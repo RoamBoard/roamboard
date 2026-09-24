@@ -5,7 +5,18 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 
 type JsonObject = Record<string, unknown>;
 type Point = { id: string; longitude: number; latitude: number; label: string };
-type SearchFeature = { id: string; name: string; address: string; longitude: number; latitude: number };
+type Suggestion = { id: string; name: string; address: string; type: string };
+type SearchFeature = {
+  id: string;
+  name: string;
+  address: string;
+  longitude: number;
+  latitude: number;
+  categories: string[];
+  rating?: number;
+  phone?: string;
+  website?: string;
+};
 type RouteSummary = { distanceKm: number; durationMinutes: number; profile: string };
 
 const stockholm = { longitude: 18.0686, latitude: 59.3293 };
@@ -37,6 +48,34 @@ function featureAddress(feature: JsonObject) {
   return String(properties.full_address ?? properties.place_formatted ?? featureName(feature));
 }
 
+function optionalString(value: unknown) {
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function parseFeature(feature: JsonObject, index: number): SearchFeature | null {
+  const point = coordinates(feature);
+  if (!point) return null;
+  const properties = isObject(feature.properties) ? feature.properties : {};
+  const metadata = isObject(properties.metadata) ? properties.metadata : {};
+  const categoryValue = properties.poi_category ?? properties.poi_category_ids;
+  const categories = Array.isArray(categoryValue)
+    ? categoryValue.filter((value): value is string => typeof value === "string")
+    : [];
+  const rating = Number(metadata.rating);
+
+  return {
+    id: String(feature.id ?? properties.mapbox_id ?? index),
+    name: featureName(feature),
+    address: featureAddress(feature),
+    longitude: point[0],
+    latitude: point[1],
+    categories,
+    rating: Number.isFinite(rating) ? rating : undefined,
+    phone: optionalString(metadata.phone),
+    website: optionalString(metadata.website),
+  };
+}
+
 async function readJson(response: Response) {
   const text = await response.text();
   try {
@@ -50,15 +89,25 @@ export function MapboxPlayground() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapboxMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
+  const sessionTokenRef = useRef("");
   const [mapReady, setMapReady] = useState(false);
   const [mapError, setMapError] = useState("");
+  const [query, setQuery] = useState("Gamla Stan, Stockholm");
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchFeature[]>([]);
+  const [activeCategory, setActiveCategory] = useState("");
   const [stops, setStops] = useState<Point[]>([]);
   const [profile, setProfile] = useState("walking");
   const [routeSummary, setRouteSummary] = useState<RouteSummary | null>(null);
   const [reverseResult, setReverseResult] = useState("Click the map or submit coordinates.");
   const [rawResponse, setRawResponse] = useState("Run an experiment to inspect its JSON response.");
   const [loading, setLoading] = useState<"search" | "reverse" | "route" | null>(null);
+
+  const sessionToken = () => {
+    if (!sessionTokenRef.current) sessionTokenRef.current = crypto.randomUUID();
+    return sessionTokenRef.current;
+  };
 
   const reverseGeocode = useCallback(async (longitude: number, latitude: number, addStop: boolean) => {
     setLoading("reverse");
@@ -132,12 +181,57 @@ export function MapboxPlayground() {
     });
   }, [stops, mapReady]);
 
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (trimmed.length < 2) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(async () => {
+      setSuggestionsLoading(true);
+      const center = mapRef.current?.getCenter() ?? stockholm;
+      const longitude = "lng" in center ? center.lng : center.longitude;
+      const latitude = "lat" in center ? center.lat : center.latitude;
+      const url = `/api/mapbox/suggest?query=${encodeURIComponent(trimmed)}&sessionToken=${encodeURIComponent(sessionToken())}&limit=6&longitude=${longitude}&latitude=${latitude}`;
+      try {
+        const response = await fetch(url, { signal: controller.signal });
+        const body = await readJson(response);
+        if (!response.ok || !isObject(body) || !Array.isArray(body.suggestions)) {
+          setSuggestions([]);
+          return;
+        }
+        setSuggestions(body.suggestions.filter(isObject).flatMap((item) => {
+          const id = optionalString(item.mapbox_id);
+          if (!id) return [];
+          return [{
+            id,
+            name: String(item.name_preferred ?? item.name ?? "Unknown place"),
+            address: String(item.full_address ?? item.place_formatted ?? ""),
+            type: String(item.feature_type ?? "place"),
+          }];
+        }));
+      } catch (error) {
+        if (error instanceof Error && error.name !== "AbortError") setSuggestions([]);
+      } finally {
+        if (!controller.signal.aborted) setSuggestionsLoading(false);
+      }
+    }, 350);
+
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [query]);
+
   const search = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading("search");
-    const form = new FormData(event.currentTarget);
-    const query = String(form.get("query") ?? "").trim();
-    const url = `/api/mapbox/search?query=${encodeURIComponent(query)}&limit=6&longitude=${stockholm.longitude}&latitude=${stockholm.latitude}`;
+    const trimmedQuery = query.trim();
+    const center = mapRef.current?.getCenter() ?? stockholm;
+    const longitude = "lng" in center ? center.lng : center.longitude;
+    const latitude = "lat" in center ? center.lat : center.latitude;
+    const url = `/api/mapbox/search?query=${encodeURIComponent(trimmedQuery)}&limit=10&longitude=${longitude}&latitude=${latitude}`;
 
     try {
       const response = await fetch(url);
@@ -146,13 +240,69 @@ export function MapboxPlayground() {
       if (!response.ok) throw new Error(isObject(body) ? String(body.error ?? "Search failed.") : "Search failed.");
 
       const parsed = featureList(body).flatMap((feature, index) => {
-        const point = coordinates(feature);
-        return point ? [{
-          id: String(feature.id ?? index), name: featureName(feature), address: featureAddress(feature),
-          longitude: point[0], latitude: point[1],
-        }] : [];
+        const result = parseFeature(feature, index);
+        return result ? [result] : [];
       });
       setSearchResults(parsed);
+      setSuggestions([]);
+      setActiveCategory("");
+    } catch (error) {
+      setSearchResults([]);
+      setRawResponse(JSON.stringify({ error: String(error) }, null, 2));
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const chooseSuggestion = async (suggestion: Suggestion) => {
+    setLoading("search");
+    const token = sessionToken();
+    const url = `/api/mapbox/retrieve?id=${encodeURIComponent(suggestion.id)}&sessionToken=${encodeURIComponent(token)}`;
+    try {
+      const response = await fetch(url);
+      const body = await readJson(response);
+      setRawResponse(JSON.stringify({ status: response.status, url, body }, null, 2));
+      if (!response.ok) throw new Error(isObject(body) ? String(body.error ?? "Place retrieval failed.") : "Place retrieval failed.");
+      const result = featureList(body).map(parseFeature).find((item): item is SearchFeature => item !== null);
+      if (!result) throw new Error("Mapbox returned no coordinates for this suggestion.");
+      setQuery(result.name);
+      setSuggestions([]);
+      setSearchResults([result]);
+      setActiveCategory("");
+      chooseResult(result);
+      sessionTokenRef.current = "";
+    } catch (error) {
+      setRawResponse(JSON.stringify({ error: String(error) }, null, 2));
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const browseCategory = async (category: string) => {
+    setLoading("search");
+    setActiveCategory(category);
+    setSuggestions([]);
+    const center = mapRef.current?.getCenter() ?? stockholm;
+    const longitude = "lng" in center ? center.lng : center.longitude;
+    const latitude = "lat" in center ? center.lat : center.latitude;
+    const url = `/api/mapbox/pois?category=${encodeURIComponent(category)}&limit=12&longitude=${longitude}&latitude=${latitude}`;
+    try {
+      const response = await fetch(url);
+      const body = await readJson(response);
+      setRawResponse(JSON.stringify({ status: response.status, url, body }, null, 2));
+      if (!response.ok) throw new Error(isObject(body) ? String(body.error ?? "POI search failed.") : "POI search failed.");
+      const parsed = featureList(body).flatMap((feature, index) => {
+        const result = parseFeature(feature, index);
+        return result ? [result] : [];
+      });
+      setSearchResults(parsed);
+      if (parsed.length > 0) {
+        const bounds = parsed.reduce(
+          (current, result) => current.extend([result.longitude, result.latitude]),
+          new mapboxgl.LngLatBounds([parsed[0].longitude, parsed[0].latitude], [parsed[0].longitude, parsed[0].latitude]),
+        );
+        mapRef.current?.fitBounds(bounds as LngLatBoundsLike, { padding: 80, maxZoom: 14 });
+      }
     } catch (error) {
       setSearchResults([]);
       setRawResponse(JSON.stringify({ error: String(error) }, null, 2));
@@ -236,20 +386,49 @@ export function MapboxPlayground() {
     <div className="mapbox-playground">
       <section className="mapbox-controls">
         <article className="card">
-          <div className="endpoint-heading compact"><span className="method">GET</span><h2>1. Forward geocoding</h2><p>Search cities, neighbourhoods and addresses, then add a result as a route stop.</p></div>
+          <div className="endpoint-heading compact"><span className="method">GET</span><h2>1. Autocomplete + POI search</h2><p>Search addresses, destinations, restaurants, museums, cafés, hotels and attractions.</p></div>
           <form onSubmit={search}>
-            <label>Place or address<input name="query" defaultValue="Gamla Stan, Stockholm" required /></label>
-            <button type="submit" disabled={loading !== null}>{loading === "search" ? "Searching…" : "Search destinations"}</button>
+            <label className="mapbox-search-field">Place, address or POI
+              <input name="query" value={query} onChange={(event) => {
+                setQuery(event.target.value);
+                if (event.target.value.trim().length < 2) setSuggestions([]);
+              }} autoComplete="off" required />
+              {(suggestionsLoading || suggestions.length > 0) && <div className="mapbox-suggestions" role="listbox">
+                {suggestionsLoading && <span className="suggestion-loading">Finding suggestions…</span>}
+                {suggestions.map((suggestion) => <button type="button" role="option" aria-selected="false" className="mapbox-suggestion" key={suggestion.id} onClick={() => void chooseSuggestion(suggestion)}>
+                  <span><strong>{suggestion.name}</strong><small>{suggestion.address}</small></span><em>{suggestion.type}</em>
+                </button>)}
+              </div>}
+            </label>
+            <button type="submit" disabled={loading !== null}>{loading === "search" ? "Searching…" : "Search"}</button>
           </form>
           <div className="mapbox-search-results">
             {searchResults.map((result) => <button className="mapbox-result" type="button" key={result.id} onClick={() => chooseResult(result)}>
-              <strong>{result.name}</strong><span>{result.address}</span><small>{result.latitude.toFixed(5)}, {result.longitude.toFixed(5)}</small>
+              <span className="mapbox-result-title"><strong>{result.name}</strong>{result.rating !== undefined && <b>★ {result.rating.toFixed(1)}</b>}</span>
+              <span>{result.address}</span>
+              {result.categories.length > 0 && <small>{result.categories.slice(0, 3).join(" · ")}</small>}
+              <small>{result.latitude.toFixed(5)}, {result.longitude.toFixed(5)}</small>
             </button>)}
           </div>
         </article>
 
         <article className="card">
-          <div className="endpoint-heading compact"><span className="method">GET</span><h2>2. Reverse geocoding</h2><p>Turn EXIF GPS into a journal location. Submitting also adds a route stop.</p></div>
+          <div className="endpoint-heading compact"><span className="method">GET</span><h2>2. Browse nearby POIs</h2><p>Search around the current map centre. Move the map first to test another neighbourhood.</p></div>
+          <div className="poi-category-grid">
+            {[
+              ["coffee", "Cafés"],
+              ["food_and_drink", "Food"],
+              ["museum", "Museums"],
+              ["hotel", "Hotels"],
+              ["park", "Parks"],
+              ["shopping", "Shopping"],
+            ].map(([id, label]) => <button type="button" className={activeCategory === id ? "poi-chip active" : "poi-chip"} key={id} disabled={loading !== null} onClick={() => void browseCategory(id)}>{label}</button>)}
+          </div>
+          <small className="mapbox-helper">Results appear in the search card above. Select one to add it as a route stop.</small>
+        </article>
+
+        <article className="card">
+          <div className="endpoint-heading compact"><span className="method">GET</span><h2>3. Reverse geocoding</h2><p>Turn EXIF GPS into a journal location. Submitting also adds a route stop.</p></div>
           <form className="form-row" onSubmit={reverseFromForm}>
             <label>Latitude<input name="latitude" type="number" step="any" defaultValue="59.3251" /></label>
             <label>Longitude<input name="longitude" type="number" step="any" defaultValue="18.0711" /></label>
@@ -259,7 +438,7 @@ export function MapboxPlayground() {
         </article>
 
         <article className="card">
-          <div className="endpoint-heading compact"><span className="method">GET</span><h2>3. Directions</h2><p>Add 2-10 stops by searching, submitting GPS, or clicking the map.</p></div>
+          <div className="endpoint-heading compact"><span className="method">GET</span><h2>4. Directions</h2><p>Add 2-10 stops by searching, submitting GPS, or clicking the map.</p></div>
           <div className="route-actions">
             <label>Travel profile<select value={profile} onChange={(event) => setProfile(event.target.value)}><option value="walking">Walking</option><option value="cycling">Cycling</option><option value="driving">Driving</option></select></label>
             <button type="button" disabled={stops.length < 2 || loading !== null} onClick={() => void calculateRoute()}>{loading === "route" ? "Routing…" : "Calculate route"}</button>
