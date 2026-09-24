@@ -23,7 +23,14 @@ export default function Home() {
 
       <section className="provider-grid" aria-label="API experiments">
         {providers.map((provider) => {
-          const href = provider.slug === "google-places" ? "/google-places" : provider.slug === "photo-import" ? "/photo-import" : `/providers/${provider.slug}`;
+        const href =
+          provider.slug === "google-places"
+            ? "/google-places"
+            : provider.slug === "mapbox"
+              ? "/mapbox"
+              : provider.slug === "photo-import"
+                ? "/photo-import"
+                : `/providers/${provider.slug}`;
           return (
             <Link className={provider.slug === "google-places" ? "provider-card featured" : "provider-card"} href={href} key={provider.slug}>
               <div className="provider-card-top"><span className="provider-symbol">{provider.symbol}</span><span className="status-pill">{provider.status}</span></div>

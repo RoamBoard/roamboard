@@ -649,3 +649,280 @@ pre {
     grid-template-columns: 1fr;
   }
 }
+
+/* ================================
+   Mapbox prototype
+   ================================ */
+
+.mapbox-hero {
+  margin-bottom: 28px;
+}
+
+.mapbox-playground {
+  display: grid;
+  grid-template-columns: minmax(340px, 440px) minmax(500px, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.mapbox-controls {
+  display: grid;
+  gap: 16px;
+}
+
+.mapbox-controls .card {
+  padding: 20px;
+}
+
+.endpoint-heading.compact {
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+}
+
+.endpoint-heading.compact h2 {
+  display: inline;
+  margin: 0 0 0 8px;
+  font-size: 1.05rem;
+}
+
+.endpoint-heading.compact p {
+  margin-top: 10px;
+  font-size: 0.86rem;
+}
+
+.mapbox-controls form {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+}
+
+.mapbox-controls form label {
+  flex: 1;
+}
+
+.mapbox-controls form button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.mapbox-search-results {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.mapbox-result {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  border: 1px solid #2a3850;
+  border-radius: 10px;
+  background: #111a2c;
+  color: #edf3fc;
+  padding: 12px;
+  text-align: left;
+}
+
+.mapbox-result:hover {
+  border-color: #4f76b8;
+  background: #182947;
+}
+
+.mapbox-result span,
+.mapbox-result small {
+  overflow: hidden;
+  color: #94a3b8;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mapbox-location-result {
+  border: 1px solid #29436c;
+  border-radius: 10px;
+  background: #182947;
+  color: #c7d6eb !important;
+  font-size: 0.85rem;
+  margin: 12px 0 0 !important;
+  padding: 11px 12px;
+}
+
+.route-actions {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.route-stops {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+}
+
+.route-stops li {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 30px;
+  gap: 9px;
+  align-items: center;
+  border-bottom: 1px solid #2a3850;
+  padding: 8px 0;
+}
+
+.route-stops li > span,
+.mapbox-stop-marker {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 2px solid white;
+  border-radius: 50%;
+  background: #2563eb;
+  box-shadow: 0 3px 10px rgb(0 0 0 / 40%);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.route-stops li div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+  font-size: 0.8rem;
+}
+
+.route-stops small {
+  overflow: hidden;
+  color: #94a3b8;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.route-stops li > button {
+  background: transparent;
+  color: #94a3b8;
+  font-size: 1.2rem;
+  padding: 3px;
+}
+
+.route-summary {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid #29436c;
+  border-radius: 12px;
+  background: #182947;
+  color: #b8c8df;
+  margin-top: 14px;
+  padding: 12px;
+}
+
+.route-summary strong {
+  color: #60a5fa;
+  font-size: 1.15rem;
+}
+
+.route-summary span {
+  border-left: 1px solid #3d5272;
+  padding-left: 10px;
+}
+
+/* Map stays visible while testing controls */
+
+.mapbox-map-panel {
+  overflow: hidden;
+  position: sticky;
+  top: 20px;
+  border: 1px solid #2a3850;
+  border-radius: 20px;
+  background: #141c2e;
+  box-shadow: 0 16px 40px rgb(0 0 0 / 25%);
+}
+
+.mapbox-map-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 15px 17px;
+}
+
+.mapbox-map-header div {
+  display: grid;
+  gap: 4px;
+}
+
+.mapbox-map-header span {
+  color: #94a3b8;
+  font-size: 0.78rem;
+}
+
+.map-status {
+  border-radius: 999px;
+  background: #422006;
+  color: #fbbf24 !important;
+  font-weight: 800;
+  padding: 6px 10px;
+}
+
+.map-status.ready {
+  background: #123524;
+  color: #4ade80 !important;
+}
+
+.mapbox-map {
+  width: 100%;
+  min-height: 720px;
+}
+
+.mapbox-error {
+  color: #fca5a5;
+  font-size: 0.83rem;
+  padding: 0 16px 12px;
+}
+
+.mapbox-raw {
+  grid-column: 1 / -1;
+  border: 1px solid #2a3850;
+  border-radius: 16px;
+  background: #141c2e;
+  margin-top: 0;
+  padding: 16px;
+}
+
+/* Mobile */
+
+@media (max-width: 900px) {
+  .mapbox-playground {
+    grid-template-columns: 1fr;
+  }
+
+  .mapbox-map-panel {
+    position: static;
+  }
+
+  .mapbox-map {
+    min-height: 520px;
+  }
+}
+
+@media (max-width: 600px) {
+  .mapbox-controls form {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .mapbox-controls form button {
+    width: 100%;
+  }
+
+  .route-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .route-actions label {
+    grid-column: 1 / -1;
+  }
+}
