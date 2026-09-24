@@ -10,9 +10,25 @@ export const badRequest = (message: string) =>
   NextResponse.json({ error: message }, { status: 400 });
 
 export const proxyJson = async (response: Response) => {
-  const body: unknown = await response.json().catch(() => ({
-    error: "The provider returned a non-JSON response.",
-  }));
+  const raw = await response.text();
+  let body: unknown;
+
+  if (!raw.trim()) {
+    body = {
+      error: "The provider returned an empty response.",
+      providerStatus: response.status,
+    };
+  } else {
+    try {
+      body = JSON.parse(raw) as unknown;
+    } catch {
+      body = {
+        error: "The provider returned a non-JSON response.",
+        providerStatus: response.status,
+        preview: raw.slice(0, 500),
+      };
+    }
+  }
 
   return NextResponse.json(body, { status: response.status });
 };

@@ -12,7 +12,7 @@ type ApiTesterProps = {
   title: string;
   description: string;
   endpoint: string;
-  fields: Field[];
+  fields: readonly Field[];
 };
 
 export function ApiTester({ title, description, endpoint, fields }: ApiTesterProps) {
