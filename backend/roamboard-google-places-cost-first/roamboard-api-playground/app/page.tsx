@@ -5,7 +5,8 @@ const providers = [
   { name: "Mapbox", slug: "mapbox", symbol: "M", status: "Expanded prototype", description: "Search destinations, reverse-geocode trip photos, map itinerary stops, and calculate walking, cycling or driving routes." },
   { name: "Open-Meteo", slug: "weather", symbol: "WX", status: "Basic tester", description: "Forecast temperatures, precipitation, weather codes, sunrise, and sunset without a key." },
   { name: "Pexels", slug: "pexels", symbol: "PX", status: "Visual prototype", description: "Search destination photos and videos, inspect attribution and responsive sizes, and preview destination board covers." },
-  { name: "Unsplash", slug: "unsplash", symbol: "UN", status: "Basic tester", description: "Compare destination images, attribution data, colors, and responsive image URLs." },
+  { name: "Unsplash", slug: "unsplash", symbol: "UN", status: "Image pipeline", description: "Rank destination covers, compare automatic focus crops, and generate responsive optimized image URLs." },
+  { name: "Cloudinary", slug: "cloudinary", symbol: "CL", status: "Crop prototype", description: "Upload user-owned images, set a manual focal area, and generate reusable destination-cover crops." },
   { name: "Wikipedia", slug: "wikipedia", symbol: "W", status: "Basic tester", description: "Fetch destination descriptions, thumbnails, article links, and coordinates." },
   { name: "Wikidata", slug: "wikidata", symbol: "WD", status: "Basic tester", description: "Inspect entity IDs and structured claims for destinations and landmarks." },
   { name: "GeoNames", slug: "geonames", symbol: "GN", status: "Basic tester", description: "Resolve canonical place names, hierarchy, population, and coordinates." },
@@ -23,7 +24,7 @@ export default function Home() {
 
       <section className="provider-grid" aria-label="API experiments">
         {providers.map((provider) => {
-          const href = provider.slug === "google-places" ? "/google-places" : provider.slug === "mapbox" ? "/mapbox" : provider.slug === "pexels" ? "/pexels" : provider.slug === "photo-import" ? "/photo-import" : `/providers/${provider.slug}`;
+          const href = provider.slug === "google-places" ? "/google-places" : provider.slug === "mapbox" ? "/mapbox" : provider.slug === "pexels" ? "/pexels" : provider.slug === "unsplash" ? "/unsplash" : provider.slug === "cloudinary" ? "/cloudinary" : provider.slug === "photo-import" ? "/photo-import" : `/providers/${provider.slug}`;
           return (
             <Link className={provider.slug === "google-places" ? "provider-card featured" : "provider-card"} href={href} key={provider.slug}>
               <div className="provider-card-top"><span className="provider-symbol">{provider.symbol}</span><span className="status-pill">{provider.status}</span></div>

@@ -18,6 +18,7 @@ type SearchFeature = {
   website?: string;
 };
 type RouteSummary = { distanceKm: number; durationMinutes: number; profile: string };
+type ImportedPhotoLocation = { photo: string; longitude: number; latitude: number };
 
 const stockholm = { longitude: 18.0686, latitude: 59.3293 };
 const routeSourceId = "roamboard-route";
@@ -103,6 +104,7 @@ export function MapboxPlayground() {
   const [reverseResult, setReverseResult] = useState("Click the map or submit coordinates.");
   const [rawResponse, setRawResponse] = useState("Run an experiment to inspect its JSON response.");
   const [loading, setLoading] = useState<"search" | "reverse" | "route" | null>(null);
+  const [importedPhoto, setImportedPhoto] = useState<ImportedPhotoLocation | null>(null);
 
   const sessionToken = () => {
     if (!sessionTokenRef.current) sessionTokenRef.current = crypto.randomUUID();
@@ -146,14 +148,30 @@ export function MapboxPlayground() {
         if (cancelled || !mapContainer.current) return;
 
         mapboxgl.accessToken = body.token;
+        const params = new URLSearchParams(window.location.search);
+        const importedLatitude = Number(params.get("latitude"));
+        const importedLongitude = Number(params.get("longitude"));
+        const hasImportedLocation = Number.isFinite(importedLatitude)
+          && importedLatitude >= -90 && importedLatitude <= 90
+          && Number.isFinite(importedLongitude)
+          && importedLongitude >= -180 && importedLongitude <= 180;
+        const imported = hasImportedLocation ? {
+          photo: params.get("photo")?.trim() || "Cloudinary photo",
+          latitude: importedLatitude,
+          longitude: importedLongitude,
+        } : null;
+        setImportedPhoto(imported);
         const map = new mapboxgl.Map({
           container: mapContainer.current,
           style: "mapbox://styles/mapbox/streets-v12",
-          center: [stockholm.longitude, stockholm.latitude],
-          zoom: 11,
+          center: imported ? [imported.longitude, imported.latitude] : [stockholm.longitude, stockholm.latitude],
+          zoom: imported ? 14 : 11,
         });
         map.addControl(new mapboxgl.NavigationControl(), "top-right");
-        map.on("load", () => setMapReady(true));
+        map.on("load", () => {
+          setMapReady(true);
+          if (imported) void reverseGeocode(imported.longitude, imported.latitude, true);
+        });
         map.on("click", (event) => void reverseGeocode(event.lngLat.lng, event.lngLat.lat, true));
         map.on("error", (event) => setMapError(event.error?.message ?? "The map could not load."));
         mapRef.current = map;
@@ -385,6 +403,15 @@ export function MapboxPlayground() {
   return (
     <div className="mapbox-playground">
       <section className="mapbox-controls">
+        {importedPhoto && <article className="card">
+          <div className="endpoint-heading compact">
+            <span className="method experimental">PHOTO GPS</span>
+            <h2>Cloudinary photo location</h2>
+            <p><strong>{importedPhoto.photo}</strong> was sent from the Cloudinary prototype. Mapbox has centred the map, added a marker and reverse-geocoded the coordinates.</p>
+          </div>
+          <p className="mapbox-location-result">{importedPhoto.latitude.toFixed(6)}, {importedPhoto.longitude.toFixed(6)}</p>
+          <p className="mapbox-location-result">{reverseResult}</p>
+        </article>}
         <article className="card">
           <div className="endpoint-heading compact"><span className="method">GET</span><h2>1. Autocomplete + POI search</h2><p>Search addresses, destinations, restaurants, museums, cafés, hotels and attractions.</p></div>
           <form onSubmit={search}>
