@@ -1,69 +1,123 @@
-import Image from "next/image";
+"use client";
+
+import { FormEvent, useEffect, useState } from "react";
+
+interface SearchDocument {
+  id: string;
+  entityType: string;
+  title: string;
+  description: string;
+  city: string;
+  country: string;
+  categories: string[];
+}
+
+interface SearchResponse {
+  data: {
+    hits: Array<{ document: SearchDocument; score: number }>;
+    total: number;
+  };
+}
+
+const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3000/api/v1";
 
 export default function Home() {
+  const [query, setQuery] = useState("");
+  const [submittedQuery, setSubmittedQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [results, setResults] = useState<SearchResponse["data"] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const trimmedQuery = query.trim();
+    const controller = new AbortController();
+
+    if (trimmedQuery.length < 2) {
+      return () => controller.abort();
+    }
+
+    fetch(`${apiBaseUrl}/search/suggestions?q=${encodeURIComponent(trimmedQuery)}`, { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Suggestions are unavailable");
+        return response.json() as Promise<{ data: string[] }>;
+      })
+      .then((response) => setSuggestions(response.data))
+      .catch((requestError: unknown) => {
+        if (!(requestError instanceof DOMException && requestError.name === "AbortError")) setSuggestions([]);
+      });
+
+    return () => controller.abort();
+  }, [query]);
+
+  useEffect(() => {
+    if (!submittedQuery) return;
+
+    const controller = new AbortController();
+
+    fetch(`${apiBaseUrl}/search?q=${encodeURIComponent(submittedQuery)}`, { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Search is unavailable");
+        return response.json() as Promise<SearchResponse>;
+      })
+      .then((response) => setResults(response.data))
+      .catch((requestError: unknown) => {
+        if (requestError instanceof DOMException && requestError.name === "AbortError") return;
+        setResults(null);
+        setError(requestError instanceof Error ? requestError.message : "Search is unavailable");
+      })
+      .finally(() => setLoading(false));
+
+    return () => controller.abort();
+  }, [submittedQuery]);
+
+  const submitSearch = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    setLoading(true);
+    setError("");
+    setSubmittedQuery(query.trim());
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <main className="min-h-screen bg-slate-950 px-6 py-16 text-slate-100">
+      <div className="mx-auto max-w-4xl">
+        <p className="text-sm font-semibold uppercase tracking-[0.25em] text-cyan-300">Roamboard search</p>
+        <h1 className="mt-4 max-w-2xl text-5xl font-semibold tracking-tight text-white">Find the next place worth building a trip around.</h1>
+        <form className="relative mt-10" onSubmit={submitSearch}>
+          <label className="sr-only" htmlFor="search-query">Search destinations, places, and itineraries</label>
+          <div className="flex gap-3">
+            <input id="search-query" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Try Stockholm or stokholm" className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-900 px-5 py-4 text-lg text-white outline-none ring-cyan-300 placeholder:text-slate-500 focus:ring-2" />
+            <button className="rounded-lg bg-cyan-300 px-6 font-semibold text-slate-950 hover:bg-cyan-200" type="submit">Search</button>
+          </div>
+          {query.trim().length >= 2 && suggestions.length > 0 && (
+            <ul className="absolute z-10 mt-2 w-full max-w-[calc(100%-7rem)] rounded-lg border border-slate-700 bg-slate-900 p-2 shadow-2xl">
+              {suggestions.map((suggestion) => (
+                <li key={suggestion}>
+                  <button className="w-full rounded-md px-3 py-2 text-left text-slate-200 hover:bg-slate-800" type="button" onClick={() => { setQuery(suggestion); setSubmittedQuery(suggestion); setSuggestions([]); }}>{suggestion}</button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </form>
+        <section className="mt-16" aria-live="polite">
+          {loading && <p className="text-slate-400">Searching...</p>}
+          {error && <p className="text-rose-300">{error}</p>}
+          {!loading && !error && results && results.total === 0 && <p className="text-slate-400">No public travel records matched that search.</p>}
+          {!loading && !error && results && results.total > 0 && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {results.hits.map(({ document }) => (
+                <article className="rounded-lg border border-slate-800 bg-slate-900 p-5" key={document.id}>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">{document.entityType}</p>
+                  <h2 className="mt-2 text-2xl font-semibold text-white">{document.title}</h2>
+                  <p className="mt-1 text-sm text-slate-400">{document.city}, {document.country}</p>
+                  <p className="mt-4 leading-7 text-slate-300">{document.description}</p>
+                  <div className="mt-5 flex flex-wrap gap-2">{document.categories.map((category) => <span className="rounded-full border border-slate-700 px-3 py-1 text-xs text-slate-400" key={category}>{category}</span>)}</div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+    </main>
   );
 }

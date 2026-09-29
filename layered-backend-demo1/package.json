@@ -8,7 +8,11 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/src/server.js",
-    "test": "tsx --test test/todos.api.test.ts",
+    "test": "tsx --test test/todos.api.test.ts test/search.query.test.ts",
+    "test:integration": "tsx --test test/search.integration.test.ts",
+    "search:setup": "tsx src/features/search/search.cli.ts setup",
+    "search:seed": "tsx src/features/search/search.cli.ts seed",
+    "search:reindex": "tsx src/features/search/search.cli.ts reindex",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm test"
   },
@@ -16,6 +20,7 @@
     "node": ">=18"
   },
   "dependencies": {
+    "@elastic/elasticsearch": "8.18.2",
     "cors": "^2.8.6",
     "dotenv": "^18.0.4",
     "express": "^5.2.1",
@@ -31,5 +36,8 @@
     "supertest": "^7.3.0",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
   }
 }
