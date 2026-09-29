@@ -1,1 +1,8 @@
 /express-demo/node_modules
+
+# Next.js
+.next/
+out/
+
+# Dependencies
+node_modules/
