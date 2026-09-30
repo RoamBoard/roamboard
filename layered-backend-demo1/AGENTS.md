@@ -6,7 +6,7 @@ This is a living project guide. Agents may and should update `AGENTS.md` when th
 
 ## Current status and product context
 
-This folder is the TypeScript backend prototype for Roamboard. It is currently a small Express 5 todo API with an in-memory repository. It is not yet connected to PostgreSQL, Elasticsearch, authentication, media providers, or Docker services.
+This folder is the TypeScript backend prototype for Roamboard. It has an Express 5 todo API and a sample travel search API. Local development defaults to in-memory repositories; Docker Compose runs the API with PostgreSQL persistence and a derived Elasticsearch index. It does not have real Boards, authentication, media providers, or frontend integration.
 
 The frontend is a Next.js App Router application in `frontend/`. Read [frontend/AGENTS.md](../frontend/AGENTS.md) and [frontend/REQUIREMENTS.md](../frontend/REQUIREMENTS.md) when an API change affects the UI. The frontend currently uses mock data and the Board model in `frontend/src/types/board.ts` is a provisional contract, not proof that persistence or authentication exists.
 
@@ -43,13 +43,13 @@ src/features/<feature>/
 - **Schemas** validate and transform request body, params, and query values with Zod.
 - **Controllers** translate HTTP input into service calls and service results into responses. Do not put business rules or database queries here.
 - **Services** own business rules, authorization decisions, orchestration, and provider coordination. Keep them independent of Express where practical.
-- **Repositories** own PostgreSQL persistence. They expose interfaces that services depend on and should not leak SQL or ORM details into controllers.
+- **Repositories** own persistence and expose interfaces for services. The todo and search source features each have an in-memory implementation and a PostgreSQL implementation. SQL stays out of controllers.
 - **Provider adapters** wrap Cloudinary, Mapbox, Google Places, Unsplash, Elasticsearch, and similar services. Keep third-party SDK types and request details behind an interface.
 - **Modules** construct repositories, services, controllers, and routers. Preserve dependency injection so tests can provide fakes or in-memory implementations.
 - **Middleware** handles cross-cutting concerns such as authentication, authorization helpers, validation, request logging, not-found handling, and centralized errors.
 - **Shared code** belongs in `src/shared/` only when it is genuinely used across features. Avoid creating a generic abstraction for one caller.
 
-The current `todo` feature is the reference implementation for layering and test injection. The in-memory repository is a development demonstration only; new persistent features should be designed around repository interfaces so the database adapter can replace it cleanly.
+The `todo` feature is the reference implementation for layering and test injection. The search feature reads sample travel records from PostgreSQL, indexes only public records in Elasticsearch, and supports full reindexing. Those records have no write API; when real Board writes arrive, design durable index updates and retries before claiming the search index stays synchronized.
 
 ## Backend stack and planned infrastructure
 
@@ -62,14 +62,21 @@ Current stack:
 - Helmet and CORS for security and cross-origin middleware.
 - `debug` for application, integration, provider, and development logging, using stable namespaces such as `roamboard:http`, `roamboard:auth`, `roamboard:db`, `roamboard:search`, and `roamboard:media`.
 - `pino-http` may remain as request middleware where useful, but it must not replace the required `debug` logging convention for application/debug logs.
+- `pg` for parameterized PostgreSQL queries and `@elastic/elasticsearch` for the derived search index.
 - Node's built-in test runner with Supertest for API tests.
 - npm is the package manager for this folder. Keep `package-lock.json` in sync and do not create another lockfile here.
 
-Planned infrastructure, to be introduced incrementally:
+Implemented demo infrastructure:
 
-- **PostgreSQL:** system of record for users, profiles, Boards, items, locations, media metadata, tags, friend relationships, saved resources, visibility, and travel history. Use migrations, foreign keys, unique constraints, timestamps, and indexes. Keep database access behind repositories.
-- **Elasticsearch:** derived search index for public Board, destination, and location discovery, autocomplete, fuzzy matching, ranking, and filters. PostgreSQL remains authoritative. Index updates must be designed for retry/rebuild and must not silently make private data searchable.
-- **Docker:** run the API server, PostgreSQL, and Elasticsearch as separate services. Use Docker Compose for local orchestration when the services are introduced. The API must read service URLs and credentials from environment variables and must not assume `localhost` when running inside Compose.
+- **PostgreSQL:** persistent todos and sample travel search documents, with a SQL migration. The in-memory adapters remain for tests and local development.
+- **Elasticsearch:** public sample travel search, suggestions, filters, and reindexing from PostgreSQL when the Docker stack is used.
+- **Docker Compose:** API, PostgreSQL, and Elasticsearch services with health checks and separate named data volumes. The local configuration disables Elasticsearch security and is not a production deployment.
+
+Planned Roamboard infrastructure, to be introduced incrementally:
+
+- **PostgreSQL:** expand the system of record to users, profiles, Boards, items, locations, media metadata, tags, friend relationships, saved resources, visibility, and travel history. Use migrations, foreign keys, unique constraints, timestamps, and indexes.
+- **Elasticsearch:** expand the derived index to real public Board, destination, and location discovery. Add a durable update/retry path and keep private data out of the index.
+- **Docker:** harden the current local demo before deployment. Continue using service names and environment variables inside Compose, never `localhost` for another container.
 - **Cloudinary or another object store:** store uploaded media; PostgreSQL stores metadata, ownership, association, provider key, URL, MIME type, dimensions, and extraction status rather than large binary content.
 - **Mapbox:** map display, geocoding, and routes where approved. Treat provider results as external data and persist only the data the product needs.
 - **Google Places API and Unsplash:** location/place enrichment and application-provided imagery through provider adapters. Never expose provider secrets to the frontend.
@@ -170,9 +177,10 @@ npm run typecheck
 npm test
 npm run check
 npm run build
+docker compose up --build -d    # after creating .env from .env.example
 ```
 
-Add Docker Compose and integration commands only when those files and services exist. Do not claim a provider, database, authentication flow, or Docker deployment works until it has been exercised and documented.
+The README documents Docker Compose and an opt-in test against PostgreSQL and Elasticsearch. The normal API tests still use in-memory adapters. Run the opt-in integration test when changing database or search wiring. Do not claim authentication, Boards, or provider integrations exist.
 
 ## Code style and consistency
 
