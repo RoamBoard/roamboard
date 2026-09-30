@@ -7,6 +7,8 @@ const envSchema = z.object({
     .default("development"),
   PORT: z.coerce.number().int().positive().default(3000),
   CLIENT_ORIGIN: z.string().url().default("http://localhost:5173"),
+  STORAGE: z.enum(["memory", "postgres"]).default("memory"),
+  DATABASE_URL: z.string().url().optional(),
   ELASTICSEARCH_NODE: z.string().url().optional(),
   ELASTIC_CLOUD_ID: z.string().trim().min(1).optional(),
   ELASTIC_API_KEY: z.string().trim().min(1).optional(),
@@ -28,6 +30,14 @@ const envSchema = z.object({
       code: "custom",
       path: ["ELASTICSEARCH_NODE"],
       message: "Use either ELASTICSEARCH_NODE or Elastic Cloud credentials",
+    });
+  }
+
+  if (value.STORAGE === "postgres" && !value.DATABASE_URL) {
+    context.addIssue({
+      code: "custom",
+      path: ["DATABASE_URL"],
+      message: "DATABASE_URL is required when STORAGE=postgres",
     });
   }
 });

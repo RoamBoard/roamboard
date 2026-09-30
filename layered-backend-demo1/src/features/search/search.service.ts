@@ -26,7 +26,10 @@ export function createSearchService(
   }
 
   async function reindex(): Promise<number> {
-    const documents = await sourceRepository.findAll();
+    const documents = (await sourceRepository.findAll()).filter((document) => document.isPublic);
+    if (await client.indices.exists({ index: SEARCH_INDEX })) {
+      await client.indices.delete({ index: SEARCH_INDEX });
+    }
     await ensureIndex();
 
     if (documents.length === 0) {

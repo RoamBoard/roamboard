@@ -15,12 +15,13 @@ import { notFoundHandler } from "./middleware/not-found.js";
 interface CreateAppOptions {
   todoRepository?: TodoRepository;
   searchClient?: Client;
+  searchModule?: SearchModule;
 }
 
-export function createApp({ todoRepository, searchClient }: CreateAppOptions = {}): Express {
+export function createApp({ todoRepository, searchClient, searchModule: providedSearchModule }: CreateAppOptions = {}): Express {
   const app = express();
   const todoModule = createTodoModule({ repository: todoRepository });
-  const searchModule: SearchModule = createSearchModule({ client: searchClient });
+  const searchModule = providedSearchModule ?? createSearchModule({ client: searchClient });
 
   app.disable("x-powered-by");
 
