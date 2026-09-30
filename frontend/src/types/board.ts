@@ -14,10 +14,19 @@ export type BoardDestination = {
 };
 
 export type BoardLocation = {
+  // Roamboard's own ID, separate from Google's place ID.
+  id: string;
+  source: "manual" | "google";
   name: string;
   address?: string;
   latitude: number;
   longitude: number;
+  countryCode?: string;
+  city?: string;
+  // Filled from a Google result when available; manual pins do not need these.
+  // The place ID can be used to fetch further Google details later.
+  googlePlaceId?: string;
+  googleMapsUrl?: string;
 };
 
 export type BoardImage = {
@@ -43,6 +52,9 @@ export type BoardLocationItem = {
   id: string;
   type: "location";
   location: BoardLocation;
+  // The user's own notes and photos for this Board entry.
+  notes?: string;
+  images?: BoardImage[];
 };
 
 export type BoardTextItem = {
