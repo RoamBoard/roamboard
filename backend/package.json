@@ -1,14 +1,25 @@
 {
-  "name": "backend",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "roamboard-backend",
+  "version": "0.1.0",
+  "description": "Roamboard API",
+  "private": true,
+  "type": "module",
+  "main": "dist/server.js",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "tsx watch src/server.ts",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/server.js",
+    "check": "npm run lint && npm run typecheck && npm test && npm run build"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "UNLICENSED",
   "dependencies": {
     "cors": "^2.8.6",
     "debug": "^4.4.3",
