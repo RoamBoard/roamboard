@@ -9,6 +9,9 @@ import type { SearchModule } from "./features/search/search.module.js";
 import type { Client } from "@elastic/elasticsearch";
 import { createDestinationModule } from "./features/destinations/destination.module.js";
 import { createProviderModule } from "./features/providers/provider.module.js";
+import type { GooglePlaceReferenceRepository } from "./features/providers/provider.types.js";
+import { createQuotaModule } from "./features/quotas/quota.module.js";
+import type { QuotaRepository } from "./features/quotas/quota.types.js";
 import { createTodoModule } from "./features/todos/todo.module.js";
 import type { TodoRepository } from "./features/todos/todo.types.js";
 import { errorHandler } from "./middleware/error-handler.js";
@@ -18,14 +21,17 @@ interface CreateAppOptions {
   todoRepository?: TodoRepository;
   searchClient?: Client;
   searchModule?: SearchModule;
+  quotaRepository?: QuotaRepository;
+  googlePlaceReferenceRepository?: GooglePlaceReferenceRepository;
 }
 
-export function createApp({ todoRepository, searchClient, searchModule: providedSearchModule }: CreateAppOptions = {}): Express {
+export function createApp({ todoRepository, searchClient, searchModule: providedSearchModule, quotaRepository, googlePlaceReferenceRepository }: CreateAppOptions = {}): Express {
   const app = express();
   const todoModule = createTodoModule({ repository: todoRepository });
   const searchModule = providedSearchModule ?? createSearchModule({ client: searchClient });
-  const destinationModule = createDestinationModule();
-  const providerModule = createProviderModule();
+  const quotaModule = createQuotaModule(quotaRepository);
+  const destinationModule = createDestinationModule(quotaModule.service);
+  const providerModule = createProviderModule(quotaModule.service, googlePlaceReferenceRepository);
 
   app.disable("x-powered-by");
 
@@ -43,6 +49,7 @@ export function createApp({ todoRepository, searchClient, searchModule: provided
   app.use("/api/v1/search", searchModule.router);
   app.use("/api/v1/destinations", destinationModule.router);
   app.use("/api/v1/providers", providerModule.router);
+  app.use("/api/v1/quotas", quotaModule.router);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

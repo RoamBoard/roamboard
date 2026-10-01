@@ -1,4 +1,4 @@
-import type { ProviderPhoto, ProviderPlace, ProviderRoute, RoutePoint, RouteProfile } from "./provider.types.js";
+import type { GooglePlaceDetails, ProviderPhoto, ProviderPlace, ProviderRoute, RoutePoint, RouteProfile } from "./provider.types.js";
 
 type JsonObject = Record<string, unknown>;
 
@@ -19,6 +19,14 @@ function numberValue(value: unknown): number | undefined {
 async function readJson(response: Response): Promise<unknown> {
   const text = await response.text();
   return text ? JSON.parse(text) as unknown : {};
+}
+
+export function googleMapsPlaceUrl(placeId: string, query: string): string {
+  const url = new URL("https://www.google.com/maps/search/");
+  url.searchParams.set("api", "1");
+  url.searchParams.set("query", query || "Google place");
+  url.searchParams.set("query_place_id", placeId);
+  return url.toString();
 }
 
 export async function reverseMapbox(latitude: number, longitude: number, token: string): Promise<string> {
@@ -89,16 +97,46 @@ export async function searchGooglePlaces(query: string, apiKey: string, limit: n
     const displayName = objectValue(place.displayName);
     const latitude = numberValue(location.latitude);
     const longitude = numberValue(location.longitude);
-    if (latitude === undefined || longitude === undefined) return [];
+    const id = stringValue(place.id);
+    if (!id || latitude === undefined || longitude === undefined) return [];
+    const name = stringValue(displayName.text, "Unnamed place");
+    const address = stringValue(place.formattedAddress, "Address unavailable");
     return [{
-      id: stringValue(place.id),
-      name: stringValue(displayName.text, "Unnamed place"),
-      address: stringValue(place.formattedAddress, "Address unavailable"),
+      id,
+      name,
+      address,
       latitude,
       longitude,
       types: Array.isArray(place.types) ? place.types.filter((item): item is string => typeof item === "string") : [],
+      googleMapsUrl: googleMapsPlaceUrl(id, name === "Unnamed place" ? address : name),
     }];
   });
+}
+
+export async function fetchGooglePlaceDetails(placeId: string, apiKey: string): Promise<GooglePlaceDetails> {
+  const response = await fetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`, {
+    headers: {
+      "X-Goog-Api-Key": apiKey,
+      "X-Goog-FieldMask": "id,formattedAddress,location,types",
+    },
+    signal: AbortSignal.timeout(8_000),
+  });
+  if (!response.ok) throw new Error(`Google Places returned ${response.status}`);
+  const place = objectValue(await readJson(response));
+  const location = objectValue(place.location);
+  const latitude = numberValue(location.latitude);
+  const longitude = numberValue(location.longitude);
+  if (latitude === undefined || longitude === undefined) throw new Error("Google Places returned no location");
+  const id = stringValue(place.id, placeId);
+  const address = stringValue(place.formattedAddress, "Address unavailable");
+  return {
+    id,
+    address,
+    latitude,
+    longitude,
+    types: Array.isArray(place.types) ? place.types.filter((item): item is string => typeof item === "string") : [],
+    googleMapsUrl: googleMapsPlaceUrl(id, address),
+  };
 }
 
 export async function routeMapbox(points: RoutePoint[], profile: RouteProfile, token: string): Promise<ProviderRoute> {

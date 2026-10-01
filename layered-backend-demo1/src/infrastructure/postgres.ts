@@ -13,22 +13,18 @@ export function createPostgresPool(connectionString: string): Pool {
 }
 
 export async function runMigrations(pool: Pool): Promise<void> {
-  const sql = await readFile(resolve("migrations/001_demo_tables.sql"), "utf8");
+  const migrations = ["001_demo_tables", "002_api_quota_usage", "003_google_place_references"];
   const client = await pool.connect();
 
   try {
     await client.query("BEGIN");
     await client.query("CREATE TABLE IF NOT EXISTS schema_migrations (name text PRIMARY KEY)");
-    const applied = await client.query(
-      "SELECT 1 FROM schema_migrations WHERE name = $1",
-      ["001_demo_tables"],
-    );
-    if (applied.rowCount === 0) {
-      await client.query(sql);
-      await client.query(
-        "INSERT INTO schema_migrations (name) VALUES ($1)",
-        ["001_demo_tables"],
-      );
+    for (const name of migrations) {
+      const applied = await client.query("SELECT 1 FROM schema_migrations WHERE name = $1", [name]);
+      if (applied.rowCount === 0) {
+        await client.query(await readFile(resolve(`migrations/${name}.sql`), "utf8"));
+        await client.query("INSERT INTO schema_migrations (name) VALUES ($1)", [name]);
+      }
     }
     await client.query("COMMIT");
   } catch (error) {

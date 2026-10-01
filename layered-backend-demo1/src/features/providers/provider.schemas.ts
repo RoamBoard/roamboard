@@ -37,8 +37,25 @@ export const cloudinaryMetadataSchema = z.object({
   query: z.object({ publicId: z.string().trim().min(1).max(300) }).strict(),
 });
 
+const googlePlaceId = z.string().trim().min(1).max(512);
+
+export const googlePlaceDetailsSchema = z.object({
+  params: z.object({ placeId: googlePlaceId }).strict(),
+});
+
+export const saveGooglePlaceSchema = z.object({
+  body: z.object({ placeId: googlePlaceId }).strict(),
+});
+
+export const deleteGooglePlaceSchema = z.object({
+  params: z.object({ placeId: googlePlaceId }).strict(),
+});
+
 export type ProviderSearchRequest = z.infer<typeof providerSearchSchema>;
 export type ProviderReverseRequest = z.infer<typeof providerReverseSchema>;
 export type CloudinaryDeliveryRequest = z.infer<typeof cloudinaryDeliverySchema>;
 export type MapboxRouteRequest = z.infer<typeof mapboxRouteSchema>;
 export type CloudinaryMetadataRequest = z.infer<typeof cloudinaryMetadataSchema>;
+export type GooglePlaceDetailsRequest = z.infer<typeof googlePlaceDetailsSchema>;
+export type SaveGooglePlaceRequest = z.infer<typeof saveGooglePlaceSchema>;
+export type DeleteGooglePlaceRequest = z.infer<typeof deleteGooglePlaceSchema>;

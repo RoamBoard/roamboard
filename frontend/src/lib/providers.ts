@@ -1,5 +1,5 @@
 export type ProviderConfig = {
-  mapbox: { configured: boolean; publicToken?: string };
+  mapbox: { configured: boolean };
   unsplash: { configured: boolean };
   googlePlaces: { configured: boolean; billingRequired: true };
   cloudinary: { configured: boolean; cloudName?: string };
@@ -12,6 +12,14 @@ export type ProviderPlace = {
   latitude: number;
   longitude: number;
   types: string[];
+  googleMapsUrl: string;
+};
+
+export type GooglePlaceDetails = Omit<ProviderPlace, "name">;
+
+export type SavedGooglePlaceReference = {
+  placeId: string;
+  savedAt: string;
 };
 
 export type ProviderPhoto = {
@@ -66,6 +74,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const loadProviderConfig = () => request<ProviderConfig>("/api/v1/providers/config");
 
+export const loadMapboxMapSession = () => request<{ publicToken: string }>("/api/v1/providers/mapbox/map-session", { method: "POST" });
+
 export const searchMapboxProvider = (query: string) => request<ProviderPlace[]>(`/api/v1/providers/mapbox/search?q=${encodeURIComponent(query)}`);
 
 export const reverseMapboxProvider = (latitude: string, longitude: string) => request<{ address: string }>(`/api/v1/providers/mapbox/reverse?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}`);
@@ -75,6 +85,20 @@ export const routeMapboxProvider = (points: Array<{ latitude: number; longitude:
 export const searchUnsplashProvider = (query: string) => request<ProviderPhoto[]>(`/api/v1/providers/unsplash/search?q=${encodeURIComponent(query)}`);
 
 export const searchGooglePlacesProvider = (query: string) => request<ProviderPlace[]>(`/api/v1/providers/google-places/search?q=${encodeURIComponent(query)}`);
+
+export const loadGooglePlaceDetails = (placeId: string) => request<GooglePlaceDetails>(`/api/v1/providers/google-places/${encodeURIComponent(placeId)}`);
+
+export const loadSavedGooglePlaces = () => request<SavedGooglePlaceReference[]>("/api/v1/providers/google-places/saved");
+
+export const saveGooglePlace = (placeId: string) => request<SavedGooglePlaceReference>("/api/v1/providers/google-places/saved", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ placeId }) });
+
+export async function deleteSavedGooglePlace(placeId: string): Promise<void> {
+  const response = await fetch(`${apiOrigin}/api/v1/providers/google-places/saved/${encodeURIComponent(placeId)}`, { method: "DELETE" });
+  if (!response.ok) {
+    const body = (await response.json()) as { error?: { message?: string } };
+    throw new Error(body.error?.message ?? "The saved Google Place ID could not be deleted.");
+  }
+}
 
 export const buildCloudinaryDelivery = (publicId: string, width: string, height: string, crop: string) => request<{ url: string }>(`/api/v1/providers/cloudinary/delivery?publicId=${encodeURIComponent(publicId)}&width=${encodeURIComponent(width)}&height=${encodeURIComponent(height)}&crop=${encodeURIComponent(crop)}`);
 

@@ -17,13 +17,38 @@ export interface ProviderPlace {
   latitude: number;
   longitude: number;
   types: string[];
+  googleMapsUrl: string;
+}
+
+export interface GooglePlaceDetails {
+  id: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  types: string[];
+  googleMapsUrl: string;
+}
+
+export interface SavedGooglePlaceReference {
+  placeId: string;
+  savedAt: string;
+}
+
+export interface GooglePlaceReferenceRepository {
+  save(placeId: string): Promise<SavedGooglePlaceReference>;
+  list(): Promise<SavedGooglePlaceReference[]>;
+  delete(placeId: string): Promise<boolean>;
 }
 
 export interface ProviderConfig {
-  mapbox: { configured: boolean; publicToken?: string };
+  mapbox: { configured: boolean };
   unsplash: { configured: boolean };
   googlePlaces: { configured: boolean; billingRequired: true };
   cloudinary: { configured: boolean; cloudName?: string };
+}
+
+export interface MapboxMapSession {
+  publicToken: string;
 }
 
 export type RouteProfile = "walking" | "cycling" | "driving";

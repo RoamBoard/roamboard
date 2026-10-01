@@ -1,6 +1,9 @@
 import "dotenv/config";
 import { z } from "zod";
 
+const emptyToUndefined = (value: unknown) => typeof value === "string" && value.trim() === "" ? undefined : value;
+const optionalString = z.preprocess(emptyToUndefined, z.string().trim().min(1).optional());
+
 const envSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
@@ -10,15 +13,16 @@ const envSchema = z.object({
   STORAGE: z.enum(["memory", "postgres"]).default("memory"),
   DATABASE_URL: z.string().url().optional(),
   ELASTICSEARCH_NODE: z.string().url().optional(),
-  ELASTIC_CLOUD_ID: z.string().trim().min(1).optional(),
-  ELASTIC_API_KEY: z.string().trim().min(1).optional(),
-  SEARCH_REINDEX_KEY: z.string().trim().min(1).optional(),
-  MAPBOX_ACCESS_TOKEN: z.string().trim().min(1).optional(),
-  UNSPLASH_ACCESS_KEY: z.string().trim().min(1).optional(),
-  GOOGLE_PLACES_API_KEY: z.string().trim().min(1).optional(),
-  CLOUDINARY_CLOUD_NAME: z.string().trim().min(1).optional(),
-  CLOUDINARY_API_KEY: z.string().trim().min(1).optional(),
-  CLOUDINARY_API_SECRET: z.string().trim().min(1).optional(),
+  ELASTIC_CLOUD_ID: optionalString,
+  ELASTIC_API_KEY: optionalString,
+  SEARCH_REINDEX_KEY: optionalString,
+  MAPBOX_ACCESS_TOKEN: optionalString,
+  MAPBOX_PUBLIC_TOKEN: optionalString,
+  UNSPLASH_ACCESS_KEY: optionalString,
+  GOOGLE_PLACES_API_KEY: optionalString,
+  CLOUDINARY_CLOUD_NAME: optionalString,
+  CLOUDINARY_API_KEY: optionalString,
+  CLOUDINARY_API_SECRET: optionalString,
 }).superRefine((value, context) => {
   const hasCloudId = value.ELASTIC_CLOUD_ID !== undefined;
   const hasApiKey = value.ELASTIC_API_KEY !== undefined;
@@ -44,6 +48,14 @@ const envSchema = z.object({
       code: "custom",
       path: ["DATABASE_URL"],
       message: "DATABASE_URL is required when STORAGE=postgres",
+    });
+  }
+
+  if (value.NODE_ENV === "production" && value.STORAGE !== "postgres") {
+    context.addIssue({
+      code: "custom",
+      path: ["STORAGE"],
+      message: "Production requires STORAGE=postgres so API quota counters cannot reset on restart",
     });
   }
 });

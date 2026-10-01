@@ -17,11 +17,16 @@ function createFakeProviderService(receivedTypes: string[]): ProviderService {
       googlePlaces: { configured: false, billingRequired: true },
       cloudinary: { configured: true },
     }),
+    mapboxMapSession: async () => ({ publicToken: "pk.test" }),
     mapboxSearch: async () => [],
     mapboxReverse: async () => "",
     mapboxRoute: async (_points, profile) => ({ profile, distanceKm: 0, durationMinutes: 0, geometry: [] }),
     unsplashSearch: async () => [],
     googlePlacesSearch: async () => [],
+    googlePlaceDetails: async (placeId) => ({ id: placeId, address: "", latitude: 0, longitude: 0, types: [], googleMapsUrl: "" }),
+    saveGooglePlace: async (placeId) => ({ placeId, savedAt: "2026-10-01T00:00:00.000Z" }),
+    savedGooglePlaces: async () => [],
+    deleteSavedGooglePlace: async () => undefined,
     cloudinaryDelivery: () => "",
     cloudinaryUpload: async (file) => {
       receivedTypes.push(file.mimetype);

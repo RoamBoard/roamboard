@@ -10,6 +10,8 @@ import {
   seedSearchDocuments,
 } from "./features/search/search.postgres-repository.js";
 import { createPostgresTodoRepository } from "./features/todos/todo.postgres-repository.js";
+import { createPostgresQuotaRepository } from "./features/quotas/quota.postgres-repository.js";
+import { createPostgresGooglePlaceReferenceRepository } from "./features/providers/provider.google-place-postgres-repository.js";
 import { createPostgresPool, runMigrations } from "./infrastructure/postgres.js";
 
 const log = debug("roamboard:http");
@@ -34,6 +36,8 @@ async function main(): Promise<void> {
   const app = createApp({
     todoRepository: pool ? createPostgresTodoRepository(pool) : undefined,
     searchModule,
+    quotaRepository: pool ? createPostgresQuotaRepository(pool) : undefined,
+    googlePlaceReferenceRepository: pool ? createPostgresGooglePlaceReferenceRepository(pool) : undefined,
   });
   const server = app.listen(env.PORT, () => {
     log("API listening on port %d with %s storage", env.PORT, env.STORAGE);
