@@ -13,6 +13,12 @@ const envSchema = z.object({
   ELASTIC_CLOUD_ID: z.string().trim().min(1).optional(),
   ELASTIC_API_KEY: z.string().trim().min(1).optional(),
   SEARCH_REINDEX_KEY: z.string().trim().min(1).optional(),
+  MAPBOX_ACCESS_TOKEN: z.string().trim().min(1).optional(),
+  UNSPLASH_ACCESS_KEY: z.string().trim().min(1).optional(),
+  GOOGLE_PLACES_API_KEY: z.string().trim().min(1).optional(),
+  CLOUDINARY_CLOUD_NAME: z.string().trim().min(1).optional(),
+  CLOUDINARY_API_KEY: z.string().trim().min(1).optional(),
+  CLOUDINARY_API_SECRET: z.string().trim().min(1).optional(),
 }).superRefine((value, context) => {
   const hasCloudId = value.ELASTIC_CLOUD_ID !== undefined;
   const hasApiKey = value.ELASTIC_API_KEY !== undefined;

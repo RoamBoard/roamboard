@@ -10,9 +10,9 @@ type Props = {
 
 export default function AppShell({ children, activeHref, profile }: Props) {
   return (
-      <div className="relative grid h-dvh w-full overflow-hidden bg-white">
+      <div className="relative grid h-dvh w-full grid-cols-[5rem_minmax(0,1fr)] overflow-hidden bg-white sm:grid-cols-[6rem_minmax(0,1fr)]">
         <Sidebar activeHref={activeHref} />
-        <main className="grid min-h-0 min-w-0">{children}</main>
+        <main className="grid min-h-0 min-w-0 overflow-y-auto">{children}</main>
         <ProfileControl {...profile} />
       </div>
   );

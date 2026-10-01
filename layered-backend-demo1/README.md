@@ -1,6 +1,6 @@
 # Layered backend demo
 
-This Express 5 prototype has a todo API and a small travel search API. PostgreSQL stores the todos and the sample travel records. Elasticsearch is a derived search index, rebuilt by the backend from PostgreSQL. The frontend is not yet connected to these APIs, and the travel records are demo fixtures rather than real Boards.
+This Express 5 backend has a todo API, a sample travel search API, and a destination discovery API. PostgreSQL stores the todos and sample travel records. Elasticsearch is a derived search index, rebuilt by the backend from PostgreSQL. Destination provider responses are live, short-lived discovery data and are not persisted or indexed.
 
 ```text
 HTTP client -> Express API -> PostgreSQL (source of truth)
@@ -19,7 +19,25 @@ docker compose up --build -d
 docker compose ps
 ```
 
+To stop and start the project again later without deleting PostgreSQL or Elasticsearch data:
+
+```powershell
+docker compose down
+docker compose up --build -d
+```
+
+Do not use `docker compose down -v` unless you intentionally want to delete the named data volumes. If PostgreSQL reports a password mismatch after changing `.env`, update the existing local role rather than deleting the volume:
+
+```powershell
+docker compose exec -T --user postgres postgres psql -U roamboard -d roamboard -c "ALTER ROLE roamboard WITH PASSWORD 'your-local-password';"
+docker compose up -d api
+```
+
+Run the frontend separately from `frontend/` with `pnpm dev`; it uses `http://localhost:3001` from `.env.local` and is available at `http://localhost:3000`.
+
 The API is at `http://localhost:3001`. PostgreSQL is available to local tools at `localhost:5433`, and Elasticsearch at `localhost:9200`; all published ports are bound to the host's loopback address. Elasticsearch security is disabled for local development, so this Compose file is not a production deployment. Compose waits for the database and search service health checks before starting the API. The API applies `migrations/001_demo_tables.sql`, seeds missing sample travel records in PostgreSQL, and rebuilds Elasticsearch before it listens.
+
+The frontend uses `NEXT_PUBLIC_API_BASE_URL=http://localhost:3001` so browser requests reach the published API address. Set a valid public `pk.` `MAPBOX_ACCESS_TOKEN` in the API environment to enable destination search and the interactive map. `Open-Meteo` and Wikipedia need no key; `UNSPLASH_ACCESS_KEY` is optional and adds destination imagery. The provider lab at `http://localhost:3000/dev/providers` also exposes Mapbox routing and saved pinpoints, Unsplash, Google Places, Cloudinary upload/metadata extraction, and Elasticsearch fuzzy search/autocomplete. Google Places requires a billing-enabled Google Cloud project. These provider keys stay in the API container, except the intentionally public Mapbox `pk.` token used by Mapbox GL in the browser.
 
 Try the endpoints in PowerShell:
 
@@ -72,5 +90,19 @@ The separate Elasticsearch integration test can also be enabled with `RUN_ELASTI
 | `DELETE` | `/api/v1/todos/:todoId` | Delete a todo |
 | `GET` | `/api/v1/search` | Fuzzy public travel search with filters and pagination |
 | `GET` | `/api/v1/search/suggestions` | Title suggestions |
+| `GET` | `/api/v1/destinations/search?q=...` | Search destinations through the server-side Mapbox adapter |
+| `GET` | `/api/v1/destinations/context?...` | Load weather, Wikipedia, and optional imagery for a selected destination |
+| `GET` | `/api/v1/providers/config` | Report which developer provider keys are configured, without revealing values |
+| `GET` | `/api/v1/providers/mapbox/search?q=...` | Mapbox search prototype |
+| `GET` | `/api/v1/providers/mapbox/reverse?...` | Mapbox reverse-geocoding prototype |
+| `POST` | `/api/v1/providers/mapbox/directions` | Route between 2-10 saved coordinates using walking, cycling, or driving |
+| `GET` | `/api/v1/providers/unsplash/search?q=...` | Unsplash image search prototype |
+| `GET` | `/api/v1/providers/google-places/search?q=...` | Google Places text-search prototype |
+| `GET` | `/api/v1/providers/cloudinary/delivery?...` | Cloudinary responsive delivery URL prototype |
+| `POST` | `/api/v1/providers/cloudinary/upload` | Upload an image up to 15 MB, including HEIC/HEIF files reported with a generic browser MIME type |
+| `GET` | `/api/v1/providers/cloudinary/assets` | Load lightweight summaries of Roamboard-tagged Cloudinary uploads |
+| `GET` | `/api/v1/providers/cloudinary/metadata?...` | Read and normalize capture, camera, orientation, EXIF/XMP, and degree-minute-second GPS metadata from one original asset |
 
-This is still a prototype: it has no Board persistence, accounts, authorization, live travel-record writes, PostGIS, or frontend integration.
+The Elasticsearch provider lab is backed by the existing public sample records and demonstrates fuzzy search, search-as-you-type suggestions, filters, relevance scores, and development reindexing. It does not add external provider data to the index.
+
+This is still a prototype: it has no Board persistence, accounts, authorization, live travel-record writes, or PostGIS. The frontend home page uses the destination discovery API; Boards and the Elasticsearch sample search remain separate demos.

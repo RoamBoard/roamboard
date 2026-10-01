@@ -7,6 +7,8 @@ import { env } from "./config/env.js";
 import { createSearchModule } from "./features/search/search.module.js";
 import type { SearchModule } from "./features/search/search.module.js";
 import type { Client } from "@elastic/elasticsearch";
+import { createDestinationModule } from "./features/destinations/destination.module.js";
+import { createProviderModule } from "./features/providers/provider.module.js";
 import { createTodoModule } from "./features/todos/todo.module.js";
 import type { TodoRepository } from "./features/todos/todo.types.js";
 import { errorHandler } from "./middleware/error-handler.js";
@@ -22,6 +24,8 @@ export function createApp({ todoRepository, searchClient, searchModule: provided
   const app = express();
   const todoModule = createTodoModule({ repository: todoRepository });
   const searchModule = providedSearchModule ?? createSearchModule({ client: searchClient });
+  const destinationModule = createDestinationModule();
+  const providerModule = createProviderModule();
 
   app.disable("x-powered-by");
 
@@ -37,6 +41,8 @@ export function createApp({ todoRepository, searchClient, searchModule: provided
 
   app.use("/api/v1/todos", todoModule.router);
   app.use("/api/v1/search", searchModule.router);
+  app.use("/api/v1/destinations", destinationModule.router);
+  app.use("/api/v1/providers", providerModule.router);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

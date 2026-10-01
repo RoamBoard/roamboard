@@ -4,11 +4,17 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      CLIENT_ORIGIN: http://localhost:5173
+      CLIENT_ORIGIN: ${CLIENT_ORIGIN:-http://localhost:3000}
       STORAGE: postgres
       DATABASE_URL: postgres://roamboard:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/roamboard
       ELASTICSEARCH_NODE: http://elasticsearch:9200
       DEBUG: roamboard:*
+      MAPBOX_ACCESS_TOKEN: ${MAPBOX_ACCESS_TOKEN:-}
+      UNSPLASH_ACCESS_KEY: ${UNSPLASH_ACCESS_KEY:-}
+      GOOGLE_PLACES_API_KEY: ${GOOGLE_PLACES_API_KEY:-}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
     ports:
       - "127.0.0.1:3001:3000"
     depends_on:

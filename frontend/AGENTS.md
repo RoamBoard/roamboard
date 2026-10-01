@@ -14,6 +14,10 @@ These instructions apply to work inside `frontend/`. Roamboard is a student proj
 
 This is a living project guide. Agents may and should update `AGENTS.md` when the frontend architecture, backend contract, design system, testing process, dependencies, or supported features change. Keep updates factual, concise, and consistent with the code that actually exists. Clearly label planned work, mocks, and placeholders so future agents do not mistake them for implemented behavior.
 
+## Current integrated surfaces
+
+The home route (`/home`) uses the versioned backend destination flow for explicit place search and selected-destination context. The developer provider lab (`/dev/providers`) uses the backend `/api/v1/providers` routes for Mapbox search/reverse geocoding/routing with saved map pins, Unsplash search, Google Places text search, Cloudinary upload and metadata handoff, and Elasticsearch fuzzy search/autocomplete. The Cloudinary panel accepts browser-generic HEIC/HEIF uploads, previews returned assets, and fetches EXIF/XMP/GPS metadata from the original Cloudinary asset when a loaded image is selected. Provider credentials remain server-side in the backend environment; the browser receives only the intentionally public Mapbox `pk.` token and `NEXT_PUBLIC_API_BASE_URL`.
+
 ## Project purpose and requirements
 
 Read [REQUIREMENTS.md](REQUIREMENTS.md) before changing feature behavior. It contains the supplied frontend requirements, which take precedence over the project proposal. It describes intended behavior, not a list of already implemented features. Implement the requested task without expanding it to the entire requirements document.
@@ -94,6 +98,7 @@ Before integrating a feature, look for an existing backend contract. Follow the 
 - Keep frontend types, request helpers, and UI assumptions aligned with the actual backend contract. When a field or response changes, update the relevant frontend types and backend documentation together rather than silently adapting one side.
 - Send cookies when the authentication design requires them, using the approved same-origin or credentialed request configuration. Never put JWTs, provider API keys, Cloudinary credentials, Mapbox tokens intended for server use, or other secrets into client-side source or local storage.
 - Call the Roamboard backend for provider-backed work. The browser must not call Google Places, Unsplash, Cloudinary management APIs, Elasticsearch, or other secret-bearing services directly unless a documented public-client integration has been approved.
+- The provider lab is intentionally a developer-facing surface, not persisted Board functionality. It must continue to show missing-key and provider-failure states without exposing credentials or pretending that Cloudinary uploads create Board media records, that GPS metadata is trusted without user confirmation, or that Google billing is available by default.
 - Render loading and failure feedback for network operations. Map `401` to a login-required state, `403` to a permission state, `404` to a missing-resource state, `409` to a conflict state, and validation errors to actionable field feedback without exposing internal details.
 - Do not assume a Board is saved because local state changed. Mark previews, mock data, optimistic updates, and simulated uploads clearly, and reconcile successful mutations with the server response.
 - Keep API calls in a small, testable data-access boundary rather than scattering fetch logic through presentational components. Use the existing project patterns until a shared client or data library is approved.

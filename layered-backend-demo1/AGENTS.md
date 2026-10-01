@@ -6,7 +6,7 @@ This is a living project guide. Agents may and should update `AGENTS.md` when th
 
 ## Current status and product context
 
-This folder is the TypeScript backend prototype for Roamboard. It has an Express 5 todo API and a sample travel search API. Local development defaults to in-memory repositories; Docker Compose runs the API with PostgreSQL persistence and a derived Elasticsearch index. It does not have real Boards, authentication, media providers, or frontend integration.
+This folder is the TypeScript backend prototype for Roamboard. It has an Express 5 todo API, a sample travel search API, a destination discovery API, and a server-side provider lab. Local development defaults to in-memory repositories; Docker Compose runs the API with PostgreSQL persistence and a derived Elasticsearch index. It does not have real Boards or authentication. Provider discovery data is not persisted or indexed, and the provider lab is integrated with the frontend at `/dev/providers`.
 
 The frontend is a Next.js App Router application in `frontend/`. Read [frontend/AGENTS.md](../frontend/AGENTS.md) and [frontend/REQUIREMENTS.md](../frontend/REQUIREMENTS.md) when an API change affects the UI. The frontend currently uses mock data and the Board model in `frontend/src/types/board.ts` is a provisional contract, not proof that persistence or authentication exists.
 
@@ -71,6 +71,7 @@ Implemented demo infrastructure:
 - **PostgreSQL:** persistent todos and sample travel search documents, with a SQL migration. The in-memory adapters remain for tests and local development.
 - **Elasticsearch:** public sample travel search, suggestions, filters, and reindexing from PostgreSQL when the Docker stack is used.
 - **Docker Compose:** API, PostgreSQL, and Elasticsearch services with health checks and separate named data volumes. The local configuration disables Elasticsearch security and is not a production deployment.
+- **Provider configuration:** Docker passes optional `MAPBOX_ACCESS_TOKEN`, `UNSPLASH_ACCESS_KEY`, `GOOGLE_PLACES_API_KEY`, and Cloudinary credentials into the API container. The browser receives only provider status and normalized responses, except for the intentionally public Mapbox `pk.` token needed by Mapbox GL. Google Places requires a billing-enabled Google Cloud project. Cloudinary uploads are tagged, accept HEIC/HEIF files that browsers report with a generic MIME type, and normalize EXIF/XMP degree-minute-second GPS metadata for prototype handoff. Asset listings remain lightweight; metadata is fetched from the original asset through the single-resource Admin API. Board ownership and PostgreSQL media persistence are not implemented.
 
 Planned Roamboard infrastructure, to be introduced incrementally:
 
@@ -128,7 +129,7 @@ Validate all important input at the API boundary and validate again in provider/
 
 Use regex only for a clearly defined product rule, such as a documented username or slug format. Do not invent restrictive name rules without product agreement. Normalize values where useful, such as trimming user-entered text and canonicalizing case, while preserving user-visible content where appropriate.
 
-External provider responses are untrusted and may be incomplete, rate-limited, duplicated, or unavailable. Normalize them into internal types, handle partial failures deliberately, apply timeouts, and avoid sequential requests when independent requests can safely run concurrently with `Promise.all` or an equivalent. Deduplicate search and provider results using stable provider IDs and canonical keys, not display names alone.
+External provider responses are untrusted and may be incomplete, rate-limited, duplicated, or unavailable. Normalize them into internal types, handle partial failures deliberately, apply timeouts, and avoid sequential requests when independent requests can safely run concurrently with `Promise.all` or an equivalent. Deduplicate search and provider results using stable provider IDs and canonical keys, not display names alone. Uploaded image types and metadata are also untrusted: enforce size/type limits, validate GPS ranges, and keep raw metadata out of logs.
 
 Never call external APIs directly from controllers or expose provider API keys to the frontend. Keep provider-specific retry, timeout, quota, and mapping behavior in adapters/services. Log provider failures without secrets or user-uploaded sensitive metadata.
 
@@ -180,7 +181,7 @@ npm run build
 docker compose up --build -d    # after creating .env from .env.example
 ```
 
-The README documents Docker Compose and an opt-in test against PostgreSQL and Elasticsearch. The normal API tests still use in-memory adapters. Run the opt-in integration test when changing database or search wiring. Do not claim authentication, Boards, or provider integrations exist.
+The README documents Docker Compose and an opt-in test against PostgreSQL and Elasticsearch. The normal API tests still use in-memory adapters. Run the opt-in integration test when changing database or search wiring. Do not claim authentication, Boards, or persistent Board media exist. Provider endpoints are implemented, but live provider behavior still depends on valid credentials and external network access.
 
 ## Code style and consistency
 
