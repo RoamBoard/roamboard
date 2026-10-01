@@ -51,6 +51,15 @@ export interface MapboxMapSession {
   publicToken: string;
 }
 
+export interface MapboxLocation {
+  id: string;
+  label: string;
+  detail: string;
+  type: string;
+  latitude: number;
+  longitude: number;
+}
+
 export type RouteProfile = "walking" | "cycling" | "driving";
 
 export interface RoutePoint {

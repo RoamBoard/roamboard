@@ -8,7 +8,7 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/src/server.js",
-    "test": "tsx --test test/todos.api.test.ts test/search.query.test.ts test/destination.schemas.test.ts test/provider.cloudinary.test.ts test/provider.google-places.api.test.ts test/quota.service.test.ts",
+    "test": "tsx --test test/todos.api.test.ts test/search.query.test.ts test/destination.schemas.test.ts test/provider.cloudinary.test.ts test/provider.google-places.api.test.ts test/provider.mapbox.test.ts test/quota.service.test.ts",
     "test:integration": "tsx --test test/search.integration.test.ts test/postgres.integration.test.ts",
     "search:setup": "tsx src/features/search/search.cli.ts setup",
     "search:seed": "tsx src/features/search/search.cli.ts seed",

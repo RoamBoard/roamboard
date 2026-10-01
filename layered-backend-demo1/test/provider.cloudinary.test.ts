@@ -19,7 +19,7 @@ function createFakeProviderService(receivedTypes: string[]): ProviderService {
     }),
     mapboxMapSession: async () => ({ publicToken: "pk.test" }),
     mapboxSearch: async () => [],
-    mapboxReverse: async () => "",
+    mapboxReverse: async (latitude, longitude) => ({ id: "mapbox-test", label: "Stockholm, Sweden", detail: "Testgatan 1", type: "address", latitude, longitude }),
     mapboxRoute: async (_points, profile) => ({ profile, distanceKm: 0, durationMinutes: 0, geometry: [] }),
     unsplashSearch: async () => [],
     googlePlacesSearch: async () => [],

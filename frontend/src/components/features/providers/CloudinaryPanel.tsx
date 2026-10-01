@@ -158,7 +158,7 @@ export default function CloudinaryPanel({ configured }: Props) {
           ) : null}
           {!loadingMetadata && !selected.metadata ? <p className="mt-4 text-14 text-graphite">Select an image to ask Cloudinary for metadata.</p> : null}
           {selected.metadata?.hasGps ? (
-            <a className="mt-5 inline-block border border-foreground px-4 py-3 text-14" href={`/dev/providers?tab=mapbox&latitude=${selected.metadata.latitude}&longitude=${selected.metadata.longitude}&label=${encodeURIComponent(selected.publicId)}`}>
+            <a className="mt-5 inline-block border border-foreground px-4 py-3 text-14" href={`/dev/providers?tab=mapbox&latitude=${selected.metadata.latitude}&longitude=${selected.metadata.longitude}`}>
               Open GPS pin in Mapbox
             </a>
           ) : null}

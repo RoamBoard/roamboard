@@ -20,13 +20,13 @@ export default function ProviderLab() {
   const [active, setActive] = useState<ProviderId>(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "mapbox" ? "mapbox" : "mapbox");
   const [config, setConfig] = useState<ProviderConfig | null>(null);
   const [configError, setConfigError] = useState("");
-  const [handoff] = useState<{ latitude: number; longitude: number; label: string } | null>(() => {
+  const [handoff] = useState<{ latitude: number; longitude: number } | null>(() => {
     if (typeof window === "undefined") return null;
     const params = new URLSearchParams(window.location.search);
     const latitude = Number(params.get("latitude"));
     const longitude = Number(params.get("longitude"));
     return params.get("tab") === "mapbox" && Number.isFinite(latitude) && Number.isFinite(longitude)
-      ? { latitude, longitude, label: params.get("label")?.trim() || "Cloudinary photo location" }
+      ? { latitude, longitude }
       : null;
   });
 

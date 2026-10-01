@@ -6,6 +6,8 @@ import { useEffect, useRef, useState } from "react";
 export type MapPoint = {
   id: string;
   label: string;
+  detail?: string;
+  type?: string;
   latitude: number;
   longitude: number;
 };
@@ -23,8 +25,13 @@ export default function InteractiveMap({ token, points, routeGeometry, onMapClic
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapboxMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
+  const onMapClickRef = useRef(onMapClick);
   const [mapError, setMapError] = useState("");
   const [mapReady, setMapReady] = useState(false);
+
+  useEffect(() => {
+    onMapClickRef.current = onMapClick;
+  }, [onMapClick]);
 
   useEffect(() => {
     if (!token || !containerRef.current) return;
@@ -44,7 +51,7 @@ export default function InteractiveMap({ token, points, routeGeometry, onMapClic
         map.addLayer({ id: routeSource, type: "line", source: routeSource, paint: { "line-color": "#161616", "line-width": 4, "line-opacity": 0.8 } });
         setMapReady(true);
       });
-      map.on("click", (event) => onMapClick(event.lngLat.lat, event.lngLat.lng));
+      map.on("click", (event) => onMapClickRef.current(event.lngLat.lat, event.lngLat.lng));
       map.on("error", (event) => setMapError(event.error?.message ?? "The Mapbox map could not load."));
       mapRef.current = map;
     }, 0);
@@ -55,7 +62,7 @@ export default function InteractiveMap({ token, points, routeGeometry, onMapClic
       mapRef.current?.remove();
       mapRef.current = null;
     };
-  }, [token, onMapClick]);
+  }, [token]);
 
   useEffect(() => {
     markersRef.current.forEach((marker) => marker.remove());

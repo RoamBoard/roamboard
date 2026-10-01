@@ -1,4 +1,4 @@
-import type { GooglePlaceDetails, ProviderPhoto, ProviderPlace, ProviderRoute, RoutePoint, RouteProfile } from "./provider.types.js";
+import type { GooglePlaceDetails, MapboxLocation, ProviderPhoto, ProviderPlace, ProviderRoute, RoutePoint, RouteProfile } from "./provider.types.js";
 
 type JsonObject = Record<string, unknown>;
 
@@ -29,7 +29,15 @@ export function googleMapsPlaceUrl(placeId: string, query: string): string {
   return url.toString();
 }
 
-export async function reverseMapbox(latitude: number, longitude: number, token: string): Promise<string> {
+function contextName(context: JsonObject, key: string): string {
+  return stringValue(objectValue(context[key]).name);
+}
+
+function uniqueNames(values: string[]): string[] {
+  return values.filter((value, index) => value && values.findIndex((candidate) => candidate.toLocaleLowerCase() === value.toLocaleLowerCase()) === index);
+}
+
+export async function reverseMapbox(latitude: number, longitude: number, token: string): Promise<MapboxLocation> {
   const url = new URL("https://api.mapbox.com/search/geocode/v6/reverse");
   url.searchParams.set("longitude", String(longitude));
   url.searchParams.set("latitude", String(latitude));
@@ -40,7 +48,23 @@ export async function reverseMapbox(latitude: number, longitude: number, token: 
   const body = objectValue(await readJson(response));
   const first = Array.isArray(body.features) ? objectValue(body.features[0]) : {};
   const properties = objectValue(first.properties);
-  return stringValue(properties.full_address ?? properties.place_formatted, "No address found for these coordinates.");
+  const context = objectValue(properties.context);
+  const type = stringValue(properties.feature_type, "location");
+  const name = stringValue(properties.name_preferred ?? properties.name, "Pinned location");
+  const featureName = (featureType: string) => type === featureType ? name : contextName(context, featureType);
+  const area = featureName("neighborhood") || featureName("locality") || featureName("district");
+  const place = featureName("place");
+  const country = featureName("country");
+  const label = uniqueNames([area || place || name, place, country]).join(", ");
+  const detail = [area, place, country].some((value) => value.toLocaleLowerCase() === name.toLocaleLowerCase()) ? "" : name;
+  return {
+    id: stringValue(first.id ?? properties.mapbox_id, `mapbox-${latitude}-${longitude}`),
+    label: label || name,
+    detail,
+    type,
+    latitude,
+    longitude,
+  };
 }
 
 export async function searchUnsplash(query: string, accessKey: string, limit: number): Promise<ProviderPhoto[]> {

@@ -48,7 +48,7 @@ export function createProviderController(service: ProviderService): ProviderCont
     },
     mapboxReverse: async (req, res) => {
       const { query } = req.validated as ProviderReverseRequest;
-      res.json({ data: { address: await service.mapboxReverse(query.latitude, query.longitude) } });
+      res.json({ data: await service.mapboxReverse(query.latitude, query.longitude) });
     },
     mapboxRoute: async (req, res) => {
       const { body } = req.validated as MapboxRouteRequest;

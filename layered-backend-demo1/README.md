@@ -97,7 +97,7 @@ The separate Elasticsearch integration test can also be enabled with `RUN_ELASTI
 | `GET` | `/api/v1/providers/config` | Report which developer provider keys are configured, without revealing values |
 | `POST` | `/api/v1/providers/mapbox/map-session` | Reserve one map load and return the public browser token when quota remains |
 | `GET` | `/api/v1/providers/mapbox/search?q=...` | Mapbox search prototype |
-| `GET` | `/api/v1/providers/mapbox/reverse?...` | Mapbox reverse-geocoding prototype |
+| `GET` | `/api/v1/providers/mapbox/reverse?...` | Reverse-geocode coordinates into an area label, concise location detail, and geographic type |
 | `POST` | `/api/v1/providers/mapbox/directions` | Route between 2-10 saved coordinates using walking, cycling, or driving |
 | `GET` | `/api/v1/providers/unsplash/search?q=...` | Unsplash image search prototype |
 | `GET` | `/api/v1/providers/google-places/search?q=...` | Google Places text-search prototype |

@@ -15,6 +15,25 @@ export type ProviderPlace = {
   googleMapsUrl: string;
 };
 
+export type MapboxSearchResult = {
+  id: string;
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  placeType: string;
+  context: string[];
+};
+
+export type MapboxLocation = {
+  id: string;
+  label: string;
+  detail: string;
+  type: string;
+  latitude: number;
+  longitude: number;
+};
+
 export type GooglePlaceDetails = Omit<ProviderPlace, "name">;
 
 export type SavedGooglePlaceReference = {
@@ -76,11 +95,15 @@ export const loadProviderConfig = () => request<ProviderConfig>("/api/v1/provide
 
 export const loadMapboxMapSession = () => request<{ publicToken: string }>("/api/v1/providers/mapbox/map-session", { method: "POST" });
 
-export const searchMapboxProvider = (query: string) => request<ProviderPlace[]>(`/api/v1/providers/mapbox/search?q=${encodeURIComponent(query)}`);
+export const searchMapboxProvider = (query: string) => request<MapboxSearchResult[]>(`/api/v1/providers/mapbox/search?q=${encodeURIComponent(query)}`);
 
-export const reverseMapboxProvider = (latitude: string, longitude: string) => request<{ address: string }>(`/api/v1/providers/mapbox/reverse?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}`);
+export const reverseMapboxProvider = (latitude: string, longitude: string) => request<MapboxLocation>(`/api/v1/providers/mapbox/reverse?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}`);
 
-export const routeMapboxProvider = (points: Array<{ latitude: number; longitude: number }>, profile: ProviderRoute["profile"]) => request<ProviderRoute>("/api/v1/providers/mapbox/directions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ points, profile }) });
+export const routeMapboxProvider = (points: Array<{ latitude: number; longitude: number }>, profile: ProviderRoute["profile"]) => request<ProviderRoute>("/api/v1/providers/mapbox/directions", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ points: points.map(({ latitude, longitude }) => ({ latitude, longitude })), profile }),
+});
 
 export const searchUnsplashProvider = (query: string) => request<ProviderPhoto[]>(`/api/v1/providers/unsplash/search?q=${encodeURIComponent(query)}`);
 

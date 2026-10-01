@@ -5,13 +5,13 @@ import type { DestinationResult } from "../destinations/destination.types.js";
 import type { QuotaService } from "../quotas/quota.service.js";
 import { loadCloudinaryAssets, loadCloudinaryMetadata, uploadCloudinaryImage } from "./provider.cloudinary.js";
 import { fetchGooglePlaceDetails, reverseMapbox, routeMapbox, searchGooglePlaces, searchUnsplash } from "./provider.providers.js";
-import type { CloudinaryAsset, GooglePlaceDetails, GooglePlaceReferenceRepository, MapboxMapSession, PhotoMetadata, ProviderConfig, ProviderPhoto, ProviderPlace, ProviderRoute, RoutePoint, RouteProfile, SavedGooglePlaceReference } from "./provider.types.js";
+import type { CloudinaryAsset, GooglePlaceDetails, GooglePlaceReferenceRepository, MapboxLocation, MapboxMapSession, PhotoMetadata, ProviderConfig, ProviderPhoto, ProviderPlace, ProviderRoute, RoutePoint, RouteProfile, SavedGooglePlaceReference } from "./provider.types.js";
 
 export interface ProviderService {
   config(): ProviderConfig;
   mapboxMapSession(): Promise<MapboxMapSession>;
   mapboxSearch(query: string, limit: number): Promise<DestinationResult[]>;
-  mapboxReverse(latitude: number, longitude: number): Promise<string>;
+  mapboxReverse(latitude: number, longitude: number): Promise<MapboxLocation>;
   mapboxRoute(points: RoutePoint[], profile: RouteProfile): Promise<ProviderRoute>;
   unsplashSearch(query: string, limit: number): Promise<ProviderPhoto[]>;
   googlePlacesSearch(query: string, limit: number): Promise<ProviderPlace[]>;
