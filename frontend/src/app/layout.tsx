@@ -5,35 +5,37 @@ import "./globals.css";
 // Both typefaces are from Fontshare (fontshare.com). Download the variable
 // .woff2 files and place them in src/fonts/.
 const cabinet = localFont({
-  src: "../fonts/CabinetGrotesk-Variable.woff2",
-  variable: "--font-cabinet",
-  weight: "100 800",
-  display: "swap",
+    src: "../fonts/CabinetGrotesk-Variable.woff2",
+    variable: "--font-cabinet",
+    weight: "100 800",
+    display: "swap"
 });
 
 const satoshi = localFont({
-  src: "../fonts/Satoshi-Variable.woff2",
-  variable: "--font-satoshi",
-  weight: "300 900",
-  display: "swap",
+    src: "../fonts/Satoshi-Variable.woff2",
+    variable: "--font-satoshi",
+    weight: "300 900",
+    display: "swap"
 });
 
 export const metadata: Metadata = {
-  title: "Roamboard",
-  description:
-    "Roamboard is a visual travel platform for discovering places, finding inspiration, and turning the things you love into journeys of your own.",
+    title: "Roamboard",
+    description:
+        "Roamboard is a visual travel platform for discovering places, finding inspiration, and turning the things you love into journeys of your own."
 };
 
 export default function RootLayout({
-  children,
+    children
 }: {
-  children: React.ReactNode;
+    children: React.ReactNode;
 }) {
-  return (
-    <html lang="en">
-      <body className={`${cabinet.variable} ${satoshi.variable} antialiased`}>
-        {children}
-      </body>
-    </html>
-  );
+    return (
+        <html lang="en">
+            <body
+                className={`${cabinet.variable} ${satoshi.variable} antialiased`}
+            >
+                {children}
+            </body>
+        </html>
+    );
 }

@@ -10,28 +10,28 @@ import { errorHandler } from "./middleware/error-handler.js";
 import { notFoundHandler } from "./middleware/not-found.js";
 
 interface CreateAppOptions {
-  todoRepository?: TodoRepository;
+    todoRepository?: TodoRepository;
 }
 
 export function createApp({ todoRepository }: CreateAppOptions = {}): Express {
-  const app = express();
-  const todoModule = createTodoModule({ repository: todoRepository });
+    const app = express();
+    const todoModule = createTodoModule({ repository: todoRepository });
 
-  app.disable("x-powered-by");
+    app.disable("x-powered-by");
 
-  app.use(pinoHttp());
-  app.use(helmet());
-  app.use(cors({ origin: env.CLIENT_ORIGIN }));
-  app.use(express.json({ limit: "100kb" }));
+    app.use(pinoHttp());
+    app.use(helmet());
+    app.use(cors({ origin: env.CLIENT_ORIGIN }));
+    app.use(express.json({ limit: "100kb" }));
 
-  app.get("/health", (_req, res) => {
-    res.json({ status: "ok" });
-  });
+    app.get("/health", (_req, res) => {
+        res.json({ status: "ok" });
+    });
 
-  app.use("/api/v1/todos", todoModule.router);
+    app.use("/api/v1/todos", todoModule.router);
 
-  app.use(notFoundHandler);
-  app.use(errorHandler);
+    app.use(notFoundHandler);
+    app.use(errorHandler);
 
-  return app;
+    return app;
 }

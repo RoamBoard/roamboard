@@ -45,14 +45,16 @@ Show useful validation errors and action failures. Display loading or progress f
 
 ## Code organization and readability
 
+Prettier is the source of truth for formatting. Use the repository's root `.prettierrc`: indent with four spaces and never tabs, use double quotes in JavaScript and TypeScript, do not use trailing commas, and use LF line endings with a final newline. Do not add a nested Prettier configuration. After editing supported files, run `pnpm format` and `pnpm format:check` from the repository root.
+
 Follow the existing structure:
 
-| Location | Purpose |
-| --- | --- |
-| `src/app/` | Routes, page composition, layouts, and route metadata |
-| `src/components/layout/` | Shared page structure, including the app shell and sidebar |
-| `src/components/ui/` | Reusable interface components |
-| `src/components/features/` | Components specific to a feature |
+| Location                   | Purpose                                                    |
+| -------------------------- | ---------------------------------------------------------- |
+| `src/app/`                 | Routes, page composition, layouts, and route metadata      |
+| `src/components/layout/`   | Shared page structure, including the app shell and sidebar |
+| `src/components/ui/`       | Reusable interface components                              |
+| `src/components/features/` | Components specific to a feature                           |
 
 - Prefer straightforward functions and components, descriptive names, and explicit prop types.
 - Extract shared code when actual reuse or readability warrants it. Avoid unnecessary wrappers, generic frameworks, and complicated TypeScript.
@@ -69,13 +71,13 @@ The current stack is Next.js App Router, React, TypeScript, and Tailwind CSS v4.
 
 The proposal describes these tools, but they are not currently declared frontend dependencies:
 
-| Proposed tool | Intended use after approval |
-| --- | --- |
-| shadcn | Primitives for complex interface components where needed |
-| Motion | Animations and interface transitions where useful |
-| Storybook | Developing and documenting reusable UI components |
+| Proposed tool  | Intended use after approval                                    |
+| -------------- | -------------------------------------------------------------- |
+| shadcn         | Primitives for complex interface components where needed       |
+| Motion         | Animations and interface transitions where useful              |
+| Storybook      | Developing and documenting reusable UI components              |
 | TanStack Query | Backend data fetching, caching, loading states, and refetching |
-| Zustand | Optional shared client state when local state is insufficient |
+| Zustand        | Optional shared client state when local state is insufficient  |
 
 Ask before adding dependencies, including tools named in the proposal. Do not install them merely because they appear in this document.
 
@@ -102,13 +104,13 @@ When a contract is missing or ambiguous, pause the dependent UI change and ask f
 
 Use pnpm, as declared in `package.json`, and preserve its lockfile. Run these commands from inside `frontend/` (`cd frontend` from the repository root):
 
-| Command | Purpose |
-| --- | --- |
-| `pnpm install` | Install the declared dependencies |
-| `pnpm dev` | Start the development server |
-| `pnpm lint` | Run ESLint |
-| `pnpm exec tsc --noEmit` | Check TypeScript |
-| `pnpm build` | Check the production build |
+| Command                  | Purpose                           |
+| ------------------------ | --------------------------------- |
+| `pnpm install`           | Install the declared dependencies |
+| `pnpm dev`               | Start the development server      |
+| `pnpm lint`              | Run ESLint                        |
+| `pnpm exec tsc --noEmit` | Check TypeScript                  |
+| `pnpm build`             | Check the production build        |
 
 Do not mix package managers or create another package manager's lockfile. Keep `node_modules/`, `.next/`, and other generated output out of Git.
 

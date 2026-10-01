@@ -31,13 +31,13 @@ The API runs at `http://localhost:3000` by default. Copy `.env.example` to `.env
 
 ## Endpoints
 
-| Method | Path | Purpose |
-| --- | --- | --- |
-| `GET` | `/health` | Health check |
-| `GET` | `/api/v1/todos` | List todos |
-| `GET` | `/api/v1/todos/:todoId` | Get one todo |
-| `POST` | `/api/v1/todos` | Create a todo |
-| `PATCH` | `/api/v1/todos/:todoId` | Update a todo |
+| Method   | Path                    | Purpose       |
+| -------- | ----------------------- | ------------- |
+| `GET`    | `/health`               | Health check  |
+| `GET`    | `/api/v1/todos`         | List todos    |
+| `GET`    | `/api/v1/todos/:todoId` | Get one todo  |
+| `POST`   | `/api/v1/todos`         | Create a todo |
+| `PATCH`  | `/api/v1/todos/:todoId` | Update a todo |
 | `DELETE` | `/api/v1/todos/:todoId` | Delete a todo |
 
 Filter the list with `GET /api/v1/todos?completed=true` or `completed=false`.

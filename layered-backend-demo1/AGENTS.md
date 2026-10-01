@@ -87,11 +87,11 @@ Not in the current plan: WebSockets, Redis, and PostGIS. Do not add them merely 
 
 ```json
 {
-  "error": {
-    "code": "BOARD_NOT_FOUND",
-    "message": "The requested Board could not be found.",
-    "details": {}
-  }
+    "error": {
+        "code": "BOARD_NOT_FOUND",
+        "message": "The requested Board could not be found.",
+        "details": {}
+    }
 }
 ```
 
@@ -176,12 +176,13 @@ Add Docker Compose and integration commands only when those files and services e
 
 ## Code style and consistency
 
+Prettier is the source of truth for formatting. Use the repository's root `.prettierrc`: indent with four spaces and never tabs, use double quotes in JavaScript and TypeScript, do not use trailing commas, and use LF line endings with a final newline. Do not add a nested Prettier configuration. After editing supported files, run `pnpm format` and `pnpm format:check` from the repository root.
+
 - Use `const` only. Do not introduce `let` or `var`; use immutable transformations, helper functions, or explicit state objects instead.
 - Use descriptive names and explicit interfaces/types for public functions, module options, repository contracts, provider adapters, and request data.
 - Keep imports ordered and use the existing `.js` suffix for relative ESM imports in TypeScript source.
 - Prefer `async`/`await`, early returns, small functions, and straightforward control flow.
 - Avoid `any`, unsafe casts, duplicated validation, hidden global state, and broad barrel exports unless there is a clear benefit.
-- Keep formatting consistent with the existing files: two-space indentation, double quotes, semicolons, trailing commas where the formatter produces them.
 - Do not add comments that restate code. Add a short comment only for a non-obvious architectural or security decision.
 - Keep route names, feature filenames, response envelopes, error codes, and environment variable names predictable. Use singular feature folder names when matching a resource (`board`, `user`, `image`) and plural route paths (`/boards`, `/users`, `/images`).
 - Keep database migrations, Docker files, provider configuration, and API contract changes reviewable and focused. Do not commit `.env` files, secrets, generated build output, `node_modules`, or provider exports.

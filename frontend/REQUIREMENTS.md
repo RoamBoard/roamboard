@@ -86,7 +86,6 @@ Users should be able to:
 Users should be able to share a Board using a link.
 Each Board should have one of three visibility settings:
 
-
 - The Board can be viewed by the owner's friends on Roamboard.
 - Anyone can view the Board.
 
