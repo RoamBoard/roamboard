@@ -6,3 +6,7 @@ out/
 
 # Dependencies
 node_modules/
+
+# Backend
+/backend/.env
+/backend/dist/
