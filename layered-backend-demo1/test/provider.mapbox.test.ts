@@ -1,7 +1,48 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { searchMapboxCities } from "../src/features/destinations/destination.providers.js";
 import { reverseMapbox } from "../src/features/providers/provider.providers.js";
+
+test("returns canonical city data from permanent structured geocoding", async (context) => {
+  context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+    const url = new URL(String(input));
+    assert.equal(url.searchParams.get("country"), "DK");
+    assert.equal(url.searchParams.get("place"), "Copenhagen");
+    assert.equal(url.searchParams.get("types"), "place");
+    assert.equal(url.searchParams.get("permanent"), "true");
+    return new Response(JSON.stringify({
+      features: [{
+        id: "mapbox-copenhagen",
+        geometry: { coordinates: [12.5683, 55.6761] },
+        properties: {
+          feature_type: "place",
+          name: "Copenhagen",
+          place_formatted: "Capital Region, Denmark",
+          context: {
+            place: { name: "Copenhagen" },
+            country: { name: "Denmark", country_code: "DK" },
+          },
+        },
+      }],
+    }), { status: 200 });
+  });
+
+  const result = await searchMapboxCities("DK", "Copenhagen", 5, "pk.test");
+
+  assert.deepEqual(result[0], {
+    id: "mapbox-copenhagen",
+    name: "Copenhagen",
+    address: "Capital Region, Denmark",
+    latitude: 55.6761,
+    longitude: 12.5683,
+    placeType: "place",
+    context: ["Copenhagen", "Denmark"],
+    country: "Denmark",
+    countryCode: "DK",
+    city: "Copenhagen",
+  });
+});
 
 test("formats a reverse-geocoded address as area context plus concise detail", async (context) => {
   context.mock.method(globalThis, "fetch", async () => new Response(JSON.stringify({

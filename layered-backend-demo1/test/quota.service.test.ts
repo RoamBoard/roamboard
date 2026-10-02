@@ -85,6 +85,7 @@ test("counts failed upstream calls conservatively", async () => {
 test("reviewed provider caps stay below their published free boundaries", () => {
   const policies = createQuotaPolicies();
   assert.equal(policies.find((candidate) => candidate.id === "mapbox.geocoding")?.windows[0]?.limit, 99_000);
+  assert.equal(policies.find((candidate) => candidate.id === "mapbox.permanent_geocoding")?.windows[0]?.limit, 2_475);
   assert.equal(policies.find((candidate) => candidate.id === "google.place_details_essentials")?.windows[0]?.limit, 9_900);
   assert.equal(policies.find((candidate) => candidate.id === "unsplash.requests")?.windows[0]?.limit, 990);
 });

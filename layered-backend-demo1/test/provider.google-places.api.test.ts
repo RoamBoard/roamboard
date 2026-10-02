@@ -15,6 +15,7 @@ function fakeService(): ProviderService {
     config: () => ({ mapbox: { configured: false }, unsplash: { configured: false }, googlePlaces: { configured: true, billingRequired: true }, cloudinary: { configured: false } }),
     mapboxMapSession: async () => ({ publicToken: "pk.test" }),
     mapboxSearch: async () => [],
+    mapboxDestinationSearch: async () => [],
     mapboxReverse: async (latitude, longitude) => ({ id: "mapbox-test", label: "Stockholm, Sweden", detail: "Testgatan 1", type: "address", latitude, longitude }),
     mapboxRoute: async (_points, profile) => ({ profile, distanceKm: 0, durationMinutes: 0, geometry: [] }),
     unsplashSearch: async () => [],

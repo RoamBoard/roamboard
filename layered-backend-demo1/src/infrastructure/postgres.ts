@@ -13,7 +13,12 @@ export function createPostgresPool(connectionString: string): Pool {
 }
 
 export async function runMigrations(pool: Pool): Promise<void> {
-  const migrations = ["001_demo_tables", "002_api_quota_usage", "003_google_place_references"];
+  const migrations = [
+    "001_demo_tables",
+    "002_api_quota_usage",
+    "003_google_place_references",
+    "004_users_and_boards",
+  ];
   const client = await pool.connect();
 
   try {

@@ -23,6 +23,9 @@ export type MapboxSearchResult = {
   longitude: number;
   placeType: string;
   context: string[];
+  country: string | null;
+  countryCode: string | null;
+  city: string | null;
 };
 
 export type MapboxLocation = {
@@ -96,6 +99,11 @@ export const loadProviderConfig = () => request<ProviderConfig>("/api/v1/provide
 export const loadMapboxMapSession = () => request<{ publicToken: string }>("/api/v1/providers/mapbox/map-session", { method: "POST" });
 
 export const searchMapboxProvider = (query: string) => request<MapboxSearchResult[]>(`/api/v1/providers/mapbox/search?q=${encodeURIComponent(query)}`);
+
+export const searchBoardDestinations = (countryCode: string, city: string) => {
+  const params = new URLSearchParams({ country: countryCode, city, limit: "5" });
+  return request<MapboxSearchResult[]>(`/api/v1/providers/mapbox/board-destinations?${params.toString()}`);
+};
 
 export const reverseMapboxProvider = (latitude: string, longitude: string) => request<MapboxLocation>(`/api/v1/providers/mapbox/reverse?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}`);
 

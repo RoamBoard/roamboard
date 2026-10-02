@@ -33,6 +33,9 @@ export function createDestinationService(quota: QuotaService): DestinationServic
         longitude: input.longitude,
         placeType: input.placeType,
         context: [],
+        country: null,
+        countryCode: null,
+        city: null,
       };
       const unavailable: string[] = [];
       const unsplashKey = env.UNSPLASH_ACCESS_KEY;

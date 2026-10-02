@@ -1,6 +1,6 @@
 import { env } from "../../config/env.js";
 import { AppError } from "../../shared/app-error.js";
-import { searchMapbox } from "../destinations/destination.providers.js";
+import { searchMapbox, searchMapboxCities } from "../destinations/destination.providers.js";
 import type { DestinationResult } from "../destinations/destination.types.js";
 import type { QuotaService } from "../quotas/quota.service.js";
 import { loadCloudinaryAssets, loadCloudinaryMetadata, uploadCloudinaryImage } from "./provider.cloudinary.js";
@@ -11,6 +11,7 @@ export interface ProviderService {
   config(): ProviderConfig;
   mapboxMapSession(): Promise<MapboxMapSession>;
   mapboxSearch(query: string, limit: number): Promise<DestinationResult[]>;
+  mapboxDestinationSearch(country: string, city: string, limit: number): Promise<DestinationResult[]>;
   mapboxReverse(latitude: number, longitude: number): Promise<MapboxLocation>;
   mapboxRoute(points: RoutePoint[], profile: RouteProfile): Promise<ProviderRoute>;
   unsplashSearch(query: string, limit: number): Promise<ProviderPhoto[]>;
@@ -68,6 +69,10 @@ export function createProviderService(quota: QuotaService, googlePlaceReferences
     mapboxSearch: async (query, limit) => {
       const token = required(env.MAPBOX_ACCESS_TOKEN, "Mapbox");
       return callProvider("Mapbox", () => quota.run("mapbox.geocoding", () => searchMapbox(query, limit, token)));
+    },
+    mapboxDestinationSearch: async (country, city, limit) => {
+      const token = required(env.MAPBOX_ACCESS_TOKEN, "Mapbox");
+      return callProvider("Mapbox", () => quota.run("mapbox.permanent_geocoding", () => searchMapboxCities(country, city, limit, token)));
     },
     mapboxReverse: async (latitude, longitude) => {
       const token = required(env.MAPBOX_ACCESS_TOKEN, "Mapbox");

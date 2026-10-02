@@ -14,6 +14,7 @@ These limits leave approximately 1% headroom below the published boundary. They 
 | --- | ---: | ---: | --- |
 | `mapbox.map_loads` | 49,500/month | 50,000/month | Mapbox GL JS map initialization on a pay-as-you-go account |
 | `mapbox.geocoding` | 99,000/month | 100,000/month | Temporary forward and reverse geocoding |
+| `mapbox.permanent_geocoding` | 2,475/month | 2,500/month | Permanent forward geocoding for Board destinations stored in PostgreSQL |
 | `mapbox.directions` | 99,000/month | 100,000/month | Directions requests |
 | `google.places_text_search_pro` | 4,950/month | 5,000/month | Useful POI text search; the requested name, address, location, and type fields trigger Text Search Pro |
 | `google.place_details_essentials` | 9,900/month | 10,000/month | Live address, location, and type lookup for a saved Place ID |
@@ -21,6 +22,10 @@ These limits leave approximately 1% headroom below the published boundary. They 
 | `open_meteo.forecast` | 590/minute, 4,950/hour, 9,900/day, 297,000/month | 600/minute, 5,000/hour, 10,000/day, 300,000/month | Free non-commercial Forecast API |
 | `wikipedia.action_api` | 190/minute | 200/minute | Identified, unauthenticated Action API client |
 | `cloudinary.admin` | 495/hour | 500/hour | Free-plan Admin API |
+
+The profile travel-footprint map uses the existing `mapbox.map_loads` reservation. Its Mapbox Countries v1 boundary tiles and the city GeoJSON overlay are rendered within that same GL JS map load; they do not introduce another provider operation or quota policy.
+
+Board destination lookup uses structured city and country input with `types=place` and `permanent=true`. This permits the selected canonical city, country, ISO code, and coordinates to be stored with the Board. Permanent geocoding requires a billing-enabled Mapbox account; the backend stops at 2,475 requests per month, below the published 2,500-request free boundary.
 
 Mapbox's larger free tier requires a payment method and Mapbox does not offer an account-side spending cap. These code limits therefore assume that all calls use credentials dedicated to Roamboard and pass through this backend. If the same account or key is used elsewhere, Roamboard cannot know about that usage and its local counter is not sufficient.
 

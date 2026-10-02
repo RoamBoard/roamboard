@@ -11,6 +11,14 @@ interface MapboxFeature {
   properties?: Record<string, unknown>;
 }
 
+interface MapboxSearchOptions {
+  query?: string;
+  country?: string;
+  city?: string;
+  permanent?: boolean;
+  types?: string;
+}
+
 function objectValue(value: unknown): Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
     ? value as Record<string, unknown>
@@ -30,9 +38,13 @@ async function readJson(response: Response): Promise<unknown> {
   return body ? JSON.parse(body) as unknown : {};
 }
 
-export async function searchMapbox(query: string, limit: number, token: string): Promise<DestinationResult[]> {
+async function requestMapbox(options: MapboxSearchOptions, limit: number, token: string): Promise<DestinationResult[]> {
   const url = new URL("https://api.mapbox.com/search/geocode/v6/forward");
-  url.searchParams.set("q", query);
+  if (options.query) url.searchParams.set("q", options.query);
+  if (options.country) url.searchParams.set("country", options.country);
+  if (options.city) url.searchParams.set("place", options.city);
+  if (options.permanent) url.searchParams.set("permanent", "true");
+  if (options.types) url.searchParams.set("types", options.types);
   url.searchParams.set("limit", String(limit));
   url.searchParams.set("language", "en");
   url.searchParams.set("autocomplete", "false");
@@ -50,18 +62,34 @@ export async function searchMapbox(query: string, limit: number, token: string):
     const latitude = numberValue(coordinates[1]);
     if (longitude === undefined || latitude === undefined) return [];
     const name = stringValue(properties.name_preferred ?? properties.name, "Unknown place");
+    const featureType = stringValue(properties.feature_type, "place");
+    const context = objectValue(properties.context);
+    const countryContext = objectValue(context.country);
+    const placeContext = objectValue(context.place);
+    const country = stringValue(countryContext.name);
+    const countryCode = stringValue(countryContext.country_code).toUpperCase();
+    const city = featureType === "place" ? name : stringValue(placeContext.name);
     return [{
       id: stringValue(feature.id ?? properties.mapbox_id, `mapbox-${index}`),
       name,
       address: stringValue(properties.full_address ?? properties.place_formatted, name),
       latitude,
       longitude,
-      placeType: stringValue(properties.feature_type, "place"),
-      context: Array.isArray(properties.context)
-        ? properties.context.filter((item): item is string => typeof item === "string")
-        : [],
+      placeType: featureType,
+      context: [stringValue(placeContext.name), country].filter(Boolean),
+      country: country || null,
+      countryCode: /^[A-Z]{2}$/.test(countryCode) ? countryCode : null,
+      city: city || null,
     }];
   });
+}
+
+export function searchMapbox(query: string, limit: number, token: string): Promise<DestinationResult[]> {
+  return requestMapbox({ query }, limit, token);
+}
+
+export function searchMapboxCities(country: string, city: string, limit: number, token: string): Promise<DestinationResult[]> {
+  return requestMapbox({ country, city, permanent: true, types: "place" }, limit, token);
 }
 
 export async function fetchWeather(latitude: number, longitude: number): Promise<DestinationWeather> {

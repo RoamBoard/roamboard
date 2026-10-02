@@ -40,6 +40,16 @@ services:
       timeout: 3s
       retries: 20
 
+  adminer:
+    image: adminer:5.5.1-standalone
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.18.2
     environment:

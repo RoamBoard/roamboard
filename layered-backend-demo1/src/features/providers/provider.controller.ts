@@ -1,12 +1,13 @@
 import type { RequestHandler } from "express";
 
-import type { CloudinaryDeliveryRequest, CloudinaryMetadataRequest, DeleteGooglePlaceRequest, GooglePlaceDetailsRequest, MapboxRouteRequest, ProviderReverseRequest, ProviderSearchRequest, SaveGooglePlaceRequest } from "./provider.schemas.js";
+import type { BoardDestinationSearchRequest, CloudinaryDeliveryRequest, CloudinaryMetadataRequest, DeleteGooglePlaceRequest, GooglePlaceDetailsRequest, MapboxRouteRequest, ProviderReverseRequest, ProviderSearchRequest, SaveGooglePlaceRequest } from "./provider.schemas.js";
 import type { ProviderService } from "./provider.service.js";
 
 export interface ProviderController {
   config: RequestHandler;
   mapboxMapSession: RequestHandler;
   mapboxSearch: RequestHandler;
+  mapboxDestinationSearch: RequestHandler;
   mapboxReverse: RequestHandler;
   mapboxRoute: RequestHandler;
   unsplashSearch: RequestHandler;
@@ -30,6 +31,10 @@ export function createProviderController(service: ProviderService): ProviderCont
     config: (_req, res) => res.json({ data: service.config() }),
     mapboxMapSession: async (_req, res) => res.json({ data: await service.mapboxMapSession() }),
     mapboxSearch: search(service.mapboxSearch),
+    mapboxDestinationSearch: async (req, res) => {
+      const { query } = req.validated as BoardDestinationSearchRequest;
+      res.json({ data: await service.mapboxDestinationSearch(query.country, query.city, query.limit) });
+    },
     unsplashSearch: search(service.unsplashSearch),
     googlePlacesSearch: search(service.googlePlacesSearch),
     googlePlaceDetails: async (req, res) => {

@@ -6,6 +6,9 @@ export interface DestinationResult {
   longitude: number;
   placeType: string;
   context: string[];
+  country: string | null;
+  countryCode: string | null;
+  city: string | null;
 }
 
 export interface DestinationWeather {

@@ -1,13 +1,13 @@
 # Layered backend demo
 
-This Express 5 backend has a todo API, a sample travel search API, and a destination discovery API. PostgreSQL stores the todos, sample travel records, quota counters, and saved Google Place ID references. Elasticsearch is a derived search index, rebuilt by the backend from PostgreSQL. Other destination provider response fields are live discovery data and are not persisted or indexed.
+This Express 5 backend has a todo API, a prototype user/profile and Board API, a sample travel search API, and a destination discovery API. PostgreSQL stores users, profiles, Boards, destinations, Board visits, friendships, saved resources, todos, sample travel records, quota counters, and saved Google Place ID references. Elasticsearch is a derived search index, rebuilt by the backend from PostgreSQL. Other destination provider response fields are live discovery data and are not persisted or indexed.
 
 ```text
 HTTP client -> Express API -> PostgreSQL (source of truth)
                            -> Elasticsearch (search index)
 ```
 
-PostgreSQL and Elasticsearch do not talk directly. The API reads the source records from PostgreSQL and indexes only public records. There is no endpoint for changing travel records yet, so a full rebuild at API startup and the reindex command are enough for this demo. Future Board writes will need a durable retry mechanism such as an outbox before they can safely update the search index.
+PostgreSQL and Elasticsearch do not talk directly. The API reads the source records from PostgreSQL and indexes only public records. There is no endpoint for changing search documents yet, so a full rebuild at API startup and the reindex command are enough for this demo. Future public Board search writes will need a durable retry mechanism such as an outbox before they can safely update the search index.
 
 ## Run all three services with Docker
 
@@ -35,9 +35,11 @@ docker compose up -d api
 
 Run the frontend separately from `frontend/` with `pnpm dev`; it uses `http://localhost:3001` from `.env.local` and is available at `http://localhost:3000`.
 
-The API is at `http://localhost:3001`. PostgreSQL is available to local tools at `localhost:5433`, and Elasticsearch at `localhost:9200`; all published ports are bound to the host's loopback address. Elasticsearch security is disabled for local development, so this Compose file is not a production deployment. Compose waits for the database and search service health checks before starting the API. The API applies the SQL migrations, including the durable API quota counter, seeds missing sample travel records in PostgreSQL, and rebuilds Elasticsearch before it listens.
+The API is at `http://localhost:3001`. PostgreSQL is available to local tools at `localhost:5433`, Adminer is at `http://localhost:8080`, and Elasticsearch is at `localhost:9200`; all published ports are bound to the host's loopback address. Adminer and the unsecured local Elasticsearch service are development tools, not production deployments. Compose waits for the database and search service health checks before starting the API. The API applies the SQL migrations, including the durable API quota counter, seeds missing sample travel records in PostgreSQL, and rebuilds Elasticsearch before it listens.
 
-The frontend uses `NEXT_PUBLIC_API_BASE_URL=http://localhost:3001` so browser requests reach the published API address. Set `MAPBOX_ACCESS_TOKEN` for server-side search and routing. Prefer a separate public `pk.` `MAPBOX_PUBLIC_TOKEN`, restricted to the frontend URLs and minimum map scopes, for the interactive map; a `pk.` access token remains a backward-compatible fallback. `Open-Meteo` and Wikipedia need no key; `UNSPLASH_ACCESS_KEY` is optional and adds destination imagery. The provider lab at `http://localhost:3000/dev/providers` also exposes Mapbox routing and saved pinpoints, Unsplash, Google Places, Cloudinary upload/metadata extraction, and Elasticsearch fuzzy search/autocomplete. Google Places requires a billing-enabled Google Cloud project. Provider credentials remain in the API container. The intentionally public browser token is released only after the backend reserves a map-load unit.
+To browse database tables without installing a desktop application, use Adminer at `http://localhost:8080`. Select PostgreSQL and sign in with server `postgres`, username/database `roamboard`, and the `POSTGRES_PASSWORD` value from `.env`.
+
+The frontend uses `NEXT_PUBLIC_API_BASE_URL=http://localhost:3001` so browser requests reach the published API address. Set `MAPBOX_ACCESS_TOKEN` for server-side search and routing. Prefer a separate public `pk.` `MAPBOX_PUBLIC_TOKEN`, restricted to the frontend URLs and minimum map scopes, for the interactive map; a `pk.` access token remains a backward-compatible fallback. `Open-Meteo` and Wikipedia need no key; `UNSPLASH_ACCESS_KEY` is optional and adds destination imagery. The provider lab at `http://localhost:3000/dev/providers` also exposes Mapbox routing and saved pinpoints, Unsplash, Google Places, Cloudinary upload/metadata extraction, and Elasticsearch fuzzy search/autocomplete. Board creation uses permanent Mapbox geocoding so selected city, country, ISO code, and coordinates may be stored; this requires a billing-enabled Mapbox account. Google Places also requires a billing-enabled Google Cloud project. Provider credentials remain in the API container. The intentionally public browser token is released only after the backend reserves a map-load unit.
 
 External provider calls are protected by fail-closed hard quotas. Docker uses PostgreSQL for atomic counters that survive restarts and coordinate multiple API instances. Quota limits are reviewed code constants rather than environment configuration. Read [docs/API_QUOTAS.md](docs/API_QUOTAS.md) before adding or changing any provider endpoint.
 
@@ -49,7 +51,13 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:3001/api/v1/todos' -Conten
 Invoke-RestMethod 'http://localhost:3001/api/v1/todos'
 Invoke-RestMethod 'http://localhost:3001/api/v1/search?q=stokholm'
 Invoke-RestMethod 'http://localhost:3001/api/v1/search/suggestions?q=sto'
+Invoke-RestMethod 'http://localhost:3001/api/v1/users/me'
+Invoke-RestMethod 'http://localhost:3001/api/v1/users/me/stats'
 ```
+
+Open `http://localhost:3000/dev/profile` after starting the frontend to edit the seeded `roam_demo` profile, change its picture URL, create Boards, and see its statistics and Mapbox travel footprint refresh from the API. Completed Boards shade visited countries and cities; planned destinations use a lighter style. This developer page uses the default prototype identity. It is not real login.
+
+Until authentication is implemented, protected prototype routes use `x-demo-user-id`. If the header is omitted, the seeded user `00000000-0000-4000-8000-000000000001` is selected. A user created with `POST /api/v1/users` can be selected by sending its returned ID in that header. This behavior must be replaced by verified authentication before production use.
 
 Restarting the API preserves todos because PostgreSQL uses a named volume. `docker compose down` stops and removes the containers but keeps both named data volumes. Changing the PostgreSQL password after its volume has been initialized requires changing the database role password too; editing `.env` alone does not change an existing database.
 
@@ -85,6 +93,7 @@ The separate Elasticsearch integration test can also be enabled with `RUN_ELASTI
 | --- | --- | --- |
 | `GET` | `/health` | API process health |
 | `GET` | `/health/elasticsearch` | Elasticsearch connectivity |
+| `GET` | `/api/v1/providers/mapbox/board-destinations` | Validate a city and country and return persistable canonical destination data |
 | `GET` | `/api/v1/todos` | List todos, optionally filtered by `completed` |
 | `GET` | `/api/v1/todos/:todoId` | Read a todo |
 | `POST` | `/api/v1/todos` | Create a todo |
@@ -110,7 +119,18 @@ The separate Elasticsearch integration test can also be enabled with `RUN_ELASTI
 | `GET` | `/api/v1/providers/cloudinary/assets` | Load lightweight summaries of Roamboard-tagged Cloudinary uploads |
 | `GET` | `/api/v1/providers/cloudinary/metadata?...` | Read and normalize capture, camera, orientation, EXIF/XMP, and degree-minute-second GPS metadata from one original asset |
 | `GET` | `/api/v1/quotas` | Inspect local hard-limit usage, remaining units, reset times, and durable-storage status |
+| `POST` | `/api/v1/users` | Create a prototype user with an immutable username |
+| `GET` | `/api/v1/users/me` | Read the selected user's profile |
+| `PATCH` | `/api/v1/users/me` | Change display name, description, location, interests, or extensible settings |
+| `PUT` / `DELETE` | `/api/v1/users/me/profile-picture` | Set or clear profile-picture metadata |
+| `GET` | `/api/v1/users/me/stats` | Count completed-trip countries, owned Boards, friends, saved places, and saved Boards |
+| `GET` | `/api/v1/users/me/boards` | List the selected user's Boards |
+| `POST` | `/api/v1/users/me/boards` | Create a prototype Board with destinations |
+| `GET` | `/api/v1/users/me/recent-boards` | List recently opened, still-accessible Boards |
+| `GET` | `/api/v1/users/me/map-destinations` | Return planned and completed Board destinations for a world map |
+| `GET` | `/api/v1/boards/:boardId` | Read an accessible Board and record a visit |
+| `PUT` / `DELETE` | `/api/v1/users/me/saved-boards/:boardId` | Save or unsave an accessible Board |
 
 The Elasticsearch provider lab is backed by the existing public sample records and demonstrates fuzzy search, search-as-you-type suggestions, filters, relevance scores, and development reindexing. It does not add external provider data to the index.
 
-This is still a prototype: it has no Board persistence, accounts, authorization, live travel-record writes, or PostGIS. The frontend home page uses the destination discovery API; Boards and the Elasticsearch sample search remain separate demos.
+This is still a prototype: profile and basic Board records persist, but it has no passwords or production authentication, Board items/media editing, full account lifecycle, or PostGIS. The `x-demo-user-id` boundary exists only to exercise frontend-to-database behavior. The frontend home page uses the destination discovery API; the profile lab and Elasticsearch sample search remain separate demos.

@@ -14,6 +14,8 @@ import { createQuotaModule } from "./features/quotas/quota.module.js";
 import type { QuotaRepository } from "./features/quotas/quota.types.js";
 import { createTodoModule } from "./features/todos/todo.module.js";
 import type { TodoRepository } from "./features/todos/todo.types.js";
+import { createUserModule } from "./features/users/user.module.js";
+import type { UserRepository } from "./features/users/user.types.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { notFoundHandler } from "./middleware/not-found.js";
 
@@ -23,15 +25,17 @@ interface CreateAppOptions {
   searchModule?: SearchModule;
   quotaRepository?: QuotaRepository;
   googlePlaceReferenceRepository?: GooglePlaceReferenceRepository;
+  userRepository?: UserRepository;
 }
 
-export function createApp({ todoRepository, searchClient, searchModule: providedSearchModule, quotaRepository, googlePlaceReferenceRepository }: CreateAppOptions = {}): Express {
+export function createApp({ todoRepository, searchClient, searchModule: providedSearchModule, quotaRepository, googlePlaceReferenceRepository, userRepository }: CreateAppOptions = {}): Express {
   const app = express();
   const todoModule = createTodoModule({ repository: todoRepository });
   const searchModule = providedSearchModule ?? createSearchModule({ client: searchClient });
   const quotaModule = createQuotaModule(quotaRepository);
   const destinationModule = createDestinationModule(quotaModule.service);
   const providerModule = createProviderModule(quotaModule.service, googlePlaceReferenceRepository);
+  const userModule = createUserModule({ repository: userRepository });
 
   app.disable("x-powered-by");
 
@@ -50,6 +54,8 @@ export function createApp({ todoRepository, searchClient, searchModule: provided
   app.use("/api/v1/destinations", destinationModule.router);
   app.use("/api/v1/providers", providerModule.router);
   app.use("/api/v1/quotas", quotaModule.router);
+  app.use("/api/v1/users", userModule.userRouter);
+  app.use("/api/v1/boards", userModule.boardRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

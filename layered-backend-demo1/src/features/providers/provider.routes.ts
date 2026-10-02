@@ -5,7 +5,7 @@ import multer from "multer";
 
 import { validate } from "../../middleware/validate.js";
 import { AppError } from "../../shared/app-error.js";
-import { cloudinaryDeliverySchema, cloudinaryMetadataSchema, deleteGooglePlaceSchema, googlePlaceDetailsSchema, mapboxRouteSchema, providerReverseSchema, providerSearchSchema, saveGooglePlaceSchema } from "./provider.schemas.js";
+import { boardDestinationSearchSchema, cloudinaryDeliverySchema, cloudinaryMetadataSchema, deleteGooglePlaceSchema, googlePlaceDetailsSchema, mapboxRouteSchema, providerReverseSchema, providerSearchSchema, saveGooglePlaceSchema } from "./provider.schemas.js";
 import type { ProviderService } from "./provider.service.js";
 import { createProviderController } from "./provider.controller.js";
 
@@ -32,6 +32,7 @@ export function createProviderRouter(service: ProviderService): Router {
   router.get("/config", controller.config);
   router.post("/mapbox/map-session", controller.mapboxMapSession);
   router.get("/mapbox/search", validate(providerSearchSchema), controller.mapboxSearch);
+  router.get("/mapbox/board-destinations", validate(boardDestinationSearchSchema), controller.mapboxDestinationSearch);
   router.get("/mapbox/reverse", validate(providerReverseSchema), controller.mapboxReverse);
   router.post("/mapbox/directions", validate(mapboxRouteSchema), controller.mapboxRoute);
   router.get("/unsplash/search", validate(providerSearchSchema), controller.unsplashSearch);

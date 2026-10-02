@@ -1,8 +1,18 @@
 import { z } from "zod";
 
+import { isCountryCode } from "../../shared/countries.js";
+
 export const providerSearchSchema = z.object({
   query: z.object({
     q: z.string().trim().min(2).max(100),
+    limit: z.coerce.number().int().min(1).max(10).default(5),
+  }).strict(),
+});
+
+export const boardDestinationSearchSchema = z.object({
+  query: z.object({
+    country: z.string().trim().toUpperCase().refine(isCountryCode, "Choose an existing country"),
+    city: z.string().trim().min(2).max(120),
     limit: z.coerce.number().int().min(1).max(10).default(5),
   }).strict(),
 });
@@ -52,6 +62,7 @@ export const deleteGooglePlaceSchema = z.object({
 });
 
 export type ProviderSearchRequest = z.infer<typeof providerSearchSchema>;
+export type BoardDestinationSearchRequest = z.infer<typeof boardDestinationSearchSchema>;
 export type ProviderReverseRequest = z.infer<typeof providerReverseSchema>;
 export type CloudinaryDeliveryRequest = z.infer<typeof cloudinaryDeliverySchema>;
 export type MapboxRouteRequest = z.infer<typeof mapboxRouteSchema>;

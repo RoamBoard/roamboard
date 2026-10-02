@@ -11,6 +11,7 @@ export function createQuotaPolicies(): QuotaPolicy[] {
   return [
     monthly("mapbox.map_loads", "Mapbox", "Mapbox GL JS map initialization", "map load", 49_500, MAPBOX_PRICING),
     monthly("mapbox.geocoding", "Mapbox", "Temporary forward or reverse geocoding", "request", 99_000, MAPBOX_PRICING),
+    monthly("mapbox.permanent_geocoding", "Mapbox", "Permanent forward geocoding for stored Board destinations", "request", 2_475, MAPBOX_PRICING),
     monthly("mapbox.directions", "Mapbox", "Directions API", "request", 99_000, MAPBOX_PRICING),
     monthly("google.places_text_search_pro", "Google Maps Platform", "Places API Text Search Pro", "billable event", 4_950, GOOGLE_PRICING, "America/Los_Angeles"),
     monthly("google.place_details_essentials", "Google Maps Platform", "Places API Place Details Essentials", "billable event", 9_900, GOOGLE_PRICING, "America/Los_Angeles"),

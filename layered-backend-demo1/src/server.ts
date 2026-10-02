@@ -13,6 +13,7 @@ import { createPostgresTodoRepository } from "./features/todos/todo.postgres-rep
 import { createPostgresQuotaRepository } from "./features/quotas/quota.postgres-repository.js";
 import { createPostgresGooglePlaceReferenceRepository } from "./features/providers/provider.google-place-postgres-repository.js";
 import { createPostgresPool, runMigrations } from "./infrastructure/postgres.js";
+import { createPostgresUserRepository } from "./features/users/user.postgres-repository.js";
 
 const log = debug("roamboard:http");
 
@@ -38,6 +39,7 @@ async function main(): Promise<void> {
     searchModule,
     quotaRepository: pool ? createPostgresQuotaRepository(pool) : undefined,
     googlePlaceReferenceRepository: pool ? createPostgresGooglePlaceReferenceRepository(pool) : undefined,
+    userRepository: pool ? createPostgresUserRepository(pool) : undefined,
   });
   const server = app.listen(env.PORT, () => {
     log("API listening on port %d with %s storage", env.PORT, env.STORAGE);
