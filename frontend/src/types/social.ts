@@ -71,3 +71,9 @@ export type UserProfile = {
 };
 
 export type AudienceFilter = "ME" | "FRIENDS" | "EXPLORE";
+
+export type UserSettings = {
+    theme: "light" | "dark";
+    defaultBoardVisibility: "friends" | "public";
+    emailNotifications: boolean;
+};

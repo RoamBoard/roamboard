@@ -1,4 +1,5 @@
-import type { UserProfile } from "@/types/social";
+import type { UserProfile, UserSettings } from "@/types/social";
+import { calculateTravelerTier } from "@/utils/tier";
 
 export const mockRowanProfile: UserProfile = {
     id: "user-rowan-mercer",
@@ -485,3 +486,156 @@ export const mockRowanProfile: UserProfile = {
         }
     ]
 };
+
+export const defaultUserSettings: UserSettings = {
+    theme: "light",
+    defaultBoardVisibility: "friends",
+    emailNotifications: true
+};
+
+const PROFILE_STORAGE_KEY = "roamboard_mock_profile";
+const SETTINGS_STORAGE_KEY = "roamboard_mock_settings";
+
+// Cached baseline copy for resetting
+const initialRowanProfile: UserProfile = JSON.parse(
+    JSON.stringify(mockRowanProfile)
+);
+
+const listeners = new Set<() => void>();
+
+function notify() {
+    listeners.forEach((listener) => listener());
+}
+
+export function subscribeMockStore(listener: () => void): () => void {
+    listeners.add(listener);
+    return () => {
+        listeners.delete(listener);
+    };
+}
+
+const store: {
+    profile: UserProfile;
+    settings: UserSettings;
+} = {
+    profile: { ...mockRowanProfile },
+    settings: { ...defaultUserSettings }
+};
+
+if (typeof window !== "undefined") {
+    try {
+        const storedProfile = localStorage.getItem(PROFILE_STORAGE_KEY);
+        if (storedProfile) {
+            store.profile = {
+                ...store.profile,
+                ...JSON.parse(storedProfile)
+            };
+            store.profile.tier = calculateTravelerTier(
+                store.profile.mapStats
+            ).name;
+            Object.assign(mockRowanProfile, store.profile);
+        }
+        const storedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY);
+        if (storedSettings) {
+            store.settings = {
+                ...store.settings,
+                ...JSON.parse(storedSettings)
+            };
+        }
+    } catch {
+        // Ignore parse errors in local storage
+    }
+}
+
+export function getMockProfile(): UserProfile {
+    return store.profile;
+}
+
+export function updateMockProfile(patch: Partial<UserProfile>): UserProfile {
+    store.profile = {
+        ...store.profile,
+        ...patch,
+        details: {
+            ...store.profile.details,
+            ...(patch.details ?? {})
+        },
+        stats: {
+            ...store.profile.stats,
+            ...(patch.stats ?? {})
+        },
+        mapStats: {
+            ...store.profile.mapStats,
+            ...(patch.mapStats ?? {})
+        }
+    };
+    if (patch.location) {
+        store.profile.details.location = patch.location;
+    }
+
+    // Traveler tier is automatically granted based on travel history
+    store.profile.tier = calculateTravelerTier(
+        store.profile.mapStats
+    ).name;
+
+    Object.assign(mockRowanProfile, store.profile);
+
+    if (typeof window !== "undefined") {
+        try {
+            localStorage.setItem(
+                PROFILE_STORAGE_KEY,
+                JSON.stringify(store.profile)
+            );
+        } catch {
+            // Ignore storage errors
+        }
+    }
+
+    notify();
+    return store.profile;
+}
+
+export function resetMockProfile(): UserProfile {
+    store.profile = JSON.parse(JSON.stringify(initialRowanProfile));
+    store.profile.tier = calculateTravelerTier(
+        store.profile.mapStats
+    ).name;
+    Object.assign(mockRowanProfile, store.profile);
+    if (typeof window !== "undefined") {
+        try {
+            localStorage.removeItem(PROFILE_STORAGE_KEY);
+        } catch {
+            // Ignore storage errors
+        }
+    }
+    notify();
+    return store.profile;
+}
+
+export function getMockSettings(): UserSettings {
+    return store.settings;
+}
+
+export function updateMockSettings(patch: Partial<UserSettings>): UserSettings {
+    store.settings = { ...store.settings, ...patch };
+
+    if (typeof window !== "undefined") {
+        try {
+            localStorage.setItem(
+                SETTINGS_STORAGE_KEY,
+                JSON.stringify(store.settings)
+            );
+            if (patch.theme) {
+                if (patch.theme === "dark") {
+                    document.documentElement.classList.add("dark");
+                } else {
+                    document.documentElement.classList.remove("dark");
+                }
+            }
+        } catch {
+            // Ignore storage errors
+        }
+    }
+    notify();
+    return store.settings;
+}
+

@@ -10,7 +10,7 @@ export default function Sidebar({ activeHref }: Props) {
 
     return (
         <>
-            <header className="absolute top-[3%] left-[2%]">
+            <header className="absolute top-[3%] left-[2%] z-30">
                 <Link
                     href="/home"
                     aria-label="Roamboard home"
@@ -21,7 +21,7 @@ export default function Sidebar({ activeHref }: Props) {
             </header>
             <nav
                 aria-label="Main navigation"
-                className="text-12 absolute top-[59%] bottom-[5%] left-[2.8%] flex flex-col items-start justify-between"
+                className="text-12 absolute top-[59%] bottom-[5%] left-[2.8%] z-30 flex flex-col items-start justify-between"
             >
                 <Link
                     href="/home"

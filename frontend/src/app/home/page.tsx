@@ -8,7 +8,13 @@ export const metadata: Metadata = {
 
 export default function HomePage() {
     return (
-        <AppShell activeHref="/home" profile={{ href: "/profile" }}>
+        <AppShell
+            activeHref="/home"
+            profile={{
+                profileHref: "/profile",
+                settingsHref: "/settings"
+            }}
+        >
             <CenteredPrompt
                 label="Where would you like to go?"
                 placeholder="so, where is it you wish to go?"

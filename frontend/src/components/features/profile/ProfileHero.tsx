@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import type { UserProfile } from "@/types/social";
 
 type Props = {
@@ -13,7 +14,7 @@ export default function ProfileHero({ profile }: Props) {
         >
             {/* Left column: Hero photo + Name */}
             <div className="flex flex-col lg:col-span-5">
-                <div className="bg-porcelain relative aspect-[3/4] w-full overflow-hidden">
+                <div className="bg-porcelain border-line relative aspect-[3/4] w-full overflow-hidden rounded-[2px] border">
                     <Image
                         src={profile.avatarUrl}
                         alt={`Portrait of ${profile.name}`}
@@ -22,6 +23,19 @@ export default function ProfileHero({ profile }: Props) {
                         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 40vw, 380px"
                         className="object-cover"
                     />
+
+                    {/* Notice in the box: photo upload implementation pending backend */}
+                    <div className="border-line bg-background/95 shadow-xs absolute right-3 bottom-3 left-3 rounded-[2px] border p-2.5 backdrop-blur-xs">
+                        <div className="flex items-center gap-1.5">
+                            <span className="bg-obsidian h-1.5 w-1.5 shrink-0 rounded-full" />
+                            <span className="text-10 tracking-label text-obsidian block font-bold uppercase">
+                                Photo Upload Note
+                            </span>
+                        </div>
+                        <p className="text-10 text-graphite mt-1 leading-normal font-medium">
+                            Upload should be implemented later when the backend framework is created.
+                        </p>
+                    </div>
                 </div>
                 <h2 className="font-display text-48 sm:text-60 text-obsidian mt-2 font-black tracking-tight uppercase select-none">
                     {profile.name}
@@ -59,21 +73,14 @@ export default function ProfileHero({ profile }: Props) {
                             </div>
                         </div>
 
-                        {/* Top right buttons: [ edit profile ] and [ ... ] */}
+                        {/* Top right button: [ edit profile ] */}
                         <div className="flex items-center gap-2">
-                            <button
-                                type="button"
+                            <Link
+                                href="/settings"
                                 className="border-line text-12 text-graphite hover:text-obsidian hover:border-obsidian font-body cursor-pointer rounded-[2px] border px-3.5 py-1 font-medium transition-colors"
                             >
                                 edit profile
-                            </button>
-                            <button
-                                type="button"
-                                aria-label="More options"
-                                className="border-line text-12 text-graphite hover:text-obsidian hover:border-obsidian font-body flex cursor-pointer items-center justify-center rounded-[2px] border px-2.5 py-1 font-medium transition-colors"
-                            >
-                                •••
-                            </button>
+                            </Link>
                         </div>
                     </div>
 

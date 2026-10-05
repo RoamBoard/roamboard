@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
+import { getMockProfile, subscribeMockStore } from "@/data/mock-social";
 import type { AudienceFilter, UserProfile } from "@/types/social";
 import ProfileHero from "./ProfileHero";
 import InterestingFacts from "./InterestingFacts";
@@ -12,7 +13,12 @@ type Props = {
     profile: UserProfile;
 };
 
-export default function SocialPageContent({ profile }: Props) {
+export default function ProfilePageContent({ profile: initialProfile }: Props) {
+    const profile = useSyncExternalStore(
+        subscribeMockStore,
+        getMockProfile,
+        () => initialProfile
+    );
     const [activeFilter, setActiveFilter] = useState<AudienceFilter>("ME");
 
     const filters: AudienceFilter[] = ["ME", "FRIENDS", "EXPLORE"];

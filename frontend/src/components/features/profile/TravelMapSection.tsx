@@ -72,7 +72,9 @@ export default function TravelMapSection({ profile }: Props) {
 
                     <div>
                         <div className="font-display text-22 text-obsidian flex items-center gap-1 font-bold">
-                            {profile.mapStats.photosTaken.toLocaleString()}
+                            {profile.mapStats.photosTaken.toLocaleString(
+                                "en-US"
+                            )}
                             <span
                                 className="text-12 text-graphite font-normal"
                                 aria-hidden="true"

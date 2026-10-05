@@ -7,7 +7,7 @@ import ProfileControl, {
 type Props = {
     children: ReactNode;
     activeHref: string;
-    profile: ProfileControlProps;
+    profile?: ProfileControlProps;
 };
 
 export default function AppShell({ children, activeHref, profile }: Props) {
