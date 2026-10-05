@@ -7,10 +7,14 @@ import ProfileControl, {
 type Props = {
     children: ReactNode;
     activeHref: string;
-    profile: ProfileControlProps;
+    profile?: ProfileControlProps;
 };
 
-export default function AppShell({ children, activeHref, profile }: Props) {
+export default function AppShell({
+    children,
+    activeHref,
+    profile = {}
+}: Props) {
     return (
         <div className="relative grid h-dvh w-full overflow-hidden bg-white">
             <Sidebar activeHref={activeHref} />
