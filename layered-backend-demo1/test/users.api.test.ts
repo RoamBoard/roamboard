@@ -162,3 +162,199 @@ test("rejects malformed prototype identities and Boards without complete destina
     .send({ title: "Fantasy trip", destinations: [{ country: "Narnia", countryCode: "ZZ", city: "Cair Paravel", latitude: 1, longitude: 1 }] });
   assert.equal(inventedCountry.status, 400);
 });
+
+test("saves incomplete detailed Boards as drafts and validates publishing rules", async () => {
+  const app = createApp();
+  const dayId = "40000000-0000-4000-8000-000000000001";
+
+  const draft = await request(app)
+    .post("/api/v1/boards")
+    .send({
+      title: "",
+      status: "draft",
+      visibility: "private",
+      tags: ["tokyo", "food"],
+      vibes: ["Hidden gems"],
+      highlights: [],
+      days: [{ id: dayId, dayNumber: 1, date: null, pins: [] }],
+      images: [],
+    });
+  assert.equal(draft.status, 201);
+  assert.equal(draft.body.data.title, "Untitled Board");
+  assert.equal(draft.body.data.status, "draft");
+
+  const invalidPublish = await request(app)
+    .post("/api/v1/boards")
+    .send({
+      title: "Tokyo ideas",
+      status: "published",
+      visibility: "public",
+      tags: [],
+      vibes: [],
+      highlights: [],
+      days: [{ id: dayId, dayNumber: 1, date: null, pins: [] }],
+      images: [],
+    });
+  assert.equal(invalidPublish.status, 400);
+});
+
+test("creates a public detailed Board with ordered pins and discovery metadata", async () => {
+  const indexed: Array<{ id: string; tags: string[]; categories: string[] }> = [];
+  const app = createApp({ boardSearchIndexer: { index: async (document) => { indexed.push(document); } } });
+  const dayId = "40000000-0000-4000-8000-000000000002";
+  const pinId = "50000000-0000-4000-8000-000000000001";
+  const created = await request(app)
+    .post("/api/v1/boards")
+    .send({
+      title: "A day in Tokyo",
+      description: "Temples and noodles.",
+      status: "published",
+      visibility: "public",
+      tags: ["tokyo", "food"],
+      vibes: ["Hidden gems", "Solo travel"],
+      highlights: ["Senso-ji"],
+      days: [{
+        id: dayId,
+        dayNumber: 1,
+        date: "2026-10-10",
+        pins: [{
+          id: pinId,
+          order: 0,
+          time: "09:00",
+          title: "Senso-ji",
+          description: "Morning visit",
+          category: "landmark",
+          source: "mapbox",
+          location: {
+            name: "Senso-ji",
+            address: "Asakusa, Tokyo",
+            latitude: 35.7148,
+            longitude: 139.7967,
+            country: "Japan",
+            countryCode: "JP",
+            city: "Tokyo",
+            mapboxId: "mapbox.sensoji",
+          },
+        }],
+      }],
+      images: [],
+    });
+  assert.equal(created.status, 201);
+  assert.equal(created.body.data.days[0].pins[0].title, "Senso-ji");
+  assert.deepEqual(created.body.data.tags, ["tokyo", "food"]);
+  assert.deepEqual(created.body.data.vibes, ["Hidden gems", "Solo travel"]);
+  assert.equal(created.body.data.destinations[0].countryCode, "JP");
+  const inspected = await request(app).get(`/api/v1/boards/${created.body.data.id}`);
+  assert.equal(inspected.status, 200);
+  assert.equal(inspected.body.data.days[0].pins[0].category, "landmark");
+  assert.equal(indexed.length, 1);
+  assert.deepEqual(indexed[0]?.tags, ["tokyo", "food"]);
+  assert.deepEqual(indexed[0]?.categories, ["Hidden gems", "Solo travel", "landmark"]);
+});
+
+function browseBoardInput(title: string, visibility: "private" | "friends" | "public", status: "draft" | "published" = "published") {
+  return {
+    title, visibility, status, tags: ["japan"], vibes: ["Culture"], highlights: ["Osaka Castle"],
+    days: [{ id: "60000000-0000-4000-8000-000000000001", dayNumber: 1, date: null, pins: [{
+      id: "60000000-0000-4000-8000-000000000002", order: 0, time: "09:00", title: "Osaka Castle",
+      category: "landmark", source: "mapbox", description: "Castle visit",
+      location: { name: "Osaka Castle", address: "Osaka, Japan", latitude: 34.6873, longitude: 135.5262,
+        country: "Japan", countryCode: "JP", city: "Osaka", mapboxId: "osaka-castle" },
+    }] }], images: [],
+  };
+}
+
+test("browse includes own drafts and only published public or accepted-friend Boards from others", async () => {
+  const app = createApp();
+  const friend = "00000000-0000-4000-8000-000000000002";
+  const stranger = await request(app).post("/api/v1/users").send({ username: "browse_stranger", displayName: "Stranger" }).expect(201);
+  const create = async (owner: string, title: string, visibility: "private" | "friends" | "public", status: "draft" | "published" = "published") => {
+    const result = await request(app).post("/api/v1/boards").set("x-demo-user-id", owner).send(browseBoardInput(title, visibility, status)).expect(201);
+    return result.body.data.id as string;
+  };
+  const visible = [
+    await create(DEMO_USER_ID, "Own private draft", "private", "draft"),
+    await create(DEMO_USER_ID, "Own public draft", "public", "draft"),
+    await create(friend, "Friend published", "friends"),
+    await create(stranger.body.data.id, "Stranger published", "public"),
+  ];
+  const hidden = [
+    await create(friend, "Friend private", "private"),
+    await create(friend, "Friend public draft", "public", "draft"),
+    await create(stranger.body.data.id, "Stranger friends", "friends"),
+    await create(stranger.body.data.id, "Stranger private", "private"),
+    await create(stranger.body.data.id, "Stranger public draft", "public", "draft"),
+  ];
+  const result = await request(app).get("/api/v1/boards?page=1&limit=20").expect(200);
+  assert.deepEqual(result.body.meta, { page: 1, limit: 20, hasMore: false });
+  const ids = result.body.data.map((board: { id: string }) => board.id);
+  for (const id of visible) assert.ok(ids.includes(id), `Missing accessible Board ${id}`);
+  for (const id of hidden) assert.ok(!ids.includes(id), `Leaked inaccessible Board ${id}`);
+  const publicDraft = await request(app).get(`/api/v1/boards/${hidden[1]}`);
+  assert.equal(publicDraft.status, 404);
+});
+
+test("browse paginates without duplicate Boards and validates pagination and identity", async () => {
+  const app = createApp();
+  await request(app).post("/api/v1/boards").send(browseBoardInput("Pagination draft", "private", "draft")).expect(201);
+  const whole = await request(app).get("/api/v1/boards").expect(200);
+  assert.equal(whole.body.meta.page, 1);
+  assert.equal(whole.body.meta.limit, 20);
+  const pages = await Promise.all(whole.body.data.map((_board: unknown, index: number) => request(app).get(`/api/v1/boards?page=${index + 1}&limit=1`).expect(200)));
+  assert.deepEqual(pages.flatMap((page) => page.body.data.map((board: { id: string }) => board.id)), whole.body.data.map((board: { id: string }) => board.id));
+  pages.forEach((page, index) => assert.deepEqual(page.body.meta, { page: index + 1, limit: 1, hasMore: index < pages.length - 1 }));
+  const empty = await request(app).get(`/api/v1/boards?page=${pages.length + 1}&limit=1`).expect(200);
+  assert.deepEqual(empty.body.data, []);
+  assert.equal(empty.body.meta.hasMore, false);
+  for (const query of ["page=0", "page=-1", "page=1.5", "page=nope", "limit=0", "limit=51", "limit=1.5", "unexpected=true"]) {
+    await request(app).get(`/api/v1/boards?${query}`).expect(400);
+  }
+  await request(app).get("/api/v1/boards").set("x-demo-user-id", "00000000-0000-4000-8000-000000000099").expect(401);
+});
+
+test("delete permits only the owner and hides missing or inaccessible Boards", async () => {
+  const app = createApp();
+  const friend = "00000000-0000-4000-8000-000000000002";
+  const publicBoard = await request(app).post("/api/v1/boards").set("x-demo-user-id", friend).send(browseBoardInput("Readable other Board", "public")).expect(201);
+  const privateBoard = await request(app).post("/api/v1/boards").set("x-demo-user-id", friend).send(browseBoardInput("Hidden other Board", "private")).expect(201);
+  await request(app).delete(`/api/v1/boards/${publicBoard.body.data.id}`).expect(403);
+  await request(app).delete(`/api/v1/boards/${privateBoard.body.data.id}`).expect(404);
+  await request(app).delete("/api/v1/boards/70000000-0000-4000-8000-000000000099").expect(404);
+  await request(app).delete("/api/v1/boards/not-a-uuid").expect(400);
+  await request(app).delete(`/api/v1/boards/${publicBoard.body.data.id}`).set("x-demo-user-id", "00000000-0000-4000-8000-000000000099").expect(401);
+  await request(app).get(`/api/v1/boards/${publicBoard.body.data.id}`).expect(200);
+});
+
+test("owner deletion removes Board details, saved references, visits, map destinations and search entry", async () => {
+  const indexed: string[] = [];
+  const removed: string[] = [];
+  const app = createApp({ boardSearchIndexer: {
+    index: async (document) => { indexed.push(document.id); },
+    remove: async (boardId) => { removed.push(boardId); },
+  } });
+  const created = await request(app).post("/api/v1/boards").send(browseBoardInput("Delete complete itinerary", "public")).expect(201);
+  const id: string = created.body.data.id;
+  const friend = "00000000-0000-4000-8000-000000000002";
+  await request(app).get(`/api/v1/boards/${id}`).set("x-demo-user-id", friend).expect(200);
+  await request(app).put(`/api/v1/users/me/saved-boards/${id}`).set("x-demo-user-id", friend).expect(204);
+  const ownerBefore = await request(app).get("/api/v1/users/me/stats").expect(200);
+  const friendBefore = await request(app).get("/api/v1/users/me/stats").set("x-demo-user-id", friend).expect(200);
+  assert.ok(indexed.includes(id));
+  const deleted = await request(app).delete(`/api/v1/boards/${id}`).expect(204);
+  assert.equal(deleted.text, "");
+  assert.deepEqual(removed, [id]);
+  await request(app).get(`/api/v1/boards/${id}`).expect(404);
+  await request(app).delete(`/api/v1/boards/${id}`).expect(404);
+  assert.deepEqual(removed, [id]);
+  const ownerAfter = await request(app).get("/api/v1/users/me/stats").expect(200);
+  const friendAfter = await request(app).get("/api/v1/users/me/stats").set("x-demo-user-id", friend).expect(200);
+  assert.equal(ownerAfter.body.data.boardsCreated, ownerBefore.body.data.boardsCreated - 1);
+  assert.equal(friendAfter.body.data.boardsSaved, friendBefore.body.data.boardsSaved - 1);
+  for (const path of ["/api/v1/boards", "/api/v1/users/me/boards", "/api/v1/users/me/map-destinations"]) {
+    const result = await request(app).get(path).expect(200);
+    assert.ok(!result.body.data.some((entry: { id?: string; boardId?: string }) => entry.id === id || entry.boardId === id));
+  }
+  const recent = await request(app).get("/api/v1/users/me/recent-boards").set("x-demo-user-id", friend).expect(200);
+  assert.ok(!recent.body.data.some((entry: { id: string }) => entry.id === id));
+  await request(app).put(`/api/v1/users/me/saved-boards/${id}`).set("x-demo-user-id", friend).expect(404);
+});

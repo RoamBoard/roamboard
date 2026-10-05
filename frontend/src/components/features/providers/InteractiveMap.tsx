@@ -10,28 +10,35 @@ export type MapPoint = {
   type?: string;
   latitude: number;
   longitude: number;
+  color?: string;
 };
 
 type Props = {
   token?: string;
   points: MapPoint[];
   routeGeometry: Array<[number, number]>;
-  onMapClick: (latitude: number, longitude: number) => void;
+  onMapClick?: (latitude: number, longitude: number) => void;
+  onPointClick?: (point: MapPoint) => void;
 };
 
 const routeSource = "roamboard-provider-route";
 
-export default function InteractiveMap({ token, points, routeGeometry, onMapClick }: Props) {
+export default function InteractiveMap({ token, points, routeGeometry, onMapClick, onPointClick }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapboxMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
   const onMapClickRef = useRef(onMapClick);
+  const onPointClickRef = useRef(onPointClick);
   const [mapError, setMapError] = useState("");
   const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
     onMapClickRef.current = onMapClick;
   }, [onMapClick]);
+
+  useEffect(() => {
+    onPointClickRef.current = onPointClick;
+  }, [onPointClick]);
 
   useEffect(() => {
     if (!token || !containerRef.current) return;
@@ -51,7 +58,9 @@ export default function InteractiveMap({ token, points, routeGeometry, onMapClic
         map.addLayer({ id: routeSource, type: "line", source: routeSource, paint: { "line-color": "#161616", "line-width": 4, "line-opacity": 0.8 } });
         setMapReady(true);
       });
-      map.on("click", (event) => onMapClickRef.current(event.lngLat.lat, event.lngLat.lng));
+      if (onMapClickRef.current) {
+        map.on("click", (event) => onMapClickRef.current?.(event.lngLat.lat, event.lngLat.lng));
+      }
       map.on("error", (event) => setMapError(event.error?.message ?? "The Mapbox map could not load."));
       mapRef.current = map;
     }, 0);
@@ -67,16 +76,49 @@ export default function InteractiveMap({ token, points, routeGeometry, onMapClic
   useEffect(() => {
     markersRef.current.forEach((marker) => marker.remove());
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !mapReady) return;
     markersRef.current = points.map((point, index) => {
       const element = document.createElement("div");
       element.className = "provider-map-pin";
-      element.innerHTML = `<span>${index + 1}</span>`;
+      if (point.color) element.style.backgroundColor = point.color;
+      const label = document.createElement("span");
+      label.textContent = String(index + 1);
+      element.append(label);
       element.title = point.label;
-      return new mapboxgl.Marker({ element })
+      if (onPointClickRef.current) {
+        element.setAttribute("role", "button");
+        element.setAttribute("tabindex", "0");
+        element.setAttribute("aria-label", `Open ${point.label}`);
+        const activate = () => onPointClickRef.current?.(point);
+        element.addEventListener("click", (event) => {
+          event.stopPropagation();
+          activate();
+        });
+        element.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            activate();
+          }
+        });
+      }
+      const colocated = points.filter((candidate) => Math.abs(candidate.latitude - point.latitude) < 0.00001 && Math.abs(candidate.longitude - point.longitude) < 0.00001);
+      const position = colocated.findIndex((candidate) => candidate.id === point.id);
+      const angle = (position / colocated.length) * Math.PI * 2;
+      const offset: [number, number] = colocated.length > 1 ? [Math.cos(angle) * 22, Math.sin(angle) * 22] : [0, 0];
+      return new mapboxgl.Marker({ element, offset })
         .setLngLat([point.longitude, point.latitude])
         .addTo(map);
     });
+    if (points.length === 1 && points[0]) {
+      map.easeTo({ center: [points[0].longitude, points[0].latitude], zoom: 13 });
+    }
+    if (points.length > 1) {
+      const bounds = points.reduce(
+        (current, point) => current.extend([point.longitude, point.latitude]),
+        new mapboxgl.LngLatBounds(),
+      );
+      map.fitBounds(bounds, { padding: 64, maxZoom: 14 });
+    }
   }, [points, mapReady]);
 
   useEffect(() => {

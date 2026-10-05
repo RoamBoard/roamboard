@@ -5,7 +5,9 @@ import { prototypeAuth } from "./user.auth.js";
 import type { UserController } from "./user.controller.js";
 import {
   boardByIdSchema,
+  browseBoardsSchema,
   createBoardSchema,
+  createDetailedBoardSchema,
   createUserSchema,
   listBoardsSchema,
   setProfilePictureSchema,
@@ -35,6 +37,9 @@ export function createUserRouter(controller: UserController): Router {
 export function createBoardRouter(controller: UserController): Router {
   const router = Router();
   router.use(prototypeAuth);
+  router.get("/", validate(browseBoardsSchema), controller.listBoards);
+  router.delete("/:boardId", validate(boardByIdSchema), controller.deleteBoard);
+  router.post("/", validate(createDetailedBoardSchema), controller.createDetailedBoard);
   router.get("/:boardId", validate(boardByIdSchema), controller.getBoard);
   return router;
 }

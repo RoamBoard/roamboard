@@ -77,3 +77,52 @@ test("PostgreSQL persists API todos and supplies Elasticsearch search records", 
     await pool.end();
   }
 });
+
+test("PostgreSQL owner deletion cascades itinerary children and durable search source", { skip: !runIntegration }, async () => {
+  const databaseUrl = process.env.TEST_DATABASE_URL;
+  assert.ok(databaseUrl, "Set TEST_DATABASE_URL for the PostgreSQL integration test");
+  const pool = createPostgresPool(databaseUrl);
+  const ownerIds: string[] = [];
+  const boardIds: string[] = [];
+  try {
+    await runMigrations(pool);
+    const { createPostgresUserRepository } = await import("../src/features/users/user.postgres-repository.js");
+    const app = createApp({ userRepository: createPostgresUserRepository(pool) });
+    const owner = await request(app).post("/api/v1/users").send({ username: `del_${randomUUID().replaceAll("-", "").slice(0, 20)}`, displayName: "Deletion integration" }).expect(201);
+    ownerIds.push(owner.body.data.id);
+    const dayId = randomUUID();
+    const pinId = randomUUID();
+    const imageId = randomUUID();
+    const created = await request(app).post("/api/v1/boards").set("x-demo-user-id", owner.body.data.id).send({
+      title: "Durable deletion", status: "published", visibility: "public", tags: ["castle"], vibes: [], highlights: ["Osaka Castle"],
+      days: [{ id: dayId, dayNumber: 1, date: null, pins: [{ id: pinId, order: 0, time: "09:00", title: "Osaka Castle", description: "", category: "landmark", source: "mapbox",
+        location: { name: "Osaka Castle", address: "Osaka, Japan", latitude: 34.6873, longitude: 135.5262, country: "Japan", countryCode: "JP", city: "Osaka", mapboxId: "integration-osaka" } }] }],
+      images: [{ id: imageId, pinId, publicId: `integration/${imageId}`, source: "upload", url: "https://images.example/castle.jpg", thumbnailUrl: "https://images.example/castle-thumb.jpg", width: 100, height: 100,
+        capturedAt: null, latitude: null, longitude: null, order: 0, credit: null, creditUrl: null, sourceUrl: null }],
+    }).expect(201);
+    const boardId: string = created.body.data.id;
+    boardIds.push(boardId);
+    await request(app).get(`/api/v1/boards/${boardId}`).set("x-demo-user-id", owner.body.data.id).expect(200);
+    await request(app).put(`/api/v1/users/me/saved-boards/${boardId}`).set("x-demo-user-id", owner.body.data.id).expect(204);
+    const tables = ["board_destinations", "board_days", "board_pins", "board_images", "board_visits", "saved_boards"];
+    for (const table of tables) {
+      const rows = await pool.query(`SELECT count(*)::int AS count FROM ${table} WHERE board_id = $1`, [boardId]);
+      assert.ok(rows.rows[0].count > 0, `Expected ${table} fixture before deletion`);
+    }
+    assert.equal((await pool.query("SELECT count(*)::int AS count FROM search_documents WHERE id = $1", [boardId])).rows[0].count, 1);
+    await request(app).delete(`/api/v1/boards/${boardId}`).set("x-demo-user-id", owner.body.data.id).expect(204);
+    for (const table of tables) {
+      assert.equal((await pool.query(`SELECT count(*)::int AS count FROM ${table} WHERE board_id = $1`, [boardId])).rows[0].count, 0, `${table} survived deletion`);
+    }
+    assert.equal((await pool.query("SELECT count(*)::int AS count FROM search_documents WHERE id = $1", [boardId])).rows[0].count, 0);
+    const restartedApp = createApp({ userRepository: createPostgresUserRepository(pool) });
+    await request(restartedApp).get(`/api/v1/boards/${boardId}`).set("x-demo-user-id", owner.body.data.id).expect(404);
+  } finally {
+    for (const id of boardIds) {
+      await pool.query("DELETE FROM search_documents WHERE id = $1", [id]);
+      await pool.query("DELETE FROM boards WHERE id = $1", [id]);
+    }
+    for (const id of ownerIds) await pool.query("DELETE FROM users WHERE id = $1", [id]);
+    await pool.end();
+  }
+});

@@ -37,11 +37,12 @@ function uniqueNames(values: string[]): string[] {
   return values.filter((value, index) => value && values.findIndex((candidate) => candidate.toLocaleLowerCase() === value.toLocaleLowerCase()) === index);
 }
 
-export async function reverseMapbox(latitude: number, longitude: number, token: string): Promise<MapboxLocation> {
+export async function reverseMapbox(latitude: number, longitude: number, token: string, permanent = false): Promise<MapboxLocation> {
   const url = new URL("https://api.mapbox.com/search/geocode/v6/reverse");
   url.searchParams.set("longitude", String(longitude));
   url.searchParams.set("latitude", String(latitude));
   url.searchParams.set("language", "en");
+  if (permanent) url.searchParams.set("permanent", "true");
   url.searchParams.set("access_token", token);
   const response = await fetch(url, { signal: AbortSignal.timeout(8_000) });
   if (!response.ok) throw new Error(`Mapbox returned ${response.status}`);
@@ -55,6 +56,8 @@ export async function reverseMapbox(latitude: number, longitude: number, token: 
   const area = featureName("neighborhood") || featureName("locality") || featureName("district");
   const place = featureName("place");
   const country = featureName("country");
+  const countryContext = type === "country" ? properties : objectValue(context.country);
+  const countryCode = stringValue(countryContext.country_code).toUpperCase();
   const label = uniqueNames([area || place || name, place, country]).join(", ");
   const detail = [area, place, country].some((value) => value.toLocaleLowerCase() === name.toLocaleLowerCase()) ? "" : name;
   return {
@@ -64,6 +67,9 @@ export async function reverseMapbox(latitude: number, longitude: number, token: 
     type,
     latitude,
     longitude,
+    country: country || null,
+    countryCode: /^[A-Z]{2}$/.test(countryCode) ? countryCode : null,
+    city: place || null,
   };
 }
 
@@ -91,7 +97,7 @@ export async function searchUnsplash(query: string, accessKey: string, limit: nu
       id: stringValue(photo.id),
       url: urlValue,
       thumbnailUrl: stringValue(urls.small, urlValue),
-      alt: stringValue(photo.alt_description, `${query} travel photo`),
+      alt: stringValue(photo.alt_description, stringValue(photo.description, "Travel photograph")),
       photographer: stringValue(user.name, "Unsplash photographer"),
       photographerUrl: stringValue(userLinks.html),
       sourceUrl: stringValue(links.html),

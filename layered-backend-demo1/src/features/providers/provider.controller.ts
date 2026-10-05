@@ -7,8 +7,10 @@ export interface ProviderController {
   config: RequestHandler;
   mapboxMapSession: RequestHandler;
   mapboxSearch: RequestHandler;
+  mapboxBoardSearch: RequestHandler;
   mapboxDestinationSearch: RequestHandler;
   mapboxReverse: RequestHandler;
+  mapboxBoardReverse: RequestHandler;
   mapboxRoute: RequestHandler;
   unsplashSearch: RequestHandler;
   googlePlacesSearch: RequestHandler;
@@ -31,6 +33,7 @@ export function createProviderController(service: ProviderService): ProviderCont
     config: (_req, res) => res.json({ data: service.config() }),
     mapboxMapSession: async (_req, res) => res.json({ data: await service.mapboxMapSession() }),
     mapboxSearch: search(service.mapboxSearch),
+    mapboxBoardSearch: search(service.mapboxBoardSearch),
     mapboxDestinationSearch: async (req, res) => {
       const { query } = req.validated as BoardDestinationSearchRequest;
       res.json({ data: await service.mapboxDestinationSearch(query.country, query.city, query.limit) });
@@ -54,6 +57,10 @@ export function createProviderController(service: ProviderService): ProviderCont
     mapboxReverse: async (req, res) => {
       const { query } = req.validated as ProviderReverseRequest;
       res.json({ data: await service.mapboxReverse(query.latitude, query.longitude) });
+    },
+    mapboxBoardReverse: async (req, res) => {
+      const { query } = req.validated as ProviderReverseRequest;
+      res.json({ data: await service.mapboxBoardReverse(query.latitude, query.longitude) });
     },
     mapboxRoute: async (req, res) => {
       const { body } = req.validated as MapboxRouteRequest;

@@ -88,6 +88,10 @@ export function searchMapbox(query: string, limit: number, token: string): Promi
   return requestMapbox({ query }, limit, token);
 }
 
+export function searchMapboxPermanent(query: string, limit: number, token: string): Promise<DestinationResult[]> {
+  return requestMapbox({ query, permanent: true }, limit, token);
+}
+
 export function searchMapboxCities(country: string, city: string, limit: number, token: string): Promise<DestinationResult[]> {
   return requestMapbox({ country, city, permanent: true, types: "place" }, limit, token);
 }

@@ -76,7 +76,7 @@ function assetFromUpload(result: CloudinaryImageResult, cloudName: string): Clou
   const embeddedMetadata = result.media_metadata ?? result.image_metadata;
   return {
     publicId: result.public_id,
-    url: result.secure_url,
+    url: `https://res.cloudinary.com/${cloudName}/image/upload/q_auto,f_auto/${result.public_id}`,
     thumbnailUrl: `https://res.cloudinary.com/${cloudName}/image/upload/c_fill,w_480,h_320,q_auto,f_auto/${result.public_id}`,
     width: result.width,
     height: result.height,

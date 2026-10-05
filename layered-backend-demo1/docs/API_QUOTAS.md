@@ -25,7 +25,7 @@ These limits leave approximately 1% headroom below the published boundary. They 
 
 The profile travel-footprint map uses the existing `mapbox.map_loads` reservation. Its Mapbox Countries v1 boundary tiles and the city GeoJSON overlay are rendered within that same GL JS map load; they do not introduce another provider operation or quota policy.
 
-Board destination lookup uses structured city and country input with `types=place` and `permanent=true`. This permits the selected canonical city, country, ISO code, and coordinates to be stored with the Board. Permanent geocoding requires a billing-enabled Mapbox account; the backend stops at 2,475 requests per month, below the published 2,500-request free boundary.
+Board destination lookup uses structured city and country input with `types=place` and `permanent=true`. Board pin search and photo/map reverse geocoding also set `permanent=true` because selected results may be stored. These operations share the reviewed `mapbox.permanent_geocoding` policy. Permanent geocoding requires a billing-enabled Mapbox account; the backend stops at 2,475 requests per month, below the published 2,500-request free boundary.
 
 Mapbox's larger free tier requires a payment method and Mapbox does not offer an account-side spending cap. These code limits therefore assume that all calls use credentials dedicated to Roamboard and pass through this backend. If the same account or key is used elsewhere, Roamboard cannot know about that usage and its local counter is not sufficient.
 

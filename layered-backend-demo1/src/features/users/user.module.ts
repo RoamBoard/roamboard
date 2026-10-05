@@ -4,7 +4,7 @@ import { createUserController, type UserController } from "./user.controller.js"
 import { createUserRepository } from "./user.repository.js";
 import { createBoardRouter, createUserRouter } from "./user.routes.js";
 import { createUserService } from "./user.service.js";
-import type { UserRepository, UserService } from "./user.types.js";
+import type { BoardSearchIndexer, UserRepository, UserService } from "./user.types.js";
 
 export interface UserModule {
   userRouter: Router;
@@ -16,10 +16,11 @@ export interface UserModule {
 
 interface CreateUserModuleOptions {
   repository?: UserRepository;
+  searchIndexer?: BoardSearchIndexer;
 }
 
-export function createUserModule({ repository = createUserRepository() }: CreateUserModuleOptions = {}): UserModule {
-  const service = createUserService(repository);
+export function createUserModule({ repository = createUserRepository(), searchIndexer }: CreateUserModuleOptions = {}): UserModule {
+  const service = createUserService(repository, searchIndexer);
   const controller = createUserController(service);
   return {
     userRouter: createUserRouter(controller),

@@ -18,6 +18,7 @@ export async function runMigrations(pool: Pool): Promise<void> {
     "002_api_quota_usage",
     "003_google_place_references",
     "004_users_and_boards",
+    "005_board_creator",
   ];
   const client = await pool.connect();
 

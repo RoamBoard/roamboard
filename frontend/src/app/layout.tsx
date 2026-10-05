@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import "mapbox-gl/dist/mapbox-gl.css";
 import "./globals.css";
 
 // Both typefaces are from Fontshare (fontshare.com). Download the variable

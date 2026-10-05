@@ -40,6 +40,7 @@ async function main(): Promise<void> {
     quotaRepository: pool ? createPostgresQuotaRepository(pool) : undefined,
     googlePlaceReferenceRepository: pool ? createPostgresGooglePlaceReferenceRepository(pool) : undefined,
     userRepository: pool ? createPostgresUserRepository(pool) : undefined,
+    boardSearchIndexer: searchModule.service,
   });
   const server = app.listen(env.PORT, () => {
     log("API listening on port %d with %s storage", env.PORT, env.STORAGE);

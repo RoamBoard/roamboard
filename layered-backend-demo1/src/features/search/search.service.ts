@@ -15,6 +15,8 @@ export interface SearchService {
   search(input: SearchInput): Promise<SearchResult>;
   suggestions(query: string, limit: number): Promise<string[]>;
   isReady(): Promise<boolean>;
+  index(document: SearchDocument): Promise<void>;
+  remove(boardId: string): Promise<void>;
 }
 
 export function createSearchService(
@@ -95,5 +97,19 @@ export function createSearchService(
     }
   }
 
-  return { ensureIndex, reindex, search, suggestions, isReady };
+  async function index(document: SearchDocument): Promise<void> {
+    await ensureIndex();
+    await client.index({
+      index: SEARCH_INDEX,
+      id: document.id,
+      document,
+      refresh: "wait_for",
+    });
+  }
+
+  async function remove(boardId: string): Promise<void> {
+    await client.delete({ index: SEARCH_INDEX, id: boardId, refresh: "wait_for" }, { ignore: [404] });
+  }
+
+  return { remove, ensureIndex, reindex, search, suggestions, isReady, index };
 }

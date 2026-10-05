@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 720" role="img" aria-labelledby="title description">
+  <title id="title">Rock formations at sunset</title>
+  <desc id="description">A stylized desert landscape in warm evening light.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4c6672"/>
+      <stop offset="0.44" stop-color="#d18a4f"/>
+      <stop offset="1" stop-color="#f3c379"/>
+    </linearGradient>
+    <linearGradient id="sand" x1="0" y1="0" x2="0.86" y2="0.72">
+      <stop offset="0" stop-color="#9a5d32"/>
+      <stop offset="0.52" stop-color="#d89652"/>
+      <stop offset="1" stop-color="#7a422b"/>
+    </linearGradient>
+    <linearGradient id="rock" x1="0.15" y1="0" x2="0.82" y2="1">
+      <stop offset="0" stop-color="#402d27"/>
+      <stop offset="0.58" stop-color="#70412b"/>
+      <stop offset="1" stop-color="#1f2323"/>
+    </linearGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="16"/>
+    </filter>
+  </defs>
+  <rect width="1600" height="720" fill="url(#sky)"/>
+  <circle cx="1330" cy="178" r="98" fill="#ffd58c" opacity=".82" filter="url(#soft)"/>
+  <path d="M0 370C260 310 428 344 650 316c272-34 497-119 950-44v448H0Z" fill="url(#sand)"/>
+  <path d="M0 470c238-26 406 11 603 46 252 44 504 39 997-80v284H0Z" fill="#d49a5b" opacity=".65"/>
+  <g fill="url(#rock)">
+    <path d="M72 377c43-17 51-82 88-91 31-8 42 18 62 11 26-8 24-63 67-77 47-15 70 25 84 70 13 43 49 58 74 87Z"/>
+    <path d="M493 457c45-49 47-149 108-178 46-22 75 14 103-2 40-22 39-136 106-151 76-18 117 94 122 183 4 62 39 109 82 148Z"/>
+    <path d="M1060 355c46-20 55-103 96-115 40-12 58 31 87 21 36-12 43-97 102-99 64-2 80 89 105 123 27 36 74 43 118 70Z"/>
+  </g>
+  <g fill="none" stroke="#efb06b" stroke-linecap="round" opacity=".48">
+    <path d="M585 301c68 37 115 99 120 183"/>
+    <path d="M775 178c35 84 31 179 3 275"/>
+    <path d="M1155 263c36 26 48 65 50 111"/>
+  </g>
+  <path d="M0 630c265-83 460-60 660 9 251 87 504 37 940-98v179H0Z" fill="#3d332b" opacity=".72"/>
+</svg>

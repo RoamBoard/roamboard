@@ -3,7 +3,9 @@ import type { RequestHandler } from "express";
 import { getPrototypeUserId } from "./user.auth.js";
 import type {
   BoardByIdRequest,
+  BrowseBoardsRequest,
   CreateBoardRequest,
+  CreateDetailedBoardRequest,
   CreateUserRequest,
   ListBoardsRequest,
   SetProfilePictureRequest,
@@ -21,7 +23,10 @@ export interface UserController {
   listOwnBoards: RequestHandler;
   listRecentBoards: RequestHandler;
   getBoard: RequestHandler;
+  listBoards: RequestHandler;
+  deleteBoard: RequestHandler;
   createBoard: RequestHandler;
+  createDetailedBoard: RequestHandler;
   saveBoard: RequestHandler;
   unsaveBoard: RequestHandler;
   getMapDestinations: RequestHandler;
@@ -67,6 +72,18 @@ export function createUserController(service: UserService): UserController {
     res.json({ data: boards, meta: { limit: query.limit, count: boards.length } });
   };
 
+  const listBoards: RequestHandler = async (req, res) => {
+    const { query } = req.validated as BrowseBoardsRequest;
+    const result = await service.listBoards(getPrototypeUserId(req.prototypeUserId), query.page, query.limit);
+    res.json({ data: result.boards, meta: { page: query.page, limit: query.limit, hasMore: result.hasMore } });
+  };
+
+  const deleteBoard: RequestHandler = async (req, res) => {
+    const { params } = req.validated as BoardByIdRequest;
+    await service.deleteBoard(getPrototypeUserId(req.prototypeUserId), params.boardId);
+    res.status(204).send();
+  };
+
   const getBoard: RequestHandler = async (req, res) => {
     const { params } = req.validated as BoardByIdRequest;
     res.json({ data: await service.getBoard(getPrototypeUserId(req.prototypeUserId), params.boardId) });
@@ -75,6 +92,11 @@ export function createUserController(service: UserService): UserController {
   const createBoard: RequestHandler = async (req, res) => {
     const { body } = req.validated as CreateBoardRequest;
     res.status(201).json({ data: await service.createBoard(getPrototypeUserId(req.prototypeUserId), body) });
+  };
+
+  const createDetailedBoard: RequestHandler = async (req, res) => {
+    const { body } = req.validated as CreateDetailedBoardRequest;
+    res.status(201).json({ data: await service.createDetailedBoard(getPrototypeUserId(req.prototypeUserId), body) });
   };
 
   const saveBoard: RequestHandler = async (req, res) => {
@@ -93,5 +115,5 @@ export function createUserController(service: UserService): UserController {
     res.json({ data: await service.getMapDestinations(getPrototypeUserId(req.prototypeUserId)) });
   };
 
-  return { createUser, getProfile, updateProfile, setProfilePicture, deleteProfilePicture, getStats, listOwnBoards, listRecentBoards, getBoard, createBoard, saveBoard, unsaveBoard, getMapDestinations };
+  return { listBoards, deleteBoard, createUser, getProfile, updateProfile, setProfilePicture, deleteProfilePicture, getStats, listOwnBoards, listRecentBoards, getBoard, createBoard, createDetailedBoard, saveBoard, unsaveBoard, getMapDestinations };
 }

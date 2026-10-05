@@ -3,7 +3,9 @@ import { randomUUID } from "node:crypto";
 import type {
   BoardSummary,
   CreateBoardInput,
+  CreateDetailedBoardInput,
   CreateUserInput,
+  DetailedBoard,
   MapDestination,
   ProfileStats,
   UpdateProfileInput,
@@ -22,7 +24,7 @@ function copyProfile(profile: UserProfile): UserProfile {
   return structuredClone(profile);
 }
 
-function copyBoard(board: BoardSummary): BoardSummary {
+function copyBoard<T extends BoardSummary>(board: T): T {
   return structuredClone(board);
 }
 
@@ -53,7 +55,7 @@ export function createUserRepository(): UserRepository {
       updatedAt: "2026-08-01T10:00:00.000Z",
     }],
   ]);
-  const boards = new Map<string, BoardSummary>();
+  const boards = new Map<string, BoardSummary | DetailedBoard>();
   const visits = new Map<string, Map<string, string>>();
   const savedBoards = new Map<string, Set<string>>([[DEMO_USER_ID, new Set()]]);
   const friendships = new Set([`${DEMO_USER_ID}:${friendId}`]);
@@ -151,6 +153,25 @@ export function createUserRepository(): UserRepository {
     };
   }
 
+  async function findVisibleBoards(userId: string, limit: number, offset: number): Promise<BoardSummary[]> {
+    const visible = await Promise.all(Array.from(boards.values()).map(async (board) => {
+      const readable = board.ownerId === userId || ((board.status ?? "published") === "published" &&
+        (board.visibility === "public" || (board.visibility === "friends" && await areFriends(userId, board.ownerId))));
+      return readable ? board : null;
+    }));
+    return visible.filter((board): board is BoardSummary | DetailedBoard => board !== null)
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.id.localeCompare(b.id))
+      .slice(offset, offset + limit).map(copyBoard);
+  }
+
+  async function deleteBoard(userId: string, boardId: string): Promise<boolean> {
+    if (boards.get(boardId)?.ownerId !== userId) return false;
+    boards.delete(boardId);
+    visits.forEach((items) => items.delete(boardId));
+    savedBoards.forEach((items) => items.delete(boardId));
+    return true;
+  }
+
   async function findOwnBoards(userId: string, limit: number): Promise<BoardSummary[]> {
     return Array.from(boards.values()).filter((board) => board.ownerId === userId).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, limit).map(copyBoard);
   }
@@ -163,7 +184,7 @@ export function createUserRepository(): UserRepository {
     });
   }
 
-  async function findBoardById(boardId: string): Promise<BoardSummary | null> {
+  async function findBoardById(boardId: string): Promise<BoardSummary | DetailedBoard | null> {
     const board = boards.get(boardId);
     return board ? copyBoard(board) : null;
   }
@@ -190,6 +211,44 @@ export function createUserRepository(): UserRepository {
     return copyBoard(board);
   }
 
+  async function createDetailedBoard(userId: string, input: CreateDetailedBoardInput): Promise<DetailedBoard> {
+    const timestamp = now();
+    const destinations = input.days
+      .flatMap((day) => day.pins)
+      .flatMap((pin) => pin.location?.country && pin.location.countryCode && pin.location.city
+        ? [{
+            id: randomUUID(),
+            country: pin.location.country,
+            countryCode: pin.location.countryCode,
+            city: pin.location.city,
+            latitude: pin.location.latitude,
+            longitude: pin.location.longitude,
+          }]
+        : [])
+      .filter((destination, index, all) => all.findIndex((candidate) =>
+        candidate.countryCode === destination.countryCode && candidate.city === destination.city
+      ) === index);
+    const board: DetailedBoard = {
+      id: randomUUID(),
+      ownerId: userId,
+      title: input.title || "Untitled Board",
+      description: input.description,
+      visibility: input.visibility,
+      isCompleted: false,
+      status: input.status,
+      tags: [...input.tags],
+      vibes: [...input.vibes],
+      highlights: [...input.highlights],
+      destinations,
+      days: structuredClone(input.days),
+      images: structuredClone(input.images),
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+    boards.set(board.id, board);
+    return structuredClone(board);
+  }
+
   async function saveBoard(userId: string, boardId: string): Promise<void> {
     const current = savedBoards.get(userId) ?? new Set<string>();
     current.add(boardId);
@@ -204,5 +263,5 @@ export function createUserRepository(): UserRepository {
     return Array.from(boards.values()).filter((board) => board.ownerId === userId).flatMap((board) => board.destinations.map((destination) => ({ ...destination, boardId: board.id, boardTitle: board.title, isCompleted: board.isCompleted })));
   }
 
-  return { findUserById, findUserByUsername, createUser, updateProfile, setProfilePicture, deleteProfilePicture, getStats, findOwnBoards, findRecentBoards, findBoardById, areFriends, recordBoardVisit, createBoard, saveBoard, unsaveBoard, findMapDestinations };
+  return { findVisibleBoards, deleteBoard, findUserById, findUserByUsername, createUser, updateProfile, setProfilePicture, deleteProfilePicture, getStats, findOwnBoards, findRecentBoards, findBoardById, areFriends, recordBoardVisit, createBoard, createDetailedBoard, saveBoard, unsaveBoard, findMapDestinations };
 }

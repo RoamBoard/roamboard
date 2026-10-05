@@ -45,7 +45,10 @@ test("returns canonical city data from permanent structured geocoding", async (c
 });
 
 test("formats a reverse-geocoded address as area context plus concise detail", async (context) => {
-  context.mock.method(globalThis, "fetch", async () => new Response(JSON.stringify({
+  context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+    const url = new URL(String(input));
+    assert.equal(url.searchParams.get("permanent"), "true");
+    return new Response(JSON.stringify({
     features: [{
       id: "mapbox-address",
       properties: {
@@ -54,14 +57,15 @@ test("formats a reverse-geocoded address as area context plus concise detail", a
         context: {
           neighborhood: { name: "Odenplan" },
           place: { name: "Stockholm" },
-          country: { name: "Sweden" },
+          country: { name: "Sweden", country_code: "SE" },
           postcode: { name: "113 25" },
         },
       },
     }],
-  }), { status: 200 }));
+    }), { status: 200 });
+  });
 
-  const result = await reverseMapbox(59.3425, 18.0472, "pk.test");
+  const result = await reverseMapbox(59.3425, 18.0472, "pk.test", true);
 
   assert.deepEqual(result, {
     id: "mapbox-address",
@@ -70,6 +74,9 @@ test("formats a reverse-geocoded address as area context plus concise detail", a
     type: "address",
     latitude: 59.3425,
     longitude: 18.0472,
+    country: "Sweden",
+    countryCode: "SE",
+    city: "Stockholm",
   });
 });
 

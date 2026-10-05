@@ -16,6 +16,7 @@ import { createTodoModule } from "./features/todos/todo.module.js";
 import type { TodoRepository } from "./features/todos/todo.types.js";
 import { createUserModule } from "./features/users/user.module.js";
 import type { UserRepository } from "./features/users/user.types.js";
+import type { BoardSearchIndexer } from "./features/users/user.types.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { notFoundHandler } from "./middleware/not-found.js";
 
@@ -26,16 +27,17 @@ interface CreateAppOptions {
   quotaRepository?: QuotaRepository;
   googlePlaceReferenceRepository?: GooglePlaceReferenceRepository;
   userRepository?: UserRepository;
+  boardSearchIndexer?: BoardSearchIndexer;
 }
 
-export function createApp({ todoRepository, searchClient, searchModule: providedSearchModule, quotaRepository, googlePlaceReferenceRepository, userRepository }: CreateAppOptions = {}): Express {
+export function createApp({ todoRepository, searchClient, searchModule: providedSearchModule, quotaRepository, googlePlaceReferenceRepository, userRepository, boardSearchIndexer }: CreateAppOptions = {}): Express {
   const app = express();
   const todoModule = createTodoModule({ repository: todoRepository });
   const searchModule = providedSearchModule ?? createSearchModule({ client: searchClient });
   const quotaModule = createQuotaModule(quotaRepository);
   const destinationModule = createDestinationModule(quotaModule.service);
   const providerModule = createProviderModule(quotaModule.service, googlePlaceReferenceRepository);
-  const userModule = createUserModule({ repository: userRepository });
+  const userModule = createUserModule({ repository: userRepository, searchIndexer: boardSearchIndexer });
 
   app.disable("x-powered-by");
 

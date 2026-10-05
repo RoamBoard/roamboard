@@ -1,13 +1,13 @@
 # Layered backend demo
 
-This Express 5 backend has a todo API, a prototype user/profile and Board API, a sample travel search API, and a destination discovery API. PostgreSQL stores users, profiles, Boards, destinations, Board visits, friendships, saved resources, todos, sample travel records, quota counters, and saved Google Place ID references. Elasticsearch is a derived search index, rebuilt by the backend from PostgreSQL. Other destination provider response fields are live discovery data and are not persisted or indexed.
+This Express 5 backend has a todo API, a prototype user/profile and Board API, a sample travel search API, and a destination discovery API. PostgreSQL stores users, profiles, Boards, Board days and pins, confirmed image references, discovery metadata, destinations, Board visits, friendships, saved resources, todos, search-source records, quota counters, and saved Google Place ID references. Elasticsearch is a derived search index, rebuilt by the backend from PostgreSQL. Other destination provider response fields are live discovery data and are not persisted or indexed.
 
 ```text
 HTTP client -> Express API -> PostgreSQL (source of truth)
                            -> Elasticsearch (search index)
 ```
 
-PostgreSQL and Elasticsearch do not talk directly. The API reads the source records from PostgreSQL and indexes only public records. There is no endpoint for changing search documents yet, so a full rebuild at API startup and the reindex command are enough for this demo. Future public Board search writes will need a durable retry mechanism such as an outbox before they can safely update the search index.
+PostgreSQL and Elasticsearch do not talk directly. The API reads the source records from PostgreSQL and indexes only public records. Creating a public published Board writes its search document in the same PostgreSQL transaction as the Board, then attempts an immediate Elasticsearch update. A failed live update does not lose the durable source record; API startup and the reindex command reconcile the derived index.
 
 ## Run all three services with Docker
 
@@ -59,7 +59,7 @@ Open `http://localhost:3000/dev/profile` after starting the frontend to edit the
 
 Until authentication is implemented, protected prototype routes use `x-demo-user-id`. If the header is omitted, the seeded user `00000000-0000-4000-8000-000000000001` is selected. A user created with `POST /api/v1/users` can be selected by sending its returned ID in that header. This behavior must be replaced by verified authentication before production use.
 
-Restarting the API preserves todos because PostgreSQL uses a named volume. `docker compose down` stops and removes the containers but keeps both named data volumes. Changing the PostgreSQL password after its volume has been initialized requires changing the database role password too; editing `.env` alone does not change an existing database.
+Restarting the computer or API preserves Boards, pins, image IDs, tags, highlights, and other saved records because PostgreSQL uses a named volume. Elasticsearch also has its own named volume; public published Board tags are derived from PostgreSQL, and startup reindexing rebuilds that index. Unsaved creator state lives only in the browser. A host API started with STORAGE=memory loses its records on process restart. `docker compose down` stops and removes the containers but keeps both named data volumes. Changing the PostgreSQL password after its volume has been initialized requires changing the database role password too; editing `.env` alone does not change an existing database.
 
 Rebuild the derived index from the PostgreSQL records with:
 
@@ -106,7 +106,9 @@ The separate Elasticsearch integration test can also be enabled with `RUN_ELASTI
 | `GET` | `/api/v1/providers/config` | Report which developer provider keys are configured, without revealing values |
 | `POST` | `/api/v1/providers/mapbox/map-session` | Reserve one map load and return the public browser token when quota remains |
 | `GET` | `/api/v1/providers/mapbox/search?q=...` | Mapbox search prototype |
+| `GET` | `/api/v1/providers/mapbox/board-search?q=...` | Permanent Mapbox search for a pin that may be persisted |
 | `GET` | `/api/v1/providers/mapbox/reverse?...` | Reverse-geocode coordinates into an area label, concise location detail, and geographic type |
+| `GET` | `/api/v1/providers/mapbox/board-reverse?...` | Permanent reverse geocoding for a pin that may be persisted |
 | `POST` | `/api/v1/providers/mapbox/directions` | Route between 2-10 saved coordinates using walking, cycling, or driving |
 | `GET` | `/api/v1/providers/unsplash/search?q=...` | Unsplash image search prototype |
 | `GET` | `/api/v1/providers/google-places/search?q=...` | Google Places text-search prototype |
@@ -128,9 +130,16 @@ The separate Elasticsearch integration test can also be enabled with `RUN_ELASTI
 | `POST` | `/api/v1/users/me/boards` | Create a prototype Board with destinations |
 | `GET` | `/api/v1/users/me/recent-boards` | List recently opened, still-accessible Boards |
 | `GET` | `/api/v1/users/me/map-destinations` | Return planned and completed Board destinations for a world map |
+| `GET` | `/api/v1/boards?page=1&limit=20` | Paginated accessible Boards: owned drafts/private Boards and published public/friend Boards; response meta contains page, limit, hasMore |
+| `DELETE` | `/api/v1/boards/:boardId` | Owner-only deletion, cascading days, pins, image references, visits, saved references, and durable search source; Cloudinary assets are retained |
 | `GET` | `/api/v1/boards/:boardId` | Read an accessible Board and record a visit |
+| `POST` | `/api/v1/boards` | Save a detailed draft or published Board with days, pins, image references, tags, vibes, highlights, and visibility |
 | `PUT` / `DELETE` | `/api/v1/users/me/saved-boards/:boardId` | Save or unsave an accessible Board |
+
+Deletion removes the PostgreSQL search source in the same transaction as the Board. Live Elasticsearch removal is attempted immediately; if Elasticsearch is unavailable, startup/manual reindexing reconciles stale entries. Drafts are readable only by their owner, regardless of their visibility selection.
 
 The Elasticsearch provider lab is backed by the existing public sample records and demonstrates fuzzy search, search-as-you-type suggestions, filters, relevance scores, and development reindexing. It does not add external provider data to the index.
 
-This is still a prototype: profile and basic Board records persist, but it has no passwords or production authentication, Board items/media editing, full account lifecycle, or PostGIS. The `x-demo-user-id` boundary exists only to exercise frontend-to-database behavior. The frontend home page uses the destination discovery API; the profile lab and Elasticsearch sample search remain separate demos.
+This is still a prototype: detailed Board creation persists, but it has no passwords or production authentication, post-save Board editing, full account lifecycle, saved-pin library, or PostGIS. Cloudinary continues to own image binaries; PostgreSQL stores Board associations and selected metadata. The `x-demo-user-id` boundary exists only to exercise frontend-to-database behavior.
+
+The frontend saved Board browser is at `http://localhost:3000/dev/boards`. It loads accessible persisted records with pagination, expands Board details and provider image IDs, and supports confirmed owner-only deletion. Adminer remains the place to inspect every user?s private data and all SQL tables in local development.

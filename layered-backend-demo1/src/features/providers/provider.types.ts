@@ -58,6 +58,9 @@ export interface MapboxLocation {
   type: string;
   latitude: number;
   longitude: number;
+  country?: string | null;
+  countryCode?: string | null;
+  city?: string | null;
 }
 
 export type RouteProfile = "walking" | "cycling" | "driving";

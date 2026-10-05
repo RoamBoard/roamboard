@@ -3,9 +3,11 @@ import test from "node:test";
 
 import express from "express";
 import request from "supertest";
+import { v2 as cloudinary } from "cloudinary";
 
+import { env } from "../src/config/env.js";
 import { createProviderRouter } from "../src/features/providers/provider.routes.js";
-import { normalizePhotoMetadata } from "../src/features/providers/provider.cloudinary.js";
+import { loadCloudinaryAssets, normalizePhotoMetadata } from "../src/features/providers/provider.cloudinary.js";
 import type { ProviderService } from "../src/features/providers/provider.service.js";
 import { errorHandler } from "../src/middleware/error-handler.js";
 
@@ -19,8 +21,10 @@ function createFakeProviderService(receivedTypes: string[]): ProviderService {
     }),
     mapboxMapSession: async () => ({ publicToken: "pk.test" }),
     mapboxSearch: async () => [],
+    mapboxBoardSearch: async () => [],
     mapboxDestinationSearch: async () => [],
     mapboxReverse: async (latitude, longitude) => ({ id: "mapbox-test", label: "Stockholm, Sweden", detail: "Testgatan 1", type: "address", latitude, longitude }),
+    mapboxBoardReverse: async (latitude, longitude) => ({ id: "mapbox-test", label: "Stockholm, Sweden", detail: "Testgatan 1", type: "address", latitude, longitude }),
     mapboxRoute: async (_points, profile) => ({ profile, distanceKm: 0, durationMinutes: 0, geometry: [] }),
     unsplashSearch: async () => [],
     googlePlacesSearch: async () => [],
@@ -103,4 +107,25 @@ test("normalizes Cloudinary degree-minute-second GPS metadata", () => {
   assert.equal(metadata.hasGps, true);
   assert.ok(metadata.latitude !== null && Math.abs(metadata.latitude - 59.342483) < 0.000001);
   assert.ok(metadata.longitude !== null && Math.abs(metadata.longitude - 18.047161) < 0.000001);
+});
+
+test("Cloudinary HEIC asset listings provide browser-negotiated cover and thumbnail delivery", async (context) => {
+  const originalConfig = { CLOUDINARY_CLOUD_NAME: env.CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY: env.CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET: env.CLOUDINARY_API_SECRET };
+  Object.assign(env, { CLOUDINARY_CLOUD_NAME: "test-cloud", CLOUDINARY_API_KEY: "test-key", CLOUDINARY_API_SECRET: "test-secret" });
+  context.mock.method(cloudinary.api, "resources_by_tag", async () => ({ resources: [{
+    public_id: "roamboard/user-uploads/castle", secure_url: "https://res.cloudinary.com/test-cloud/image/upload/v1/castle.heic",
+    width: 1200, height: 800, format: "heic", bytes: 1234, created_at: "2026-10-01T00:00:00Z",
+  }] }));
+  try {
+    const assets = await loadCloudinaryAssets();
+    assert.equal(assets.length, 1);
+    assert.equal(assets[0]?.publicId, "roamboard/user-uploads/castle");
+    assert.match(assets[0]?.url ?? "", /^https:\/\/res\.cloudinary\.com\/test-cloud\/image\/upload\//);
+    assert.match(assets[0]?.url ?? "", /(?:,|\/)f_auto(?:,|\/)/);
+    assert.match(assets[0]?.thumbnailUrl ?? "", /(?:,|\/)f_auto(?:,|\/)/);
+    assert.ok(!assets[0]?.url.endsWith(".heic"));
+    assert.equal(assets[0]?.format, "heic");
+  } finally {
+    Object.assign(env, originalConfig);
+  }
 });
