@@ -40,7 +40,7 @@ export function createPostgresQuotaRepository(pool: Pool): QuotaRepository {
         for (const window of windows) {
           const result = await client.query<UsageRow>(
             `INSERT INTO api_quota_usage (policy_id, window_name, window_start, window_end, used)
-             VALUES ($1, $2, $3, $4, $5)
+             SELECT $1, $2, $3, $4, $5 WHERE $5 <= $6
              ON CONFLICT (policy_id, window_name, window_start)
              DO UPDATE SET used = api_quota_usage.used + EXCLUDED.used
              WHERE api_quota_usage.used + EXCLUDED.used <= $6

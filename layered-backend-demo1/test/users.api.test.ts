@@ -358,3 +358,26 @@ test("owner deletion removes Board details, saved references, visits, map destin
   assert.ok(!recent.body.data.some((entry: { id: string }) => entry.id === id));
   await request(app).put(`/api/v1/users/me/saved-boards/${id}`).set("x-demo-user-id", friend).expect(404);
 });
+
+test("stores and reads a Geoapify event pin as a timed day plan", async () => {
+  const app = createApp();
+  const created = await request(app).post("/api/v1/boards").send({
+    title: "Copenhagen day plan", status: "published", visibility: "public", tags: [], vibes: [], highlights: [], images: [],
+    days: [{ id: "70000000-0000-4000-8000-000000000001", dayNumber: 1, date: "2026-10-10", pins: [{
+      id: "70000000-0000-4000-8000-000000000002", order: 0, time: "09:00", title: "Morning concert", description: "Meet by the venue", category: "event", source: "geoapify",
+      location: { name: "Copenhagen", address: "Copenhagen, Denmark", latitude: 55.6761, longitude: 12.5683, country: "Denmark", countryCode: "DK", city: "Copenhagen", mapboxId: "geoapify-copenhagen" },
+    }] }],
+  });
+  assert.equal(created.status, 201, JSON.stringify(created.body));
+  const read = await request(app).get(`/api/v1/boards/${created.body.data.id}`);
+  assert.equal(read.status, 200);
+  const day = read.body.data.days[0];
+  assert.equal(day.dayNumber, 1);
+  assert.equal(day.date, "2026-10-10");
+  assert.equal(day.pins[0].source, "geoapify");
+  assert.equal(day.pins[0].category, "event");
+  assert.equal(day.pins[0].time, "09:00");
+  assert.equal(day.pins[0].location.mapboxId, "geoapify-copenhagen");
+  assert.equal(day.pins[0].location.latitude, 55.6761);
+  assert.equal(read.body.data.destinations[0].countryCode, "DK");
+});

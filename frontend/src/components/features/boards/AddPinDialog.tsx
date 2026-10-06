@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import InteractiveMap, { type MapPoint } from "@/components/features/providers/InteractiveMap";
 import PinCategoryIcon from "@/components/ui/PinCategoryIcon";
 import { categoryFromMapboxType, pinCategories } from "@/lib/board-options";
-import { loadMapboxMapSession, loadProviderConfig, searchBoardMapboxProvider, searchUnsplashProvider, type MapboxSearchResult, type ProviderPhoto } from "@/lib/providers";
+import { loadMapboxMapSession, loadProviderConfig, searchBoardLocationProvider, searchUnsplashProvider, type MapboxSearchResult, type ProviderPhoto } from "@/lib/providers";
 import { dayColors, type BoardDayDraft, type BoardImageDraft, type BoardPinDraft, type PinCategory, type PinLocation } from "@/types/board-creator";
 
 type Props = {
@@ -67,7 +67,7 @@ export default function AddPinDialog({ day, days, onClose, onAdd, onEditExisting
     setLoading(true);
     setError("");
     try {
-      const places = await searchBoardMapboxProvider(query.trim());
+      const places = await searchBoardLocationProvider(query.trim());
       const priority = (place: MapboxSearchResult) => ["place", "poi"].includes(place.placeType) ? 0 : ["locality", "neighborhood", "district", "region", "country"].includes(place.placeType) ? 1 : 2;
       setResults([...places].sort((first, second) => priority(first) - priority(second)));
     } catch (caught) {
@@ -108,7 +108,7 @@ export default function AddPinDialog({ day, days, onClose, onAdd, onEditExisting
       return;
     }
     const pinId = crypto.randomUUID();
-    onAdd(day.id, { id: pinId, order: day.pins.length, time, title: trimmedTitle, description: description.trim(), category, source: selected ? "mapbox" : "manual", location: selected }, photo ? imageFromPhoto(photo, pinId) : null);
+    onAdd(day.id, { id: pinId, order: day.pins.length, time, title: trimmedTitle, description: description.trim(), category, source: selected ? "geoapify" : "manual", location: selected }, photo ? imageFromPhoto(photo, pinId) : null);
     onClose();
   }
 

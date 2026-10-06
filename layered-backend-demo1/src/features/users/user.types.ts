@@ -69,7 +69,7 @@ export interface BoardPinInput {
   title: string;
   description: string;
   category: PinCategory;
-  source: "manual" | "mapbox" | "photo";
+  source: "manual" | "mapbox" | "geoapify" | "photo";
   location: BoardPinLocation | null;
 }
 

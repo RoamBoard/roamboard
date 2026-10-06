@@ -34,6 +34,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${cabinet.variable} ${satoshi.variable} antialiased`}>
         {children}
+        <footer className="px-6 py-3 text-12 text-graphite">Location data: <a href="https://www.geoapify.com/">Powered by Geoapify</a> &middot; <a href="https://www.openstreetmap.org/copyright">&copy; OpenStreetMap contributors</a></footer>
       </body>
     </html>
   );

@@ -8,13 +8,14 @@ Quota behavior is intentionally not configurable through `.env`. Environment var
 
 ## Current policies
 
-These limits leave approximately 1% headroom below the published boundary. They were checked against official provider documentation on 1 October 2026.
+These limits leave approximately 1% headroom below the published boundary. They were checked against official provider documentation on 6 October 2026.
 
 | Policy | Roamboard hard limit | Published boundary | Metered operation |
 | --- | ---: | ---: | --- |
-| `mapbox.map_loads` | 49,500/month | 50,000/month | Mapbox GL JS map initialization on a pay-as-you-go account |
-| `mapbox.geocoding` | 99,000/month | 100,000/month | Temporary forward and reverse geocoding |
-| `mapbox.permanent_geocoding` | 2,475/month | 2,500/month | Permanent forward geocoding for Board destinations stored in PostgreSQL |
+| `mapbox.map_loads` | 49,500/month + 1,540/day | 50,000/month | Mapbox GL JS map initialization on a pay-as-you-go account |
+| `mapbox.geocoding` | 99,000/month + 3,090/day | 100,000/month | Temporary forward and reverse geocoding |
+| `mapbox.permanent_geocoding` | **0 (disabled)** | Paid from request 1 | No request may dispatch |
+| `geoapify.geocoding` | 2/second, 118/hour, 2,970/day | 5/second, 3,000 credits/day | Shared forward/city/reverse lookup for stored locations |
 | `mapbox.directions` | 99,000/month | 100,000/month | Directions requests |
 | `google.places_text_search_pro` | 4,950/month | 5,000/month | Useful POI text search; the requested name, address, location, and type fields trigger Text Search Pro |
 | `google.place_details_essentials` | 9,900/month | 10,000/month | Live address, location, and type lookup for a saved Place ID |
@@ -25,7 +26,13 @@ These limits leave approximately 1% headroom below the published boundary. They 
 
 The profile travel-footprint map uses the existing `mapbox.map_loads` reservation. Its Mapbox Countries v1 boundary tiles and the city GeoJSON overlay are rendered within that same GL JS map load; they do not introduce another provider operation or quota policy.
 
-Board destination lookup uses structured city and country input with `types=place` and `permanent=true`. Board pin search and photo/map reverse geocoding also set `permanent=true` because selected results may be stored. These operations share the reviewed `mapbox.permanent_geocoding` policy. Permanent geocoding requires a billing-enabled Mapbox account; the backend stops at 2,475 requests per month, below the published 2,500-request free boundary.
+Stored Board destinations, pin search, and map/photo reverse lookup now use Geoapify, not Mapbox permanent geocoding. The former 2,500-free-requests assertion was incorrect; permanent geocoding is paid from the first request and has a zero policy. There is no paid fallback if Geoapify is unconfigured or exhausted.
+
+The frontend uses `/api/v1/providers/locations/search`, `/locations/destinations`, and `/locations/reverse`. Legacy `/mapbox/board-*` routes remain aliases and share the same Geoapify counter. A city lookup filters by country and returns the existing `place` result type. The intentionally legacy `mapboxId` / `mapbox_id` field holds the namespaced `geoapify:<id>` reference, so existing stored locations survive without rewriting them. New searched pins have source `geoapify`; GPS-derived pins keep source `photo`. Migration `006_geoapify_pin_source` permits the new source in PostgreSQL. Roamboard stores the pin's event, day, local time, description, and confirmed location; Geoapify only supplies location metadata.
+
+Set `GEOAPIFY_API_KEY` in the backend `.env`; Compose forwards it server-side. The configuration response contains only a boolean, never the key. Attribution is included in the frontend footer. One geocoding request is one credit. Limits reserve before dispatch: 2 per UTC second (at most 4 across a boundary), 118/hour, 2,970/day. At most 25 UTC hourly buckets overlap any 24-hour provider day, so hourly limits keep usage below 3,000 even before the account reset timezone is verified. Provider failures are counted. Use a dedicated no-card Free project; calls elsewhere are invisible to these counters. Official sources: [Geoapify pricing](https://www.geoapify.com/pricing/), [geocoding](https://apidocs.geoapify.com/docs/geocoding/forward-geocoding/), [Mapbox pricing](https://www.mapbox.com/pricing).
+
+Mapbox map display and Directions stay enabled; temporary Mapbox geocoding remains for live session use. Mapbox billing periods need not match calendar months, so daily safeguards allow at most 49,280 map loads or 98,880 geocoding/Directions requests across 32 overlapping UTC days. Unused Mapbox products (Search Box, Autofill, Matrix, Optimization, Isochrone, Map Matching, static images, standalone tiles, Tilequery, uploads/tilesets/datasets, premium Boundaries, navigation/mobile SDKs) have explicit zero policies pending SKU review. Unknown policies fail closed. Public-token use outside this app cannot be stopped by local counters.
 
 Mapbox's larger free tier requires a payment method and Mapbox does not offer an account-side spending cap. These code limits therefore assume that all calls use credentials dedicated to Roamboard and pass through this backend. If the same account or key is used elsewhere, Roamboard cannot know about that usage and its local counter is not sufficient.
 

@@ -84,7 +84,7 @@ const boardPin = z.object({
   title: z.string().trim().min(1).max(200),
   description: z.string().trim().max(2000).default(""),
   category: z.enum(["landmark", "culture", "museum", "restaurant", "cafe", "bar", "shopping", "park", "nature", "hike", "beach", "neighborhood", "city", "address", "stay", "transit", "event", "activity", "other"]),
-  source: z.enum(["manual", "mapbox", "photo"]),
+  source: z.enum(["manual", "mapbox", "geoapify", "photo"]),
   location: detailedBoardLocation.nullable(),
 }).strict();
 

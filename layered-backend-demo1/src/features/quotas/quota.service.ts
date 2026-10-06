@@ -30,6 +30,10 @@ function zonedInstant(parts: DateParts, timeZone: string): Date {
 
 function bounds(policy: QuotaPolicy, now: Date): QuotaReservationWindow[] {
   return policy.windows.map((window) => {
+    if (window.period === "second") {
+      const start = new Date(Math.floor(now.getTime() / 1000) * 1000);
+      return { ...window, name: `second:${window.timeZone}`, startsAt: start, endsAt: new Date(start.getTime() + 1000) };
+    }
     const local = partsAt(now, window.timeZone);
     const startParts: DateParts = {
       year: local.year,
@@ -72,7 +76,11 @@ export function createQuotaService(repository: QuotaRepository, policies: QuotaP
   const reserve = async (policyId: string, units = 1): Promise<void> => {
     if (!Number.isSafeInteger(units) || units < 1) throw new Error("Quota units must be a positive integer");
     const policy = policyFor(policyId);
-    const result = await repository.reserve(policy.id, units, bounds(policy, clock()));
+    const windows = bounds(policy, clock());
+    if (windows.some((window) => units > window.limit)) {
+      throw new AppError(429, "This provider operation is disabled or exceeds its hard limit.", { code: "PROVIDER_QUOTA_EXHAUSTED", policyId: policy.id });
+    }
+    const result = await repository.reserve(policy.id, units, windows);
     if (!result.allowed) {
       throw new AppError(429, `${policy.provider} ${policy.operation} is paused because Roamboard reached its hard free-usage limit.`, {
         code: "PROVIDER_QUOTA_EXHAUSTED",

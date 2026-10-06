@@ -16,6 +16,7 @@ const envSchema = z.object({
   ELASTIC_CLOUD_ID: optionalString,
   ELASTIC_API_KEY: optionalString,
   SEARCH_REINDEX_KEY: optionalString,
+  GEOAPIFY_API_KEY: optionalString,
   MAPBOX_ACCESS_TOKEN: optionalString,
   MAPBOX_PUBLIC_TOKEN: optionalString,
   UNSPLASH_ACCESS_KEY: optionalString,

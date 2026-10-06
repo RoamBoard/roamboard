@@ -19,6 +19,7 @@ export async function runMigrations(pool: Pool): Promise<void> {
     "003_google_place_references",
     "004_users_and_boards",
     "005_board_creator",
+    "006_geoapify_pin_source",
   ];
   const client = await pool.connect();
 

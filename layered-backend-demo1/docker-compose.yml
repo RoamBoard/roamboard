@@ -9,6 +9,7 @@ services:
       DATABASE_URL: postgres://roamboard:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/roamboard
       ELASTICSEARCH_NODE: http://elasticsearch:9200
       DEBUG: roamboard:*
+      GEOAPIFY_API_KEY: ${GEOAPIFY_API_KEY:-}
       MAPBOX_ACCESS_TOKEN: ${MAPBOX_ACCESS_TOKEN:-}
       MAPBOX_PUBLIC_TOKEN: ${MAPBOX_PUBLIC_TOKEN:-}
       UNSPLASH_ACCESS_KEY: ${UNSPLASH_ACCESS_KEY:-}

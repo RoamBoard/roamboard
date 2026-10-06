@@ -4,7 +4,7 @@
 import { useRef, useState } from "react";
 
 import {
-  reverseBoardMapboxProvider,
+  reverseBoardLocationProvider,
   uploadCloudinaryProvider,
   type CloudinaryAsset,
 } from "@/lib/providers";
@@ -61,7 +61,7 @@ async function prepareUpload(asset: CloudinaryAsset, index: number): Promise<Upl
     return { image, suggestedPin: null, suggestedDate: capturedDate(metadata?.capturedAt ?? null) };
   }
   try {
-    const place = await reverseBoardMapboxProvider(String(metadata.latitude), String(metadata.longitude));
+    const place = await reverseBoardLocationProvider(String(metadata.latitude), String(metadata.longitude));
     const pinId = crypto.randomUUID();
     return {
       image: { ...image, pinId },

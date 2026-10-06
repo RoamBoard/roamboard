@@ -126,3 +126,32 @@ test("PostgreSQL owner deletion cascades itinerary children and durable search s
     await pool.end();
   }
 });
+
+test("PostgreSQL migration permits Geoapify event pins and retains them across app instances", { skip: !runIntegration }, async () => {
+  const databaseUrl = process.env.TEST_DATABASE_URL;
+  assert.ok(databaseUrl, "Set TEST_DATABASE_URL for the PostgreSQL integration test");
+  const pool = createPostgresPool(databaseUrl);
+  const state: { ownerId?: string } = {};
+  try {
+    await runMigrations(pool);
+    const { createPostgresUserRepository } = await import("../src/features/users/user.postgres-repository.js");
+    const app = createApp({ userRepository: createPostgresUserRepository(pool) });
+    const owner = await request(app).post("/api/v1/users").send({ username: `geo_${randomUUID().replaceAll("-", "").slice(0, 20)}`, displayName: "Geoapify integration" }).expect(201);
+    state.ownerId = owner.body.data.id;
+    const created = await request(app).post("/api/v1/boards").set("x-demo-user-id", state.ownerId!).send({
+      title: "Durable Geoapify day plan", status: "published", visibility: "public", tags: [], vibes: [], highlights: [], images: [],
+      days: [{ id: randomUUID(), dayNumber: 1, date: "2026-10-10", pins: [{ id: randomUUID(), order: 0, time: "09:00", title: "Morning concert", description: "Meet by the venue", category: "event", source: "geoapify",
+        location: { name: "Copenhagen", address: "Copenhagen, Denmark", latitude: 55.6761, longitude: 12.5683, country: "Denmark", countryCode: "DK", city: "Copenhagen", mapboxId: "geoapify:copenhagen" } }] }],
+    }).expect(201);
+    const secondApp = createApp({ userRepository: createPostgresUserRepository(pool) });
+    const persisted = await request(secondApp).get(`/api/v1/boards/${created.body.data.id}`).expect(200);
+    const pin = persisted.body.data.days[0].pins[0];
+    assert.equal(pin.source, "geoapify");
+    assert.equal(pin.location.mapboxId, "geoapify:copenhagen");
+    assert.equal(pin.time, "09:00");
+    assert.equal(pin.category, "event");
+  } finally {
+    if (state.ownerId) await pool.query("DELETE FROM users WHERE id = $1", [state.ownerId]);
+    await pool.end();
+  }
+});

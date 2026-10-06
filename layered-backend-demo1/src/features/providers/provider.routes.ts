@@ -30,6 +30,9 @@ export function createProviderRouter(service: ProviderService): Router {
     },
   });
   router.get("/config", controller.config);
+  router.get("/locations/search", validate(providerSearchSchema), controller.mapboxBoardSearch);
+  router.get("/locations/destinations", validate(boardDestinationSearchSchema), controller.mapboxDestinationSearch);
+  router.get("/locations/reverse", validate(providerReverseSchema), controller.mapboxBoardReverse);
   router.post("/mapbox/map-session", controller.mapboxMapSession);
   router.get("/mapbox/search", validate(providerSearchSchema), controller.mapboxSearch);
   router.get("/mapbox/board-search", validate(providerSearchSchema), controller.mapboxBoardSearch);

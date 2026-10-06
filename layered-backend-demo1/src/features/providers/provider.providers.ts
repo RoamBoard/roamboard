@@ -42,7 +42,7 @@ export async function reverseMapbox(latitude: number, longitude: number, token: 
   url.searchParams.set("longitude", String(longitude));
   url.searchParams.set("latitude", String(latitude));
   url.searchParams.set("language", "en");
-  if (permanent) url.searchParams.set("permanent", "true");
+  if (permanent) throw new Error("Permanent Mapbox geocoding is disabled");
   url.searchParams.set("access_token", token);
   const response = await fetch(url, { signal: AbortSignal.timeout(8_000) });
   if (!response.ok) throw new Error(`Mapbox returned ${response.status}`);

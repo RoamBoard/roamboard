@@ -14,7 +14,7 @@ import { errorHandler } from "../src/middleware/error-handler.js";
 function createFakeProviderService(receivedTypes: string[]): ProviderService {
   return {
     config: () => ({
-      mapbox: { configured: false },
+      geoapify: { configured: false }, mapbox: { configured: false },
       unsplash: { configured: false },
       googlePlaces: { configured: false, billingRequired: true },
       cloudinary: { configured: true },

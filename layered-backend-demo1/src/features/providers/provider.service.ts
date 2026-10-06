@@ -1,8 +1,9 @@
 import { env } from "../../config/env.js";
 import { AppError } from "../../shared/app-error.js";
-import { searchMapbox, searchMapboxCities, searchMapboxPermanent } from "../destinations/destination.providers.js";
+import { searchMapbox } from "../destinations/destination.providers.js";
 import type { DestinationResult } from "../destinations/destination.types.js";
 import type { QuotaService } from "../quotas/quota.service.js";
+import { searchGeoapify, reverseGeoapify } from "./provider.geoapify.js";
 import { loadCloudinaryAssets, loadCloudinaryMetadata, uploadCloudinaryImage } from "./provider.cloudinary.js";
 import { fetchGooglePlaceDetails, reverseMapbox, routeMapbox, searchGooglePlaces, searchUnsplash } from "./provider.providers.js";
 import type { CloudinaryAsset, GooglePlaceDetails, GooglePlaceReferenceRepository, MapboxLocation, MapboxMapSession, PhotoMetadata, ProviderConfig, ProviderPhoto, ProviderPlace, ProviderRoute, RoutePoint, RouteProfile, SavedGooglePlaceReference } from "./provider.types.js";
@@ -58,6 +59,7 @@ export function createProviderService(quota: QuotaService, googlePlaceReferences
       mapbox: {
         configured: Boolean(env.MAPBOX_ACCESS_TOKEN && publicMapboxToken()),
       },
+      geoapify: { configured: Boolean(env.GEOAPIFY_API_KEY) },
       unsplash: { configured: Boolean(env.UNSPLASH_ACCESS_KEY) },
       googlePlaces: { configured: Boolean(env.GOOGLE_PLACES_API_KEY), billingRequired: true },
       cloudinary: { configured: Boolean(env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET), cloudName: env.CLOUDINARY_CLOUD_NAME },
@@ -73,20 +75,20 @@ export function createProviderService(quota: QuotaService, googlePlaceReferences
       return callProvider("Mapbox", () => quota.run("mapbox.geocoding", () => searchMapbox(query, limit, token)));
     },
     mapboxBoardSearch: async (query, limit) => {
-      const token = required(env.MAPBOX_ACCESS_TOKEN, "Mapbox");
-      return callProvider("Mapbox", () => quota.run("mapbox.permanent_geocoding", () => searchMapboxPermanent(query, limit, token)));
+      const key = required(env.GEOAPIFY_API_KEY, "Geoapify saved-location search");
+      return callProvider("Geoapify", () => quota.run("geoapify.geocoding", () => searchGeoapify(query, limit, key)));
     },
     mapboxDestinationSearch: async (country, city, limit) => {
-      const token = required(env.MAPBOX_ACCESS_TOKEN, "Mapbox");
-      return callProvider("Mapbox", () => quota.run("mapbox.permanent_geocoding", () => searchMapboxCities(country, city, limit, token)));
+      const key = required(env.GEOAPIFY_API_KEY, "Geoapify saved-location search");
+      return callProvider("Geoapify", () => quota.run("geoapify.geocoding", () => searchGeoapify(city, limit, key, country)));
     },
     mapboxReverse: async (latitude, longitude) => {
       const token = required(env.MAPBOX_ACCESS_TOKEN, "Mapbox");
       return callProvider("Mapbox", () => quota.run("mapbox.geocoding", () => reverseMapbox(latitude, longitude, token)));
     },
     mapboxBoardReverse: async (latitude, longitude) => {
-      const token = required(env.MAPBOX_ACCESS_TOKEN, "Mapbox");
-      return callProvider("Mapbox", () => quota.run("mapbox.permanent_geocoding", () => reverseMapbox(latitude, longitude, token, true)));
+      const key = required(env.GEOAPIFY_API_KEY, "Geoapify saved-location search");
+      return callProvider("Geoapify", () => quota.run("geoapify.geocoding", () => reverseGeoapify(latitude, longitude, key)));
     },
     mapboxRoute: async (points, profile) => {
       const token = required(env.MAPBOX_ACCESS_TOKEN, "Mapbox");

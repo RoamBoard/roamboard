@@ -43,7 +43,7 @@ export type BoardPinDraft = {
   title: string;
   description: string;
   category: PinCategory;
-  source: "manual" | "mapbox" | "photo";
+  source: "manual" | "mapbox" | "geoapify" | "photo";
   location: PinLocation | null;
 };
 

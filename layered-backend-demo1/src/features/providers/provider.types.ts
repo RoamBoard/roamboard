@@ -42,6 +42,7 @@ export interface GooglePlaceReferenceRepository {
 
 export interface ProviderConfig {
   mapbox: { configured: boolean };
+  geoapify: { configured: boolean };
   unsplash: { configured: boolean };
   googlePlaces: { configured: boolean; billingRequired: true };
   cloudinary: { configured: boolean; cloudName?: string };

@@ -1,4 +1,4 @@
-export type QuotaPeriod = "minute" | "hour" | "day" | "month";
+export type QuotaPeriod = "second" | "minute" | "hour" | "day" | "month";
 
 export interface QuotaWindow {
   period: QuotaPeriod;

@@ -43,7 +43,7 @@ async function requestMapbox(options: MapboxSearchOptions, limit: number, token:
   if (options.query) url.searchParams.set("q", options.query);
   if (options.country) url.searchParams.set("country", options.country);
   if (options.city) url.searchParams.set("place", options.city);
-  if (options.permanent) url.searchParams.set("permanent", "true");
+  if (options.permanent) throw new Error("Permanent Mapbox geocoding is disabled");
   if (options.types) url.searchParams.set("types", options.types);
   url.searchParams.set("limit", String(limit));
   url.searchParams.set("language", "en");
@@ -93,7 +93,7 @@ export function searchMapboxPermanent(query: string, limit: number, token: strin
 }
 
 export function searchMapboxCities(country: string, city: string, limit: number, token: string): Promise<DestinationResult[]> {
-  return requestMapbox({ country, city, permanent: true, types: "place" }, limit, token);
+  return Promise.reject(new Error("Stored city lookup uses Geoapify; permanent Mapbox geocoding is disabled"));
 }
 
 export async function fetchWeather(latitude: number, longitude: number): Promise<DestinationWeather> {

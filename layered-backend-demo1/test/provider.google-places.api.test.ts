@@ -12,7 +12,7 @@ import { AppError } from "../src/shared/app-error.js";
 function fakeService(): ProviderService {
   const saved = new Set<string>();
   return {
-    config: () => ({ mapbox: { configured: false }, unsplash: { configured: false }, googlePlaces: { configured: true, billingRequired: true }, cloudinary: { configured: false } }),
+    config: () => ({ geoapify: { configured: false }, mapbox: { configured: false }, unsplash: { configured: false }, googlePlaces: { configured: true, billingRequired: true }, cloudinary: { configured: false } }),
     mapboxMapSession: async () => ({ publicToken: "pk.test" }),
     mapboxSearch: async () => [],
     mapboxBoardSearch: async () => [],
