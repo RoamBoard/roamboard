@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import WelcomeTransitionProvider from "@/components/features/welcome/WelcomeTransitionProvider";
 import "./globals.css";
 
 // Both typefaces are from Fontshare (fontshare.com). Download the variable
@@ -34,7 +35,9 @@ export default function RootLayout({
             <body
                 className={`${cabinet.variable} ${satoshi.variable} antialiased`}
             >
-                {children}
+                <WelcomeTransitionProvider>
+                    {children}
+                </WelcomeTransitionProvider>
             </body>
         </html>
     );
