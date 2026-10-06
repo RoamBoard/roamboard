@@ -1,17 +1,21 @@
+// This component uses clicks, keyboard events, and React state in the browser.
 "use client";
 
 import {
     useEffect,
+    useId,
     useRef,
     useState,
     useSyncExternalStore,
     type ReactNode
 } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { getMockProfile, subscribeMockStore } from "@/data/mock-social";
 
+// Export the prop type so AppShell can use it too. This is not actual user data.
+// user is optional. A user must have a name, or be null.
 export type ProfileControlProps = {
+    user?: { name: string; avatarUrl?: string } | null;
     href?: string;
     profileHref?: string;
     settingsHref?: string;
@@ -21,177 +25,141 @@ export type ProfileControlProps = {
 };
 
 export default function ProfileControl({
+    user,
     href,
     profileHref = "/profile",
     settingsHref = "/settings",
-    label = "my profile",
     userName,
     avatarUrl
 }: ProfileControlProps) {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
+    const buttonRef = useRef<HTMLButtonElement>(null);
+    const dropdownId = useId();
 
-    // Sync with external mock store without setState inside effect
+    const controlClasses =
+        "absolute left-[36%] right-[8%] top-[45%] text-left text-14 leading-tight focus-visible:outline-1 focus-visible:outline-offset-4";
+
+    // Sync with external mock store if available
     const profile = useSyncExternalStore(
         subscribeMockStore,
         getMockProfile,
         getMockProfile
     );
 
-    const displayName = profile.name || userName;
-    const displayAvatar = profile.avatarUrl || avatarUrl;
+    // Determine effective user:
+    // If user is explicitly null, show logged-out view.
+    // If user is explicitly provided, use that user.
+    // Otherwise, fall back to mock profile user or userName.
+    const effectiveUser =
+        user === null
+            ? null
+            : user ?? (profile.name || userName ? {
+                  name: profile.name || userName || "ROWAN",
+                  avatarUrl: profile.avatarUrl || avatarUrl
+              } : null);
 
-    // Resolve profile URL with backward-compatibility for href prop
     const resolvedProfileHref = href ?? profileHref;
 
-    // Close dropdown on click outside or escape key
     useEffect(() => {
         if (!isOpen) return;
 
-        function handleClickOutside(event: MouseEvent) {
+        function closeOnOutsideClick(event: PointerEvent) {
             if (
-                containerRef.current &&
-                !containerRef.current.contains(event.target as Node)
+                event.target instanceof Node &&
+                !containerRef.current?.contains(event.target)
             ) {
                 setIsOpen(false);
             }
         }
 
-        function handleKeyDown(event: KeyboardEvent) {
-            if (event.key === "Escape") {
-                setIsOpen(false);
-            }
-        }
-
-        document.addEventListener("mousedown", handleClickOutside);
-        document.addEventListener("keydown", handleKeyDown);
-
+        document.addEventListener("pointerdown", closeOnOutsideClick);
         return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-            document.removeEventListener("keydown", handleKeyDown);
+            document.removeEventListener("pointerdown", closeOnOutsideClick);
         };
     }, [isOpen]);
 
     return (
         <div
             ref={containerRef}
-            className="absolute top-6 right-6 z-40 sm:top-8 sm:right-10"
+            className="absolute top-0 right-[1.3%] z-10 h-[8.75rem] w-[8.25rem] sm:h-[24%] sm:w-[14.5%]"
+            onKeyDown={(event) => {
+                if (event.key === "Escape" && isOpen) {
+                    setIsOpen(false);
+                    buttonRef.current?.focus();
+                }
+            }}
+            onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) {
+                    setIsOpen(false);
+                }
+            }}
         >
-            {/* Trigger Button */}
-            <button
-                id="profile-dropdown-button"
-                type="button"
-                onClick={() => setIsOpen((prev) => !prev)}
-                aria-haspopup="menu"
-                aria-expanded={isOpen}
-                aria-controls="profile-dropdown-menu"
-                className="border-line text-12 text-graphite hover:text-obsidian hover:border-obsidian font-body bg-background/90 hover:bg-background flex cursor-pointer items-center gap-2.5 rounded-[2px] border px-3 py-1.5 font-medium transition-colors focus-visible:outline-1 focus-visible:outline-offset-4"
+            {/* These lines are decorative, so screen readers and clicks ignore them. */}
+            <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0"
             >
-                {displayAvatar ? (
-                    <div className="bg-porcelain relative h-5 w-5 shrink-0 overflow-hidden rounded-[1px]">
-                        <Image
-                            src={displayAvatar}
-                            alt=""
-                            fill
-                            sizes="20px"
-                            className="object-cover"
-                        />
-                    </div>
-                ) : (
-                    <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.75"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="text-graphite shrink-0"
-                        aria-hidden="true"
+                <span className="bg-stone absolute top-[18%] right-[9%] left-0 h-0.5" />
+                <span className="bg-stone absolute top-0 right-[17%] h-[39%] w-0.5" />
+                <span className="bg-stone absolute top-[25%] bottom-0 left-[32%] w-0.5" />
+                <span className="bg-stone absolute top-[66%] right-0 left-[16%] h-0.5" />
+            </div>
+
+            {/* A user shows the name button; no user shows the login link below. */}
+            {effectiveUser ? (
+                <>
+                    <button
+                        ref={buttonRef}
+                        type="button"
+                        aria-expanded={isOpen}
+                        aria-controls={dropdownId}
+                        className={`${controlClasses} text-obsidian hover:underline cursor-pointer truncate font-medium`}
+                        title={effectiveUser.name}
+                        onClick={() => setIsOpen((open) => !open)}
                     >
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-                        <circle cx="12" cy="7" r="4" />
-                    </svg>
-                )}
-
-                <span>{label}</span>
-
-                <svg
-                    width="10"
-                    height="10"
-                    viewBox="0 0 10 10"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className={`text-graphite transition-transform duration-200 ${
-                        isOpen ? "rotate-180" : ""
-                    }`}
-                    aria-hidden="true"
-                >
-                    <path d="m2 3.5 3 3 3-3" />
-                </svg>
-            </button>
-
-            {/* Dropdown Menu */}
-            {isOpen && (
-                <div
-                    id="profile-dropdown-menu"
-                    role="menu"
-                    aria-labelledby="profile-dropdown-button"
-                    aria-orientation="vertical"
-                    className="border-line bg-background shadow-xs absolute right-0 mt-2 min-w-[12rem] rounded-[2px] border p-1"
-                >
-                    {Boolean(displayName) && (
-                        <div className="border-line border-b px-3 py-2">
-                            <span className="font-display text-12 text-obsidian block font-bold uppercase tracking-tight">
-                                {displayName}
-                            </span>
-                            <span className="text-10 tracking-label text-graphite block font-medium uppercase">
-                                traveler
-                            </span>
-                        </div>
+                        {effectiveUser.name}
+                    </button>
+                    {isOpen && (
+                        <nav
+                            id={dropdownId}
+                            aria-label="Account"
+                            className="bg-background text-obsidian border-line text-14 absolute top-[72%] right-[8%] z-50 w-48 border p-3 shadow-xs"
+                        >
+                            <Link
+                                href={resolvedProfileHref}
+                                className="block py-1.5 hover:underline focus-visible:outline-1 focus-visible:outline-offset-2"
+                                onClick={() => setIsOpen(false)}
+                            >
+                                My profile
+                            </Link>
+                            <Link
+                                href={settingsHref}
+                                className="block py-1.5 hover:underline focus-visible:outline-1 focus-visible:outline-offset-2"
+                                onClick={() => setIsOpen(false)}
+                            >
+                                Settings
+                            </Link>
+                            <div
+                                className="bg-line my-1.5 h-px"
+                                aria-hidden="true"
+                            />
+                            <Link
+                                href="/login"
+                                className="text-graphite hover:text-obsidian block py-1.5 hover:underline focus-visible:outline-1 focus-visible:outline-offset-2"
+                                onClick={() => setIsOpen(false)}
+                            >
+                                Log out
+                            </Link>
+                        </nav>
                     )}
-
-                    <div className="flex flex-col py-0.5">
-                        <Link
-                            href={resolvedProfileHref}
-                            role="menuitem"
-                            onClick={() => setIsOpen(false)}
-                            className="text-12 text-graphite hover:text-obsidian hover:bg-porcelain focus-visible:text-obsidian focus-visible:bg-porcelain flex items-center justify-between rounded-[2px] px-3 py-2 font-medium transition-colors"
-                        >
-                            <span>my profile</span>
-                            <span
-                                className="text-10 text-graphite font-normal"
-                                aria-hidden="true"
-                            >
-                                →
-                            </span>
-                        </Link>
-
-                        <div
-                            className="bg-line my-0.5 h-px"
-                            aria-hidden="true"
-                        />
-
-                        <Link
-                            href={settingsHref}
-                            role="menuitem"
-                            onClick={() => setIsOpen(false)}
-                            className="text-12 text-graphite hover:text-obsidian hover:bg-porcelain focus-visible:text-obsidian focus-visible:bg-porcelain flex items-center justify-between rounded-[2px] px-3 py-2 font-medium transition-colors"
-                        >
-                            <span>settings</span>
-                            <span
-                                className="text-10 text-graphite font-normal"
-                                aria-hidden="true"
-                            >
-                                →
-                            </span>
-                        </Link>
-                    </div>
-                </div>
+                </>
+            ) : (
+                <Link href="/login" className={controlClasses}>
+                    Sign up /
+                    <br />
+                    Log in
+                </Link>
             )}
         </div>
     );

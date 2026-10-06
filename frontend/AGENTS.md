@@ -116,6 +116,14 @@ Do not mix package managers or create another package manager's lockfile. Keep `
 
 ## Verification and handoff
 
+### Account interface preview
+
+The user has chosen Google-only sign-in. Email/password forms are not part of the planned login flow. The supplied requirements describe Google sign-in as conditional; this decision selects it for the implementation.
+
+`/login` and `/signup` currently contain layout previews with disabled Google buttons. No Google integration, backend authentication endpoints, sessions, or logout behavior are implemented. `ProfileControl` shows a login link when its user prop is absent, or a name dropdown when given a user. Production pages currently use the logged-out view. `/dev/account` uses a fictional name to preview the dropdown; its disabled logout button does not end a session.
+
+Stable Roamboard user IDs and Google account linking belong in the backend. No user ID or session contract is defined by this interface preview.
+
 For application changes, run the relevant lint and TypeScript checks. Run a production build for routing, configuration, dependency, or integration changes. Report command failures and checks that could not run.
 
 For UI changes, inspect the affected flow on desktop and a smaller screen, including keyboard behavior and relevant loading, error, and empty states. Check both themes when the change affects them. Missing designs must be clarified before implementing those states. Report when browser inspection was unavailable.
