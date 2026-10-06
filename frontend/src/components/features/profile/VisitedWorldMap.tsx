@@ -127,7 +127,7 @@ export default function VisitedWorldMap({ destinations }: { destinations: MapDes
           source: countrySourceId,
           "source-layer": "country_boundaries",
           filter: countryFilter([]),
-          paint: { "fill-color": "#bdbdbd", "fill-opacity": 0.45, "fill-outline-color": "#818181" },
+          paint: { "fill-color": "#e46f45", "fill-opacity": 0.25, "fill-outline-color": "#e46f45" },
         });
         map.addLayer({
           id: visitedCountryLayerId,
@@ -178,7 +178,7 @@ export default function VisitedWorldMap({ destinations }: { destinations: MapDes
   return <section className="mt-16 border-t border-line pt-10">
     <div className="flex flex-wrap items-end justify-between gap-4">
       <div><p className="text-10 font-bold uppercase tracking-label text-graphite">Travel footprint</p><h2 className="mt-2 font-display text-28 font-bold">Places around the world</h2></div>
-      <div className="flex gap-4 text-12 text-graphite"><span className="flex items-center gap-2"><i className="size-3 rounded-full bg-[#e46f45]" /> Visited</span><span className="flex items-center gap-2"><i className="size-3 rounded-full border border-foreground bg-white" /> Planned</span></div>
+      <div className="flex gap-4 text-12 text-graphite"><span className="flex items-center gap-2"><i className="size-3 rounded-full bg-[#e46f45]" /> Visited</span><span className="flex items-center gap-2"><i className="size-3 rounded-full border border-[#e46f45] bg-[#e46f45]/25" /> Planned</span></div>
     </div>
     <p className="mt-3 max-w-2xl text-14 leading-6 text-graphite">Completed Boards fill countries as visited. Planned Board destinations stay light. Select a city marker for its details.</p>
     {error ? <div className="mt-6 grid aspect-[2/1] place-items-center border border-line bg-faint px-6 text-center text-14 text-graphite" role="alert">{error}</div> : <div ref={containerRef} className="mt-6 h-96 w-full overflow-hidden border border-line sm:h-128" aria-label="Interactive world map of visited and planned destinations" />}

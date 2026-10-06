@@ -1,7 +1,7 @@
 import type { PinCategory } from "@/types/board-creator";
 
 export const pinCategories: Array<{ value: PinCategory; label: string }> = [
-  { value: "landmark", label: "Landmark / POI" },
+  { value: "landmark", label: "Landmark" },
   { value: "culture", label: "Culture" },
   { value: "museum", label: "Museum" },
   { value: "restaurant", label: "Restaurant" },
@@ -52,9 +52,13 @@ export const vibeSuggestions = [
   { label: "Festivals", icon: "✧" },
 ];
 
-export function categoryFromMapboxType(type: string): PinCategory {
+export function categoryFromLocationType(type: string): PinCategory {
+  const category = pinCategories.find((item) => item.value === type);
+  if (category) return category.value;
   if (type === "place") return "city";
-  if (["locality", "neighborhood", "district", "region", "country"].includes(type)) return "neighborhood";
-  if (["postcode", "street", "block", "address", "secondary_address"].includes(type)) return "address";
-  return "landmark";
+  if (["locality", "neighborhood", "suburb", "quarter", "district", "region", "country"].includes(type)) return "neighborhood";
+  if (["postcode", "street", "building", "block", "address", "secondary_address"].includes(type)) return "address";
+  return "other";
 }
+
+export const categoryFromMapboxType = categoryFromLocationType;

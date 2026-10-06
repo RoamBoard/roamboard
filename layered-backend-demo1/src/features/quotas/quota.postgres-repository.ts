@@ -40,16 +40,20 @@ export function createPostgresQuotaRepository(pool: Pool): QuotaRepository {
         for (const window of windows) {
           const result = await client.query<UsageRow>(
             `INSERT INTO api_quota_usage (policy_id, window_name, window_start, window_end, used)
-             SELECT $1, $2, $3, $4, $5 WHERE $5 <= $6
+             SELECT $1, $2, $3, $4, $5::bigint WHERE $5::bigint <= $6::bigint
              ON CONFLICT (policy_id, window_name, window_start)
              DO UPDATE SET used = api_quota_usage.used + EXCLUDED.used
-             WHERE api_quota_usage.used + EXCLUDED.used <= $6
+             WHERE api_quota_usage.used + EXCLUDED.used <= $6::bigint
              RETURNING used`,
             [policyId, window.name, window.startsAt, window.endsAt, units, window.limit],
           );
           if (result.rowCount === 0) {
             await client.query("ROLLBACK");
-            const used = await currentUsage(policyId, window);
+            const usage = await client.query<UsageRow>(
+              "SELECT used FROM api_quota_usage WHERE policy_id = $1 AND window_name = $2 AND window_start = $3",
+              [policyId, window.name, window.startsAt],
+            );
+            const used = Number(usage.rows[0]?.used ?? 0);
             return { allowed: false, blocked: toUsageWindow(window, used) };
           }
         }

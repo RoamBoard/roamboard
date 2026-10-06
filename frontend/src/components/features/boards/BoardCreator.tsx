@@ -172,7 +172,7 @@ export default function BoardCreator() {
 
         <div className="mx-auto mt-8 max-w-4xl text-center">
           <label htmlFor="board-title" className="text-10 uppercase tracking-label text-stone">Board creator</label>
-          <input id="board-title" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="BOARD TITLE" className="mt-2 w-full bg-transparent text-center font-display text-36 font-bold uppercase leading-none outline-none placeholder:text-foreground hover:placeholder:text-transparent focus:placeholder:text-transparent sm:text-48" />
+          <input id="board-title" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="BOARD TITLE" className="mt-2 w-full bg-transparent text-center font-display text-36 font-bold uppercase leading-none outline-none placeholder:text-foreground focus:placeholder:text-transparent sm:text-48" />
         </div>
 
         {message ? <p className="mx-auto mt-7 max-w-3xl border-l-2 border-foreground pl-4 text-13" role="status">{message}</p> : null}

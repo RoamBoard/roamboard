@@ -123,3 +123,90 @@ test("country-specific city search excludes other countries, addresses, and inva
   assert.equal(results[0]?.countryCode, "DK");
   assert.equal(results[0]?.placeType, "place");
 });
+
+const stockholmAddress = {
+  place_id: "stockholm-photo", lat: 59.342, lon: 18.049, city: "Stockholm", country: "Sweden", country_code: "se",
+  result_type: "building", address_line1: "Västmannagatan 58", street: "Västmannagatan", housenumber: "58",
+  formatted: "Västmannagatan 58, 113 25 Stockholm, Sweden",
+};
+
+function mockLocation(context: TestContext, properties: Record<string, unknown>) {
+  const calls: URL[] = [];
+  context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+    calls.push(new URL(String(input)));
+    return new Response(JSON.stringify({ features: [{ properties }] }), { status: 200 });
+  });
+  return calls;
+}
+
+test("photo GPS reverse lookup labels an ordinary address with its area and city through HTTP", async (context) => {
+  key(context);
+  const calls = mockLocation(context, { ...stockholmAddress, neighbourhood: "Odenplan" });
+  const result = await request(app().value).get("/providers/locations/reverse").query({ latitude: 59.342, longitude: 18.049 });
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  assert.equal(result.body.data.label, "Odenplan, Stockholm");
+  assert.equal(result.body.data.detail, "");
+  assert.equal(result.body.data.type, "neighborhood");
+  assert.equal(result.body.data.address, stockholmAddress.formatted);
+  assert.equal(calls.length, 1, "area labeling must not consume an extra provider request");
+});
+
+test("reverse lookup with only an address uses the city and does not invent a landmark", async (context) => {
+  mockLocation(context, stockholmAddress);
+  const result = await reverseGeoapify(59.342, 18.049, "test-key");
+  assert.equal(result.label, "Stockholm");
+  assert.equal(result.detail, "");
+  assert.equal(result.type, "place");
+});
+
+test("reverse lookup can obtain an area from nested source address metadata", async (context) => {
+  mockLocation(context, { ...stockholmAddress, datasource: { raw: { "addr:suburb": "Odenplan" } } });
+  const result = await reverseGeoapify(59.342, 18.049, "test-key");
+  assert.equal(result.label, "Odenplan, Stockholm");
+  assert.equal(result.detail, "");
+  assert.equal(result.type, "neighborhood");
+});
+
+for (const place of [
+  { name: "Café Pascal", categories: ["catering.restaurant"], expectedType: "restaurant" },
+  { name: "Mall of Scandinavia", categories: ["commercial.shopping_mall"], expectedType: "shopping" },
+  { name: "Vasa Museum", categories: ["entertainment.museum"], expectedType: "museum" },
+  { name: "Stockholm Observatory", categories: ["tourism.sights"], expectedType: "landmark" },
+]) {
+  test(`reverse lookup preserves the named POI ${place.name} and its category`, async (context) => {
+    mockLocation(context, { ...stockholmAddress, name: place.name, result_type: "amenity", categories: place.categories, suburb: "Vasastan" });
+    const result = await reverseGeoapify(59.342, 18.049, "test-key");
+    assert.equal(result.detail, place.name);
+    assert.equal(result.type, place.expectedType);
+    assert.equal(result.label, "Vasastan, Stockholm");
+  });
+}
+
+test("reverse lookup recognizes a named cafe from a singular category", async (context) => {
+  mockLocation(context, { ...stockholmAddress, name: "Café Pascal", category: "catering.cafe", suburb: "Vasastan" });
+  const result = await reverseGeoapify(59.342, 18.049, "test-key");
+  assert.equal(result.detail, "Café Pascal");
+  assert.equal(result.type, "cafe");
+  assert.equal(result.label, "Vasastan, Stockholm");
+});
+
+test("reverse lookup preserves a restaurant identified only by raw source tags", async (context) => {
+  mockLocation(context, { ...stockholmAddress, datasource: { raw: { name: "Tranan", amenity: "restaurant", "addr:suburb": "Odenplan" } } });
+  const result = await reverseGeoapify(59.342, 18.049, "test-key");
+  assert.equal(result.detail, "Tranan");
+  assert.equal(result.type, "restaurant");
+  assert.equal(result.label, "Odenplan, Stockholm");
+});
+
+test("forward search distinguishes addresses and neighborhoods from named POIs", async (context) => {
+  const cases = [
+    { ...stockholmAddress, expectedType: "address" },
+    { ...stockholmAddress, name: "Odenplan", result_type: "suburb", expectedType: "neighborhood" },
+    { ...stockholmAddress, name: "Café Pascal", result_type: "amenity", categories: ["catering.cafe"], expectedType: "cafe" },
+    { ...stockholmAddress, name: "Named place", result_type: "amenity", expectedType: "poi" },
+  ];
+  context.mock.method(globalThis, "fetch", async () => new Response(JSON.stringify({ features: cases.map(properties => ({ properties })) }), { status: 200 }));
+  const results = await searchGeoapify("Stockholm", 5, "test-key");
+  assert.deepEqual(results.map(result => result.placeType), cases.map(place => place.expectedType));
+  assert.equal(results[2]?.name, "Café Pascal");
+});

@@ -8,6 +8,7 @@ import {
   uploadCloudinaryProvider,
   type CloudinaryAsset,
 } from "@/lib/providers";
+import { categoryFromLocationType } from "@/lib/board-options";
 import type { BoardImageDraft, BoardPinDraft } from "@/types/board-creator";
 
 const MAX_IMAGES = 10;
@@ -72,11 +73,11 @@ async function prepareUpload(asset: CloudinaryAsset, index: number): Promise<Upl
         time: capturedTime(metadata.capturedAt, index),
         title: place.detail || place.label || "Photo location",
         description: "Suggested from photo location metadata. Confirm before publishing.",
-        category: "landmark",
+        category: categoryFromLocationType(place.type),
         source: "photo",
         location: {
           name: place.detail || place.label || "Photo location",
-          address: place.label,
+          address: place.address ?? place.label,
           latitude: place.latitude,
           longitude: place.longitude,
           country: place.country ?? null,
@@ -97,7 +98,7 @@ async function prepareUpload(asset: CloudinaryAsset, index: number): Promise<Upl
         time: capturedTime(metadata.capturedAt, index),
         title: "Photo location",
         description: "Suggested from embedded GPS. Confirm the place before publishing.",
-        category: "landmark",
+        category: "other",
         source: "photo",
         location: {
           name: "Photo location",

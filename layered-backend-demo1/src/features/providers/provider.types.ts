@@ -56,6 +56,7 @@ export interface MapboxLocation {
   id: string;
   label: string;
   detail: string;
+  address?: string;
   type: string;
   latitude: number;
   longitude: number;
