@@ -40,6 +40,7 @@ export const mockRowanProfile: UserProfile = {
             countryCode: "JPN",
             quote: "Neon streets, tiny bars, late-night ramen and absolutely no idea which train exit to take.",
             tags: ["Neighborhoods", "Hidden bars", "Ramen"],
+            vibes: ["Nature", "Romantic", "Hidden Gems"],
             highlights: [
                 "Shibuya Crossing",
                 "Senso-ji",
@@ -514,12 +515,16 @@ export function subscribeMockStore(listener: () => void): () => void {
     };
 }
 
+const AUTH_STORAGE_KEY = "roamboard_mock_auth";
+
 const store: {
     profile: UserProfile;
     settings: UserSettings;
+    isLoggedIn: boolean;
 } = {
     profile: { ...mockRowanProfile },
-    settings: { ...defaultUserSettings }
+    settings: { ...defaultUserSettings },
+    isLoggedIn: true
 };
 
 if (typeof window !== "undefined") {
@@ -542,9 +547,29 @@ if (typeof window !== "undefined") {
                 ...JSON.parse(storedSettings)
             };
         }
+        const storedAuth = localStorage.getItem(AUTH_STORAGE_KEY);
+        if (storedAuth !== null) {
+            store.isLoggedIn = storedAuth === "true";
+        }
     } catch {
         // Ignore parse errors in local storage
     }
+}
+
+export function getMockAuthState(): boolean {
+    return store.isLoggedIn;
+}
+
+export function setMockAuthState(isLoggedIn: boolean): void {
+    store.isLoggedIn = isLoggedIn;
+    if (typeof window !== "undefined") {
+        try {
+            localStorage.setItem(AUTH_STORAGE_KEY, String(isLoggedIn));
+        } catch {
+            // Ignore storage errors
+        }
+    }
+    notify();
 }
 
 export function getMockProfile(): UserProfile {

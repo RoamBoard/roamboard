@@ -82,6 +82,9 @@ export type Board = {
     // Tracks the owner's completed trip. New Boards and copies should start false.
     isCompleted: boolean;
     tags: string[];
+    vibes?: string[];
+    highlights?: string[];
+    collaborators?: string[];
     // An empty array allows a Board without a chosen destination.
     destinations: BoardDestination[];
     // Calendar dates in YYYY-MM-DD format.

@@ -120,8 +120,20 @@ export default function SocialBoardCard({ board }: Props) {
                             ))}
                         </div>
 
+                        {/* Vibes list */}
+                        {board.vibes && board.vibes.length > 0 && (
+                            <div className="mt-3">
+                                <div className="text-10 tracking-label text-graphite font-bold uppercase">
+                                    Vibe:
+                                </div>
+                                <div className="text-10 text-stone mt-0.5 leading-tight">
+                                    {board.vibes.join(" · ")}
+                                </div>
+                            </div>
+                        )}
+
                         {/* Highlights list */}
-                        <div className="mt-4">
+                        <div className="mt-3.5">
                             <div className="text-10 tracking-label text-graphite font-bold uppercase">
                                 Highlights:
                             </div>

@@ -8,6 +8,7 @@ export type SocialBoardPreview = {
     highlights: string[];
     savedCount: string;
     countryCode: string;
+    vibes?: string[];
     images: {
         url: string;
         alt: string;
@@ -74,6 +75,6 @@ export type AudienceFilter = "ME" | "FRIENDS" | "EXPLORE";
 
 export type UserSettings = {
     theme: "light" | "dark";
-    defaultBoardVisibility: "friends" | "public";
+    defaultBoardVisibility: "private" | "friends" | "public";
     emailNotifications: boolean;
 };

@@ -12,6 +12,9 @@ import {
     updateMockSettings
 } from "@/data/mock-social";
 import { calculateTravelerTier, TRAVELER_TIERS } from "@/utils/tier";
+import type { BoardVisibility } from "@/types/board";
+import VisibilitySelector from "@/components/features/boards/VisibilitySelector";
+import PillTagInput from "@/components/features/boards/PillTagInput";
 
 type TabType = "PROFILE" | "PREFERENCES" | "ACCOUNT";
 
@@ -65,7 +68,6 @@ export default function SettingsContent() {
     const [interests, setInterests] = useState<string[]>(
         () => initialProfile.details.interests
     );
-    const [newInterest, setNewInterest] = useState("");
     const [facts, setFacts] = useState<string[]>(() => initialProfile.facts);
     const [newFact, setNewFact] = useState("");
 
@@ -73,9 +75,10 @@ export default function SettingsContent() {
     const [theme, setTheme] = useState<"light" | "dark">(
         () => initialSettings.theme
     );
-    const [defaultBoardVisibility, setDefaultBoardVisibility] = useState<
-        "friends" | "public"
-    >(() => initialSettings.defaultBoardVisibility);
+    const [defaultBoardVisibility, setDefaultBoardVisibility] =
+        useState<BoardVisibility>(
+            () => initialSettings.defaultBoardVisibility
+        );
     const [emailNotifications, setEmailNotifications] = useState(
         () => initialSettings.emailNotifications
     );
@@ -95,19 +98,6 @@ export default function SettingsContent() {
 
     function handleRemoveLanguage(item: string) {
         setLanguages(languages.filter((l) => l !== item));
-    }
-
-    // Interest handlers
-    function handleAddInterest() {
-        const trimmed = newInterest.trim();
-        if (trimmed && !interests.includes(trimmed)) {
-            setInterests([...interests, trimmed]);
-            setNewInterest("");
-        }
-    }
-
-    function handleRemoveInterest(item: string) {
-        setInterests(interests.filter((i) => i !== item));
     }
 
     // Fact handlers
@@ -140,7 +130,7 @@ export default function SettingsContent() {
 
         // Validation
         if (!name.trim()) {
-            setErrorMessage("Name cannot be empty.");
+            setErrorMessage("Display name cannot be empty.");
             return;
         }
 
@@ -494,7 +484,7 @@ export default function SettingsContent() {
                                         htmlFor="name-input"
                                         className="text-10 tracking-label text-graphite block font-bold uppercase"
                                     >
-                                        Full Name *
+                                        Display Name *
                                     </label>
                                     <input
                                         id="name-input"
@@ -674,56 +664,19 @@ export default function SettingsContent() {
                             <h2 className="font-display text-16 text-obsidian font-bold uppercase tracking-tight">
                                 Travel Interests &amp; Tags
                             </h2>
-                            <p className="text-12 text-graphite mt-0.5">
+                            <p className="text-12 text-graphite mt-0.5 mb-4">
                                 Tags that describe your favorite types of
                                 activities and trips.
                             </p>
 
-                            <div className="mt-4 flex flex-wrap gap-2">
-                                {interests.map((interest) => (
-                                    <span
-                                        key={interest}
-                                        className="border-line bg-porcelain/60 text-12 text-obsidian font-body flex items-center gap-1.5 rounded-[2px] border px-2.5 py-1 font-medium"
-                                    >
-                                        #{interest}
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                handleRemoveInterest(interest)
-                                            }
-                                            aria-label={`Remove ${interest}`}
-                                            className="text-graphite hover:text-obsidian cursor-pointer text-xs"
-                                        >
-                                            ✕
-                                        </button>
-                                    </span>
-                                ))}
-                            </div>
-
-                            <div className="mt-4 flex max-w-sm gap-2">
-                                <input
-                                    type="text"
-                                    value={newInterest}
-                                    onChange={(e) =>
-                                        setNewInterest(e.target.value)
-                                    }
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Enter") {
-                                            e.preventDefault();
-                                            handleAddInterest();
-                                        }
-                                    }}
-                                    placeholder="Add interest (e.g. Architecture)"
-                                    className="border-line text-12 text-obsidian placeholder:text-stone font-body focus:border-obsidian flex-1 rounded-[2px] border px-3 py-1.5 transition-colors focus-visible:outline-none"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={handleAddInterest}
-                                    className="border-line text-12 text-graphite hover:text-obsidian hover:border-obsidian font-body cursor-pointer rounded-[2px] border px-3 py-1.5 font-medium transition-colors"
-                                >
-                                    + Add
-                                </button>
-                            </div>
+                            <PillTagInput
+                                label="Interests &amp; Tags"
+                                tags={interests}
+                                onChange={setInterests}
+                                addButtonLabel="add tag +"
+                                placeholder="e.g. Architecture"
+                                tooltip="Your favorite travel themes and interests"
+                            />
                         </div>
 
                         {/* Interesting Facts about me */}
@@ -841,72 +794,16 @@ export default function SettingsContent() {
                             <h2 className="font-display text-16 text-obsidian font-bold uppercase tracking-tight">
                                 Default Board Visibility
                             </h2>
-                            <p className="text-12 text-graphite mt-0.5">
+                            <p className="text-12 text-graphite mt-0.5 mb-5">
                                 Choose who can view new boards you create by
                                 default.
                             </p>
 
-                            <div className="mt-4 space-y-3 max-w-md">
-                                <label
-                                    className={`border-line flex cursor-pointer items-start gap-3 rounded-[2px] border p-3.5 transition-colors ${
-                                        defaultBoardVisibility === "friends"
-                                            ? "border-obsidian bg-porcelain/40"
-                                            : "hover:border-obsidian"
-                                    }`}
-                                >
-                                    <input
-                                        type="radio"
-                                        name="visibility"
-                                        value="friends"
-                                        checked={
-                                            defaultBoardVisibility === "friends"
-                                        }
-                                        onChange={() =>
-                                            setDefaultBoardVisibility("friends")
-                                        }
-                                        className="mt-0.5 accent-obsidian"
-                                    />
-                                    <div>
-                                        <div className="text-13 text-obsidian font-bold">
-                                            Friends Only
-                                        </div>
-                                        <p className="text-11 text-graphite mt-0.5">
-                                            Only travelers you have confirmed as
-                                            friends can see your boards.
-                                        </p>
-                                    </div>
-                                </label>
-
-                                <label
-                                    className={`border-line flex cursor-pointer items-start gap-3 rounded-[2px] border p-3.5 transition-colors ${
-                                        defaultBoardVisibility === "public"
-                                            ? "border-obsidian bg-porcelain/40"
-                                            : "hover:border-obsidian"
-                                    }`}
-                                >
-                                    <input
-                                        type="radio"
-                                        name="visibility"
-                                        value="public"
-                                        checked={
-                                            defaultBoardVisibility === "public"
-                                        }
-                                        onChange={() =>
-                                            setDefaultBoardVisibility("public")
-                                        }
-                                        className="mt-0.5 accent-obsidian"
-                                    />
-                                    <div>
-                                        <div className="text-13 text-obsidian font-bold">
-                                            Public (Anyone)
-                                        </div>
-                                        <p className="text-11 text-graphite mt-0.5">
-                                            Anyone on Roamboard and via direct link
-                                            can discover your trips.
-                                        </p>
-                                    </div>
-                                </label>
-                            </div>
+                            <VisibilitySelector
+                                value={defaultBoardVisibility}
+                                onChange={(val) => setDefaultBoardVisibility(val)}
+                                showLabel={false}
+                            />
                         </div>
 
                         {/* Notifications */}
