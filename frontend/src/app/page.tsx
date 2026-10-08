@@ -3,10 +3,11 @@ import YesPleaseButton from "@/components/ui/YesPleaseButton";
 import Tagline from "@/components/features/start-page/Tagline";
 import IntroText from "@/components/features/start-page/IntroText";
 import Wordmark from "@/components/features/start-page/Wordmark";
+import ThemeSelect from "@/components/ui/ThemeSelect";
 
 export default function StartPage() {
     return (
-        <main className="text-obsidian relative h-dvh min-h-[32rem] overflow-hidden bg-white">
+        <main className="bg-background text-foreground relative h-dvh min-h-[32rem] overflow-hidden">
             <GuideLines />
 
             {/* Content area = the box formed by the guide lines */}
@@ -17,6 +18,9 @@ export default function StartPage() {
                     <YesPleaseButton href="/home" />
                 </div>
                 <Wordmark />
+                <div className="absolute right-3 bottom-[calc(15vw+0.75rem)] z-10 md:bottom-3">
+                    <ThemeSelect side="top" />
+                </div>
             </div>
         </main>
     );

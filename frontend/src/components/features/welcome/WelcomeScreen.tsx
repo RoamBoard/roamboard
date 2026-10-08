@@ -1,6 +1,7 @@
 import Image from "next/image";
 import EnterTransition from "@/components/features/welcome/EnterTransition";
 import WelcomeUsername from "@/components/features/welcome/WelcomeUsername";
+import ThemeSelect from "@/components/ui/ThemeSelect";
 
 type Props = {
     username: string;
@@ -8,20 +9,20 @@ type Props = {
 
 export default function WelcomeScreen({ username }: Props) {
     return (
-        <main className="font-body text-obsidian relative h-dvh min-h-128 w-full overflow-hidden bg-white">
+        <main className="font-body bg-background text-foreground relative h-dvh min-h-128 w-full overflow-hidden">
             <h1 className="sr-only">Welcome back, {username}</h1>
 
             <div
                 className="pointer-events-none absolute inset-0"
                 aria-hidden="true"
             >
-                <span className="bg-porcelain absolute inset-y-0 left-[2.25%] w-px" />
-                <span className="bg-porcelain absolute inset-y-0 right-[2.25%] w-px" />
-                <span className="bg-porcelain absolute inset-x-0 top-[3.5%] h-px" />
-                <span className="bg-porcelain absolute inset-x-0 bottom-[3.5%] h-px" />
+                <span className="bg-faint absolute inset-y-0 left-[2.25%] w-px" />
+                <span className="bg-faint absolute inset-y-0 right-[2.25%] w-px" />
+                <span className="bg-faint absolute inset-x-0 top-[3.5%] h-px" />
+                <span className="bg-faint absolute inset-x-0 bottom-[3.5%] h-px" />
             </div>
 
-            <p className="text-graphite absolute top-[3.5%] right-[2.25%] text-right text-[length:clamp(0.625rem,0.8vw,1rem)] leading-[1.05]">
+            <p className="text-muted-foreground absolute top-[3.5%] right-[2.25%] text-right text-[length:clamp(0.625rem,0.8vw,1rem)] leading-[1.05]">
                 THE WORLD
                 <br />
                 AWAITS
@@ -77,13 +78,16 @@ export default function WelcomeScreen({ username }: Props) {
             >
                 ROAMBOARD
             </p>
-            <p className="text-graphite absolute right-[2.25%] bottom-[3.5%] text-right text-[length:clamp(0.625rem,0.8vw,1rem)] leading-[1.05]">
+            <p className="text-muted-foreground absolute right-[2.25%] bottom-[3.5%] text-right text-[length:clamp(0.625rem,0.8vw,1rem)] leading-[1.05]">
                 READY TO
                 <br />
                 DISCOVER IT?
             </p>
 
             <EnterTransition />
+            <div className="absolute right-[2.25%] bottom-[calc(3.5%+2.5rem)] z-10">
+                <ThemeSelect side="top" />
+            </div>
         </main>
     );
 }

@@ -11,7 +11,7 @@ export default function DiscoverPage() {
             <div className="grid place-items-center text-center">
                 <div>
                     <h1 className="font-display text-24">Discover</h1>
-                    <p className="font-body text-14 text-graphite mt-2">
+                    <p className="font-body text-14 text-muted-foreground mt-2">
                         This page is a placeholder.
                     </p>
                 </div>
