@@ -17,7 +17,7 @@ export default function CenteredPrompt({
                 aria-label={label}
                 placeholder={placeholder}
                 size={placeholder.length}
-                className="font-body text-14 text-obsidian placeholder:text-graphite focus-visible:outline-graphite max-w-full border-0 bg-transparent text-center font-normal focus-visible:outline-1 focus-visible:outline-offset-4"
+                className="font-body text-14 text-foreground placeholder:text-muted-foreground focus-visible:outline-foreground max-w-full border-0 bg-transparent text-center font-normal focus-visible:outline-1 focus-visible:outline-offset-4"
             />
         </div>
     );

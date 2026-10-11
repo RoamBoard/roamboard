@@ -68,10 +68,10 @@ export default function ProfileControl({ user = null }: ProfileControlProps) {
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-0"
             >
-                <span className="bg-stone absolute top-[18%] right-[9%] left-0 h-0.5" />
-                <span className="bg-stone absolute top-0 right-[17%] h-[39%] w-0.5" />
-                <span className="bg-stone absolute top-[25%] bottom-0 left-[32%] w-0.5" />
-                <span className="bg-stone absolute top-[66%] right-0 left-[16%] h-0.5" />
+                <span className="bg-decorative-line absolute top-[18%] right-[9%] left-0 h-0.5" />
+                <span className="bg-decorative-line absolute top-0 right-[17%] h-[39%] w-0.5" />
+                <span className="bg-decorative-line absolute top-[25%] bottom-0 left-[32%] w-0.5" />
+                <span className="bg-decorative-line absolute top-[66%] right-0 left-[16%] h-0.5" />
             </div>
             {/* A user shows the name button; no user shows the login link below. */}
             {user ? (
@@ -108,7 +108,6 @@ export default function ProfileControl({ user = null }: ProfileControlProps) {
                                 disabled
                                 /* for accessibility */
                                 aria-describedby={`${dropdownId}-notice`}
-                                
                             >
                                 Log out
                             </button>

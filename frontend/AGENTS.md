@@ -37,7 +37,9 @@ Figma designs supplied by the user are the visual reference. No Figma link is re
 
 Ask the user before implementing every missing or unclear design detail. This includes layouts, interaction behavior, responsive changes, dark mode, and loading, empty, or error states. Do not invent a design to fill a gap. Continue other work within the requested task that does not depend on that decision.
 
-Reuse Cabinet Grotesk, Satoshi, and the existing tokens in `src/app/globals.css` where they match approved designs. Use semantic color tokens for surfaces and text that change with the theme. The current dark-mode placeholder values are not approved designs.
+Reuse Cabinet Grotesk, Satoshi, and the existing tokens in `src/app/globals.css` where they match approved designs. Use semantic color tokens for surfaces and text that change with the theme. The current dark-mode palette is approved by the user.
+
+Dark mode uses a `dark` class on `<html>`. `ThemeSelect` switches between Light and Dark and saves the choice in local storage; `layout.tsx` restores it before painting. New components should use `bg-background`, `text-foreground`, `text-muted-foreground`, and `border-line` instead of fixed interface colors. Define new theme colors in both `:root` and `.dark` in `globals.css`. Keep intentional photo lettering and transition colors fixed.
 
 The application must work on desktop and smaller screens, in light and dark mode. Use semantic elements, accessible labels, keyboard access, and visible focus. Respect reduced-motion preferences. Keep common actions consistent and animations unobtrusive.
 
@@ -67,14 +69,15 @@ Follow the existing structure:
 
 ## Tools and dependency decisions
 
-The current stack is Next.js App Router, React, TypeScript, and Tailwind CSS v4. Read the relevant installed Next.js documentation as required by the generated block above before changing framework-dependent code.
+The current stack is Next.js App Router, React, TypeScript, Tailwind CSS v4, and Motion for React. Read the relevant installed Next.js documentation as required by the generated block above before changing framework-dependent code.
+
+Use Tailwind utility classes for interface styling and Motion for animated interactions and page transitions, as requested by the user. Motion is approved and installed. Keep shared theme tokens and global foundations in `src/app/globals.css`.
 
 The proposal describes these tools, but they are not currently declared frontend dependencies:
 
 | Proposed tool  | Intended use after approval                                    |
 | -------------- | -------------------------------------------------------------- |
 | shadcn         | Primitives for complex interface components where needed       |
-| Motion         | Animations and interface transitions where useful              |
 | Storybook      | Developing and documenting reusable UI components              |
 | TanStack Query | Backend data fetching, caching, loading states, and refetching |
 | Zustand        | Optional shared client state when local state is insufficient  |
@@ -123,6 +126,10 @@ The user has chosen Google-only sign-in. Email/password forms are not part of th
 `/login` and `/signup` currently contain layout previews with disabled Google buttons. No Google integration, backend authentication endpoints, sessions, or logout behavior are implemented. `ProfileControl` shows a login link when its user prop is absent, or a name dropdown when given a user. Production pages currently use the logged-out view. `/dev/account` uses a fictional name to preview the dropdown; its disabled logout button does not end a session.
 
 Stable Roamboard user IDs and Google account linking belong in the backend. No user ID or session contract is defined by this interface preview.
+
+`/welcome` is a frontend preview of the returning-user landing page, with the fictional username "Rowan" supplied by the route. `WelcomeScreen` accepts a username prop; long names fit within two lines. The user approved a light-only page, the supplied overlapping photo composition on smaller screens, and a click on ENTER to start a black-bar takeover before opening `/home`. Reduced-motion users go directly to `/home`. Images and text have separate layers for later animation work. This route does not check a login session. Once authentication exists, show this page only for an active session, use the authenticated username, and route returning users here from `/`.
+
+`WelcomeTransitionProvider` lives in the root layout so the black overlay persists during the Welcome-to-Home route change. Motion variants cover Welcome, wait for Home to render, and then slide upward to reveal Home. The bar and text use eased timing, starting from the measured ENTER position. Page content is inert during the transition, and ENTER ignores repeated activation until the reveal finishes. The welcome layout uses Tailwind utility classes. Motion's reduced-motion hook skips the takeover for users who prefer reduced motion.
 
 For application changes, run the relevant lint and TypeScript checks. Run a production build for routing, configuration, dependency, or integration changes. Report command failures and checks that could not run.
 

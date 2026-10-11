@@ -6,7 +6,7 @@ type Props = {
 
 export default function Sidebar({ activeHref }: Props) {
     const linkClasses =
-        "inline-flex min-h-6 items-center text-graphite underline-offset-2 hover:underline aria-[current=true]:text-obsidian aria-[current=true]:underline focus-visible:outline-1 focus-visible:outline-offset-4";
+        "inline-flex min-h-6 items-center text-muted-foreground underline-offset-2 hover:underline aria-[current=true]:text-foreground aria-[current=true]:underline focus-visible:outline-foreground focus-visible:outline-1 focus-visible:outline-offset-4";
 
     return (
         <>

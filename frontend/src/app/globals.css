@@ -6,17 +6,23 @@
 /* Semantic tokens: components use these, so dark mode is just a swap of
    the values below. Names follow shadcn's convention. */
 :root {
+    color-scheme: light;
     --background: #ffffff;
     --foreground: #161616; /* obsidian */
+    --muted-foreground: #818181; /* graphite */
     --line: #d2d2d2; /* slate */
     --faint: #e7e7e7; /* porcelain */
+    --decorative-line: #bdbdbd; /* stone */
 }
 
 .dark {
+    color-scheme: dark;
     --background: #161616;
     --foreground: #e7e7e7;
-    --line: #383838; /* placeholder: no dark design yet */
-    --faint: #2a2a2a; /* placeholder: no dark design yet */
+    --muted-foreground: #a3a3a3;
+    --line: #383838;
+    --faint: #2a2a2a;
+    --decorative-line: #383838;
 }
 
 /* Roamboard brand tokens (Tailwind v4). */
@@ -31,8 +37,10 @@
     /* Semantic colours (flip in dark mode) */
     --color-background: var(--background);
     --color-foreground: var(--foreground);
+    --color-muted-foreground: var(--muted-foreground);
     --color-line: var(--line);
     --color-faint: var(--faint);
+    --color-decorative-line: var(--decorative-line);
 
     /* Colour palette */
     --color-obsidian: #161616;
