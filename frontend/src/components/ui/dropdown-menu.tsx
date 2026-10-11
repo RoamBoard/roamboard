@@ -5,7 +5,7 @@ import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 
 // Copied and adapted from shadcn/ui's New York dropdown (MIT, see SHADCN-LICENSE.txt):
 // https://ui.shadcn.com/r/styles/new-york-v4/dropdown-menu.json
-// Kept the parts used by ThemeSelect. Colors use Roamboard's existing tokens;
+// Shared by ThemeSelect and ProfileControl. Colors use Roamboard's existing tokens;
 // the selected dot uses CSS, and the Radix dropdown package is imported directly.
 
 function DropdownMenu({
@@ -40,6 +40,19 @@ function DropdownMenuContent({
                 {...props}
             />
         </DropdownMenuPrimitive.Portal>
+    );
+}
+
+function DropdownMenuItem({
+    className,
+    ...props
+}: ComponentProps<typeof DropdownMenuPrimitive.Item>) {
+    return (
+        <DropdownMenuPrimitive.Item
+            data-slot="dropdown-menu-item"
+            className={`focus:bg-faint focus:text-foreground relative flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 ${className ?? ""}`}
+            {...props}
+        />
     );
 }
 
@@ -80,6 +93,7 @@ export {
     DropdownMenu,
     DropdownMenuTrigger,
     DropdownMenuContent,
+    DropdownMenuItem,
     DropdownMenuRadioGroup,
     DropdownMenuRadioItem
 };
