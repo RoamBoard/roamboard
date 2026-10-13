@@ -1,0 +1,419 @@
+import type {
+    BoardCreatorPayload,
+    BoardDayDraft,
+    BoardImageDraft,
+    BoardPinDraft
+} from "@/types/board-creator";
+
+const apiOrigin = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+
+type ApiError = { error?: { code?: string; message?: string } };
+
+async function requestEnvelope<T>(
+    path: string,
+    init: RequestInit = {}
+): Promise<{ data: T; meta?: { hasMore?: boolean } }> {
+    const response = await fetch(`${apiOrigin}${path}`, {
+        ...init,
+        credentials: "include",
+        cache: "no-store",
+        headers: {
+            ...(init.body ? { "Content-Type": "application/json" } : {}),
+            ...init.headers
+        }
+    }).catch(() => {
+        throw new Error(
+            `The Board API is unavailable at ${apiOrigin}. Start the backend and try again.`
+        );
+    });
+    if (!response.headers.get("content-type")?.includes("application/json")) {
+        throw new Error(
+            `The Board API returned ${response.status} instead of JSON. Check the API URL (${apiOrigin}).`
+        );
+    }
+    const body = (await response.json()) as {
+        data?: T;
+        meta?: { hasMore?: boolean };
+    } & ApiError;
+    if (!response.ok || body.data === undefined) {
+        throw new Error(
+            body.error?.message ?? `Board request failed (${response.status}).`
+        );
+    }
+    return { data: body.data, meta: body.meta };
+}
+
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+    return (await requestEnvelope<T>(path, init)).data;
+}
+
+export type BoardWriteRequest = {
+    status: "draft" | "published";
+    title: string;
+    description: string | null;
+    visibility: "collaborators" | "friends" | "public";
+    tagIds: number[];
+    imageIds: number[];
+    coverImageId: number | null;
+    days: Array<{
+        dayId?: number;
+        dayNumber: number;
+        date: string | null;
+        activities: Array<{
+            activityId?: number;
+            position: number;
+            title: string;
+            activityTime: string | null;
+            category: string;
+            note: string | null;
+            source: BoardPinDraft["source"];
+            location: {
+                name: string;
+                latitude: number;
+                longitude: number;
+                address: string | null;
+                city: string | null;
+                country: string | null;
+                externalPlaceId: string | null;
+            } | null;
+            locationConfirmed: boolean;
+            uploadedImageIds: number[];
+            coverImageId: number | null;
+            externalImage: {
+                provider: "unsplash";
+                providerImageId: string;
+                url: string;
+                photographer: string;
+                photographerUrl: string | null;
+                sourceUrl: string | null;
+            } | null;
+        }>;
+    }>;
+};
+
+export type BoardDocument = Omit<BoardWriteRequest, "days"> & {
+    boardId: number;
+    revision: number;
+    permissions: { canEditContent: boolean; canManageBoard: boolean };
+    coverImageId: number | null;
+    tags: Array<{ tagId: number; name: string }>;
+    images: Array<{
+        imageId: number;
+        url: string;
+        thumbnailUrl: string;
+        capturedAt: string | null;
+        position: number;
+    }>;
+    days: Array<
+        Omit<BoardWriteRequest["days"][number], "dayId" | "activities"> & {
+            dayId: number;
+            activities: Array<
+                Omit<
+                    BoardWriteRequest["days"][number]["activities"][number],
+                    "activityId"
+                > & { activityId: number }
+            >;
+        }
+    >;
+    createdAt: string;
+    updatedAt: string;
+};
+
+export type DraftSummary = {
+    boardId: number;
+    title: string;
+    updatedAt: string;
+    coverImageUrl: string | null;
+};
+
+export type PublishedSummary = DraftSummary & {
+    status: "published";
+    visibility: BoardWriteRequest["visibility"];
+};
+
+export const listBoardTags = () =>
+    request<Array<{ tagId: number; name: string }>>("/api/v1/tags");
+export async function listBoardDrafts(page = 1): Promise<{
+    items: DraftSummary[];
+    hasMore: boolean;
+}> {
+    const response = await requestEnvelope<DraftSummary[]>(
+        `/api/v1/boards?scope=drafts&page=${page}`
+    );
+    return { items: response.data, hasMore: response.meta?.hasMore ?? false };
+}
+export async function listPublishedBoards(page = 1): Promise<{
+    items: PublishedSummary[];
+    hasMore: boolean;
+}> {
+    const response = await requestEnvelope<PublishedSummary[]>(
+        `/api/v1/boards?scope=published&page=${page}`
+    );
+    return {
+        items: response.data.map((item) => ({
+            ...item,
+            coverImageUrl: item.coverImageUrl
+                ? new URL(item.coverImageUrl, apiOrigin).toString()
+                : null
+        })),
+        hasMore: response.meta?.hasMore ?? false
+    };
+}
+export const loadBoardDocument = (boardId: number) =>
+    request<BoardDocument>(`/api/v1/boards/${boardId}`);
+
+export function saveBoardDocument(
+    input: BoardWriteRequest,
+    board?: BoardDocument | null
+): Promise<BoardDocument> {
+    return board
+        ? request<BoardDocument>(`/api/v1/boards/${board.boardId}`, {
+              method: "PUT",
+              body: JSON.stringify({ ...input, revision: board.revision })
+          })
+        : request<BoardDocument>("/api/v1/boards", {
+              method: "POST",
+              body: JSON.stringify(input)
+          });
+}
+
+export function toBoardWrite(
+    draft: BoardCreatorPayload,
+    tags: Array<{ tagId: number; name: string }>,
+    confirmedPhotoPins: Set<string>
+): BoardWriteRequest {
+    const tagIds = draft.tags.map(
+        (name) => tags.find((tag) => tag.name === name)?.tagId
+    );
+    if (tagIds.some((id) => id === undefined))
+        throw new Error("Select tags from the allowed list.");
+    const uploaded = draft.images.filter((image) => image.source === "upload");
+    if (uploaded.some((image) => image.uploadedImageId === undefined)) {
+        throw new Error("An image has not finished uploading. Try again.");
+    }
+    return {
+        status: draft.status,
+        title: draft.title,
+        description: draft.description.trim() || null,
+        visibility: draft.visibility,
+        tagIds: tagIds as number[],
+        imageIds: uploaded.map((image) => image.uploadedImageId!),
+        coverImageId: draft.coverImageId,
+        days: draft.days.map((day) => ({
+            ...(day.serverDayId ? { dayId: day.serverDayId } : {}),
+            dayNumber: day.dayNumber,
+            date: day.date,
+            activities: day.pins.map((pin, position) => {
+                const pinImages = uploaded
+                    .filter((image) => image.pinId === pin.id)
+                    .sort(
+                        (first, second) =>
+                            (first.activityOrder ?? first.order) -
+                            (second.activityOrder ?? second.order)
+                    );
+                const external = draft.images.find(
+                    (image) =>
+                        image.pinId === pin.id && image.source === "unsplash"
+                );
+                return {
+                    ...(pin.serverActivityId
+                        ? { activityId: pin.serverActivityId }
+                        : {}),
+                    position,
+                    title: pin.title,
+                    activityTime: pin.time || null,
+                    category: pin.category,
+                    note: pin.description.trim() || null,
+                    source: pin.source,
+                    location: pin.location
+                        ? {
+                              name: pin.location.name,
+                              latitude: pin.location.latitude,
+                              longitude: pin.location.longitude,
+                              address: pin.location.address || null,
+                              city: pin.location.city,
+                              country: pin.location.country,
+                              externalPlaceId: pin.location.mapboxId
+                          }
+                        : null,
+                    locationConfirmed:
+                        pin.source === "photo"
+                            ? confirmedPhotoPins.has(pin.id)
+                            : pin.location !== null,
+                    uploadedImageIds: pinImages.map(
+                        (image) => image.uploadedImageId!
+                    ),
+                    coverImageId: pinImages.some(
+                        (image) => image.uploadedImageId === pin.coverImageId
+                    )
+                        ? pin.coverImageId!
+                        : (pinImages[0]?.uploadedImageId ?? null),
+                    externalImage: external
+                        ? {
+                              provider: "unsplash" as const,
+                              providerImageId: external.publicId,
+                              url: external.url,
+                              photographer: external.credit ?? "Unknown",
+                              photographerUrl: external.creditUrl,
+                              sourceUrl: external.sourceUrl
+                          }
+                        : null
+                };
+            })
+        }))
+    };
+}
+
+export function fromBoardDocument(board: BoardDocument): {
+    days: BoardDayDraft[];
+    images: BoardImageDraft[];
+    confirmedPhotoPins: Set<string>;
+} {
+    const pinIds = new Map<number, string>();
+    const confirmedPhotoPins = new Set<string>();
+    const days: BoardDayDraft[] = board.days.map((day) => ({
+        id: crypto.randomUUID(),
+        serverDayId: day.dayId,
+        dayNumber: day.dayNumber,
+        date: day.date,
+        pins: day.activities.map((activity) => {
+            const id = crypto.randomUUID();
+            pinIds.set(activity.activityId, id);
+            if (activity.source === "photo" && activity.locationConfirmed)
+                confirmedPhotoPins.add(id);
+            return {
+                id,
+                serverActivityId: activity.activityId,
+                coverImageId: activity.coverImageId,
+                order: activity.position,
+                time: activity.activityTime ?? "",
+                title: activity.title,
+                description: activity.note ?? "",
+                category: activity.category as BoardPinDraft["category"],
+                source: activity.source,
+                location: activity.location
+                    ? {
+                          name: activity.location.name,
+                          address: activity.location.address ?? "",
+                          latitude: activity.location.latitude,
+                          longitude: activity.location.longitude,
+                          city: activity.location.city,
+                          country: activity.location.country,
+                          countryCode: null,
+                          mapboxId: activity.location.externalPlaceId
+                      }
+                    : null
+            };
+        })
+    }));
+    const ownerByImage = new Map<number, { pinId: string; order: number }>();
+    for (const day of board.days)
+        for (const activity of day.activities) {
+            activity.uploadedImageIds.forEach((imageId, order) =>
+                ownerByImage.set(imageId, {
+                    pinId: pinIds.get(activity.activityId)!,
+                    order
+                })
+            );
+        }
+    const images: BoardImageDraft[] = board.images.map((image) => ({
+        id: crypto.randomUUID(),
+        uploadedImageId: image.imageId,
+        pinId: ownerByImage.get(image.imageId)?.pinId ?? null,
+        activityOrder: ownerByImage.get(image.imageId)?.order,
+        publicId: String(image.imageId),
+        source: "upload",
+        url: new URL(image.url, apiOrigin).toString(),
+        thumbnailUrl: new URL(image.thumbnailUrl, apiOrigin).toString(),
+        width: 0,
+        height: 0,
+        capturedAt: image.capturedAt,
+        latitude: null,
+        longitude: null,
+        order: image.position,
+        credit: null,
+        creditUrl: null,
+        sourceUrl: null
+    }));
+    for (const day of board.days)
+        for (const activity of day.activities) {
+            if (!activity.externalImage) continue;
+            images.push({
+                id: crypto.randomUUID(),
+                pinId: pinIds.get(activity.activityId)!,
+                publicId: activity.externalImage.providerImageId,
+                source: "unsplash",
+                url: activity.externalImage.url,
+                thumbnailUrl: activity.externalImage.url,
+                width: 0,
+                height: 0,
+                capturedAt: null,
+                latitude: null,
+                longitude: null,
+                order: images.length,
+                credit: activity.externalImage.photographer,
+                creditUrl: activity.externalImage.photographerUrl,
+                sourceUrl: activity.externalImage.sourceUrl
+            });
+        }
+    return { days, images, confirmedPhotoPins };
+}
+
+function contentType(file: File): string {
+    if (file.type) return file.type;
+    const extension = file.name.split(".").pop()?.toLowerCase();
+    if (extension === "heic" || extension === "heif")
+        return `image/${extension}`;
+    throw new Error("Choose a JPEG, PNG, WebP, HEIC, or HEIF image.");
+}
+
+export async function uploadBoardImage(file: File): Promise<{
+    imageId: number;
+    url: string;
+    thumbnailUrl: string;
+    capturedAt: string | null;
+    latitude: number | null;
+    longitude: number | null;
+}> {
+    const intent = await request<{
+        uploadId: string;
+        uploadUrl: string;
+        method: "POST";
+        formFields: Record<string, string>;
+    }>("/api/v1/images/upload-intents", {
+        method: "POST",
+        body: JSON.stringify({
+            fileName: file.name,
+            contentType: contentType(file),
+            sizeBytes: file.size
+        })
+    });
+    const form = new FormData();
+    for (const [key, value] of Object.entries(intent.formFields))
+        form.append(key, value);
+    form.append("file", file, file.name);
+    const upload = await fetch(intent.uploadUrl, {
+        method: intent.method,
+        body: form
+    });
+    if (!upload.ok)
+        throw new Error(
+            `Image storage rejected the upload (${upload.status}).`
+        );
+    const image = await request<{
+        imageId: number;
+        url: string;
+        thumbnailUrl: string;
+        capturedAt: string | null;
+        latitude: number | null;
+        longitude: number | null;
+    }>("/api/v1/images/complete", {
+        method: "POST",
+        body: JSON.stringify({ uploadId: intent.uploadId })
+    });
+    return {
+        ...image,
+        url: new URL(image.url, apiOrigin).toString(),
+        thumbnailUrl: new URL(image.thumbnailUrl, apiOrigin).toString()
+    };
+}

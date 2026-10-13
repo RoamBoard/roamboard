@@ -15,3 +15,27 @@ export function validateBody(schema: ZodType): RequestHandler {
         next();
     };
 }
+
+export function validateParams(schema: ZodType): RequestHandler {
+    return (request, response, next) => {
+        const parsed = schema.safeParse(request.params);
+        if (!parsed.success) {
+            next(new AppError(400, "Invalid request", "INVALID_REQUEST"));
+            return;
+        }
+        response.locals.params = parsed.data;
+        next();
+    };
+}
+
+export function validateQuery(schema: ZodType): RequestHandler {
+    return (request, response, next) => {
+        const parsed = schema.safeParse(request.query);
+        if (!parsed.success) {
+            next(new AppError(400, "Invalid request", "INVALID_REQUEST"));
+            return;
+        }
+        response.locals.query = parsed.data;
+        next();
+    };
+}

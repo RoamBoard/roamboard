@@ -3,52 +3,136 @@
 import { dayColors, type BoardCreatorPayload } from "@/types/board-creator";
 
 type Props = {
-  board: BoardCreatorPayload;
+    board: BoardCreatorPayload;
 };
 
 export default function BoardCreationPreview({ board }: Props) {
-  const pins = board.days.flatMap((day) => day.pins);
-  return (
-    <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr]">
-      <div>
-        <p className="text-10 font-bold uppercase tracking-label text-graphite">Cover images</p>
-        <div className="mt-4 grid max-w-sm grid-cols-3 gap-1">
-          {board.images.slice(0, 6).map((image) => <img key={image.id} src={image.thumbnailUrl} alt="" className="aspect-[3/4] w-full object-cover" />)}
-          {board.images.length === 0 ? <div className="col-span-3 grid aspect-video place-items-center bg-faint text-12 text-graphite">No images yet</div> : null}
-        </div>
-      </div>
+    const pins = board.days.flatMap((day) => day.pins);
+    const uploadedImages = board.images.filter(
+        (image) => image.source === "upload"
+    );
+    const cover = uploadedImages.find(
+        (image) => image.uploadedImageId === board.coverImageId
+    );
+    return (
+        <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr]">
+            <div>
+                <p className="text-10 tracking-label text-graphite font-bold uppercase">
+                    Board cover
+                </p>
+                <div className="mt-4 max-w-sm">
+                    {cover ? (
+                        <img
+                            src={cover.url}
+                            alt={`Cover of ${board.title || "Untitled Board"}`}
+                            className="aspect-[4/3] w-full object-cover"
+                        />
+                    ) : (
+                        <div className="bg-faint text-12 text-graphite grid aspect-[4/3] place-items-center">
+                            Default cover
+                        </div>
+                    )}
+                </div>
+            </div>
 
-      <article className="border-l border-line pl-8" aria-label="Board preview">
-        <div className="flex flex-wrap items-start justify-between gap-5">
-          <div>
-            <p className="text-10 uppercase tracking-label text-stone">Board preview</p>
-            <h3 className="mt-3 max-w-md font-display text-48 font-bold leading-[0.9]">{board.title || "Untitled Board"}</h3>
-          </div>
-          <span className="border border-line px-3 py-2 text-10 uppercase tracking-label">{board.visibility}</span>
+            <article
+                className="border-line border-l pl-8"
+                aria-label="Board preview"
+            >
+                <div className="flex flex-wrap items-start justify-between gap-5">
+                    <div>
+                        <p className="text-10 tracking-label text-stone uppercase">
+                            Board preview
+                        </p>
+                        <h3 className="font-display text-48 mt-3 max-w-md leading-[0.9] font-bold">
+                            {board.title || "Untitled Board"}
+                        </h3>
+                    </div>
+                    <span className="border-line text-10 tracking-label border px-3 py-2 uppercase">
+                        {board.visibility}
+                    </span>
+                </div>
+                <p className="text-14 text-graphite mt-6 max-w-xl leading-6">
+                    {board.description ||
+                        "Your Board description will appear here."}
+                </p>
+                <div className="text-12 text-graphite mt-7 flex flex-wrap gap-5">
+                    <span>
+                        {board.days.length} day
+                        {board.days.length === 1 ? "" : "s"}
+                    </span>
+                    <span>
+                        {pins.length} pin{pins.length === 1 ? "" : "s"}
+                    </span>
+                    <span>
+                        {uploadedImages.length} image
+                        {uploadedImages.length === 1 ? "" : "s"}
+                    </span>
+                </div>
+                <div className="mt-8 grid gap-5 sm:grid-cols-2">
+                    {board.days.map((day, index) => (
+                        <section
+                            key={day.id}
+                            className="border-t pt-4"
+                            style={{
+                                borderColor: dayColors[index % dayColors.length]
+                            }}
+                        >
+                            <h4 className="font-display text-20 font-bold">
+                                Day {day.dayNumber}
+                            </h4>
+                            <ol className="text-12 text-graphite mt-3 grid gap-2">
+                                {day.pins.slice(0, 5).map((pin) => (
+                                    <li key={pin.id}>
+                                        <time>{pin.time}</time> ·{" "}
+                                        <span className="text-foreground">
+                                            {pin.title}
+                                        </span>
+                                        <div
+                                            className="mt-2 flex flex-wrap gap-1"
+                                            aria-label={`Images for ${pin.title}`}
+                                        >
+                                            {board.images
+                                                .filter(
+                                                    (image) =>
+                                                        image.pinId === pin.id
+                                                )
+                                                .sort(
+                                                    (first, second) =>
+                                                        (first.activityOrder ??
+                                                            first.order) -
+                                                        (second.activityOrder ??
+                                                            second.order)
+                                                )
+                                                .map((image) => (
+                                                    <img
+                                                        key={image.id}
+                                                        src={image.thumbnailUrl}
+                                                        alt={`${pin.title} photo`}
+                                                        className="size-16 object-cover"
+                                                    />
+                                                ))}
+                                        </div>
+                                    </li>
+                                ))}
+                                {day.pins.length === 0 ? (
+                                    <li>No pins yet</li>
+                                ) : null}
+                            </ol>
+                        </section>
+                    ))}
+                </div>
+                <dl className="border-line mt-9 grid gap-6 border-t pt-6">
+                    <div>
+                        <dt className="text-10 tracking-label text-stone uppercase">
+                            Tags
+                        </dt>
+                        <dd className="text-12 text-graphite mt-2">
+                            {board.tags.join(" · ") || "None"}
+                        </dd>
+                    </div>
+                </dl>
+            </article>
         </div>
-        <p className="mt-6 max-w-xl text-14 leading-6 text-graphite">{board.description || "Your Board description will appear here."}</p>
-        <div className="mt-7 flex flex-wrap gap-5 text-12 text-graphite">
-          <span>{board.days.length} day{board.days.length === 1 ? "" : "s"}</span>
-          <span>{pins.length} pin{pins.length === 1 ? "" : "s"}</span>
-          <span>{board.images.length} image{board.images.length === 1 ? "" : "s"}</span>
-        </div>
-        <div className="mt-8 grid gap-5 sm:grid-cols-2">
-          {board.days.map((day, index) => (
-            <section key={day.id} className="border-t pt-4" style={{ borderColor: dayColors[index % dayColors.length] }}>
-              <h4 className="font-display text-20 font-bold">Day {day.dayNumber}</h4>
-              <ol className="mt-3 grid gap-2 text-12 text-graphite">
-                {day.pins.slice(0, 5).map((pin) => <li key={pin.id}><time>{pin.time}</time> · <span className="text-foreground">{pin.title}</span></li>)}
-                {day.pins.length === 0 ? <li>No pins yet</li> : null}
-              </ol>
-            </section>
-          ))}
-        </div>
-        <dl className="mt-9 grid gap-6 border-t border-line pt-6 sm:grid-cols-3">
-          <div><dt className="text-10 uppercase tracking-label text-stone">Tags</dt><dd className="mt-2 text-12 text-graphite">{board.tags.join(" · ") || "None"}</dd></div>
-          <div><dt className="text-10 uppercase tracking-label text-stone">Vibes</dt><dd className="mt-2 text-12 text-graphite">{board.vibes.join(" · ") || "None"}</dd></div>
-          <div><dt className="text-10 uppercase tracking-label text-stone">Highlights</dt><dd className="mt-2 text-12 text-graphite">{board.highlights.join(" · ") || "None"}</dd></div>
-        </dl>
-      </article>
-    </div>
-  );
+    );
 }
