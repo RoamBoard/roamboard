@@ -9,6 +9,8 @@ node_modules/
 /node_modules
 
 # Backend
+/.env
 /backend/.env
 /backend/dist/
 backend/SCHEMA_DRAFT.md
+.env
