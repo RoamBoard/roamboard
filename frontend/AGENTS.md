@@ -43,7 +43,9 @@ Figma designs supplied by the user are the visual reference. No Figma link is re
 
 Ask the user before implementing every missing or unclear design detail. This includes layouts, interaction behavior, responsive changes, dark mode, and loading, empty, or error states. Do not invent a design to fill a gap. Continue other work within the requested task that does not depend on that decision.
 
-Reuse Cabinet Grotesk, Satoshi, and the existing tokens in `src/app/globals.css` where they match approved designs. Use semantic color tokens for surfaces and text that change with the theme. The current dark-mode placeholder values are not approved designs.
+Reuse Cabinet Grotesk, Satoshi, and the existing tokens in `src/app/globals.css` where they match approved designs. Use semantic color tokens for surfaces and text that change with the theme. The current dark-mode palette is approved by the user.
+
+Dark mode uses a `dark` class on `<html>`. `ThemeSelect` switches between Light and Dark and saves the choice in local storage; `layout.tsx` restores it before painting. New components should use `bg-background`, `text-foreground`, `text-muted-foreground`, and `border-line` instead of fixed interface colors. Define new theme colors in both `:root` and `.dark` in `globals.css`. Keep intentional photo lettering and transition colors fixed.
 
 The application must work on desktop and smaller screens, in light and dark mode. Use semantic elements, accessible labels, keyboard access, and visible focus. Respect reduced-motion preferences. Keep common actions consistent and animations unobtrusive.
 
@@ -51,14 +53,16 @@ Show useful validation errors and action failures. Display loading or progress f
 
 ## Code organization and readability
 
+Prettier is the source of truth for formatting. Use the repository's root `.prettierrc`: indent with four spaces and never tabs, use double quotes in JavaScript and TypeScript, do not use trailing commas, and use LF line endings with a final newline. Do not add a nested Prettier configuration. After editing supported files, run `pnpm format` and `pnpm format:check` from the repository root.
+
 Follow the existing structure:
 
-| Location | Purpose |
-| --- | --- |
-| `src/app/` | Routes, page composition, layouts, and route metadata |
-| `src/components/layout/` | Shared page structure, including the app shell and sidebar |
-| `src/components/ui/` | Reusable interface components |
-| `src/components/features/` | Components specific to a feature |
+| Location                   | Purpose                                                    |
+| -------------------------- | ---------------------------------------------------------- |
+| `src/app/`                 | Routes, page composition, layouts, and route metadata      |
+| `src/components/layout/`   | Shared page structure, including the app shell and sidebar |
+| `src/components/ui/`       | Reusable interface components                              |
+| `src/components/features/` | Components specific to a feature                           |
 
 - Prefer straightforward functions and components, descriptive names, and explicit prop types.
 - Extract shared code when actual reuse or readability warrants it. Avoid unnecessary wrappers, generic frameworks, and complicated TypeScript.
@@ -71,17 +75,18 @@ Follow the existing structure:
 
 ## Tools and dependency decisions
 
-The current stack is Next.js App Router, React, TypeScript, and Tailwind CSS v4. Read the relevant installed Next.js documentation as required by the generated block above before changing framework-dependent code.
+The current stack is Next.js App Router, React, TypeScript, Tailwind CSS v4, and Motion for React. Read the relevant installed Next.js documentation as required by the generated block above before changing framework-dependent code.
+
+Use Tailwind utility classes for interface styling and Motion for animated interactions and page transitions, as requested by the user. Motion is approved and installed. Keep shared theme tokens and global foundations in `src/app/globals.css`.
 
 The proposal describes these tools, but they are not currently declared frontend dependencies:
 
-| Proposed tool | Intended use after approval |
-| --- | --- |
-| shadcn | Primitives for complex interface components where needed |
-| Motion | Animations and interface transitions where useful |
-| Storybook | Developing and documenting reusable UI components |
+| Proposed tool  | Intended use after approval                                    |
+| -------------- | -------------------------------------------------------------- |
+| shadcn         | Primitives for complex interface components where needed       |
+| Storybook      | Developing and documenting reusable UI components              |
 | TanStack Query | Backend data fetching, caching, loading states, and refetching |
-| Zustand | Optional shared client state when local state is insufficient |
+| Zustand        | Optional shared client state when local state is insufficient  |
 
 Ask before adding dependencies, including tools named in the proposal. Do not install them merely because they appear in this document.
 
@@ -109,17 +114,29 @@ When a contract is missing or ambiguous, pause the dependent UI change and ask f
 
 Use pnpm, as declared in `package.json`, and preserve its lockfile. Run these commands from inside `frontend/` (`cd frontend` from the repository root):
 
-| Command | Purpose |
-| --- | --- |
-| `pnpm install` | Install the declared dependencies |
-| `pnpm dev` | Start the development server |
-| `pnpm lint` | Run ESLint |
-| `pnpm exec tsc --noEmit` | Check TypeScript |
-| `pnpm build` | Check the production build |
+| Command                  | Purpose                           |
+| ------------------------ | --------------------------------- |
+| `pnpm install`           | Install the declared dependencies |
+| `pnpm dev`               | Start the development server      |
+| `pnpm lint`              | Run ESLint                        |
+| `pnpm exec tsc --noEmit` | Check TypeScript                  |
+| `pnpm build`             | Check the production build        |
 
 Do not mix package managers or create another package manager's lockfile. Keep `node_modules/`, `.next/`, and other generated output out of Git.
 
 ## Verification and handoff
+
+### Account interface preview
+
+The user has chosen Google-only sign-in. Email/password forms are not part of the planned login flow. The supplied requirements describe Google sign-in as conditional; this decision selects it for the implementation.
+
+`/login` and `/signup` use Google's rendered sign-in button. The browser sends the Google credential to `POST /api/v1/auth/google` with credentials; the backend verifies it and sets an HTTP-only session cookie. The frontend reads the current user through `GET /api/v1/auth/me` and signs out through `POST /api/v1/auth/logout`. `ProfileControl` shows the authenticated user's name and an active logout option. `/dev/account` still uses a fictional preview user and keeps its logout button disabled.
+
+Stable Roamboard user IDs and Google verification belong in the backend. The Google web client ID is shared through `NEXT_PUBLIC_GOOGLE_CLIENT_ID`; the Express API base URL is `NEXT_PUBLIC_API_URL`. Both are set in the ignored `frontend/.env.local` for local work. The client ID is public, while the Google client secret is not used by this flow.
+
+`/welcome` is the returning-user landing page. It checks the backend session and uses the authenticated username; without a session, it routes to `/login`. New users go to `/home` after sign-in; returning users go to `/welcome`. `WelcomeScreen` accepts a username prop; names wrap within two lines at a responsive CSS font size; longer names are clipped instead of automatically shrunk. The user approved a light-only page, the supplied overlapping photo composition on smaller screens, and a click on ENTER to start a black-bar takeover before opening `/home`. Reduced-motion users go directly to `/home`. Images and text have separate layers for later animation work.
+
+`WelcomeTransitionProvider` lives in the root layout so the black overlay persists during the Welcome-to-Home route change. Motion variants cover Welcome, wait for Home to render, and then slide upward to reveal Home. The bar and text use eased timing, starting from the measured ENTER position. Page content is inert during the transition, and ENTER ignores repeated activation until the reveal finishes. The welcome layout uses Tailwind utility classes. Motion's reduced-motion hook skips the takeover for users who prefer reduced motion.
 
 For application changes, run the relevant lint and TypeScript checks. Run a production build for routing, configuration, dependency, or integration changes. Report command failures and checks that could not run.
 

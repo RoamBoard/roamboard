@@ -6,66 +6,76 @@
 /* Semantic tokens: components use these, so dark mode is just a swap of
    the values below. Names follow shadcn's convention. */
 :root {
-  --background: #ffffff;
-  --foreground: #161616; /* obsidian */
-  --line: #d2d2d2; /* slate */
-  --faint: #e7e7e7; /* porcelain */
+    color-scheme: light;
+    --background: #ffffff;
+    --foreground: #161616; /* obsidian */
+    --muted-foreground: #818181; /* graphite */
+    --line: #d2d2d2; /* slate */
+    --faint: #e7e7e7; /* porcelain */
+    --decorative-line: #bdbdbd; /* stone */
 }
 
 .dark {
-  --background: #161616;
-  --foreground: #e7e7e7;
-  --line: #383838; /* placeholder: no dark design yet */
-  --faint: #2a2a2a; /* placeholder: no dark design yet */
+    color-scheme: dark;
+    --background: #161616;
+    --foreground: #e7e7e7;
+    --muted-foreground: #a3a3a3;
+    --line: #383838;
+    --faint: #2a2a2a;
+    --decorative-line: #383838;
 }
 
 /* Roamboard brand tokens (Tailwind v4). */
 /* Taken from Figma board */
 @theme inline {
-  /* Typefaces: variables are registered in layout.tsx */
-  --font-display: var(--font-cabinet), ui-sans-serif, system-ui, sans-serif; /* Cabinet Grotesk (primary) */
-  --font-body: var(--font-satoshi), ui-sans-serif, system-ui, sans-serif; /* Satoshi (secondary) */
+    /* Typefaces: variables are registered in layout.tsx */
+    --font-display:
+        var(--font-cabinet), ui-sans-serif, system-ui, sans-serif; /* Cabinet Grotesk (primary) */
+    --font-body:
+        var(--font-satoshi), ui-sans-serif, system-ui, sans-serif; /* Satoshi (secondary) */
 
-  /* Semantic colours (flip in dark mode) */
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-line: var(--line);
-  --color-faint: var(--faint);
+    /* Semantic colours (flip in dark mode) */
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-line: var(--line);
+    --color-faint: var(--faint);
+    --color-decorative-line: var(--decorative-line);
 
-  /* Colour palette */
-  --color-obsidian: #161616;
-  --color-graphite: #818181;
-  --color-stone: #bdbdbd;
-  --color-slate: #d2d2d2;
-  --color-porcelain: #e7e7e7;
+    /* Colour palette */
+    --color-obsidian: #161616;
+    --color-graphite: #818181;
+    --color-stone: #bdbdbd;
+    --color-slate: #d2d2d2;
+    --color-porcelain: #e7e7e7;
 
-  /* Type scale: 144, 128, 96, 72, 60, 48, 36, 30, 24, 20, 16, 14, 12
+    /* Type scale: 144, 128, 96, 72, 60, 48, 36, 30, 24, 20, 16, 14, 12
      (+ 22 heading, 15 body, 10 label from the brand foundations) */
-  --text-144: 9rem;
-  --text-128: 8rem;
-  --text-96: 6rem;
-  --text-72: 4.5rem;
-  --text-60: 3.75rem;
-  --text-48: 3rem;
-  --text-36: 2.25rem;
-  --text-30: 1.875rem;
-  --text-24: 1.5rem;
-  --text-22: 1.375rem;
-  --text-20: 1.25rem;
-  --text-16: 1rem;
-  --text-15: 0.9375rem;
-  --text-14: 0.875rem;
-  --text-12: 0.75rem;
-  --text-10: 0.625rem;
+    --text-144: 9rem;
+    --text-128: 8rem;
+    --text-96: 6rem;
+    --text-72: 4.5rem;
+    --text-60: 3.75rem;
+    --text-48: 3rem;
+    --text-36: 2.25rem;
+    --text-30: 1.875rem;
+    --text-24: 1.5rem;
+    --text-22: 1.375rem;
+    --text-20: 1.25rem;
+    --text-16: 1rem;
+    --text-15: 0.9375rem;
+    --text-14: 0.875rem;
+    --text-12: 0.75rem;
+    --text-10: 0.625rem;
 
-  /* Label style: 10 / bold / 1.4 tracking */
-  --tracking-label: 0.14em;
+    /* Label style: 10 / bold / 1.4 tracking */
+    --tracking-label: 0.14em;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-body);
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-body);
 }
 
 .provider-map-pin {

@@ -1,17 +1,19 @@
 {
-  "name": "roamboard",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "devDependencies": {
-    "eslint-config-prettier": "^10.1.8",
-    "prettier": "^3.9.9",
-    "prettier-plugin-tailwindcss": "^0.8.1"
-  }
+    "name": "roamboard",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "devDependencies": {
+        "eslint-config-prettier": "^10.1.8",
+        "prettier": "^3.9.9",
+        "prettier-plugin-tailwindcss": "^0.8.1"
+    }
 }

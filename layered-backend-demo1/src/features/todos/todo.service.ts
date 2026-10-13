@@ -1,61 +1,61 @@
 import { AppError } from "../../shared/app-error.js";
 import type {
-  CreateTodoInput,
-  Todo,
-  TodoFilters,
-  TodoRepository,
-  TodoService,
-  UpdateTodoInput,
+    CreateTodoInput,
+    Todo,
+    TodoFilters,
+    TodoRepository,
+    TodoService,
+    UpdateTodoInput
 } from "./todo.types.js";
 
 export function createTodoService(repository: TodoRepository): TodoService {
-  async function listTodos(filters?: TodoFilters): Promise<Todo[]> {
-    return repository.findAll(filters);
-  }
-
-  async function getTodo(id: string): Promise<Todo> {
-    const todo = await repository.findById(id);
-
-    if (!todo) {
-      throw new AppError(404, "Todo not found");
+    async function listTodos(filters?: TodoFilters): Promise<Todo[]> {
+        return repository.findAll(filters);
     }
 
-    return todo;
-  }
+    async function getTodo(id: string): Promise<Todo> {
+        const todo = await repository.findById(id);
 
-  async function createTodo({ title }: CreateTodoInput): Promise<Todo> {
-    return repository.create({
-      title,
-      completed: false,
-    });
-  }
+        if (!todo) {
+            throw new AppError(404, "Todo not found");
+        }
 
-  async function updateTodo(
-    id: string,
-    changes: UpdateTodoInput,
-  ): Promise<Todo> {
-    const todo = await repository.update(id, changes);
-
-    if (!todo) {
-      throw new AppError(404, "Todo not found");
+        return todo;
     }
 
-    return todo;
-  }
-
-  async function deleteTodo(id: string): Promise<void> {
-    const removed = await repository.remove(id);
-
-    if (!removed) {
-      throw new AppError(404, "Todo not found");
+    async function createTodo({ title }: CreateTodoInput): Promise<Todo> {
+        return repository.create({
+            title,
+            completed: false
+        });
     }
-  }
 
-  return {
-    listTodos,
-    getTodo,
-    createTodo,
-    updateTodo,
-    deleteTodo,
-  };
+    async function updateTodo(
+        id: string,
+        changes: UpdateTodoInput
+    ): Promise<Todo> {
+        const todo = await repository.update(id, changes);
+
+        if (!todo) {
+            throw new AppError(404, "Todo not found");
+        }
+
+        return todo;
+    }
+
+    async function deleteTodo(id: string): Promise<void> {
+        const removed = await repository.remove(id);
+
+        if (!removed) {
+            throw new AppError(404, "Todo not found");
+        }
+    }
+
+    return {
+        listTodos,
+        getTodo,
+        createTodo,
+        updateTodo,
+        deleteTodo
+    };
 }
