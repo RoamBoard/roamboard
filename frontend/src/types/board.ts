@@ -42,6 +42,8 @@ export type BoardActivity = {
     title: string;
     description: string;
     location?: BoardLocation;
+    // One-based itinerary day, independent of calendar dates.
+    dayNumber?: number;
     // Local calendar date (YYYY-MM-DD) and time (HH:mm) at the activity location.
     date?: string;
     time?: string;
@@ -52,6 +54,7 @@ export type BoardLocationItem = {
     id: string;
     type: "location";
     location: BoardLocation;
+    dayNumber?: number;
     // The user's own notes and photos for this Board entry.
     notes?: string;
     images?: BoardImage[];
@@ -61,12 +64,14 @@ export type BoardTextItem = {
     id: string;
     type: "text";
     text: string;
+    dayNumber?: number;
 };
 
 export type BoardImageItem = {
     id: string;
     type: "image";
     image: BoardImage;
+    dayNumber?: number;
 };
 
 export type BoardItem =
@@ -89,6 +94,8 @@ export type Board = {
     endDate?: string;
     // Supports undated trips; keep consistent with the date range when set.
     durationDays?: number;
+    // Optional headings for numbered days, such as "Shibuya to Shinjuku".
+    dayTitles?: Record<number, string>;
     budget?: BoardBudget;
     travelStyle?: BoardTravelStyle;
     coverImage?: BoardImage;

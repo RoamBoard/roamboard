@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
 
 export const metadata: Metadata = {
@@ -14,6 +15,12 @@ export default function BoardsPage() {
                     <p className="font-body text-14 text-muted-foreground mt-2">
                         This page is a placeholder.
                     </p>
+                    <Link
+                        href="/boards/lost-in-tokyo"
+                        className="text-14 mt-5 inline-block py-2 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4"
+                    >
+                        View published board preview
+                    </Link>
                 </div>
             </div>
         </AppShell>
