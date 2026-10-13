@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
-import AppShell from "@/components/layout/AppShell";
+import DiscoverExperience from "@/components/features/discover/DiscoverExperience";
+import {
+    DiscoverHero,
+    DiscoverJourney,
+    DiscoverFeed
+} from "@/components/features/discover/DiscoverContent";
 
 export const metadata: Metadata = {
     title: "Discover | Roamboard"
@@ -7,15 +12,14 @@ export const metadata: Metadata = {
 
 export default function DiscoverPage() {
     return (
-        <AppShell activeHref="/discover">
-            <div className="grid place-items-center text-center">
-                <div>
-                    <h1 className="font-display text-24">Discover</h1>
-                    <p className="font-body text-14 text-graphite mt-2">
-                        This page is a placeholder.
-                    </p>
-                </div>
-            </div>
-        </AppShell>
+        <DiscoverExperience
+            hero={<DiscoverHero />}
+            journey={<DiscoverJourney />}
+            mobileJourney={[0, 1, 2].map((panel) => (
+                <DiscoverJourney key={panel} mobilePanel={panel} />
+            ))}
+        >
+            <DiscoverFeed />
+        </DiscoverExperience>
     );
 }

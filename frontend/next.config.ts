@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
+import path from "node:path";
 
 const nextConfig: NextConfig = {
-    /* config options here */
     reactCompiler: true,
     images: {
         remotePatterns: [
@@ -10,8 +10,9 @@ const nextConfig: NextConfig = {
                 hostname: "images.unsplash.com"
             }
         ]
-    }
+    },
+    // The tag catalog is shared with the rest of the repository.
+    turbopack: { root: path.join(__dirname, "..") }
 };
 
 export default nextConfig;
-

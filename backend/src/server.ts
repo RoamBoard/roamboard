@@ -1,18 +1,16 @@
 import "dotenv/config";
 
-import createDebug from "debug";
-
 import { createApp } from "./app.js";
 
-const log = createDebug("roamboard:server");
-const port = Number(process.env.PORT ?? 3000);
+const port = Number(process.env.PORT ?? 3001);
 const app = createApp();
 
 const server = app.listen(port, () => {
-  log(`API listening on http://localhost:${port}`);
+  process.stdout.write(`API listening on http://localhost:${port}\n`);
 });
 
 server.on("error", (error) => {
-  log("Could not start API server: %O", error);
+  const message = error instanceof Error ? error.message : String(error);
+  process.stderr.write(`Could not start API server: ${message}\n`);
   process.exitCode = 1;
 });

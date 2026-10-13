@@ -8,18 +8,30 @@ type Props = {
     children: ReactNode;
     activeHref: string;
     profile?: ProfileControlProps;
+    discover?: { collapsed: boolean };
 };
 
 export default function AppShell({
     children,
     activeHref,
-    profile = {}
+    profile = {},
+    discover
 }: Props) {
     return (
-        <div className="relative grid h-dvh w-full overflow-hidden bg-white">
-            <Sidebar activeHref={activeHref} />
+        <div
+            className={
+                discover
+                    ? "bg-background text-foreground relative min-h-dvh w-full"
+                    : "bg-background text-foreground relative grid h-dvh w-full overflow-hidden"
+            }
+        >
+            <Sidebar activeHref={activeHref} discover={discover} />
             <main className="grid min-h-0 min-w-0">{children}</main>
-            <ProfileControl {...profile} />
+            <ProfileControl
+                {...profile}
+                compact={discover?.collapsed}
+                floating={Boolean(discover)}
+            />
         </div>
     );
 }
