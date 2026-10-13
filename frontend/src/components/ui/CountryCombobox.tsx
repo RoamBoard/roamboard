@@ -105,7 +105,7 @@ export default function CountryCombobox({
                                 aria-selected={
                                     country.code === exactCountry?.code
                                 }
-                                className={`text-14 hover:bg-faint focus:bg-faint flex w-full items-center justify-between px-4 py-3 text-left focus:outline-none${index === activeIndex ? "bg-faint" : ""}`}
+                                className={`text-14 hover:bg-faint focus:bg-faint flex w-full items-center justify-between px-4 py-3 text-left focus:outline-none${index === activeIndex ? " bg-faint" : ""}`}
                                 onMouseDown={(event) => event.preventDefault()}
                                 onClick={() => select(country)}
                             >
