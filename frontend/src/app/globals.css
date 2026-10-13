@@ -101,19 +101,19 @@ body {
 }
 
 .provider-map-pin {
-  display: grid;
-  width: 2rem;
-  height: 2rem;
-  place-items: center;
-  border: 2px solid #ffffff;
-  border-radius: 999px 999px 999px 0;
-  background: #161616;
-  color: #ffffff;
-  font: 700 0.75rem var(--font-body);
-  transform: rotate(-45deg);
-  box-shadow: 0 2px 8px rgb(0 0 0 / 25%);
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    border: 2px solid #ffffff;
+    border-radius: 999px 999px 999px 0;
+    background: #161616;
+    color: #ffffff;
+    font: 700 0.75rem var(--font-body);
+    transform: rotate(-45deg);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 25%);
 }
 
 .provider-map-pin span {
-  transform: rotate(45deg);
+    transform: rotate(45deg);
 }
