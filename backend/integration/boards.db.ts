@@ -40,10 +40,24 @@ test("Board migration and transactional creator flow in PostgreSQL", {
                     await migrationClient.query(
                         `INSERT INTO app_user (user_id, username, display_name)
                          VALUES ('legacy-sub','legacy','Legacy');
+                         INSERT INTO uploaded_image (storage_key, uploaded_by_user_id, uploaded_at)
+                         VALUES ('legacy/cover', 'legacy-sub', NOW()),
+                                ('legacy/act-img', 'legacy-sub', NOW()),
+                                ('legacy/act-cover', 'legacy-sub', NOW());
                          INSERT INTO activity_type (type) VALUES ('museum');
-                         INSERT INTO board (owner_user_id, title) VALUES ('legacy-sub','Old Board');
-                         INSERT INTO activity (day_number, board_id, position, title, type)
-                         SELECT 2, board_id, 0, 'Old Activity', 'museum' FROM board WHERE title='Old Board';`
+                         INSERT INTO board (owner_user_id, title, cover_image_id)
+                         SELECT 'legacy-sub', 'Old Board', uploaded_image_id
+                         FROM uploaded_image WHERE storage_key = 'legacy/cover';
+                         INSERT INTO activity (day_number, board_id, position, title, type, cover_image_id)
+                         SELECT 2, b.board_id, 0, 'Old Activity', 'museum', u.uploaded_image_id
+                         FROM board b
+                         CROSS JOIN (SELECT uploaded_image_id FROM uploaded_image WHERE storage_key = 'legacy/act-cover') u
+                         WHERE b.title = 'Old Board';
+                         INSERT INTO activity_image (uploaded_image_id, activity_id, position)
+                         SELECT u.uploaded_image_id, a.activity_id, 0
+                         FROM activity a
+                         CROSS JOIN (SELECT uploaded_image_id FROM uploaded_image WHERE storage_key = 'legacy/act-img') u
+                         WHERE a.title = 'Old Activity';`
                     );
                 }
                 if (name === "003_board_creator.sql") {
@@ -56,8 +70,29 @@ test("Board migration and transactional creator flow in PostgreSQL", {
                     );
                     assert.equal(backfill.rows[0]?.day_number, 2);
                     assert.equal(backfill.rows[0]?.status, "published");
+                    const backfillImages = await migrationClient.query<{
+                        uploaded_image_id: number; position: number; storage_key: string; orphaned_at: Date | null;
+                    }>(
+                        `SELECT bi.uploaded_image_id, bi.position, u.storage_key, u.orphaned_at
+                         FROM board_image bi
+                         JOIN board b ON b.board_id = bi.board_id
+                         JOIN uploaded_image u ON u.uploaded_image_id = bi.uploaded_image_id
+                         WHERE b.title = 'Old Board'
+                         ORDER BY bi.position`
+                    );
+                    assert.equal(backfillImages.rows.length, 3);
+                    assert.equal(backfillImages.rows[0]?.storage_key, "legacy/cover");
+                    assert.equal(backfillImages.rows[0]?.position, 0);
+                    assert.equal(backfillImages.rows[0]?.orphaned_at, null);
+                    assert.equal(backfillImages.rows[1]?.storage_key, "legacy/act-img");
+                    assert.equal(backfillImages.rows[1]?.position, 1);
+                    assert.equal(backfillImages.rows[1]?.orphaned_at, null);
+                    assert.equal(backfillImages.rows[2]?.storage_key, "legacy/act-cover");
+                    assert.equal(backfillImages.rows[2]?.position, 2);
+                    assert.equal(backfillImages.rows[2]?.orphaned_at, null);
                     await migrationClient.query(
                         `DELETE FROM board WHERE title='Old Board';
+                         DELETE FROM uploaded_image WHERE storage_key LIKE 'legacy/%';
                          DELETE FROM app_user WHERE user_id='legacy-sub';`
                     );
                 }

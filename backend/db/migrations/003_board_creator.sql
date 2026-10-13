@@ -55,6 +55,81 @@ CREATE TABLE board_image (
   CONSTRAINT uq_board_image_position UNIQUE (board_id, position) DEFERRABLE INITIALLY DEFERRED
 );
 
+WITH existing_photos AS (
+  SELECT
+    b.board_id,
+    b.cover_image_id AS uploaded_image_id,
+    1 AS source_priority,
+    0 AS day_number,
+    0 AS act_position,
+    0 AS img_position
+  FROM board b
+  WHERE b.cover_image_id IS NOT NULL
+
+  UNION ALL
+
+  SELECT
+    a.board_id,
+    ai.uploaded_image_id,
+    2 AS source_priority,
+    a.day_number,
+    a.position AS act_position,
+    ai.position AS img_position
+  FROM activity_image ai
+  JOIN activity a ON a.activity_id = ai.activity_id
+
+  UNION ALL
+
+  SELECT
+    a.board_id,
+    a.cover_image_id AS uploaded_image_id,
+    3 AS source_priority,
+    a.day_number,
+    a.position AS act_position,
+    0 AS img_position
+  FROM activity a
+  WHERE a.cover_image_id IS NOT NULL
+),
+ranked_photos AS (
+  SELECT
+    board_id,
+    uploaded_image_id,
+    ROW_NUMBER() OVER (
+      PARTITION BY uploaded_image_id
+      ORDER BY source_priority, board_id, day_number, act_position, img_position
+    ) AS dedup_rank,
+    source_priority,
+    day_number,
+    act_position,
+    img_position
+  FROM existing_photos
+),
+deduped_photos AS (
+  SELECT
+    board_id,
+    uploaded_image_id,
+    source_priority,
+    day_number,
+    act_position,
+    img_position
+  FROM ranked_photos
+  WHERE dedup_rank = 1
+),
+ordered_board_photos AS (
+  SELECT
+    board_id,
+    uploaded_image_id,
+    (ROW_NUMBER() OVER (
+      PARTITION BY board_id
+      ORDER BY source_priority, day_number, act_position, img_position, uploaded_image_id
+    ) - 1)::INT AS position
+  FROM deduped_photos
+)
+INSERT INTO board_image (board_id, uploaded_image_id, position)
+SELECT board_id, uploaded_image_id, position
+FROM ordered_board_photos
+WHERE EXISTS (SELECT 1 FROM uploaded_image ui WHERE ui.uploaded_image_id = ordered_board_photos.uploaded_image_id);
+
 ALTER TABLE uploaded_image
   ADD COLUMN byte_size INT CHECK (byte_size BETWEEN 1 AND 10000000),
   ADD COLUMN file_format VARCHAR(10),
