@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import WelcomeScreen from "@/components/features/welcome/WelcomeScreen";
+import AuthenticatedWelcome from "@/components/features/welcome/AuthenticatedWelcome";
 
 export const metadata: Metadata = {
     title: "Welcome back | Roamboard",
@@ -7,9 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function WelcomePage() {
-    // Frontend preview only. Replace this with the authenticated user's username
-    // and check their session when the backend authentication contract exists.
-    const previewUsername = "Rowan";
-
-    return <WelcomeScreen username={previewUsername} />;
+    return <AuthenticatedWelcome />;
 }

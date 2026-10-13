@@ -1,6 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { getCurrentUser, signOut, type AuthUser } from "@/lib/auth";
 import {
     DropdownMenu,
     DropdownMenuTrigger,
@@ -13,11 +16,57 @@ export type ProfileControlProps = {
 };
 
 export default function ProfileControl({ user = null }: ProfileControlProps) {
+    const router = useRouter();
+    const [sessionUser, setSessionUser] = useState<AuthUser | null>(null);
+    const [loaded, setLoaded] = useState(Boolean(user));
+    const [signingOut, setSigningOut] = useState(false);
+    const [logoutError, setLogoutError] = useState("");
+    const displayUser =
+        user ?? (sessionUser ? { name: sessionUser.displayName } : null);
+
+    useEffect(() => {
+        if (user) return;
+        const state = { active: true };
+        getCurrentUser()
+            .then((currentUser) => {
+                if (state.active) setSessionUser(currentUser);
+            })
+            .catch(() => {
+                if (state.active)
+                    setLogoutError("Account status is unavailable.");
+            })
+            .finally(() => {
+                if (state.active) setLoaded(true);
+            });
+        return () => {
+            state.active = false;
+        };
+    }, [user]);
+
+    async function handleSignOut() {
+        setSigningOut(true);
+        setLogoutError("");
+        try {
+            await signOut();
+            setSessionUser(null);
+            router.replace("/login");
+        } catch (cause) {
+            setLogoutError(
+                cause instanceof Error ? cause.message : "Could not sign out."
+            );
+        } finally {
+            setSigningOut(false);
+        }
+    }
+
     const controlClasses =
         "absolute left-[36%] right-[8%] top-[45%] text-left text-14 leading-tight underline-offset-2 outline-none hover:underline focus-visible:underline focus-visible:decoration-2 focus-visible:underline-offset-4";
 
     return (
-        <div className="absolute top-0 right-[1.3%] z-10 h-[8.75rem] w-[8.25rem] sm:h-[24%] sm:w-[14.5%]">
+        <div
+            aria-busy={!loaded}
+            className="absolute top-0 right-[1.3%] z-10 h-[8.75rem] w-[8.25rem] sm:h-[24%] sm:w-[14.5%]"
+        >
             <div
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-0"
@@ -27,14 +76,14 @@ export default function ProfileControl({ user = null }: ProfileControlProps) {
                 <span className="bg-decorative-line absolute top-[25%] bottom-0 left-[32%] w-0.5" />
                 <span className="bg-decorative-line absolute top-[66%] right-0 left-[16%] h-0.5" />
             </div>
-            {user ? (
+            {displayUser ? (
                 <DropdownMenu modal={false}>
                     <DropdownMenuTrigger asChild>
                         <button
                             type="button"
                             className={`${controlClasses} cursor-pointer truncate`}
                         >
-                            {user.name}
+                            {displayUser.name}
                         </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
@@ -47,21 +96,35 @@ export default function ProfileControl({ user = null }: ProfileControlProps) {
                         <DropdownMenuItem asChild>
                             <Link href="/profile">My profile</Link>
                         </DropdownMenuItem>
-                        {/* Logout is unavailable until authentication is connected. */}
-                        <DropdownMenuItem asChild disabled>
-                            <button type="button" disabled>
-                                Log out
+                        <DropdownMenuItem
+                            asChild
+                            disabled={Boolean(user) || signingOut}
+                        >
+                            <button
+                                type="button"
+                                disabled={Boolean(user) || signingOut}
+                                onClick={() => void handleSignOut()}
+                            >
+                                {signingOut ? "Signing out…" : "Log out"}
                             </button>
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
-            ) : (
+            ) : loaded ? (
                 <Link href="/login" className={controlClasses}>
                     Sign up /
                     <br />
                     Log in
                 </Link>
-            )}
+            ) : null}
+            {logoutError ? (
+                <p
+                    role="alert"
+                    className="text-14 absolute top-full right-0 max-w-48"
+                >
+                    {logoutError}
+                </p>
+            ) : null}
         </div>
     );
 }

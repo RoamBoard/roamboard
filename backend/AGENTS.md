@@ -4,8 +4,8 @@ These instructions apply to `backend/`. Use `../layered-backend-demo1/` as the r
 
 ## Current state and sources of truth
 
-- This is a Node.js 24, TypeScript, Express 5 API using npm. `src/app.ts` creates the app; `src/server.ts` starts it. `src/db.ts` currently uses `pg` only for the `/health/db` connection check. No product endpoints, authentication, or feature modules exist yet.
-- PostgreSQL schema lives in `db/migrations/001_initial.sql`. Treat that committed SQL and later migrations as the database source of truth. Do not treat the demo's in-memory Todo model or the frontend's mock data as persistent Roamboard behavior.
+- This is a Node.js 24, TypeScript, Express 5 API using npm. `src/app.ts` creates the app; `src/server.ts` starts it. `src/db.ts` owns the shared `pg` pool. The first feature module, `src/features/auth/`, verifies Google ID tokens and manages PostgreSQL-backed sessions. The frontend uses this module for Google sign-in, session lookup, and logout.
+- PostgreSQL schema lives in ordered files under `db/migrations/`; `001_initial.sql` is the baseline and `002_auth_session.sql` adds sessions. Treat migrations as the database source of truth. Do not treat the demo's in-memory Todo model or the frontend's mock data as persistent Roamboard behavior.
 - Check the relevant schema, `../frontend/REQUIREMENTS.md`, and `../frontend/src/types/` before defining a feature's contract. Preserve the product decisions already represented in the schema; ask about genuinely unresolved behavior instead of silently substituting the demo's choices.
 - Keep `backend/.env` and credentials out of Git. Document new variables in `.env.example` and `README.md` without real secrets.
 
@@ -44,6 +44,7 @@ Use a feature folder under `src/features/<feature>/` with the relevant files:
 - Mount product endpoints under `/api/v1`, following the demo. Keep `/health` and `/health/db` as operational endpoints outside that prefix.
 - Define a feature's request/response contract, permissions, success cases, and failure cases before implementing its endpoint. Use consistent HTTP status codes and a consistent error shape. Never send raw SQL, stack traces, tokens, or provider secrets to clients.
 - The schema uses `app_user.user_id` for the Google `sub`. Verify Google identity server-side before trusting it; do not accept a client-supplied user ID as proof of identity. Enforce ownership, board visibility, and membership on the server for every protected read or write.
+- Cookie-authenticated mutations need CSRF protection. The current auth routes require the exact configured `CLIENT_ORIGIN` on POST requests; apply an equivalent check to future write routes. CORS alone does not stop a forged request.
 - The current board visibility values are `public`, `friends`, and `collaborators`. Consult the migration and agreed feature behavior rather than copying the demo guide's older `private` terminology or UUID identifier advice. Board and activity IDs are database-generated integers.
 - Keep schema changes in new, ordered migrations. Do not edit `001_initial.sql` after it has been applied to a database unless the team explicitly decides to rebuild that database. Coordinate SQL constraints with service validation; application checks do not replace database integrity constraints.
 - Keep operations that must succeed or fail together in a transaction. Avoid N+1 queries and return only data the caller may see. Treat provider data and user input as untrusted.
