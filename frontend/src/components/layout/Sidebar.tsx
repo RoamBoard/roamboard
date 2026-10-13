@@ -73,8 +73,8 @@ export default function Sidebar({ activeHref, discover }: Props) {
     }
 
     return (
-        <>
-            <header className="absolute top-[3%] left-[2%]">
+        <aside className="relative z-10 min-h-dvh">
+            <header className="absolute top-[3%] left-1/2 -translate-x-1/2">
                 <Link
                     href="/home"
                     aria-label="Roamboard home"
@@ -85,7 +85,7 @@ export default function Sidebar({ activeHref, discover }: Props) {
             </header>
             <nav
                 aria-label="Main navigation"
-                className="text-12 absolute top-[59%] bottom-[5%] left-[2.8%] flex flex-col items-start justify-between"
+                className="text-12 absolute top-[59%] bottom-[5%] left-1/2 flex -translate-x-1/2 flex-col items-start justify-between"
             >
                 <Link
                     href="/home"
@@ -115,7 +115,14 @@ export default function Sidebar({ activeHref, discover }: Props) {
                 >
                     social
                 </Link>
+                <Link
+                    href="/dev/providers"
+                    aria-current={activeHref === "/dev/providers"}
+                    className={linkClasses}
+                >
+                    labs
+                </Link>
             </nav>
-        </>
+        </aside>
     );
 }

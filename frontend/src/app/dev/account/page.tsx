@@ -13,9 +13,7 @@ export default function AccountPreviewPage() {
             profile={{ user: { name: "Preview user" } }}
         >
             <div className="grid place-items-center px-16 text-center">
-                <p>
-                    Account Page
-                </p>
+                <p>Account Page</p>
             </div>
         </AppShell>
     );

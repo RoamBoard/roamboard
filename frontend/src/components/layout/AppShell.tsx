@@ -23,11 +23,19 @@ export default function AppShell({
             className={
                 discover
                     ? "bg-background text-foreground relative min-h-dvh w-full"
-                    : "bg-background text-foreground relative grid h-dvh w-full overflow-hidden"
+                    : "bg-background text-foreground relative grid h-dvh w-full grid-cols-[5rem_minmax(0,1fr)] overflow-hidden sm:grid-cols-[6rem_minmax(0,1fr)]"
             }
         >
             <Sidebar activeHref={activeHref} discover={discover} />
-            <main className="grid min-h-0 min-w-0">{children}</main>
+            <main
+                className={
+                    discover
+                        ? "grid min-h-0 min-w-0"
+                        : "grid min-h-0 min-w-0 overflow-y-auto"
+                }
+            >
+                {children}
+            </main>
             <ProfileControl
                 {...profile}
                 compact={discover?.collapsed}
