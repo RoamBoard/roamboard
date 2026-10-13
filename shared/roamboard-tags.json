@@ -1,0 +1,734 @@
+{
+    "catalogVersion": "1.0.0",
+    "catalogName": "Roamboard Travel Vibes",
+    "description": "Shared source of truth for Create Board tag selection, Discover vibe grid, and /discover/vibes/:id pages.",
+    "assetNotes": {
+        "icons": "All icons are from Lucide and use one consistent outline style. SVG URLs are pinned to lucide-static 1.55.0. For a React app, preferably render the corresponding named component from lucide-react instead of loading SVGs from a CDN.",
+        "images": "Grid photos are individually curated from Pexels and referenced by stable photo IDs. The gridImage.url value is a resized remote image; sourceUrl is the original Pexels image page. Download and optimize locally if desired.",
+        "gridRendering": "Render image and tag label as separate layers; apply CSS gradient/overlay, aspect ratio and object-fit: cover in the UI. Never bake text into cover images.",
+        "matching": "Match boards to tags by the stable id field (not by display name). Keep ids unchanged after users begin saving boards.",
+        "license": "Check source licenses before redistribution. Pexels: https://www.pexels.com/license/ ; Lucide: https://lucide.dev/license"
+    },
+    "tags": [
+        {
+            "id": "adventure",
+            "name": "Adventure",
+            "description": "For the days that take you somewhere unexpected.",
+            "icon": {
+                "library": "lucide",
+                "name": "Mountain",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/mountain.svg",
+                "sourceUrl": "https://lucide.dev/icons/mountain"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/35746721/pexels-photo-35746721.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Two hikers on a dramatic mountain trail",
+                "sourceUrl": "https://www.pexels.com/photo/hiking-adventure-in-mountain-landscape-35746721/",
+                "photographer": "Ali Alcántara",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "relax",
+            "name": "Relax",
+            "description": "An invitation to slow down and stay a little longer.",
+            "icon": {
+                "library": "lucide",
+                "name": "Flower2",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/flower-2.svg",
+                "sourceUrl": "https://lucide.dev/icons/flower-2"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/17357134/pexels-photo-17357134.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Palm tree and peaceful tropical beach at sunset",
+                "sourceUrl": "https://www.pexels.com/photo/tropical-beach-at-sunset-17357134/",
+                "photographer": "@nomundodejr Jr.",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "culture",
+            "name": "Culture",
+            "description": "Traditions, places and stories worth discovering.",
+            "icon": {
+                "library": "lucide",
+                "name": "Landmark",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/landmark.svg",
+                "sourceUrl": "https://lucide.dev/icons/landmark"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/31385484/pexels-photo-31385484.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Traditional red Japanese shrine in Kyoto",
+                "sourceUrl": "https://www.pexels.com/photo/kyoto-traditional-shrine-architecture-31385484/",
+                "photographer": "Acres of Film",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "foodie",
+            "name": "Foodie",
+            "description": "Follow the flavors and find a new favorite.",
+            "icon": {
+                "library": "lucide",
+                "name": "UtensilsCrossed",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/utensils-crossed.svg",
+                "sourceUrl": "https://lucide.dev/icons/utensils-crossed"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/37305714/pexels-photo-37305714.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "A selection of pasta dishes at a restaurant in Milan",
+                "sourceUrl": "https://www.pexels.com/photo/authentic-italian-pasta-selection-in-milan-37305714/",
+                "photographer": "N G",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "nature",
+            "name": "Nature",
+            "description": "A little closer to the world beyond the city.",
+            "icon": {
+                "library": "lucide",
+                "name": "Trees",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/trees.svg",
+                "sourceUrl": "https://lucide.dev/icons/trees"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/28640620/pexels-photo-28640620.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Lush green woodland trail surrounded by ferns",
+                "sourceUrl": "https://www.pexels.com/photo/lush-forest-path-with-dense-greenery-28640620/",
+                "photographer": "Alfo Medeiros",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "romantic",
+            "name": "Romantic",
+            "description": "Beautiful places, even better shared.",
+            "icon": {
+                "library": "lucide",
+                "name": "Heart",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/heart.svg",
+                "sourceUrl": "https://lucide.dev/icons/heart"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/29735739/pexels-photo-29735739.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Couple standing beside the Venetian waterfront at sunset",
+                "sourceUrl": "https://www.pexels.com/photo/romantic-venetian-couple-at-sunset-29735739/",
+                "photographer": "carlo bettuolo",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "budget",
+            "name": "Budget",
+            "description": "Memorable journeys without the splurge.",
+            "icon": {
+                "library": "lucide",
+                "name": "Wallet",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/wallet.svg",
+                "sourceUrl": "https://lucide.dev/icons/wallet"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/28879424/pexels-photo-28879424.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Traveler reading on a train with a suitcase beside her",
+                "sourceUrl": "https://www.pexels.com/photo/traveler-reading-on-train-seat-with-luggage-28879424/",
+                "photographer": "Masi",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "hidden-gems",
+            "name": "Hidden Gems",
+            "description": "The places you almost do not want to tell anyone about.",
+            "icon": {
+                "library": "lucide",
+                "name": "Gem",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/gem.svg",
+                "sourceUrl": "https://lucide.dev/icons/gem"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/32375552/pexels-photo-32375552.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Secluded waterfall among tall evergreen trees",
+                "sourceUrl": "https://www.pexels.com/photo/forest-waterfall-hidden-among-tall-evergreen-trees-32375552/",
+                "photographer": "Luke Miller",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "city-life",
+            "name": "City Life",
+            "description": "For getting pleasantly lost in the middle of it all.",
+            "icon": {
+                "library": "lucide",
+                "name": "Building2",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/building-2.svg",
+                "sourceUrl": "https://lucide.dev/icons/building-2"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/37078984/pexels-photo-37078984.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Dramatic city skyline and river seen from above at dusk",
+                "sourceUrl": "https://www.pexels.com/photo/skyline-of-modern-city-with-skyscrapers-at-dusk-37078984/",
+                "photographer": "CHINA YU",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "slow-mornings",
+            "name": "Slow Mornings",
+            "description": "No rush, just a good beginning to the day.",
+            "icon": {
+                "library": "lucide",
+                "name": "Sunrise",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/sunrise.svg",
+                "sourceUrl": "https://lucide.dev/icons/sunrise"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/35962927/pexels-photo-35962927.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Coffee and a journal by a softly lit window",
+                "sourceUrl": "https://www.pexels.com/photo/cozy-morning-setting-with-coffee-and-journal-35962927/",
+                "photographer": "Letícia Alvares",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "nightlife",
+            "name": "Nightlife",
+            "description": "When the best plans begin after dark.",
+            "icon": {
+                "library": "lucide",
+                "name": "MoonStar",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/moon-star.svg",
+                "sourceUrl": "https://lucide.dev/icons/moon-star"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/16269959/pexels-photo-16269959.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Neon signs lighting a Hong Kong street at night",
+                "sourceUrl": "https://www.pexels.com/photo/neon-in-city-at-night-16269959/",
+                "photographer": "Jimmy Chan",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "by-the-water",
+            "name": "By the Water",
+            "description": "Lakeside afternoons, salty air and open horizons.",
+            "icon": {
+                "library": "lucide",
+                "name": "Waves",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/waves.svg",
+                "sourceUrl": "https://lucide.dev/icons/waves"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/3774768/pexels-photo-3774768.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "A small boat at a clear mountain lake in Switzerland",
+                "sourceUrl": "https://www.pexels.com/photo/boat-on-lake-with-reflection-of-mountains-3774768/",
+                "photographer": "Corinna Widmer",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "hiking",
+            "name": "Hiking",
+            "description": "The long way around is sometimes the best way.",
+            "icon": {
+                "library": "lucide",
+                "name": "Footprints",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/footprints.svg",
+                "sourceUrl": "https://lucide.dev/icons/footprints"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/15552547/pexels-photo-15552547.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Hikers following a ridgeline at sunrise",
+                "sourceUrl": "https://www.pexels.com/photo/people-hiking-on-a-trail-in-mountains-15552547/",
+                "photographer": "Miguel González",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "mountains",
+            "name": "Mountains",
+            "description": "Higher ground and views worth the climb.",
+            "icon": {
+                "library": "lucide",
+                "name": "MountainSnow",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/mountain-snow.svg",
+                "sourceUrl": "https://lucide.dev/icons/mountain-snow"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/18100505/pexels-photo-18100505.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "The Matterhorn rising over the Swiss Alps",
+                "sourceUrl": "https://www.pexels.com/photo/matterhorn-mountain-in-alps-18100505/",
+                "photographer": "Stepan Vrany",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "beach-days",
+            "name": "Beach Days",
+            "description": "Warm sand, clear water and nothing on the clock.",
+            "icon": {
+                "library": "lucide",
+                "name": "Umbrella",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/umbrella.svg",
+                "sourceUrl": "https://lucide.dev/icons/umbrella"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/15902765/pexels-photo-15902765.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Turquoise ocean washing onto a white sandy beach",
+                "sourceUrl": "https://www.pexels.com/photo/white-sand-on-beach-by-turquoise-sea-15902765/",
+                "photographer": "IAN",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "island-hopping",
+            "name": "Island Hopping",
+            "description": "One stretch of blue water after another.",
+            "icon": {
+                "library": "lucide",
+                "name": "Ship",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/ship.svg",
+                "sourceUrl": "https://lucide.dev/icons/ship"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/18372500/pexels-photo-18372500.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Outrigger boats near limestone cliffs in Palawan",
+                "sourceUrl": "https://www.pexels.com/photo/boats-anchored-by-the-islands-of-the-palawan-archipelago-18372500/",
+                "photographer": "Mark C",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "road-trips",
+            "name": "Road Trips",
+            "description": "The journey is part of the destination.",
+            "icon": {
+                "library": "lucide",
+                "name": "CarFront",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/car-front.svg",
+                "sourceUrl": "https://lucide.dev/icons/car-front"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/9613234/pexels-photo-9613234.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "White car winding along the coast of Naxos",
+                "sourceUrl": "https://www.pexels.com/photo/white-car-on-road-near-body-of-water-9613234/",
+                "photographer": "Marina Gr",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "weekend-escapes",
+            "name": "Weekend Escapes",
+            "description": "A couple of days somewhere completely different.",
+            "icon": {
+                "library": "lucide",
+                "name": "House",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/house.svg",
+                "sourceUrl": "https://lucide.dev/icons/house"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/12825193/pexels-photo-12825193.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Wooden cabin by an alpine lake in the forest",
+                "sourceUrl": "https://www.pexels.com/photo/wooden-house-in-the-forest-near-the-lake-12825193/",
+                "photographer": "Tom Verdoot",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "solo-travel",
+            "name": "Solo Travel",
+            "description": "Your own pace, your own stories.",
+            "icon": {
+                "library": "lucide",
+                "name": "UserRound",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/user-round.svg",
+                "sourceUrl": "https://lucide.dev/icons/user-round"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/12158399/pexels-photo-12158399.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Solo backpacker overlooking a sprawling city",
+                "sourceUrl": "https://www.pexels.com/photo/man-with-a-backpack-looking-at-a-city-12158399/",
+                "photographer": "Yura Forrat",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "friends-trip",
+            "name": "Friends Trip",
+            "description": "Places become stories when you share them.",
+            "icon": {
+                "library": "lucide",
+                "name": "UsersRound",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/users-round.svg",
+                "sourceUrl": "https://lucide.dev/icons/users-round"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/9630142/pexels-photo-9630142.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Group of friends raising their drinks on a beach at sunset",
+                "sourceUrl": "https://www.pexels.com/photo/people-sitting-on-beach-during-sunset-9630142/",
+                "photographer": "Ivan S",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "family-friendly",
+            "name": "Family Friendly",
+            "description": "Thoughtful adventures for every generation.",
+            "icon": {
+                "library": "lucide",
+                "name": "Users",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/users.svg",
+                "sourceUrl": "https://lucide.dev/icons/users"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/11394170/pexels-photo-11394170.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Father and children swimming together in tropical water",
+                "sourceUrl": "https://www.pexels.com/photo/sea-man-beach-vacation-11394170/",
+                "photographer": "Atlantic Ambience",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "wellness",
+            "name": "Wellness",
+            "description": "Space to reconnect with yourself.",
+            "icon": {
+                "library": "lucide",
+                "name": "Leaf",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/leaf.svg",
+                "sourceUrl": "https://lucide.dev/icons/leaf"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/8964900/pexels-photo-8964900.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Woman meditating by the sea at dawn",
+                "sourceUrl": "https://www.pexels.com/photo/a-woman-doing-a-meditation-near-the-ocean-during-morning-8964900/",
+                "photographer": "olia danilevich",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "luxury",
+            "name": "Luxury",
+            "description": "For the moments worth making extra special.",
+            "icon": {
+                "library": "lucide",
+                "name": "Crown",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/crown.svg",
+                "sourceUrl": "https://lucide.dev/icons/crown"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/5751697/pexels-photo-5751697.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Elegant infinity pool overlooking a beach hotel in Hawaii",
+                "sourceUrl": "https://www.pexels.com/photo/white-concrete-building-near-swimming-pool-5751697/",
+                "photographer": "Jason Boyd",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "art-and-design",
+            "name": "Art & Design",
+            "description": "Fresh perspectives in unexpected places.",
+            "icon": {
+                "library": "lucide",
+                "name": "Palette",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/palette.svg",
+                "sourceUrl": "https://lucide.dev/icons/palette"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/14925184/pexels-photo-14925184.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Paintings arranged inside a light-filled art gallery",
+                "sourceUrl": "https://www.pexels.com/photo/paintings-on-walls-in-art-museum-14925184/",
+                "photographer": "Olena Dovgopolova",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "architecture",
+            "name": "Architecture",
+            "description": "Buildings that tell stories of their own.",
+            "icon": {
+                "library": "lucide",
+                "name": "Columns3",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/columns-3.svg",
+                "sourceUrl": "https://lucide.dev/icons/columns-3"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/30563462/pexels-photo-30563462.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Traditional Moroccan building with arched windows in Rabat",
+                "sourceUrl": "https://www.pexels.com/photo/traditional-moroccan-architecture-in-rabat-30563462/",
+                "photographer": "MAG Photography",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "history",
+            "name": "History",
+            "description": "Look a little closer at the places that came before.",
+            "icon": {
+                "library": "lucide",
+                "name": "Hourglass",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/hourglass.svg",
+                "sourceUrl": "https://lucide.dev/icons/hourglass"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/29893942/pexels-photo-29893942.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Ancient Roman ruins and columns in Rome",
+                "sourceUrl": "https://www.pexels.com/photo/ancient-roman-ruins-in-rome-italy-29893942/",
+                "photographer": "Vinicius A. Nascimento",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "local-life",
+            "name": "Local Life",
+            "description": "A glimpse of the everyday, far from home.",
+            "icon": {
+                "library": "lucide",
+                "name": "Store",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/store.svg",
+                "sourceUrl": "https://lucide.dev/icons/store"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/12406747/pexels-photo-12406747.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Laundry hanging between historic buildings in Venice",
+                "sourceUrl": "https://www.pexels.com/photo/laundry-drying-on-lines-hanging-between-buildings-12406747/",
+                "photographer": "Anastasiia Lopushynska",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "markets",
+            "name": "Markets",
+            "description": "Find your way through the colors, sounds and stalls.",
+            "icon": {
+                "library": "lucide",
+                "name": "ShoppingBasket",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/shopping-basket.svg",
+                "sourceUrl": "https://lucide.dev/icons/shopping-basket"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/18525765/pexels-photo-18525765.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Bright fruit stall in a traditional Sicilian market",
+                "sourceUrl": "https://www.pexels.com/photo/fruit-on-stall-at-bazaar-18525765/",
+                "photographer": "Efrem Efre",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "cafe-hopping",
+            "name": "Café Hopping",
+            "description": "Coffee breaks that become the whole afternoon.",
+            "icon": {
+                "library": "lucide",
+                "name": "Coffee",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/coffee.svg",
+                "sourceUrl": "https://lucide.dev/icons/coffee"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/30573110/pexels-photo-30573110.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Coffee and a croissant on a Parisian café table",
+                "sourceUrl": "https://www.pexels.com/photo/coffee-and-croissant-on-parisian-cafe-table-30573110/",
+                "photographer": "Esra Afşar",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "wine-and-dine",
+            "name": "Wine & Dine",
+            "description": "Slow dinners and glasses worth raising.",
+            "icon": {
+                "library": "lucide",
+                "name": "Wine",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/wine.svg",
+                "sourceUrl": "https://lucide.dev/icons/wine"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/8112941/pexels-photo-8112941.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Candlelit restaurant table with fine food and wine",
+                "sourceUrl": "https://www.pexels.com/photo/food-and-wine-near-wax-candles-and-plant-in-vase-8112941/",
+                "photographer": "Rachel Claire",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "street-food",
+            "name": "Street Food",
+            "description": "The best flavors are sometimes around the corner.",
+            "icon": {
+                "library": "lucide",
+                "name": "CookingPot",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/cooking-pot.svg",
+                "sourceUrl": "https://lucide.dev/icons/cooking-pot"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/12392206/pexels-photo-12392206.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Bustling night market with glowing street-food stalls",
+                "sourceUrl": "https://www.pexels.com/photo/food-street-vendors-12392206/",
+                "photographer": "Andy Lee",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "festivals",
+            "name": "Festivals",
+            "description": "Find a reason to celebrate somewhere new.",
+            "icon": {
+                "library": "lucide",
+                "name": "PartyPopper",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/party-popper.svg",
+                "sourceUrl": "https://lucide.dev/icons/party-popper"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/14006782/pexels-photo-14006782.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Glowing lanterns floating above a nighttime festival",
+                "sourceUrl": "https://www.pexels.com/photo/lanters-in-sky-at-night-14006782/",
+                "photographer": "Taylor Marx",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "wildlife",
+            "name": "Wildlife",
+            "description": "Unforgettable encounters in the natural world.",
+            "icon": {
+                "library": "lucide",
+                "name": "PawPrint",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/paw-print.svg",
+                "sourceUrl": "https://lucide.dev/icons/paw-print"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/13142739/pexels-photo-13142739.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Herd of elephants crossing an African landscape at sunset",
+                "sourceUrl": "https://www.pexels.com/photo/elephants-at-sunset-in-kruger-park-13142739/",
+                "photographer": "Isis Petroni",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "camping",
+            "name": "Camping",
+            "description": "After sunset, the outdoors feels like home.",
+            "icon": {
+                "library": "lucide",
+                "name": "Tent",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/tent.svg",
+                "sourceUrl": "https://lucide.dev/icons/tent"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/4993253/pexels-photo-4993253.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Tent glowing beneath a star-filled sky",
+                "sourceUrl": "https://www.pexels.com/photo/anonymous-camper-in-tent-against-starry-sky-4993253/",
+                "photographer": "Rachel Claire",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "winter-escapes",
+            "name": "Winter Escapes",
+            "description": "Frosty days with warm places to return to.",
+            "icon": {
+                "library": "lucide",
+                "name": "Snowflake",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/snowflake.svg",
+                "sourceUrl": "https://lucide.dev/icons/snowflake"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/30332024/pexels-photo-30332024.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Snow-covered alpine cabin surrounded by white mountains",
+                "sourceUrl": "https://www.pexels.com/photo/serene-winter-landscape-with-snowy-cabin-30332024/",
+                "photographer": "Ahmet Yüksek",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "summer-days",
+            "name": "Summer Days",
+            "description": "Long evenings and little reasons to stay outside.",
+            "icon": {
+                "library": "lucide",
+                "name": "Sun",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/sun.svg",
+                "sourceUrl": "https://lucide.dev/icons/sun"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/29808534/pexels-photo-29808534.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Colorful parasols on a sunny beach in Polignano a Mare",
+                "sourceUrl": "https://www.pexels.com/photo/scenic-summer-view-of-polignano-a-mare-beach-italy-29808534/",
+                "photographer": "AXP Photography",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "off-the-grid",
+            "name": "Off the Grid",
+            "description": "Far from the noise, close to everything else.",
+            "icon": {
+                "library": "lucide",
+                "name": "WifiOff",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/wifi-off.svg",
+                "sourceUrl": "https://lucide.dev/icons/wifi-off"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/4406335/pexels-photo-4406335.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Remote wooden hut in a misty forested mountain valley",
+                "sourceUrl": "https://www.pexels.com/photo/wooden-cabin-on-hillside-4406335/",
+                "photographer": "eberhard grossgasteiger",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "photography",
+            "name": "Photography",
+            "description": "For seeing every place in a different light.",
+            "icon": {
+                "library": "lucide",
+                "name": "Camera",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/camera.svg",
+                "sourceUrl": "https://lucide.dev/icons/camera"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/29817098/pexels-photo-29817098.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Photographer framing a view from a mountain cliff",
+                "sourceUrl": "https://www.pexels.com/photo/photographer-capturing-scenic-mountain-landscape-29817098/",
+                "photographer": "Markus Winkler",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "sunsets",
+            "name": "Sunsets",
+            "description": "Go where the last light looks a little better.",
+            "icon": {
+                "library": "lucide",
+                "name": "Sunset",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/sunset.svg",
+                "sourceUrl": "https://lucide.dev/icons/sunset"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/28942048/pexels-photo-28942048.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Person looking across sea cliffs at golden hour",
+                "sourceUrl": "https://www.pexels.com/photo/serene-cliffside-view-at-sunset-in-cassis-france-28942048/",
+                "photographer": "Quentin Guiot",
+                "provider": "Pexels"
+            }
+        },
+        {
+            "id": "scenic-routes",
+            "name": "Scenic Routes",
+            "description": "Beautiful detours, winding roads and the long way home.",
+            "icon": {
+                "library": "lucide",
+                "name": "Route",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/route.svg",
+                "sourceUrl": "https://lucide.dev/icons/route"
+            },
+            "gridImage": {
+                "url": "https://images.pexels.com/photos/811034/pexels-photo-811034.jpeg?auto=compress&cs=tinysrgb&w=1200",
+                "alt": "Car on Norway’s Atlantic Ocean Road surrounded by the sea",
+                "sourceUrl": "https://www.pexels.com/photo/white-car-on-the-road-811034/",
+                "photographer": "Stas Tsibro",
+                "provider": "Pexels"
+            }
+        }
+    ]
+}
