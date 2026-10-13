@@ -13,9 +13,15 @@ import {
 
 export type ProfileControlProps = {
     user?: { name: string } | null;
+    compact?: boolean;
+    floating?: boolean;
 };
 
-export default function ProfileControl({ user = null }: ProfileControlProps) {
+export default function ProfileControl({
+    user = null,
+    compact = false,
+    floating = false
+}: ProfileControlProps) {
     const router = useRouter();
     const [sessionUser, setSessionUser] = useState<AuthUser | null>(null);
     const [loaded, setLoaded] = useState(Boolean(user));
@@ -59,13 +65,20 @@ export default function ProfileControl({ user = null }: ProfileControlProps) {
         }
     }
 
-    const controlClasses =
-        "absolute left-[36%] right-[8%] top-[45%] text-left text-14 leading-tight underline-offset-2 outline-none hover:underline focus-visible:underline focus-visible:decoration-2 focus-visible:underline-offset-4";
+    const controlClasses = compact
+        ? "absolute inset-x-1 top-[46%] min-h-11 text-center text-10 leading-tight underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2"
+        : "absolute left-[36%] right-[8%] top-[45%] text-left text-14 leading-tight underline-offset-2 outline-none hover:underline focus-visible:underline focus-visible:decoration-2 focus-visible:underline-offset-4";
 
     return (
         <div
             aria-busy={!loaded}
-            className="absolute top-0 right-[1.3%] z-10 h-[8.75rem] w-[8.25rem] sm:h-[24%] sm:w-[14.5%]"
+            className={
+                compact
+                    ? "bg-background fixed bottom-0 left-0 z-40 h-28 w-16 md:w-20"
+                    : floating
+                      ? "bg-background/90 fixed top-0 right-16 z-30 h-28 w-32 md:h-40 md:w-44"
+                      : "absolute top-0 right-[1.3%] z-10 h-[8.75rem] w-[8.25rem] sm:h-[24%] sm:w-[14.5%]"
+            }
         >
             <div
                 aria-hidden="true"
@@ -120,7 +133,13 @@ export default function ProfileControl({ user = null }: ProfileControlProps) {
             {logoutError ? (
                 <p
                     role="alert"
-                    className="text-14 absolute top-full right-0 max-w-48"
+                    className={
+                        compact
+                            ? "bg-background border-line text-12 absolute bottom-2 left-full ml-2 w-40 border p-2"
+                            : floating
+                              ? "bg-background text-12 absolute top-full right-0 max-w-48 p-2"
+                              : "text-14 absolute top-full right-0 max-w-48"
+                    }
                 >
                     {logoutError}
                 </p>
