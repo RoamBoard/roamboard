@@ -70,6 +70,13 @@ test("Board migration and transactional creator flow in PostgreSQL", {
                     );
                     assert.equal(backfill.rows[0]?.day_number, 2);
                     assert.equal(backfill.rows[0]?.status, "published");
+                    const backfillDays = await migrationClient.query<{ day_number: number }>(
+                        `SELECT d.day_number FROM board_day d
+                         JOIN board b ON b.board_id = d.board_id
+                         WHERE b.title = 'Old Board'
+                         ORDER BY d.day_number`
+                    );
+                    assert.deepEqual(backfillDays.rows.map((r) => r.day_number), [1, 2]);
                     const backfillImages = await migrationClient.query<{
                         uploaded_image_id: number; position: number; storage_key: string; orphaned_at: Date | null;
                     }>(

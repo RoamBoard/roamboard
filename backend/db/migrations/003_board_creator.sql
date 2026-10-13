@@ -35,7 +35,13 @@ ALTER TABLE activity
     REFERENCES board_day (board_id, day_id) ON DELETE CASCADE;
 
 INSERT INTO board_day (board_id, day_number)
-  SELECT DISTINCT board_id, day_number FROM activity;
+  SELECT m.board_id, gs.day_number
+  FROM (
+    SELECT board_id, MAX(day_number) AS max_day
+    FROM activity
+    GROUP BY board_id
+  ) m
+  CROSS JOIN LATERAL generate_series(1, m.max_day) AS gs(day_number);
 
 UPDATE activity a SET day_id = d.day_id
   FROM board_day d
