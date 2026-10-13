@@ -2,7 +2,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import PinCategoryIcon from "@/components/ui/PinCategoryIcon";
 import {
@@ -10,7 +11,197 @@ import {
     loadBoardDocument,
     type BoardDocument
 } from "@/lib/board-creator-api";
+import { useDialogFocus } from "@/lib/use-dialog-focus";
 import { dayColors } from "@/types/board-creator";
+
+export type ActiveImageDetail = {
+    id?: string;
+    url: string;
+    title: string;
+    subtitle?: string;
+    alt: string;
+    credit?: string | null;
+    creditUrl?: string | null;
+    sourceUrl?: string | null;
+    capturedAt?: string | null;
+};
+
+export type ImageDetailDialogProps = {
+    images?: ActiveImageDetail[];
+    image?: ActiveImageDetail;
+    initialIndex?: number;
+    onClose: () => void;
+};
+
+export function ImageDetailDialog({
+    images: imagesProp,
+    image,
+    initialIndex = 0,
+    onClose
+}: ImageDetailDialogProps) {
+    const dialogRef = useRef<HTMLDivElement>(null);
+    useDialogFocus(dialogRef, onClose);
+
+    const images = imagesProp ?? (image ? [image] : []);
+    const [index, setIndex] = useState(
+        Math.max(0, Math.min(initialIndex, Math.max(0, images.length - 1)))
+    );
+
+    const prev = () => setIndex((i) => (i - 1 + images.length) % images.length);
+    const next = () => setIndex((i) => (i + 1) % images.length);
+
+    useEffect(() => {
+        if (images.length <= 1) return;
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === "ArrowLeft") {
+                e.preventDefault();
+                setIndex((i) => (i - 1 + images.length) % images.length);
+            } else if (e.key === "ArrowRight") {
+                e.preventDefault();
+                setIndex((i) => (i + 1) % images.length);
+            }
+        };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    }, [images.length]);
+
+    const current = images[index];
+    if (!current) return null;
+
+    return (
+        <div
+            className="fixed inset-0 z-50 grid place-items-center bg-black/75 p-4 sm:p-8"
+            role="presentation"
+            onMouseDown={(e) => {
+                if (e.target === e.currentTarget) onClose();
+            }}
+        >
+            <div
+                ref={dialogRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="image-detail-title"
+                tabIndex={-1}
+                className="bg-background max-h-[92dvh] w-full max-w-4xl overflow-y-auto p-6 shadow-2xl outline-none sm:p-8"
+            >
+                <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                        <div className="flex items-center gap-3">
+                            {current.subtitle ? (
+                                <p className="text-10 tracking-label text-muted-foreground font-bold uppercase">
+                                    {current.subtitle}
+                                </p>
+                            ) : null}
+                            {images.length > 1 ? (
+                                <span className="border-line text-11 text-muted-foreground border px-2 py-0.5 font-mono">
+                                    {index + 1} / {images.length}
+                                </span>
+                            ) : null}
+                        </div>
+                        <h2
+                            id="image-detail-title"
+                            className="font-display text-24 sm:text-28 mt-1 truncate font-bold"
+                        >
+                            {current.title}
+                        </h2>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="border-line text-22 hover:bg-faint grid size-10 shrink-0 place-items-center border"
+                        aria-label="Close photo details"
+                    >
+                        ×
+                    </button>
+                </div>
+
+                <div className="border-line bg-faint relative mt-6 flex h-[62vh] min-h-[300px] w-full items-center justify-center overflow-hidden border">
+                    <div
+                        className="flex h-full w-full transition-transform duration-300 ease-out motion-reduce:transition-none"
+                        style={{ transform: `translateX(-${index * 100}%)` }}
+                    >
+                        {images.map((img, i) => (
+                            <div
+                                key={img.url + i}
+                                className="flex h-full min-w-full items-center justify-center p-4 sm:p-6"
+                            >
+                                <img
+                                    src={img.url}
+                                    alt={img.alt}
+                                    className="max-h-full max-w-full object-contain select-none"
+                                />
+                            </div>
+                        ))}
+                    </div>
+
+                    {images.length > 1 ? (
+                        <>
+                            <button
+                                type="button"
+                                onClick={prev}
+                                className="border-line bg-background/80 hover:bg-background text-foreground focus:ring-foreground absolute top-1/2 left-3 z-10 grid size-10 -translate-y-1/2 place-items-center rounded-full border shadow-md backdrop-blur-sm transition-transform hover:scale-105 focus:ring-2 focus:outline-none active:scale-95"
+                                aria-label="Previous photo"
+                            >
+                                <ChevronLeft className="size-5" />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={next}
+                                className="border-line bg-background/80 hover:bg-background text-foreground focus:ring-foreground absolute top-1/2 right-3 z-10 grid size-10 -translate-y-1/2 place-items-center rounded-full border shadow-md backdrop-blur-sm transition-transform hover:scale-105 focus:ring-2 focus:outline-none active:scale-95"
+                                aria-label="Next photo"
+                            >
+                                <ChevronRight className="size-5" />
+                            </button>
+                        </>
+                    ) : null}
+                </div>
+
+                {current.credit || current.capturedAt ? (
+                    <div className="text-12 text-muted-foreground mt-4 flex flex-wrap items-center justify-between gap-2">
+                        {current.credit ? (
+                            <p>
+                                Photo by{" "}
+                                {current.creditUrl ? (
+                                    <a
+                                        href={current.creditUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="hover:text-foreground underline"
+                                    >
+                                        {current.credit}
+                                    </a>
+                                ) : (
+                                    current.credit
+                                )}
+                                {current.sourceUrl ? (
+                                    <>
+                                        {" "}
+                                        on{" "}
+                                        <a
+                                            href={current.sourceUrl}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="hover:text-foreground underline"
+                                        >
+                                            Unsplash
+                                        </a>
+                                    </>
+                                ) : null}
+                            </p>
+                        ) : (
+                            <span />
+                        )}
+                        {current.capturedAt ? (
+                            <time dateTime={current.capturedAt}>
+                                Captured {current.capturedAt.slice(0, 10)}
+                            </time>
+                        ) : null}
+                    </div>
+                ) : null}
+            </div>
+        </div>
+    );
+}
 
 export default function PublishedBoardView({
     boardId,
@@ -23,6 +214,9 @@ export default function PublishedBoardView({
         initialBoard ?? null
     );
     const [error, setError] = useState("");
+    const [activeImageIndex, setActiveImageIndex] = useState<number | null>(
+        null
+    );
 
     useEffect(() => {
         if (initialBoard) return;
@@ -72,6 +266,49 @@ export default function PublishedBoardView({
         (sum, day) => sum + day.pins.length,
         0
     );
+
+    const galleryImages: ActiveImageDetail[] = [
+        ...(cover
+            ? [
+                  {
+                      id: cover.id,
+                      url: cover.url,
+                      title: board.title || "Untitled Board",
+                      subtitle: "Board cover",
+                      alt: `Cover of ${board.title || "Untitled Board"}`,
+                      credit: cover.credit,
+                      creditUrl: cover.creditUrl,
+                      sourceUrl: cover.sourceUrl,
+                      capturedAt: cover.capturedAt
+                  }
+              ]
+            : []),
+        ...restored.days.flatMap((day) =>
+            day.pins.flatMap((pin) => {
+                const pinImgs = restored.images
+                    .filter((img) => img.pinId === pin.id)
+                    .sort(
+                        (a, b) =>
+                            (a.activityOrder ?? a.order) -
+                            (b.activityOrder ?? b.order)
+                    );
+                return pinImgs.map((img, i) => ({
+                    id: img.id,
+                    url: img.url,
+                    title: pin.title,
+                    subtitle:
+                        pinImgs.length > 1
+                            ? `Day ${day.dayNumber} · Photo ${i + 1} of ${pinImgs.length}`
+                            : `Day ${day.dayNumber} · Activity photo`,
+                    alt: `${pin.title} photo`,
+                    credit: img.credit,
+                    creditUrl: img.creditUrl,
+                    sourceUrl: img.sourceUrl,
+                    capturedAt: img.capturedAt
+                }));
+            })
+        )
+    ];
 
     return (
         <article className="px-5 py-16 sm:px-10 lg:px-16">
@@ -143,11 +380,18 @@ export default function PublishedBoardView({
                     </p>
                     <div className="border-line mt-4 overflow-hidden border">
                         {cover ? (
-                            <img
-                                src={cover.url}
-                                alt={`Cover of ${board.title || "Untitled Board"}`}
-                                className="aspect-[4/3] w-full object-cover"
-                            />
+                            <button
+                                type="button"
+                                onClick={() => setActiveImageIndex(0)}
+                                className="group focus:ring-foreground block w-full cursor-pointer text-left transition-opacity hover:opacity-90 focus:ring-2 focus:outline-none"
+                                aria-label={`View cover image of ${board.title || "Untitled Board"} in detail`}
+                            >
+                                <img
+                                    src={cover.url}
+                                    alt={`Cover of ${board.title || "Untitled Board"}`}
+                                    className="aspect-[4/3] w-full object-cover"
+                                />
+                            </button>
                         ) : (
                             <div className="bg-faint text-12 text-muted-foreground grid aspect-[4/3] place-items-center">
                                 Default cover
@@ -284,18 +528,46 @@ export default function PublishedBoardView({
                                                                 >
                                                                     {pinImages.map(
                                                                         (
-                                                                            image
+                                                                            image,
+                                                                            imageIndex
                                                                         ) => (
-                                                                            <img
+                                                                            <button
                                                                                 key={
                                                                                     image.id
                                                                                 }
-                                                                                src={
-                                                                                    image.thumbnailUrl
+                                                                                type="button"
+                                                                                onClick={() => {
+                                                                                    const targetIndex =
+                                                                                        galleryImages.findIndex(
+                                                                                            (
+                                                                                                item
+                                                                                            ) =>
+                                                                                                item.id ===
+                                                                                                image.id
+                                                                                        );
+                                                                                    setActiveImageIndex(
+                                                                                        targetIndex >=
+                                                                                            0
+                                                                                            ? targetIndex
+                                                                                            : 0
+                                                                                    );
+                                                                                }}
+                                                                                className="border-line focus:ring-foreground aspect-square size-20 cursor-pointer overflow-hidden rounded-sm border transition-opacity hover:opacity-90 focus:ring-2 focus:outline-none"
+                                                                                aria-label={
+                                                                                    pinImages.length >
+                                                                                    1
+                                                                                        ? `View photo ${imageIndex + 1} for ${pin.title} in detail`
+                                                                                        : `View photo for ${pin.title} in detail`
                                                                                 }
-                                                                                alt={`${pin.title} photo`}
-                                                                                className="border-line aspect-square size-20 rounded-sm border object-cover"
-                                                                            />
+                                                                            >
+                                                                                <img
+                                                                                    src={
+                                                                                        image.thumbnailUrl
+                                                                                    }
+                                                                                    alt={`${pin.title} photo`}
+                                                                                    className="size-full object-cover"
+                                                                                />
+                                                                            </button>
                                                                         )
                                                                     )}
                                                                 </div>
@@ -312,6 +584,13 @@ export default function PublishedBoardView({
                     })}
                 </main>
             </div>
+            {activeImageIndex !== null ? (
+                <ImageDetailDialog
+                    images={galleryImages}
+                    initialIndex={activeImageIndex}
+                    onClose={() => setActiveImageIndex(null)}
+                />
+            ) : null}
         </article>
     );
 }

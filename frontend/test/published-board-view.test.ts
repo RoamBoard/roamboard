@@ -4,7 +4,9 @@ import test from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import PublishedBoardView from "../src/components/features/boards/PublishedBoardView";
+import PublishedBoardView, {
+    ImageDetailDialog
+} from "../src/components/features/boards/PublishedBoardView";
 import type { BoardDocument } from "../src/lib/board-creator-api";
 
 test("published board view renders all activities without 5-pin truncation and includes pin notes and location", () => {
@@ -178,7 +180,72 @@ test("published board view renders all activities without 5-pin truncation and i
     assert.match(markup, /Kyoto/);
     assert.match(markup, /Japan/);
 
-    // Verifies cover and image thumbnails
+    // Verifies cover and image thumbnails are interactive buttons to view in detail
     assert.match(markup, /alt="Cover of Kyoto Highlights"/);
     assert.match(markup, /thumbs\/fushimi\.jpg/);
+    assert.match(
+        markup,
+        /aria-label="View cover image of Kyoto Highlights in detail"/
+    );
+    assert.match(
+        markup,
+        /aria-label="View photo for Fushimi Inari Taisha in detail"/
+    );
+});
+
+test("image detail dialog renders accessible modal with photo, title, and attribution", () => {
+    const markup = renderToStaticMarkup(
+        createElement(ImageDetailDialog, {
+            image: {
+                url: "/images/fushimi.jpg",
+                title: "Fushimi Inari Taisha",
+                subtitle: "Photo 1 of 4",
+                alt: "Fushimi Inari Taisha photo",
+                credit: "Taro Tanaka",
+                creditUrl: "https://unsplash.com/@tarotanaka",
+                sourceUrl: "https://unsplash.com/photos/fushimi",
+                capturedAt: "2026-10-15T09:30:00Z"
+            },
+            onClose: () => {}
+        })
+    );
+
+    assert.match(markup, /role="dialog"/);
+    assert.match(markup, /aria-modal="true"/);
+    assert.match(markup, /aria-label="Close photo details"/);
+    assert.match(markup, /Fushimi Inari Taisha/);
+    assert.match(markup, /Photo 1 of 4/);
+    assert.match(markup, /src="\/images\/fushimi\.jpg"/);
+    assert.match(markup, /Taro Tanaka/);
+    assert.match(markup, /href="https:\/\/unsplash\.com\/@tarotanaka"/);
+    assert.match(markup, /Captured 2026-10-15/);
+});
+
+test("image detail dialog renders slide controls and counter when multiple images are present", () => {
+    const markup = renderToStaticMarkup(
+        createElement(ImageDetailDialog, {
+            images: [
+                {
+                    url: "/images/cover.jpg",
+                    title: "Kyoto Highlights",
+                    subtitle: "Board cover",
+                    alt: "Cover of Kyoto Highlights"
+                },
+                {
+                    url: "/images/fushimi.jpg",
+                    title: "Fushimi Inari Taisha",
+                    subtitle: "Photo 1 of 2",
+                    alt: "Fushimi Inari Taisha photo"
+                }
+            ],
+            initialIndex: 0,
+            onClose: () => {}
+        })
+    );
+
+    assert.match(markup, /role="dialog"/);
+    assert.match(markup, /aria-label="Previous photo"/);
+    assert.match(markup, /aria-label="Next photo"/);
+    assert.match(markup, /1 \/ 2/);
+    assert.match(markup, /src="\/images\/cover\.jpg"/);
 });
