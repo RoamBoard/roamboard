@@ -48,7 +48,20 @@ function fakeBoards(memberRole: "editor" | "viewer" | null = null): BoardReposit
                 visibility: board.visibility, revision: board.revision,
                 memberRole: userId === "other" ? memberRole : null, isFriend: false } : null;
         },
-        async getBoard(boardId) { return structuredClone(boards.get(boardId) ?? null); },
+        async getBoard(boardId, userId = undefined) {
+            const raw = boards.get(boardId);
+            if (!raw) return null;
+            const board = structuredClone(raw);
+            if (userId !== undefined) {
+                const access = await this.getAccess(boardId, userId);
+                if (!access || !canReadBoard(access, userId)) return null;
+                board.permissions = {
+                    canEditContent: access.ownerUserId === userId || (access.status === "published" && access.memberRole === "editor"),
+                    canManageBoard: access.ownerUserId === userId
+                };
+            }
+            return board;
+        },
         async listDrafts(_userId, page, limit) {
             const items = [...boards.values()].filter((board) => board.status === "draft")
                 .slice((page - 1) * limit, page * limit)

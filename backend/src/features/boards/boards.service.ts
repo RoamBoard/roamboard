@@ -1,28 +1,11 @@
 import { AppError } from "../../shared/app-error.js";
 import type { BoardWrite } from "./boards.schemas.js";
-import type { BoardAccess, BoardDocument, BoardRepository, BoardsService } from "./boards.types.js";
+import type { BoardRepository, BoardsService } from "./boards.types.js";
+
+export { canReadBoard } from "./boards.types.js";
 
 function invalid(): never {
     throw new AppError(400, "Invalid Board request", "INVALID_REQUEST");
-}
-
-export function canReadBoard(access: BoardAccess, userId: string | null): boolean {
-    if (access.ownerUserId === userId) return true;
-    if (access.status === "draft") return false;
-    if (access.visibility === "public") return true;
-    if (userId !== null && access.memberRole) return true;
-    return userId !== null && access.visibility === "friends" && access.isFriend;
-}
-
-function withPermissions(board: BoardDocument, access: BoardAccess, userId: string | null): BoardDocument {
-    const owner = access.ownerUserId === userId;
-    return {
-        ...board,
-        permissions: {
-            canEditContent: owner || (access.status === "published" && access.memberRole === "editor"),
-            canManageBoard: owner
-        }
-    };
 }
 
 function normalize(input: BoardWrite): BoardWrite {
@@ -104,10 +87,9 @@ export function createBoardsService(repository: BoardRepository): BoardsService 
                 day.activities.some((activity) => activity.activityId !== undefined))) invalid();
             const validated = await validateDocument(repository, input);
             const boardId = await repository.saveBoard(userId, null, null, validated);
-            const board = await repository.getBoard(boardId);
-            const access = await repository.getAccess(boardId, userId);
-            if (!board || !access) throw new Error("Created Board could not be read");
-            return withPermissions(board, access, userId);
+            const board = await repository.getBoard(boardId, userId);
+            if (!board) throw new Error("Created Board could not be read");
+            return board;
         },
         async replace(userId, boardId, revision, input) {
             const access = await repository.getAccess(boardId, userId);
@@ -124,19 +106,14 @@ export function createBoardsService(repository: BoardRepository): BoardsService 
             }
             const validated = await validateDocument(repository, input);
             await repository.saveBoard(userId, boardId, revision, validated);
-            const board = await repository.getBoard(boardId);
-            const currentAccess = await repository.getAccess(boardId, userId);
-            if (!board || !currentAccess) throw new Error("Updated Board could not be read");
-            return withPermissions(board, currentAccess, userId);
+            const board = await repository.getBoard(boardId, userId);
+            if (!board) throw new Error("Updated Board could not be read");
+            return board;
         },
         async read(boardId, userId) {
-            const access = await repository.getAccess(boardId, userId);
-            if (!access || !canReadBoard(access, userId)) {
-                throw new AppError(404, "Board not found", "NOT_FOUND");
-            }
-            const board = await repository.getBoard(boardId);
+            const board = await repository.getBoard(boardId, userId);
             if (!board) throw new AppError(404, "Board not found", "NOT_FOUND");
-            return withPermissions(board, access, userId);
+            return board;
         },
         listDrafts: (userId, page, limit) => repository.listDrafts(userId, page, limit),
         listPublished: (userId, page, limit) => repository.listPublished(userId, page, limit),

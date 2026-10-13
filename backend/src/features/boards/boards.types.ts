@@ -39,11 +39,19 @@ export interface DraftSummary {
 
 export type PublishedSummary = Omit<DraftSummary, "status"> & { status: "published" };
 
+export function canReadBoard(access: BoardAccess, userId: string | null): boolean {
+    if (access.ownerUserId === userId) return true;
+    if (access.status === "draft") return false;
+    if (access.visibility === "public") return true;
+    if (userId !== null && access.memberRole) return true;
+    return userId !== null && access.visibility === "friends" && access.isFriend;
+}
+
 export interface BoardRepository {
     listTags(): Promise<Array<{ tagId: number; name: string }>>;
     listCategories(): Promise<string[]>;
     getAccess(boardId: number, userId: string | null): Promise<BoardAccess | null>;
-    getBoard(boardId: number): Promise<BoardDocument | null>;
+    getBoard(boardId: number, userId?: string | null): Promise<BoardDocument | null>;
     listDrafts(userId: string, page: number, limit: number): Promise<{ items: DraftSummary[]; hasMore: boolean }>;
     listPublished(userId: string, page: number, limit: number): Promise<{ items: PublishedSummary[]; hasMore: boolean }>;
     saveBoard(userId: string, boardId: number | null, expectedRevision: number | null, input: BoardWrite): Promise<number>;
