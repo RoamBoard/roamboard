@@ -29,6 +29,16 @@ export function filterBoardsByTag<T extends { tags: readonly BoardTagId[] }>(
     boards: readonly T[],
     tagId: BoardTagId
 ): T[] {
-    if (!isBoardTagId(tagId)) return [];
-    return boards.filter((board) => board.tags.includes(tagId));
+    return filterBoardsByTags(boards, [tagId]);
+}
+
+// A board matching any selected tag is returned once, in source order.
+export function filterBoardsByTags<T extends { tags: readonly BoardTagId[] }>(
+    boards: readonly T[],
+    tagIds: readonly BoardTagId[]
+): T[] {
+    const validIds = tagIds.filter(isBoardTagId);
+    return boards.filter((board) =>
+        validIds.some((id) => board.tags.includes(id))
+    );
 }

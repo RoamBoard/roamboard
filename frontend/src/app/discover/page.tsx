@@ -15,6 +15,9 @@ export default function DiscoverPage() {
         <DiscoverExperience
             hero={<DiscoverHero />}
             journey={<DiscoverJourney />}
+            mobileJourney={[0, 1, 2].map((panel) => (
+                <DiscoverJourney key={panel} mobilePanel={panel} />
+            ))}
         >
             <DiscoverFeed />
         </DiscoverExperience>

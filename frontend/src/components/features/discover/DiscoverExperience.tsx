@@ -2,6 +2,7 @@
 
 import {
     useEffect,
+    useCallback,
     useRef,
     useState,
     useSyncExternalStore,
@@ -10,6 +11,7 @@ import {
 } from "react";
 import { motion, useMotionValue } from "motion/react";
 import AppShell from "@/components/layout/AppShell";
+import DiscoverIntroCarousel from "./DiscoverIntroCarousel";
 
 const desktopQuery =
     "(min-width: 1024px) and (min-height: 620px) and (prefers-reduced-motion: no-preference)";
@@ -21,9 +23,19 @@ function subscribe(callback: () => void) {
 const getSnapshot = () => window.matchMedia(desktopQuery).matches;
 const getServerSnapshot = () => false;
 
-type Props = { hero: ReactNode; journey: ReactNode; children: ReactNode };
+type Props = {
+    hero: ReactNode;
+    journey: ReactNode;
+    mobileJourney: readonly ReactNode[];
+    children: ReactNode;
+};
 
-export default function DiscoverExperience({ hero, journey, children }: Props) {
+export default function DiscoverExperience({
+    hero,
+    journey,
+    mobileJourney,
+    children
+}: Props) {
     const desktop = useSyncExternalStore(
         subscribe,
         getSnapshot,
@@ -36,6 +48,11 @@ export default function DiscoverExperience({ hero, journey, children }: Props) {
     const feed = useRef<HTMLDivElement>(null);
     const handledHash = useRef("");
     const horizontal = useMotionValue(0);
+    const carouselTravelled = useRef(false);
+    const onCarouselTravel = useCallback((travelled: boolean) => {
+        carouselTravelled.current = travelled;
+        setCollapsed(window.scrollY > 48 || travelled);
+    }, []);
 
     useEffect(() => {
         const introElement = intro.current;
@@ -60,7 +77,7 @@ export default function DiscoverExperience({ hero, journey, children }: Props) {
                 desktop ? -Math.min(distance, dimensions.travel) : 0
             );
             setCollapsed(
-                distance > 48 || (intro.current?.scrollLeft ?? 0) > 48
+                distance > 48 || (!desktop && carouselTravelled.current)
             );
         };
         update();
@@ -72,7 +89,9 @@ export default function DiscoverExperience({ hero, journey, children }: Props) {
         const state = { frame: 0 };
         const restoreHash = () => {
             const hash = window.location.hash;
-            const signature = `${hash}:${desktop}`;
+            // Returning from a collection can measure the intro before its
+            // desktop layout settles. Restore again when the travel changes.
+            const signature = `${hash}:${desktop}:${dimensions.travel}`;
             if (
                 !hash ||
                 handledHash.current === signature ||
@@ -164,28 +183,24 @@ export default function DiscoverExperience({ hero, journey, children }: Props) {
                             style={{ x: horizontal }}
                             className={desktop ? "flex w-max items-start" : ""}
                         >
-                            <div
-                                ref={intro}
-                                role="region"
-                                aria-label="Discover introduction and photo sequence"
-                                tabIndex={desktop ? -1 : 0}
-                                onScroll={() => {
-                                    if (!desktop)
-                                        setCollapsed(
-                                            window.scrollY > 48 ||
-                                                (intro.current?.scrollLeft ??
-                                                    0) > 48
-                                        );
-                                }}
-                                className={
-                                    desktop
-                                        ? "flex w-max shrink-0"
-                                        : "flex w-full snap-x snap-proximity overflow-x-auto overscroll-x-contain focus-visible:outline-2 focus-visible:outline-offset-[-2px]"
-                                }
-                            >
-                                {hero}
-                                {journey}
-                            </div>
+                            {desktop ? (
+                                <div
+                                    ref={intro}
+                                    role="region"
+                                    aria-label="Discover introduction and photo sequence"
+                                    tabIndex={-1}
+                                    className="flex w-max shrink-0"
+                                >
+                                    {hero}
+                                    {journey}
+                                </div>
+                            ) : (
+                                <DiscoverIntroCarousel
+                                    hero={hero}
+                                    journey={mobileJourney}
+                                    onTravel={onCarouselTravel}
+                                />
+                            )}
                             <div
                                 ref={feed}
                                 onFocusCapture={() => {

@@ -1,13 +1,22 @@
 import DiscoverPhoto from "./DiscoverPhoto";
 import VibeGrid from "./VibeGrid";
+import DiscoverSearch from "./DiscoverSearch";
+import DiscoverMoodMarquees from "./DiscoverMoodMarquees";
 import { Marquee } from "@/components/ui/marquee";
 import type { CSSProperties } from "react";
+import Link from "next/link";
+import {
+    discoverDestinations,
+    discoverDestinationHref
+} from "@/data/discover-destinations";
+import {
+    discoverBentoCollections,
+    discoverCollectionHref
+} from "@/data/discover-collections";
 import {
     discoverPhotos,
     journeyColumns,
-    previewBoards,
-    previewCollections,
-    previewDestinations
+    previewBoards
 } from "@/data/discover-preview";
 
 const heading =
@@ -72,17 +81,26 @@ export function DiscoverHero() {
     );
 }
 
-export function DiscoverJourney() {
+export function DiscoverJourney({
+    mobilePanel
+}: { mobilePanel?: number } = {}) {
+    const columns =
+        mobilePanel === undefined
+            ? journeyColumns
+            : journeyColumns.slice(mobilePanel * 2, mobilePanel * 2 + 2);
     return (
         <section
             aria-label="A world of travel inspiration"
-            className="relative h-[min(100dvh,56rem)] min-h-[38rem] w-[max(100vw,221dvh)] shrink-0 overflow-hidden bg-black"
+            className={`relative min-h-[38rem] shrink-0 overflow-hidden bg-black ${mobilePanel === undefined ? "h-[min(100dvh,56rem)] w-[max(100vw,221dvh)]" : "w-full flex-1"}`}
         >
-            <div className="grid h-full grid-cols-6 gap-2 px-2">
-                {journeyColumns.map((column, index) => (
+            <div
+                className={`grid h-full gap-2 px-2 ${mobilePanel === undefined ? "grid-cols-6" : "absolute inset-0 grid-cols-2"}`}
+            >
+                {columns.map((column, index) => (
                     <Marquee
                         key={index}
                         vertical
+                        repeat={mobilePanel === undefined ? 2 : 6}
                         reverse={index % 2 === 1}
                         className="h-full min-w-0"
                         style={
@@ -182,27 +200,36 @@ export function DiscoverFeed() {
                         CURATED COLLECTIONS
                     </h2>
                     <div className="mt-5 grid gap-2 md:grid-cols-12 md:grid-rows-[repeat(2,minmax(14rem,1fr))]">
-                        {previewCollections.map((collection) => (
-                            <article
-                                key={collection.title}
-                                className={`relative flex min-h-56 items-center overflow-hidden text-white ${collection.layout}`}
+                        {discoverBentoCollections.map((collection) => (
+                            <Link
+                                key={collection.id}
+                                href={discoverCollectionHref(collection)}
+                                aria-label={`Explore ${collection.title}`}
+                                className={`group focus-visible:outline-foreground relative flex min-h-56 cursor-pointer items-center overflow-hidden text-white focus-visible:outline-2 focus-visible:outline-offset-4 ${collection.layout}`}
                             >
-                                <DiscoverPhoto
-                                    photo={collection.photo}
-                                    width={collection.large ? 1100 : 800}
-                                    position={
-                                        collection.title === "Slow mornings"
-                                            ? "center 65%"
-                                            : "center"
-                                    }
+                                <div className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-[1.03] group-focus-visible:scale-[1.03] motion-reduce:transform-none motion-reduce:transition-none">
+                                    <DiscoverPhoto
+                                        photo={collection.coverImage}
+                                        width={collection.large ? 1100 : 800}
+                                        position={
+                                            collection.coverPosition ?? "center"
+                                        }
+                                    />
+                                </div>
+                                <div
+                                    aria-hidden="true"
+                                    className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/35 to-transparent"
                                 />
-                                <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/35 to-transparent" />
                                 <div className="relative w-full p-5 lg:p-6">
                                     <h3
                                         aria-label={collection.title}
                                         className={`font-body leading-none font-bold ${collection.large ? "text-48 lg:text-60" : "text-[clamp(1.1rem,2.1vw,2.25rem)]"}`}
                                     >
-                                        {collection.lines.map((line) => (
+                                        {(
+                                            collection.lines ?? [
+                                                collection.title
+                                            ]
+                                        ).map((line) => (
                                             <span key={line} className="block">
                                                 {line}
                                             </span>
@@ -212,48 +239,11 @@ export function DiscoverFeed() {
                                         {collection.description}
                                     </p>
                                 </div>
-                            </article>
+                            </Link>
                         ))}
                     </div>
                 </section>
-                <section
-                    aria-label="Search preview"
-                    className="mt-12 max-w-5xl md:mt-16"
-                >
-                    <label htmlFor="discover-search" className="sr-only">
-                        Search by vibe, category, or place (preview only)
-                    </label>
-                    <input
-                        id="discover-search"
-                        disabled
-                        aria-describedby="discover-preview-note"
-                        placeholder="type in a vibe, category, or place"
-                        className="border-line text-16 placeholder:text-muted-foreground w-full border-b bg-transparent py-5 disabled:cursor-not-allowed"
-                    />
-                    <ul
-                        aria-label="Example search suggestions"
-                        className="text-12 mt-5 flex flex-wrap gap-x-8 gap-y-3"
-                    >
-                        {[
-                            "somewhere warm",
-                            "48h away",
-                            "food worth travelling for",
-                            "quiet cities",
-                            "after dark",
-                            "by the water"
-                        ].map((vibe) => (
-                            <li key={vibe}>{vibe}</li>
-                        ))}
-                    </ul>
-                    <p
-                        id="discover-preview-note"
-                        className="text-muted-foreground text-12 mt-5"
-                    >
-                        Visual preview — search, Board counts and editorial
-                        selections are sample content. Opening and saving Boards
-                        are not connected yet.
-                    </p>
-                </section>
+                <DiscoverSearch />
                 <section
                     aria-labelledby="trending-title"
                     className="mt-20 md:mt-24"
@@ -262,26 +252,38 @@ export function DiscoverFeed() {
                         TRENDING DESTINATIONS
                     </h2>
                     <div className="mt-5 grid grid-cols-2 gap-2 md:grid-cols-12 md:grid-rows-[repeat(6,5.2rem)]">
-                        {previewDestinations.map((destination) => (
-                            <article
-                                key={destination.name}
-                                className={`relative min-h-56 overflow-hidden text-white md:min-h-0 ${destination.layout}`}
+                        {discoverDestinations.map((destination) => (
+                            <Link
+                                key={destination.countryCode}
+                                href={discoverDestinationHref(destination)}
+                                aria-label={`Explore ${destination.name}`}
+                                className={`group focus-visible:outline-foreground relative min-h-56 cursor-pointer overflow-hidden text-white focus-visible:outline-2 focus-visible:outline-offset-4 md:min-h-0 ${destination.layout}`}
                             >
-                                <DiscoverPhoto
-                                    photo={destination.photo}
-                                    width={900}
+                                <div className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-[1.03] group-focus-visible:scale-[1.03] motion-reduce:transform-none motion-reduce:transition-none">
+                                    <DiscoverPhoto
+                                        photo={destination.coverImage}
+                                        width={900}
+                                    />
+                                </div>
+                                <div
+                                    aria-hidden="true"
+                                    className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/65"
                                 />
-                                <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/65" />
                                 <h3 className="relative p-3 text-[clamp(1rem,2.3vw,2.5rem)] leading-none font-bold uppercase lg:p-5">
                                     {destination.name}
                                 </h3>
                                 <p className="text-10 absolute right-3 bottom-3">
-                                    {destination.count} boards
+                                    {destination.previewBoardCount} boards
+                                    <span className="sr-only">
+                                        {" "}
+                                        (sample count)
+                                    </span>
                                 </p>
-                            </article>
+                            </Link>
                         ))}
                     </div>
                 </section>
+                <DiscoverMoodMarquees />
                 <FeaturedBoards />
             </div>
             <div className="h-32 bg-gradient-to-b from-transparent to-black" />
