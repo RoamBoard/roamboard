@@ -542,7 +542,7 @@ test("merging server IDs preserves local edits and newly added pins/images", () 
                     {
                         activityId: 777,
                         position: 0,
-                        time: "10:00",
+                        activityTime: "10:00",
                         title: "Museum",
                         note: "Initial visit",
                         category: "museum",

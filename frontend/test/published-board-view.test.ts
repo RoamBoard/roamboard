@@ -44,7 +44,7 @@ test("published board view renders all activities without 5-pin truncation and i
                         activityTime: "09:00",
                         category: "sightseeing",
                         note: "Wake up early to walk through thousand torii gates.",
-                        source: "upload",
+                        source: "photo",
                         locationConfirmed: false,
                         uploadedImageIds: [10],
                         coverImageId: null,
