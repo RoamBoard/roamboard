@@ -106,7 +106,7 @@ function fakeBoards(memberRole: "editor" | "viewer" | null = null): BoardReposit
                 permissions: { canEditContent: false, canManageBoard: false }
             };
             boards.set(id, board);
-            return id;
+            return board;
         },
         async deleteBoard(boardId) { return boards.delete(boardId); }
     };

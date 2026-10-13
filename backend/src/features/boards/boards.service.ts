@@ -86,10 +86,7 @@ export function createBoardsService(repository: BoardRepository): BoardsService 
             if (input.days.some((day) => day.dayId !== undefined ||
                 day.activities.some((activity) => activity.activityId !== undefined))) invalid();
             const validated = await validateDocument(repository, input);
-            const boardId = await repository.saveBoard(userId, null, null, validated);
-            const board = await repository.getBoard(boardId, userId);
-            if (!board) throw new Error("Created Board could not be read");
-            return board;
+            return repository.saveBoard(userId, null, null, validated);
         },
         async replace(userId, boardId, revision, input) {
             const access = await repository.getAccess(boardId, userId);
@@ -105,10 +102,7 @@ export function createBoardsService(repository: BoardRepository): BoardsService 
                 throw new AppError(403, "Only the owner can change visibility", "FORBIDDEN");
             }
             const validated = await validateDocument(repository, input);
-            await repository.saveBoard(userId, boardId, revision, validated);
-            const board = await repository.getBoard(boardId, userId);
-            if (!board) throw new Error("Updated Board could not be read");
-            return board;
+            return repository.saveBoard(userId, boardId, revision, validated);
         },
         async read(boardId, userId) {
             const board = await repository.getBoard(boardId, userId);

@@ -54,7 +54,7 @@ export interface BoardRepository {
     getBoard(boardId: number, userId?: string | null): Promise<BoardDocument | null>;
     listDrafts(userId: string, page: number, limit: number): Promise<{ items: DraftSummary[]; hasMore: boolean }>;
     listPublished(userId: string, page: number, limit: number): Promise<{ items: PublishedSummary[]; hasMore: boolean }>;
-    saveBoard(userId: string, boardId: number | null, expectedRevision: number | null, input: BoardWrite): Promise<number>;
+    saveBoard(userId: string, boardId: number | null, expectedRevision: number | null, input: BoardWrite): Promise<BoardDocument>;
     deleteBoard(boardId: number, userId: string): Promise<boolean>;
 }
 

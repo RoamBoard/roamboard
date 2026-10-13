@@ -444,7 +444,13 @@ export default function BoardCreator({
                 confirmedPhotoPins
             );
             const sentDays = days;
+            const expectedRevision = savedBoard ? savedBoard.revision + 1 : 1;
             const board = await saveBoardDocument(write, savedBoard);
+            if (board.revision !== expectedRevision) {
+                throw new Error(
+                    "Board changed in another session while saving. Please refresh to load the latest changes."
+                );
+            }
             setSavedBoard(board);
             setDays((current) => mergeServerIds(current, sentDays, board));
             setImages((current) => mergeServerImages(current, board));

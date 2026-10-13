@@ -1,4 +1,4 @@
-import { useEffect, type RefObject } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 
 const focusableSelector =
     'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -7,6 +7,11 @@ export function useDialogFocus<T extends HTMLElement>(
     containerRef: RefObject<T | null>,
     onClose?: () => void
 ) {
+    const onCloseRef = useRef(onClose);
+    useEffect(() => {
+        onCloseRef.current = onClose;
+    }, [onClose]);
+
     useEffect(() => {
         const previousActive = document.activeElement as HTMLElement | null;
 
@@ -34,7 +39,7 @@ export function useDialogFocus<T extends HTMLElement>(
             if (event.key === "Escape") {
                 event.preventDefault();
                 event.stopPropagation();
-                onClose?.();
+                onCloseRef.current?.();
                 return;
             }
 
@@ -86,5 +91,5 @@ export function useDialogFocus<T extends HTMLElement>(
                 previousActive.focus();
             }
         };
-    }, [containerRef, onClose]);
+    }, [containerRef]);
 }

@@ -246,6 +246,126 @@ async function writeChildren(client: PoolClient, boardId: number, userId: string
         [input.coverImageId === undefined ? (input.imageIds[0] ?? null) : input.coverImageId, boardId]);
 }
 
+async function readBoardDocument(
+    client: PoolClient,
+    boardId: number,
+    userId: string | null | undefined
+): Promise<BoardDocument | null> {
+    const boardResult = await client.query<BoardRow>("SELECT * FROM board WHERE board_id = $1", [boardId]);
+    const board = boardResult.rows[0];
+    if (!board) return null;
+
+    let permissions = { canEditContent: false, canManageBoard: false };
+    if (userId !== undefined) {
+        const accessResult = await client.query<{
+            member_role: BoardAccess["memberRole"];
+            is_friend: boolean;
+        }>(
+            `SELECT bm.role AS member_role,
+              EXISTS (SELECT 1 FROM friendship f WHERE f.status = 'accepted' AND
+                ((f.requester_user_id = $1 AND f.recipient_user_id = $2) OR
+                 (f.recipient_user_id = $1 AND f.requester_user_id = $2))) AS is_friend
+             FROM (SELECT $1::text AS owner_id) o
+             LEFT JOIN board_member bm ON bm.board_id = $3 AND bm.user_id = $2`,
+            [board.owner_user_id, userId, boardId]
+        );
+        const accessRow = accessResult.rows[0];
+        const access: BoardAccess = {
+            boardId: board.board_id,
+            ownerUserId: board.owner_user_id,
+            status: board.status,
+            visibility: board.visibility,
+            revision: board.revision,
+            memberRole: accessRow?.member_role ?? null,
+            isFriend: Boolean(accessRow?.is_friend)
+        };
+        if (!canReadBoard(access, userId)) {
+            return null;
+        }
+        permissions = {
+            canEditContent: access.ownerUserId === userId || (access.status === "published" && access.memberRole === "editor"),
+            canManageBoard: access.ownerUserId === userId
+        };
+    }
+
+    const tagResult = await client.query<{ tag_id: number; tag_name: string }>(
+        `SELECT t.tag_id, t.tag_name FROM board_tag bt JOIN tag t ON t.tag_id = bt.tag_id
+         WHERE bt.board_id = $1 ORDER BY t.tag_name`, [boardId]);
+    const dayResult = await client.query<{ day_id: number; day_number: number; date: string | null }>(
+        `SELECT day_id, day_number, to_char(calendar_date, 'YYYY-MM-DD') AS date
+         FROM board_day WHERE board_id = $1 ORDER BY day_number`, [boardId]);
+    const activityResult = await client.query<{
+        activity_id: number; day_id: number | null; day_number: number; position: number;
+        title: string; activity_time: string | null; note: string | null; type: string;
+        source: "manual" | "mapbox" | "geoapify" | "photo";
+        location_confirmed: boolean; cover_image_id: number | null;
+        external_image_provider: string | null; external_image_id: string | null;
+        external_image_url: string | null; external_image_photographer: string | null;
+        external_image_photographer_url: string | null; external_image_source_url: string | null;
+    } & LocationRow>(
+        `SELECT a.*, l.name, l.latitude, l.longitude, l.address, l.city, l.country,
+          l.external_place_id
+         FROM activity a LEFT JOIN location l ON l.location_id = a.location_id
+         WHERE a.board_id = $1 ORDER BY a.day_number, a.position, a.activity_id`, [boardId]);
+    const imageResult = await client.query<{ uploaded_image_id: number; position: number; captured_at: Date | null }>(
+        `SELECT bi.uploaded_image_id, bi.position, i.captured_at
+         FROM board_image bi JOIN uploaded_image i ON i.uploaded_image_id = bi.uploaded_image_id
+         WHERE bi.board_id = $1 ORDER BY bi.position`, [boardId]);
+    const activityImageResult = await client.query<{ activity_id: number; uploaded_image_id: number; position: number }>(
+        `SELECT ai.activity_id, ai.uploaded_image_id, ai.position
+         FROM activity_image ai JOIN activity a ON a.activity_id = ai.activity_id
+         WHERE a.board_id = $1 ORDER BY ai.activity_id, ai.position`, [boardId]);
+    const activityImages = new Map<number, number[]>();
+    for (const row of activityImageResult.rows) {
+        const ids = activityImages.get(row.activity_id) ?? [];
+        ids.push(row.uploaded_image_id);
+        activityImages.set(row.activity_id, ids);
+    }
+    const dayMap = new Map<number, BoardDocument["days"][number]>();
+    const days: BoardDocument["days"] = dayResult.rows.map((row) => {
+        const day = { dayId: row.day_id, dayNumber: row.day_number,
+            date: row.date, activities: [] as BoardDocument["days"][number]["activities"] };
+        dayMap.set(row.day_id, day);
+        return day;
+    });
+    for (const row of activityResult.rows) {
+        const day = row.day_id === null ? undefined : dayMap.get(row.day_id);
+        if (!day) continue;
+        day.activities.push({
+            activityId: row.activity_id, position: row.position, title: row.title,
+            activityTime: row.activity_time?.slice(0, 5) ?? null,
+            category: row.type, note: row.note, source: row.source,
+            location: row.location_id === null ? null : locationFromRow(row),
+            locationConfirmed: row.location_confirmed,
+            uploadedImageIds: activityImages.get(row.activity_id) ?? [],
+            coverImageId: row.cover_image_id,
+            externalImage: row.external_image_provider === "unsplash" ? {
+                provider: "unsplash", providerImageId: row.external_image_id!,
+                url: row.external_image_url!, photographer: row.external_image_photographer!,
+                photographerUrl: row.external_image_photographer_url,
+                sourceUrl: row.external_image_source_url
+            } : null
+        });
+    }
+    return {
+        boardId: board.board_id, revision: board.revision, status: board.status,
+        title: board.title, description: board.description, visibility: board.visibility,
+        isCompleted: board.is_completed, coverImageId: board.cover_image_id,
+        tagIds: tagResult.rows.map((row) => row.tag_id),
+        tags: tagResult.rows.map((row) => ({ tagId: row.tag_id, name: row.tag_name })),
+        imageIds: imageResult.rows.map((row) => row.uploaded_image_id),
+        images: imageResult.rows.map((row) => ({
+            imageId: row.uploaded_image_id,
+            url: imagePath(row.uploaded_image_id, "display"),
+            thumbnailUrl: imagePath(row.uploaded_image_id, "thumbnail"),
+            capturedAt: row.captured_at?.toISOString() ?? null,
+            position: row.position
+        })),
+        days, createdAt: board.created_at.toISOString(), updatedAt: board.updated_at.toISOString(),
+        permissions
+    };
+}
+
 export function createBoardsRepository(): BoardRepository {
     return {
         async listTags() {
@@ -286,125 +406,9 @@ export function createBoardsRepository(): BoardRepository {
             const client = await getPool().connect();
             try {
                 await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
-                const boardResult = await client.query<BoardRow>("SELECT * FROM board WHERE board_id = $1", [boardId]);
-                const board = boardResult.rows[0];
-                if (!board) {
-                    await client.query("COMMIT");
-                    return null;
-                }
-
-                let permissions = { canEditContent: false, canManageBoard: false };
-                if (userId !== undefined) {
-                    const accessResult = await client.query<{
-                        member_role: BoardAccess["memberRole"];
-                        is_friend: boolean;
-                    }>(
-                        `SELECT bm.role AS member_role,
-                          EXISTS (SELECT 1 FROM friendship f WHERE f.status = 'accepted' AND
-                            ((f.requester_user_id = $1 AND f.recipient_user_id = $2) OR
-                             (f.recipient_user_id = $1 AND f.requester_user_id = $2))) AS is_friend
-                         FROM (SELECT $1::text AS owner_id) o
-                         LEFT JOIN board_member bm ON bm.board_id = $3 AND bm.user_id = $2`,
-                        [board.owner_user_id, userId, boardId]
-                    );
-                    const accessRow = accessResult.rows[0];
-                    const access: BoardAccess = {
-                        boardId: board.board_id,
-                        ownerUserId: board.owner_user_id,
-                        status: board.status,
-                        visibility: board.visibility,
-                        revision: board.revision,
-                        memberRole: accessRow?.member_role ?? null,
-                        isFriend: Boolean(accessRow?.is_friend)
-                    };
-                    if (!canReadBoard(access, userId)) {
-                        await client.query("COMMIT");
-                        return null;
-                    }
-                    permissions = {
-                        canEditContent: access.ownerUserId === userId || (access.status === "published" && access.memberRole === "editor"),
-                        canManageBoard: access.ownerUserId === userId
-                    };
-                }
-
-                const tagResult = await client.query<{ tag_id: number; tag_name: string }>(
-                    `SELECT t.tag_id, t.tag_name FROM board_tag bt JOIN tag t ON t.tag_id = bt.tag_id
-                     WHERE bt.board_id = $1 ORDER BY t.tag_name`, [boardId]);
-                const dayResult = await client.query<{ day_id: number; day_number: number; date: string | null }>(
-                    `SELECT day_id, day_number, to_char(calendar_date, 'YYYY-MM-DD') AS date
-                     FROM board_day WHERE board_id = $1 ORDER BY day_number`, [boardId]);
-                const activityResult = await client.query<{
-                    activity_id: number; day_id: number | null; day_number: number; position: number;
-                    title: string; activity_time: string | null; note: string | null; type: string;
-                    source: "manual" | "mapbox" | "geoapify" | "photo";
-                    location_confirmed: boolean; cover_image_id: number | null;
-                    external_image_provider: string | null; external_image_id: string | null;
-                    external_image_url: string | null; external_image_photographer: string | null;
-                    external_image_photographer_url: string | null; external_image_source_url: string | null;
-                } & LocationRow>(
-                    `SELECT a.*, l.name, l.latitude, l.longitude, l.address, l.city, l.country,
-                      l.external_place_id
-                     FROM activity a LEFT JOIN location l ON l.location_id = a.location_id
-                     WHERE a.board_id = $1 ORDER BY a.day_number, a.position, a.activity_id`, [boardId]);
-                const imageResult = await client.query<{ uploaded_image_id: number; position: number; captured_at: Date | null }>(
-                    `SELECT bi.uploaded_image_id, bi.position, i.captured_at
-                     FROM board_image bi JOIN uploaded_image i ON i.uploaded_image_id = bi.uploaded_image_id
-                     WHERE bi.board_id = $1 ORDER BY bi.position`, [boardId]);
-                const activityImageResult = await client.query<{ activity_id: number; uploaded_image_id: number; position: number }>(
-                    `SELECT ai.activity_id, ai.uploaded_image_id, ai.position
-                     FROM activity_image ai JOIN activity a ON a.activity_id = ai.activity_id
-                     WHERE a.board_id = $1 ORDER BY ai.activity_id, ai.position`, [boardId]);
-            const activityImages = new Map<number, number[]>();
-            for (const row of activityImageResult.rows) {
-                const ids = activityImages.get(row.activity_id) ?? [];
-                ids.push(row.uploaded_image_id);
-                activityImages.set(row.activity_id, ids);
-            }
-            const dayMap = new Map<number, BoardDocument["days"][number]>();
-            const days: BoardDocument["days"] = dayResult.rows.map((row) => {
-                const day = { dayId: row.day_id, dayNumber: row.day_number,
-                    date: row.date, activities: [] as BoardDocument["days"][number]["activities"] };
-                dayMap.set(row.day_id, day);
-                return day;
-            });
-            for (const row of activityResult.rows) {
-                const day = row.day_id === null ? undefined : dayMap.get(row.day_id);
-                if (!day) continue;
-                day.activities.push({
-                    activityId: row.activity_id, position: row.position, title: row.title,
-                    activityTime: row.activity_time?.slice(0, 5) ?? null,
-                    category: row.type, note: row.note, source: row.source,
-                    location: row.location_id === null ? null : locationFromRow(row),
-                    locationConfirmed: row.location_confirmed,
-                    uploadedImageIds: activityImages.get(row.activity_id) ?? [],
-                    coverImageId: row.cover_image_id,
-                    externalImage: row.external_image_provider === "unsplash" ? {
-                        provider: "unsplash", providerImageId: row.external_image_id!,
-                        url: row.external_image_url!, photographer: row.external_image_photographer!,
-                        photographerUrl: row.external_image_photographer_url,
-                        sourceUrl: row.external_image_source_url
-                    } : null
-                });
-            }
-            const document: BoardDocument = {
-                boardId: board.board_id, revision: board.revision, status: board.status,
-                title: board.title, description: board.description, visibility: board.visibility,
-                isCompleted: board.is_completed, coverImageId: board.cover_image_id,
-                tagIds: tagResult.rows.map((row) => row.tag_id),
-                tags: tagResult.rows.map((row) => ({ tagId: row.tag_id, name: row.tag_name })),
-                imageIds: imageResult.rows.map((row) => row.uploaded_image_id),
-                images: imageResult.rows.map((row) => ({
-                    imageId: row.uploaded_image_id,
-                    url: imagePath(row.uploaded_image_id, "display"),
-                    thumbnailUrl: imagePath(row.uploaded_image_id, "thumbnail"),
-                    capturedAt: row.captured_at?.toISOString() ?? null,
-                    position: row.position
-                })),
-                days, createdAt: board.created_at.toISOString(), updatedAt: board.updated_at.toISOString(),
-                permissions
-            };
-            await client.query("COMMIT");
-            return document;
+                const document = await readBoardDocument(client, boardId, userId);
+                await client.query("COMMIT");
+                return document;
             } catch (error) {
                 await client.query("ROLLBACK");
                 throw error;
@@ -494,8 +498,10 @@ export function createBoardsRepository(): BoardRepository {
                     );
                 }
                 await writeChildren(client, savedId, userId, input);
+                const document = await readBoardDocument(client, savedId, userId);
+                if (!document) throw new Error("Saved Board could not be read");
                 await client.query("COMMIT");
-                return savedId;
+                return document;
             } catch (error) {
                 await client.query("ROLLBACK");
                 throw error;

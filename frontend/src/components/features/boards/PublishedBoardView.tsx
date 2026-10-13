@@ -40,13 +40,13 @@ export default function PublishedBoardView({
     if (error)
         return (
             <div className="px-6 py-20 sm:px-12">
-                <p className="text-10 tracking-label text-stone uppercase">
+                <p className="text-10 tracking-label text-muted-foreground uppercase">
                     Board inspector
                 </p>
                 <h1 className="font-display text-48 mt-4 font-bold">
                     Could not load Board
                 </h1>
-                <p className="text-14 text-graphite mt-4" role="alert">
+                <p className="text-14 text-muted-foreground mt-4" role="alert">
                     {error}
                 </p>
             </div>
@@ -54,7 +54,7 @@ export default function PublishedBoardView({
     if (!board)
         return (
             <div
-                className="text-13 text-graphite grid min-h-[70dvh] place-items-center"
+                className="text-13 text-muted-foreground grid min-h-[70dvh] place-items-center"
                 role="status"
             >
                 Loading Board…
@@ -77,7 +77,7 @@ export default function PublishedBoardView({
         <article className="px-5 py-16 sm:px-10 lg:px-16">
             <header className="border-line mx-auto max-w-7xl border-b pb-12">
                 <div className="flex flex-wrap items-center justify-between gap-4">
-                    <p className="text-10 tracking-label text-stone font-bold uppercase">
+                    <p className="text-10 tracking-label text-muted-foreground font-bold uppercase">
                         Saved Itinerary · {board.status}
                     </p>
                     <span className="border-line text-10 tracking-label border px-3 py-1 uppercase">
@@ -88,11 +88,11 @@ export default function PublishedBoardView({
                     {board.title || "Untitled Board"}
                 </h1>
                 {board.description ? (
-                    <p className="text-16 text-graphite mt-5 max-w-3xl leading-relaxed whitespace-pre-line">
+                    <p className="text-16 text-muted-foreground mt-5 max-w-3xl leading-relaxed whitespace-pre-line">
                         {board.description}
                     </p>
                 ) : null}
-                <div className="text-12 text-graphite mt-6 flex flex-wrap items-center gap-6">
+                <div className="text-12 text-muted-foreground mt-6 flex flex-wrap items-center gap-6">
                     <span>
                         {restored.days.length} day
                         {restored.days.length === 1 ? "" : "s"}
@@ -104,7 +104,7 @@ export default function PublishedBoardView({
                         {restored.images.length} photo
                         {restored.images.length === 1 ? "" : "s"}
                     </span>
-                    <span className="text-stone">
+                    <span className="text-muted-foreground">
                         Board ID: {board.boardId}
                     </span>
                 </div>
@@ -116,7 +116,7 @@ export default function PublishedBoardView({
                         {board.tags.map((tag) => (
                             <span
                                 key={tag.tagId}
-                                className="border-line bg-faint text-11 text-graphite border px-3 py-1"
+                                className="border-line bg-faint text-11 text-muted-foreground border px-3 py-1"
                             >
                                 #{tag.name}
                             </span>
@@ -138,7 +138,7 @@ export default function PublishedBoardView({
 
             <div className="mx-auto mt-12 grid max-w-7xl gap-12 lg:grid-cols-[20rem_1fr]">
                 <aside>
-                    <p className="text-10 tracking-label text-graphite font-bold uppercase">
+                    <p className="text-10 tracking-label text-muted-foreground font-bold uppercase">
                         Board cover
                     </p>
                     <div className="border-line mt-4 overflow-hidden border">
@@ -149,7 +149,7 @@ export default function PublishedBoardView({
                                 className="aspect-[4/3] w-full object-cover"
                             />
                         ) : (
-                            <div className="bg-faint text-12 text-graphite grid aspect-[4/3] place-items-center">
+                            <div className="bg-faint text-12 text-muted-foreground grid aspect-[4/3] place-items-center">
                                 Default cover
                             </div>
                         )}
@@ -176,7 +176,7 @@ export default function PublishedBoardView({
                                     >
                                         Day {day.dayNumber}
                                     </h2>
-                                    <div className="text-12 text-graphite flex gap-3">
+                                    <div className="text-12 text-muted-foreground flex gap-3">
                                         {day.date ? (
                                             <time dateTime={day.date}>
                                                 {day.date}
@@ -192,7 +192,7 @@ export default function PublishedBoardView({
                                 </div>
 
                                 {day.pins.length === 0 ? (
-                                    <p className="text-13 text-graphite mt-6 italic">
+                                    <p className="text-13 text-muted-foreground mt-6 italic">
                                         No activities planned for this day.
                                     </p>
                                 ) : (
@@ -231,7 +231,7 @@ export default function PublishedBoardView({
                                                 >
                                                     <div className="flex items-start gap-3">
                                                         <span
-                                                            className="bg-faint text-graphite grid size-8 shrink-0 place-items-center rounded-sm"
+                                                            className="bg-faint text-muted-foreground grid size-8 shrink-0 place-items-center rounded-sm"
                                                             title={pin.category}
                                                         >
                                                             <PinCategoryIcon
@@ -247,7 +247,7 @@ export default function PublishedBoardView({
                                                                     {pin.title}
                                                                 </h3>
                                                                 {pin.time ? (
-                                                                    <time className="text-stone text-12 font-mono">
+                                                                    <time className="text-muted-foreground text-12 font-mono">
                                                                         {
                                                                             pin.time
                                                                         }
@@ -256,7 +256,7 @@ export default function PublishedBoardView({
                                                             </div>
 
                                                             {locationDisplay ? (
-                                                                <p className="text-12 text-graphite mt-1 flex items-center gap-1">
+                                                                <p className="text-12 text-muted-foreground mt-1 flex items-center gap-1">
                                                                     <span>
                                                                         📍
                                                                     </span>
