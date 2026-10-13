@@ -3,6 +3,8 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import type { Board } from "@/types/board";
+import { isBoardTagId } from "@/data/board-tags";
+import BoardTagSelector from "./BoardTagSelector";
 
 const inputClasses =
     "mt-2 w-full rounded border border-line bg-background px-3 py-2 text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground";
@@ -29,9 +31,15 @@ export default function BoardPreviewForm() {
         const countryCode = readText("countryCode").toUpperCase();
         const cities = splitList(readText("cities"));
         const visibility = readText("visibility");
+        const tagIds = formData.getAll("tagIds").map(String);
 
         setPreview(null);
         setError("");
+
+        if (tagIds.some((id) => !isBoardTagId(id))) {
+            setError("Choose tags from the Roamboard catalog.");
+            return;
+        }
 
         if (!title) {
             setError("Enter a Board title containing more than spaces.");
@@ -71,7 +79,7 @@ export default function BoardPreviewForm() {
             description: readText("description"),
             visibility,
             isCompleted: formData.get("isCompleted") === "on",
-            tags: splitList(readText("tags")),
+            tags: [...new Set(tagIds)],
             destinations: country
                 ? [
                       {
@@ -188,18 +196,7 @@ export default function BoardPreviewForm() {
                     I have completed this trip
                 </label>
 
-                <div>
-                    <label htmlFor="board-tags">Tags (optional)</label>
-                    <input
-                        id="board-tags"
-                        name="tags"
-                        aria-describedby="tags-help"
-                        className={inputClasses}
-                    />
-                    <p id="tags-help" className="text-14 mt-2">
-                        Separate tags with commas, for example food, museums.
-                    </p>
-                </div>
+                <BoardTagSelector />
 
                 {error ? (
                     <p
