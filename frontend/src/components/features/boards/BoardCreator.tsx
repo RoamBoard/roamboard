@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import BoardCreationPreview from "@/components/features/boards/BoardCreationPreview";
 import BoardDiscoveryDetails from "@/components/features/boards/BoardDiscoveryDetails";
@@ -14,6 +14,8 @@ import {
     fromBoardDocument,
     listBoardTags,
     loadBoardDocument,
+    mergeServerIds,
+    mergeServerImages,
     saveBoardDocument,
     toBoardWrite,
     type BoardDocument
@@ -108,6 +110,8 @@ export default function BoardCreator({
         () => new Set()
     );
     const [saving, setSaving] = useState<BoardStatus | null>(null);
+    const [uploading, setUploading] = useState(false);
+    const pendingUploadRef = useRef<Promise<unknown> | null>(null);
     const [draftLoading, setDraftLoading] = useState(
         initialBoardId !== undefined
     );
@@ -328,7 +332,7 @@ export default function BoardCreator({
         });
     }
 
-    function setActivityCover(pinId: string, imageId: number) {
+    function setActivityCover(pinId: string, imageId: number | null) {
         setDays((current) =>
             current.map((day) => ({
                 ...day,
@@ -415,21 +419,35 @@ export default function BoardCreator({
                 ?.scrollIntoView({ behavior, block: "start" });
             return;
         }
+        if (pendingUploadRef.current) {
+            setMessage("Waiting for image uploads to finish...");
+            await pendingUploadRef.current;
+            pendingUploadRef.current = null;
+        }
         setSaving(status);
         setError("");
         setMessage("");
         try {
+            const currentPayload = {
+                title,
+                description,
+                status,
+                visibility,
+                coverImageId,
+                tags,
+                days,
+                images
+            };
             const write = toBoardWrite(
-                { ...payload, status },
+                currentPayload,
                 allowedTags,
                 confirmedPhotoPins
             );
+            const sentDays = days;
             const board = await saveBoardDocument(write, savedBoard);
-            const restored = fromBoardDocument(board);
             setSavedBoard(board);
-            setDays(restored.days);
-            setImages(restored.images);
-            setConfirmedPhotoPins(restored.confirmedPhotoPins);
+            setDays((current) => mergeServerIds(current, sentDays, board));
+            setImages((current) => mergeServerImages(current, board));
             setMessage(
                 expectedStatus === "published"
                     ? "Board changes saved."
@@ -465,133 +483,150 @@ export default function BoardCreator({
             </header>
 
             <div className="px-4 sm:px-8 lg:px-16">
-                <BoardImageIntake
-                    images={images.filter((image) => image.source === "upload")}
-                    coverImageId={coverImageId}
-                    onSelectCover={setSelectedCoverImageId}
-                    onUploaded={handleUploads}
-                    onRemove={removeImage}
-                />
-
-                <div className="mx-auto mt-8 max-w-4xl text-center">
-                    <label
-                        htmlFor="board-title"
-                        className="text-10 tracking-label text-stone uppercase"
-                    >
-                        Board creator
-                    </label>
-                    <input
-                        id="board-title"
-                        value={title}
-                        onChange={(event) => setTitle(event.target.value)}
-                        placeholder="BOARD TITLE"
-                        className="font-display text-36 placeholder:text-foreground sm:text-48 mt-2 w-full bg-transparent text-center leading-none font-bold uppercase outline-none focus:placeholder:text-transparent"
-                    />
-                </div>
-
-                {message ? (
-                    <p
-                        className="border-foreground text-13 mx-auto mt-7 max-w-3xl border-l-2 pl-4"
-                        role="status"
-                    >
-                        {message}
-                    </p>
-                ) : null}
-                {draftLoading ? (
-                    <p className="text-13 mx-auto mt-7 max-w-3xl" role="status">
-                        Loading Board...
-                    </p>
-                ) : null}
-                {error ? (
-                    <p
-                        className="border-foreground text-13 mx-auto mt-7 max-w-3xl border-l-2 pl-4"
-                        role="alert"
-                    >
-                        {error}
-                    </p>
-                ) : null}
-
-                <section
-                    id="board-basics"
-                    className="mx-auto mt-24 grid max-w-7xl scroll-mt-8 gap-10 lg:grid-cols-[15rem_1fr] lg:gap-16"
+                <fieldset
+                    disabled={saving !== null}
+                    className="m-0 min-w-0 border-0 p-0 disabled:pointer-events-none disabled:opacity-80"
                 >
-                    <CreatorSectionIntro
-                        number="01"
-                        title="BOARD BASICS"
-                        description="Let’s start with the essentials to set the scene for everything you’re about to plan."
+                    <BoardImageIntake
+                        images={images.filter(
+                            (image) => image.source === "upload"
+                        )}
+                        coverImageId={coverImageId}
+                        disabled={saving !== null}
+                        onUploadingChange={setUploading}
+                        onUploadPromise={(promise) => {
+                            pendingUploadRef.current = promise;
+                        }}
+                        onSelectCover={setSelectedCoverImageId}
+                        onUploaded={handleUploads}
+                        onRemove={removeImage}
                     />
-                    <label className="font-display text-20 block max-w-3xl font-bold">
-                        Description
-                        <textarea
-                            value={description}
-                            onChange={(event) =>
-                                setDescription(event.target.value)
-                            }
-                            placeholder="type here..."
-                            rows={7}
-                            className="border-line font-body text-14 placeholder:text-stone focus:border-foreground mt-3 w-full resize-y border-0 border-b bg-transparent py-3 leading-6 font-normal outline-none"
-                        />
-                    </label>
-                </section>
 
-                <section
-                    id="day-plan"
-                    className="mx-auto mt-28 grid max-w-7xl scroll-mt-8 gap-10 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-16"
-                >
-                    <CreatorSectionIntro
-                        number="02"
-                        title="BUILD YOUR DAY PLAN"
-                        description="Shape the trip. Add and arrange places, restaurants, notes, and more."
-                    />
-                    <div className="min-w-0">
-                        <DayPlanner
-                            days={days}
-                            images={images}
-                            onAddDay={() =>
-                                setDays((current) => [
-                                    ...current,
-                                    newDay(current.length + 1)
-                                ])
-                            }
-                            onRemoveDay={removeDay}
-                            onAddPin={addPin}
-                            onUpdatePin={updatePin}
-                            onMovePin={movePin}
-                            onRemovePin={removePin}
-                            onAddActivityImage={addActivityImage}
-                            onAssignActivityImage={assignActivityImage}
-                            onSetActivityCover={setActivityCover}
-                            onReorderActivityImage={reorderActivityImage}
-                            confirmedPhotoPins={confirmedPhotoPins}
-                            onConfirmPhotoPin={(pinId) =>
-                                setConfirmedPhotoPins(
-                                    (current) => new Set([...current, pinId])
-                                )
-                            }
+                    <div className="mx-auto mt-8 max-w-4xl text-center">
+                        <label
+                            htmlFor="board-title"
+                            className="text-10 tracking-label text-stone uppercase"
+                        >
+                            Board creator
+                        </label>
+                        <input
+                            id="board-title"
+                            value={title}
+                            onChange={(event) => setTitle(event.target.value)}
+                            placeholder="BOARD TITLE"
+                            className="font-display text-36 placeholder:text-foreground sm:text-48 mt-2 w-full bg-transparent text-center leading-none font-bold uppercase outline-none focus:placeholder:text-transparent"
                         />
                     </div>
-                </section>
 
-                <section
-                    id="details-discovery"
-                    className="mx-auto mt-28 grid max-w-7xl scroll-mt-8 gap-10 lg:grid-cols-[15rem_1fr] lg:gap-16"
-                >
-                    <CreatorSectionIntro
-                        number="03"
-                        title="DETAILS & DISCOVERY"
-                        description="Give your Board more context to keep plans organized and make it easier for others to discover."
-                    />
-                    <BoardDiscoveryDetails
-                        tags={tags}
-                        allowedTags={allowedTags.map((tag) => tag.name)}
-                        visibility={visibility}
-                        canChangeVisibility={
-                            savedBoard?.permissions.canManageBoard ?? true
-                        }
-                        onTagsChange={setTags}
-                        onVisibilityChange={setVisibility}
-                    />
-                </section>
+                    {message ? (
+                        <p
+                            className="border-foreground text-13 mx-auto mt-7 max-w-3xl border-l-2 pl-4"
+                            role="status"
+                        >
+                            {message}
+                        </p>
+                    ) : null}
+                    {draftLoading ? (
+                        <p
+                            className="text-13 mx-auto mt-7 max-w-3xl"
+                            role="status"
+                        >
+                            Loading Board...
+                        </p>
+                    ) : null}
+                    {error ? (
+                        <p
+                            className="border-foreground text-13 mx-auto mt-7 max-w-3xl border-l-2 pl-4"
+                            role="alert"
+                        >
+                            {error}
+                        </p>
+                    ) : null}
+
+                    <section
+                        id="board-basics"
+                        className="mx-auto mt-24 grid max-w-7xl scroll-mt-8 gap-10 lg:grid-cols-[15rem_1fr] lg:gap-16"
+                    >
+                        <CreatorSectionIntro
+                            number="01"
+                            title="BOARD BASICS"
+                            description="Let’s start with the essentials to set the scene for everything you’re about to plan."
+                        />
+                        <label className="font-display text-20 block max-w-3xl font-bold">
+                            Description
+                            <textarea
+                                value={description}
+                                onChange={(event) =>
+                                    setDescription(event.target.value)
+                                }
+                                placeholder="type here..."
+                                rows={7}
+                                className="border-line font-body text-14 placeholder:text-stone focus:border-foreground mt-3 w-full resize-y border-0 border-b bg-transparent py-3 leading-6 font-normal outline-none"
+                            />
+                        </label>
+                    </section>
+
+                    <section
+                        id="day-plan"
+                        className="mx-auto mt-28 grid max-w-7xl scroll-mt-8 gap-10 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-16"
+                    >
+                        <CreatorSectionIntro
+                            number="02"
+                            title="BUILD YOUR DAY PLAN"
+                            description="Shape the trip. Add and arrange places, restaurants, notes, and more."
+                        />
+                        <div className="min-w-0">
+                            <DayPlanner
+                                disabled={saving !== null}
+                                days={days}
+                                images={images}
+                                onAddDay={() =>
+                                    setDays((current) => [
+                                        ...current,
+                                        newDay(current.length + 1)
+                                    ])
+                                }
+                                onRemoveDay={removeDay}
+                                onAddPin={addPin}
+                                onUpdatePin={updatePin}
+                                onMovePin={movePin}
+                                onRemovePin={removePin}
+                                onAddActivityImage={addActivityImage}
+                                onAssignActivityImage={assignActivityImage}
+                                onSetActivityCover={setActivityCover}
+                                onReorderActivityImage={reorderActivityImage}
+                                confirmedPhotoPins={confirmedPhotoPins}
+                                onConfirmPhotoPin={(pinId) =>
+                                    setConfirmedPhotoPins(
+                                        (current) =>
+                                            new Set([...current, pinId])
+                                    )
+                                }
+                            />
+                        </div>
+                    </section>
+
+                    <section
+                        id="details-discovery"
+                        className="mx-auto mt-28 grid max-w-7xl scroll-mt-8 gap-10 lg:grid-cols-[15rem_1fr] lg:gap-16"
+                    >
+                        <CreatorSectionIntro
+                            number="03"
+                            title="DETAILS & DISCOVERY"
+                            description="Give your Board more context to keep plans organized and make it easier for others to discover."
+                        />
+                        <BoardDiscoveryDetails
+                            tags={tags}
+                            allowedTags={allowedTags.map((tag) => tag.name)}
+                            visibility={visibility}
+                            canChangeVisibility={
+                                savedBoard?.permissions.canManageBoard ?? true
+                            }
+                            onTagsChange={setTags}
+                            onVisibilityChange={setVisibility}
+                        />
+                    </section>
+                </fieldset>
 
                 <section
                     id="board-preview"
@@ -627,6 +662,7 @@ export default function BoardCreator({
                                     disabled={
                                         draftLoading ||
                                         saving !== null ||
+                                        uploading ||
                                         (initialBoardId !== undefined &&
                                             !savedBoard) ||
                                         savedBoard?.status === "published"
@@ -644,6 +680,7 @@ export default function BoardCreator({
                                 disabled={
                                     draftLoading ||
                                     saving !== null ||
+                                    uploading ||
                                     (initialBoardId !== undefined &&
                                         !savedBoard) ||
                                     (savedBoard?.status === "published" &&

@@ -5,6 +5,8 @@ import {
     fromBoardDocument,
     listBoardDrafts,
     listPublishedBoards,
+    mergeServerIds,
+    mergeServerImages,
     saveBoardDocument,
     toBoardWrite,
     uploadBoardImage,
@@ -167,6 +169,114 @@ test("one Board cover is independent of multiple ordered images on an activity",
         [13, 12]
     );
     assert.equal(roundTrip.days[0]?.activities[0]?.coverImageId, 12);
+});
+
+test("explicit null coverImageId preserves null to keep external image as activity cover", () => {
+    const payload: BoardCreatorPayload = {
+        ...draft,
+        coverImageId: 12,
+        images: [
+            draft.images[0]!,
+            {
+                id: "external-img",
+                pinId: "pin-local",
+                publicId: "unsplash-1",
+                source: "unsplash",
+                url: "https://images.unsplash.com/photo-1",
+                thumbnailUrl: "https://images.unsplash.com/photo-1",
+                width: 800,
+                height: 600,
+                capturedAt: null,
+                latitude: null,
+                longitude: null,
+                order: 1,
+                credit: "Photographer",
+                creditUrl: null,
+                sourceUrl: null
+            }
+        ],
+        days: [
+            {
+                ...draft.days[0]!,
+                pins: [{ ...draft.days[0]!.pins[0]!, coverImageId: null }]
+            }
+        ]
+    };
+    const write = toBoardWrite(
+        payload,
+        [{ tagId: 3, name: "Food" }],
+        new Set(["pin-local"])
+    );
+    assert.deepEqual(write.days[0]?.activities[0]?.uploadedImageIds, [12]);
+    assert.equal(write.days[0]?.activities[0]?.coverImageId, null);
+    assert.equal(
+        write.days[0]?.activities[0]?.externalImage?.providerImageId,
+        "unsplash-1"
+    );
+
+    // Reopening the saved Board via fromBoardDocument and saving again preserves null coverImageId
+    const saved: BoardDocument = {
+        ...write,
+        boardId: 10,
+        revision: 1,
+        permissions: { canEditContent: true, canManageBoard: true },
+        tags: [{ tagId: 3, name: "Food" }],
+        images: [
+            {
+                imageId: 12,
+                position: 0,
+                url: "/api/v1/images/12/content?variant=display",
+                thumbnailUrl: "/api/v1/images/12/content?variant=thumbnail",
+                capturedAt: null
+            }
+        ],
+        days: [
+            {
+                ...write.days[0]!,
+                dayId: 7,
+                activities: [
+                    { ...write.days[0]!.activities[0]!, activityId: 25 }
+                ]
+            }
+        ],
+        createdAt: "2026-05-01T00:00:00Z",
+        updatedAt: "2026-05-01T00:00:00Z"
+    };
+    const restored = fromBoardDocument(saved);
+    assert.equal(restored.days[0]?.pins[0]?.coverImageId, null);
+    const roundTrip = toBoardWrite(
+        {
+            ...payload,
+            days: restored.days,
+            images: restored.images
+        },
+        saved.tags,
+        restored.confirmedPhotoPins
+    );
+    assert.equal(roundTrip.days[0]?.activities[0]?.coverImageId, null);
+    assert.deepEqual(roundTrip.days[0]?.activities[0]?.uploadedImageIds, [12]);
+
+    // Conversely, an omitted coverImageId (undefined) falls back to first uploaded photo
+    const omittedPayload: BoardCreatorPayload = {
+        ...payload,
+        days: [
+            {
+                ...draft.days[0]!,
+                pins: [
+                    {
+                        ...draft.days[0]!.pins[0]!,
+                        coverImageId: undefined
+                    }
+                ]
+            }
+        ]
+    };
+    const omittedWrite = toBoardWrite(
+        omittedPayload,
+        [{ tagId: 3, name: "Food" }],
+        new Set(["pin-local"])
+    );
+    assert.equal(omittedWrite.days[0]?.activities[0]?.coverImageId, 12);
 });
 
 test("draft list reads items from data and pagination from meta", async () => {
@@ -378,4 +488,160 @@ test("an HTML API error becomes an actionable message instead of a JSON parse ex
     } finally {
         globalThis.fetch = originalFetch;
     }
+});
+
+test("merging server IDs preserves local edits and newly added pins/images", () => {
+    const sentDays = [
+        {
+            id: "day-local-1",
+            serverDayId: undefined,
+            dayNumber: 1,
+            date: "2026-05-01",
+            pins: [
+                {
+                    id: "pin-local-1",
+                    serverActivityId: undefined,
+                    order: 0,
+                    time: "10:00",
+                    title: "Museum",
+                    description: "Initial visit",
+                    category: "museum" as const,
+                    source: "photo" as const,
+                    location: null
+                }
+            ]
+        }
+    ];
+
+    const savedBoard: BoardDocument = {
+        boardId: 42,
+        revision: 2,
+        status: "draft",
+        title: "Test",
+        description: null,
+        visibility: "collaborators",
+        coverImageId: null,
+        tagIds: [],
+        tags: [],
+        imageIds: [100],
+        images: [
+            {
+                imageId: 100,
+                url: "/api/v1/images/100/content?variant=display",
+                thumbnailUrl: "/api/v1/images/100/content?variant=thumbnail",
+                capturedAt: null,
+                position: 0
+            }
+        ],
+        days: [
+            {
+                dayId: 555,
+                dayNumber: 1,
+                date: "2026-05-01",
+                activities: [
+                    {
+                        activityId: 777,
+                        position: 0,
+                        time: "10:00",
+                        title: "Museum",
+                        note: "Initial visit",
+                        category: "museum",
+                        source: "photo",
+                        location: null,
+                        locationConfirmed: false,
+                        uploadedImageIds: [],
+                        coverImageId: null,
+                        externalImage: null
+                    }
+                ]
+            }
+        ],
+        permissions: { canEditContent: true, canManageBoard: true },
+        createdAt: "2026-05-01T00:00:00Z",
+        updatedAt: "2026-05-01T00:00:00Z"
+    };
+
+    const currentDays = [
+        {
+            ...sentDays[0]!,
+            pins: [
+                {
+                    ...sentDays[0]!.pins[0]!,
+                    title: "Museum (Updated locally)",
+                    description: "Updated description"
+                },
+                {
+                    id: "pin-local-2",
+                    serverActivityId: undefined,
+                    order: 1,
+                    time: "14:00",
+                    title: "New Pin Added During Save",
+                    description: "Fresh pin",
+                    category: "cafe" as const,
+                    source: "manual" as const,
+                    location: null
+                }
+            ]
+        }
+    ];
+
+    const mergedDays = mergeServerIds(currentDays, sentDays, savedBoard);
+
+    assert.equal(mergedDays[0]?.serverDayId, 555);
+    assert.equal(mergedDays[0]?.id, "day-local-1");
+    assert.equal(mergedDays[0]?.pins[0]?.serverActivityId, 777);
+    assert.equal(mergedDays[0]?.pins[0]?.id, "pin-local-1");
+    assert.equal(mergedDays[0]?.pins[0]?.title, "Museum (Updated locally)");
+    assert.equal(mergedDays[0]?.pins[0]?.description, "Updated description");
+    assert.equal(mergedDays[0]?.pins[1]?.id, "pin-local-2");
+    assert.equal(mergedDays[0]?.pins[1]?.serverActivityId, undefined);
+    assert.equal(mergedDays[0]?.pins[1]?.title, "New Pin Added During Save");
+
+    const currentImages = [
+        {
+            id: "img-1",
+            uploadedImageId: 100,
+            pinId: null,
+            publicId: "100",
+            source: "upload" as const,
+            url: "blob://local",
+            thumbnailUrl: "blob://local-thumb",
+            width: 0,
+            height: 0,
+            capturedAt: null,
+            latitude: null,
+            longitude: null,
+            order: 0,
+            credit: null,
+            creditUrl: null,
+            sourceUrl: null
+        },
+        {
+            id: "img-2",
+            uploadedImageId: 200,
+            pinId: null,
+            publicId: "200",
+            source: "upload" as const,
+            url: "blob://pending-upload",
+            thumbnailUrl: "blob://pending-upload-thumb",
+            width: 0,
+            height: 0,
+            capturedAt: null,
+            latitude: null,
+            longitude: null,
+            order: 1,
+            credit: null,
+            creditUrl: null,
+            sourceUrl: null
+        }
+    ];
+
+    const mergedImages = mergeServerImages(currentImages, savedBoard);
+    assert.equal(mergedImages.length, 2);
+    assert.match(
+        mergedImages[0]?.url ?? "",
+        /^http:\/\/localhost:3001\/api\/v1\/images\/100/
+    );
+    assert.equal(mergedImages[1]?.uploadedImageId, 200);
+    assert.equal(mergedImages[1]?.url, "blob://pending-upload");
 });

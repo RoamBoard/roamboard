@@ -15,6 +15,7 @@ import {
 } from "@/types/board-creator";
 
 type Props = {
+    disabled?: boolean;
     days: BoardDayDraft[];
     images: BoardImageDraft[];
     onAddDay: () => void;
@@ -29,7 +30,7 @@ type Props = {
     onRemovePin: (pinId: string) => void;
     onAddActivityImage: (image: BoardImageDraft) => void;
     onAssignActivityImage: (imageId: string, pinId: string | null) => void;
-    onSetActivityCover: (pinId: string, imageId: number) => void;
+    onSetActivityCover: (pinId: string, imageId: number | null) => void;
     onReorderActivityImage: (
         pinId: string,
         imageId: string,
@@ -121,12 +122,14 @@ function DayColumn({
                         (first.activityOrder ?? first.order) -
                         (second.activityOrder ?? second.order)
                 );
-            return [
-                pin.id,
-                photos.find(
-                    (image) => image.uploadedImageId === pin.coverImageId
-                ) ?? photos[0]
-            ] as const;
+            const cover =
+                pin.coverImageId === null
+                    ? (photos.find((image) => image.source === "unsplash") ??
+                      null)
+                    : (photos.find(
+                          (image) => image.uploadedImageId === pin.coverImageId
+                      ) ?? photos[0]);
+            return [pin.id, cover] as const;
         })
     );
     return (
@@ -318,6 +321,7 @@ function DayColumn({
 }
 
 export default function DayPlanner({
+    disabled = false,
     days,
     images,
     onAddDay,
@@ -345,18 +349,22 @@ export default function DayPlanner({
     const removingDay = days.find((day) => day.id === removingDayId) ?? null;
 
     function requestRemoveDay(day: BoardDayDraft) {
-        if (days.length === 1) return;
+        if (disabled || days.length === 1) return;
         if (day.pins.length === 0) onRemoveDay(day.id);
         else setRemovingDayId(day.id);
     }
 
     function openExistingPin(pinId: string) {
+        if (disabled) return;
         setDialogDayId(null);
         setEditingPinId(pinId);
     }
 
     return (
-        <>
+        <fieldset
+            disabled={disabled}
+            className="m-0 min-w-0 border-0 p-0 disabled:pointer-events-none disabled:opacity-80"
+        >
             <div className="mb-4 flex justify-end gap-2">
                 <button
                     type="button"
@@ -460,6 +468,6 @@ export default function DayPlanner({
                     }}
                 />
             ) : null}
-        </>
+        </fieldset>
     );
 }

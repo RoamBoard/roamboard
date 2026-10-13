@@ -17,6 +17,9 @@ export type UploadedBoardImage = {
 type Props = {
     images: BoardImageDraft[];
     coverImageId: number | null;
+    disabled?: boolean;
+    onUploadingChange?: (uploading: boolean) => void;
+    onUploadPromise?: (promise: Promise<unknown>) => void;
     onSelectCover: (imageId: number) => void;
     onUploaded: (items: UploadedBoardImage[]) => void;
     onRemove: (imageId: string) => void;
@@ -95,6 +98,9 @@ function prepareUpload(
 export default function BoardImageIntake({
     images,
     coverImageId,
+    disabled = false,
+    onUploadingChange,
+    onUploadPromise,
     onSelectCover,
     onUploaded,
     onRemove
@@ -108,7 +114,7 @@ export default function BoardImageIntake({
     );
 
     async function upload(files: File[]) {
-        if (files.length === 0) return;
+        if (disabled || busy || files.length === 0) return;
         if (files.length > remaining) {
             setError(
                 `Choose no more than ${remaining} additional image${remaining === 1 ? "" : "s"}.`
@@ -116,25 +122,31 @@ export default function BoardImageIntake({
             return;
         }
         setBusy(true);
+        onUploadingChange?.(true);
         setError("");
-        try {
-            const assets = await Promise.all(
-                files.map((file) => uploadBoardImage(file))
-            );
-            const prepared = assets.map((asset, index) =>
-                prepareUpload(asset, images.length + index)
-            );
-            onUploaded(prepared);
-        } catch (caught) {
-            setError(
-                caught instanceof Error
-                    ? caught.message
-                    : "The images could not be uploaded."
-            );
-        } finally {
-            setBusy(false);
-            if (inputRef.current) inputRef.current.value = "";
-        }
+        const uploadTask = (async () => {
+            try {
+                const assets = await Promise.all(
+                    files.map((file) => uploadBoardImage(file))
+                );
+                const prepared = assets.map((asset, index) =>
+                    prepareUpload(asset, images.length + index)
+                );
+                onUploaded(prepared);
+            } catch (caught) {
+                setError(
+                    caught instanceof Error
+                        ? caught.message
+                        : "The images could not be uploaded."
+                );
+            } finally {
+                setBusy(false);
+                onUploadingChange?.(false);
+                if (inputRef.current) inputRef.current.value = "";
+            }
+        })();
+        onUploadPromise?.(uploadTask);
+        await uploadTask;
     }
 
     return (
@@ -144,10 +156,14 @@ export default function BoardImageIntake({
         >
             <div
                 className="border-line relative grid min-h-80 place-items-center overflow-hidden border-x px-8 text-center sm:min-h-96"
-                onDragOver={(event) => event.preventDefault()}
+                onDragOver={(event) => {
+                    if (!disabled && !busy) event.preventDefault();
+                }}
                 onDrop={(event) => {
                     event.preventDefault();
-                    void upload(Array.from(event.dataTransfer.files));
+                    if (!disabled && !busy) {
+                        void upload(Array.from(event.dataTransfer.files));
+                    }
                 }}
             >
                 <div
@@ -184,7 +200,7 @@ export default function BoardImageIntake({
                     </p>
                     <button
                         type="button"
-                        disabled={busy || remaining === 0}
+                        disabled={disabled || busy || remaining === 0}
                         onClick={() => inputRef.current?.click()}
                         className="border-foreground bg-background text-12 text-foreground hover:bg-foreground hover:text-background mt-5 border px-5 py-3 transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none"
                     >
@@ -200,7 +216,7 @@ export default function BoardImageIntake({
                         accept="image/*,.heic,.heif"
                         multiple
                         className="sr-only"
-                        disabled={busy || remaining === 0}
+                        disabled={disabled || busy || remaining === 0}
                         onChange={(event) =>
                             void upload(Array.from(event.target.files ?? []))
                         }
@@ -218,7 +234,7 @@ export default function BoardImageIntake({
                 ) : null}
                 <button
                     type="button"
-                    disabled={busy || remaining === 0}
+                    disabled={disabled || busy || remaining === 0}
                     onClick={() => inputRef.current?.click()}
                     className="absolute bottom-10 left-1/2 grid size-10 -translate-x-1/2 place-items-center border border-white bg-black/45 text-white backdrop-blur-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white disabled:opacity-40"
                     aria-label="Choose Board images"
@@ -260,10 +276,11 @@ export default function BoardImageIntake({
                             ) : (
                                 <button
                                     type="button"
+                                    disabled={disabled || busy}
                                     onClick={() =>
                                         onSelectCover(image.uploadedImageId!)
                                     }
-                                    className="text-9 mt-1 block underline"
+                                    className="text-9 mt-1 block underline disabled:opacity-40"
                                 >
                                     Set as cover
                                 </button>
@@ -275,8 +292,9 @@ export default function BoardImageIntake({
                             ) : null}
                             <button
                                 type="button"
+                                disabled={disabled || busy}
                                 onClick={() => onRemove(image.id)}
-                                className="bg-background/90 text-14 absolute top-1 right-1 grid size-6 place-items-center"
+                                className="bg-background/90 text-14 absolute top-1 right-1 grid size-6 place-items-center disabled:opacity-40"
                                 aria-label={`Remove image ${index + 1}`}
                             >
                                 ×

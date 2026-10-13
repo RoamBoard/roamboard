@@ -243,11 +243,17 @@ export function toBoardWrite(
                     uploadedImageIds: pinImages.map(
                         (image) => image.uploadedImageId!
                     ),
-                    coverImageId: pinImages.some(
-                        (image) => image.uploadedImageId === pin.coverImageId
-                    )
-                        ? pin.coverImageId!
-                        : (pinImages[0]?.uploadedImageId ?? null),
+                    coverImageId:
+                        pin.coverImageId === undefined
+                            ? (pinImages[0]?.uploadedImageId ?? null)
+                            : pin.coverImageId !== null &&
+                                pinImages.some(
+                                    (image) =>
+                                        image.uploadedImageId ===
+                                        pin.coverImageId
+                                )
+                              ? pin.coverImageId
+                              : null,
                     externalImage: external
                         ? {
                               provider: "unsplash" as const,
@@ -416,4 +422,80 @@ export async function uploadBoardImage(file: File): Promise<{
         url: new URL(image.url, apiOrigin).toString(),
         thumbnailUrl: new URL(image.thumbnailUrl, apiOrigin).toString()
     };
+}
+
+export function mergeServerIds(
+    currentDays: BoardDayDraft[],
+    sentDays: BoardDayDraft[],
+    savedBoard: BoardDocument
+): BoardDayDraft[] {
+    const serverDayIdByLocalDayId = new Map<string, number>();
+    const serverActivityIdByLocalPinId = new Map<string, number>();
+    const serverCoverImageByLocalPinId = new Map<string, number | null>();
+
+    sentDays.forEach((sentDay, dayIndex) => {
+        const serverDay = savedBoard.days[dayIndex];
+        if (serverDay) {
+            serverDayIdByLocalDayId.set(sentDay.id, serverDay.dayId);
+            sentDay.pins.forEach((sentPin, pinIndex) => {
+                const serverAct = serverDay.activities[pinIndex];
+                if (serverAct) {
+                    serverActivityIdByLocalPinId.set(
+                        sentPin.id,
+                        serverAct.activityId
+                    );
+                    serverCoverImageByLocalPinId.set(
+                        sentPin.id,
+                        serverAct.coverImageId
+                    );
+                }
+            });
+        }
+    });
+
+    return currentDays.map((day) => {
+        const serverDayId =
+            serverDayIdByLocalDayId.get(day.id) ?? day.serverDayId;
+        return {
+            ...day,
+            serverDayId,
+            pins: day.pins.map((pin) => {
+                const serverActivityId =
+                    serverActivityIdByLocalPinId.get(pin.id) ??
+                    pin.serverActivityId;
+                const coverImageId = serverCoverImageByLocalPinId.has(pin.id)
+                    ? (serverCoverImageByLocalPinId.get(pin.id) ?? null)
+                    : pin.coverImageId;
+                return {
+                    ...pin,
+                    serverActivityId,
+                    coverImageId
+                };
+            })
+        };
+    });
+}
+
+export function mergeServerImages(
+    currentImages: BoardImageDraft[],
+    savedBoard: BoardDocument
+): BoardImageDraft[] {
+    const serverImageById = new Map(
+        savedBoard.images.map((img) => [img.imageId, img])
+    );
+    return currentImages.map((img) => {
+        if (img.uploadedImageId && serverImageById.has(img.uploadedImageId)) {
+            const serverImg = serverImageById.get(img.uploadedImageId)!;
+            return {
+                ...img,
+                url: new URL(serverImg.url, apiOrigin).toString(),
+                thumbnailUrl: new URL(
+                    serverImg.thumbnailUrl,
+                    apiOrigin
+                ).toString(),
+                order: serverImg.position
+            };
+        }
+        return img;
+    });
 }

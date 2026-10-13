@@ -22,7 +22,7 @@ type Props = {
     onDelete: () => void;
     onAddImage: (image: BoardImageDraft) => void;
     onAssignImage: (imageId: string, pinId: string | null) => void;
-    onSetCover: (pinId: string, imageId: number) => void;
+    onSetCover: (pinId: string, imageId: number | null) => void;
     onReorderImage: (pinId: string, imageId: string, direction: -1 | 1) => void;
 };
 
@@ -56,9 +56,12 @@ export default function PinEditorDialog({
         (image) => image.source === "upload" && image.pinId !== pin.id
     );
     const cover =
-        activityImages.find(
-            (image) => image.uploadedImageId === draft.coverImageId
-        ) ?? activityImages[0];
+        draft.coverImageId === null
+            ? (activityImages.find((image) => image.source === "unsplash") ??
+              null)
+            : (activityImages.find(
+                  (image) => image.uploadedImageId === draft.coverImageId
+              ) ?? activityImages[0]);
 
     async function upload(files: File[]) {
         if (files.length === 0) return;
@@ -215,25 +218,23 @@ export default function PinEditorDialog({
                                     <span className="text-10 mt-2 block font-bold">
                                         Activity cover
                                     </span>
-                                ) : item.uploadedImageId ? (
+                                ) : (
                                     <button
                                         type="button"
                                         onClick={() => {
-                                            onSetCover(
-                                                pin.id,
-                                                item.uploadedImageId!
-                                            );
+                                            const nextCoverId =
+                                                item.uploadedImageId ?? null;
+                                            onSetCover(pin.id, nextCoverId);
                                             setDraft((current) => ({
                                                 ...current,
-                                                coverImageId:
-                                                    item.uploadedImageId
+                                                coverImageId: nextCoverId
                                             }));
                                         }}
                                         className="text-10 mt-2 underline"
                                     >
                                         Set as activity cover
                                     </button>
-                                ) : null}
+                                )}
                                 {item.source === "upload" ? (
                                     <div className="text-10 mt-2 flex flex-wrap gap-2">
                                         <button
