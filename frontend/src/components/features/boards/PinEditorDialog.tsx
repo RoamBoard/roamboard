@@ -6,6 +6,7 @@ import { useRef, useState } from "react";
 import PinCategoryIcon from "@/components/ui/PinCategoryIcon";
 import { pinCategories } from "@/lib/board-options";
 import { uploadBoardImage } from "@/lib/board-creator-api";
+import { useDialogFocus } from "@/lib/use-dialog-focus";
 import type {
     BoardImageDraft,
     BoardPinDraft,
@@ -37,6 +38,8 @@ export default function PinEditorDialog({
     onSetCover,
     onReorderImage
 }: Props) {
+    const dialogRef = useRef<HTMLDivElement>(null);
+    useDialogFocus(dialogRef, onClose);
     const inputRef = useRef<HTMLInputElement>(null);
     const [draft, setDraft] = useState(pin);
     const [uploading, setUploading] = useState(false);
@@ -110,10 +113,12 @@ export default function PinEditorDialog({
             }}
         >
             <div
+                ref={dialogRef}
+                tabIndex={-1}
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="edit-pin-heading"
-                className="bg-background max-h-[92dvh] w-full max-w-xl overflow-y-auto p-6 shadow-2xl sm:p-8"
+                className="bg-background max-h-[92dvh] w-full max-w-xl overflow-y-auto p-6 shadow-2xl outline-none sm:p-8"
             >
                 <div className="flex items-start justify-between">
                     <div>
@@ -377,7 +382,7 @@ export default function PinEditorDialog({
                     />
                 </label>
                 {draft.location ? (
-                    <p className="text-12 text-graphite mt-4 leading-5">
+                    <p className="text-12 text-muted-foreground mt-4 leading-5">
                         {draft.location.address}
                     </p>
                 ) : null}

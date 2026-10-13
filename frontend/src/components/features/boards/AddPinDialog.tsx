@@ -8,6 +8,7 @@ import InteractiveMap, {
 } from "@/components/features/providers/InteractiveMap";
 import PinCategoryIcon from "@/components/ui/PinCategoryIcon";
 import { categoryFromMapboxType, pinCategories } from "@/lib/board-options";
+import { useDialogFocus } from "@/lib/use-dialog-focus";
 import {
     loadMapboxMapSession,
     loadProviderConfig,
@@ -92,6 +93,7 @@ export default function AddPinDialog({
 }: Props) {
     const photoRequestRef = useRef(0);
     const dialogRef = useRef<HTMLDivElement>(null);
+    useDialogFocus(dialogRef, onClose);
     const [token, setToken] = useState<string>();
     const [query, setQuery] = useState("");
     const [results, setResults] = useState<MapboxSearchResult[]>([]);
@@ -137,7 +139,6 @@ export default function AddPinDialog({
     );
 
     useEffect(() => {
-        dialogRef.current?.focus();
         void loadProviderConfig()
             .then((config) =>
                 config.mapbox.configured
@@ -312,7 +313,7 @@ export default function AddPinDialog({
             >
                 <header className="border-line flex items-start justify-between border-b p-5 sm:p-7">
                     <div>
-                        <p className="text-10 tracking-label text-graphite font-bold uppercase">
+                        <p className="text-10 tracking-label text-muted-foreground font-bold uppercase">
                             Day {day.dayNumber}
                         </p>
                         <h2

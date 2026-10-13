@@ -1,5 +1,8 @@
 "use client";
 
+import { useRef } from "react";
+import { useDialogFocus } from "@/lib/use-dialog-focus";
+
 type Props = {
     title: string;
     description: string;
@@ -15,6 +18,9 @@ export default function ConfirmDialog({
     onCancel,
     onConfirm
 }: Props) {
+    const dialogRef = useRef<HTMLDivElement>(null);
+    useDialogFocus(dialogRef, onCancel);
+
     return (
         <div
             className="fixed inset-0 z-[60] grid place-items-center bg-black/45 p-4"
@@ -24,11 +30,13 @@ export default function ConfirmDialog({
             }}
         >
             <div
+                ref={dialogRef}
+                tabIndex={-1}
                 role="alertdialog"
                 aria-modal="true"
                 aria-labelledby="confirm-title"
                 aria-describedby="confirm-description"
-                className="bg-background w-full max-w-md p-7 shadow-2xl"
+                className="bg-background w-full max-w-md p-7 shadow-2xl outline-none"
             >
                 <h2
                     id="confirm-title"
@@ -38,7 +46,7 @@ export default function ConfirmDialog({
                 </h2>
                 <p
                     id="confirm-description"
-                    className="text-14 text-graphite mt-3 leading-6"
+                    className="text-14 text-muted-foreground mt-3 leading-6"
                 >
                     {description}
                 </p>
