@@ -5,11 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import ProfileControl from "../src/components/ui/ProfileControl";
 import Sidebar from "../src/components/layout/Sidebar";
-import {
-    getMockAuthState,
-    getMockAuthStateServerSnapshot,
-    setMockAuthState
-} from "../src/data/mock-social";
+import { getMockAuthState, getMockAuthStateServerSnapshot, setMockAuthState } from "../src/data/mock-social";
 
 const mockRouter = {
     back: () => {},
@@ -80,5 +76,3 @@ test("Sidebar renders navigation links and does not render theme select", () => 
     assert.ok(html.includes('href="/discover"'));
     assert.ok(!html.includes("Color theme"));
 });
-
-
