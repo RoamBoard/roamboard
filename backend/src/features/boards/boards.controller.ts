@@ -5,6 +5,7 @@ import type { BoardReplace, BoardWrite } from "./boards.schemas.js";
 import type { BoardsService } from "./boards.types.js";
 
 interface BoardController {
+    listAccessible: RequestHandler;
     listTags: RequestHandler;
     listCategories: RequestHandler;
     create: RequestHandler;
@@ -20,6 +21,11 @@ function userId(locals: Record<string, unknown>): string {
 
 export function createBoardsController(service: BoardsService): BoardController {
     return {
+        listAccessible: async (_request, response) => {
+            const { page, limit } = response.locals.query as { page: number; limit: number };
+            const result = await service.listAccessible(userId(response.locals), page, limit);
+            response.json({ data: result.items, meta: { page, limit, hasMore: result.hasMore } });
+        },
         listTags: async (_request, response) => {
             response.json({ data: await service.listTags() });
         },

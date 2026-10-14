@@ -69,7 +69,7 @@ role passwords; use SQL role management and update the corresponding credentials
 In a separate PowerShell terminal on each laptop, open an SSH tunnel:
 
 ```powershell
-ssh -N -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -L 127.0.0.1:15432:127.0.0.1:5432 YOUR_SSH_USER@YOUR_VM_IP
+ssh -i <local-path-to-your-key> -N -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -L 127.0.0.1:15432:127.0.0.1:5432 YOUR_SSH_USER@YOUR_VM_IP
 ```
 
 Keep this terminal open while developing. Port 15432 avoids a clash with a local Postgres
@@ -126,6 +126,10 @@ sudo docker compose --env-file ../.env exec -T postgres psql -U roamboard_user -
 The filename above is an example, not an existing migration. Coordinate one maintainer
 to apply migrations and record applied filenames; there is currently no migration ledger.
 Restarting the container does not apply new migrations to an existing database.
+
+Record shared development applications in [the manual migration log](../db/MIGRATION_LOG.md).
+Migration `004_api_features.sql` was applied on 2026-10-14; do not reapply it to
+the shared database. Fresh databases still need all ordered migrations.
 
 Useful commands from the same directory:
 

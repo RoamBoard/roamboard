@@ -52,6 +52,9 @@ function fakeBoards(memberRole: "editor" | "viewer" | null = null): BoardReposit
     let nextDayId = 10;
     let nextActivityId = 100;
     return {
+        async listAccessible() {
+            return { items: [], hasMore: false };
+        },
         async listTags() {
             return [
                 { tagId: 1, name: "Food" },

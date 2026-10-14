@@ -90,10 +90,10 @@ export type CloudinaryAsset = {
     metadata?: PhotoMetadata;
 };
 
-const apiOrigin = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001";
+const apiOrigin = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-    const response = await fetch(`${apiOrigin}${path}`, init);
+    const response = await fetch(`${apiOrigin}${path}`, { ...init, credentials: "include" });
     const body = (await response.json()) as {
         data?: T;
         error?: { message?: string };
@@ -173,7 +173,8 @@ export const saveGooglePlace = (placeId: string) =>
 
 export async function deleteSavedGooglePlace(placeId: string): Promise<void> {
     const response = await fetch(`${apiOrigin}/api/v1/providers/google-places/saved/${encodeURIComponent(placeId)}`, {
-        method: "DELETE"
+        method: "DELETE",
+        credentials: "include"
     });
     if (!response.ok) {
         const body = (await response.json()) as {
@@ -191,7 +192,11 @@ export const buildCloudinaryDelivery = (publicId: string, width: string, height:
 export async function uploadCloudinaryProvider(file: File): Promise<CloudinaryAsset> {
     const form = new FormData();
     form.append("file", file, file.name);
-    const response = await fetch(`${apiOrigin}/api/v1/providers/cloudinary/upload`, { method: "POST", body: form });
+    const response = await fetch(`${apiOrigin}/api/v1/providers/cloudinary/upload`, {
+        method: "POST",
+        credentials: "include",
+        body: form
+    });
     const body = (await response.json()) as {
         data?: CloudinaryAsset;
         error?: { message?: string };

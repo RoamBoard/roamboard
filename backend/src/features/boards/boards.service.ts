@@ -83,7 +83,14 @@ async function validateDocument(repository: BoardRepository, input: BoardWrite):
     return normalized;
 }
 
-export function createBoardsService(repository: BoardRepository): BoardsService {
+export function createBoardsService(
+    repository: BoardRepository,
+    refreshSearch?: (boardId: number) => Promise<void>
+): BoardsService {
+    // PostgreSQL remains authoritative if the derived search index is temporarily unavailable.
+    const refresh = async (boardId: number) => {
+        await refreshSearch?.(boardId).catch(() => undefined);
+    };
     return {
         listTags: () => repository.listTags(),
         listCategories: () => repository.listCategories(),
@@ -96,7 +103,9 @@ export function createBoardsService(repository: BoardRepository): BoardsService 
             )
                 invalid();
             const validated = await validateDocument(repository, input);
-            return repository.saveBoard(userId, null, null, validated);
+            const board = await repository.saveBoard(userId, null, null, validated);
+            await refresh(board.boardId);
+            return board;
         },
         async replace(userId, boardId, revision, input) {
             const access = await repository.getAccess(boardId, userId);
@@ -112,7 +121,14 @@ export function createBoardsService(repository: BoardRepository): BoardsService 
                 throw new AppError(403, "Only the owner can change visibility", "FORBIDDEN");
             }
             const validated = await validateDocument(repository, input);
-            return repository.saveBoard(userId, boardId, revision, validated);
+            if (!owner && input.isCompleted !== undefined) {
+                const current = await repository.getBoard(boardId, userId);
+                if (current?.isCompleted !== input.isCompleted)
+                    throw new AppError(403, "Only the owner can change completion", "FORBIDDEN");
+            }
+            const board = await repository.saveBoard(userId, boardId, revision, validated);
+            await refresh(boardId);
+            return board;
         },
         async read(boardId, userId) {
             const board = await repository.getBoard(boardId, userId);
@@ -121,6 +137,7 @@ export function createBoardsService(repository: BoardRepository): BoardsService 
         },
         listDrafts: (userId, page, limit) => repository.listDrafts(userId, page, limit),
         listPublished: (userId, page, limit) => repository.listPublished(userId, page, limit),
+        listAccessible: (userId, page, limit) => repository.listAccessible(userId, page, limit),
         async delete(boardId, userId) {
             const access = await repository.getAccess(boardId, userId);
             if (!access) throw new AppError(404, "Board not found", "NOT_FOUND");
@@ -130,6 +147,7 @@ export function createBoardsService(repository: BoardRepository): BoardsService 
             if (!(await repository.deleteBoard(boardId, userId))) {
                 throw new AppError(404, "Board not found", "NOT_FOUND");
             }
+            await refresh(boardId);
         }
     };
 }

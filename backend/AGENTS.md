@@ -4,8 +4,8 @@ These instructions apply to `backend/`. Use `../layered-backend-demo1/` as the r
 
 ## Current state and sources of truth
 
-- This is a Node.js 24, TypeScript, Express 5 API using npm. `src/app.ts` creates the app; `src/server.ts` starts it. `src/db.ts` owns the shared `pg` pool. The first feature module, `src/features/auth/`, verifies Google ID tokens and manages PostgreSQL-backed sessions. The frontend uses this module for Google sign-in, session lookup, and logout.
-- PostgreSQL schema lives in ordered files under `db/migrations/`; `001_initial.sql` is the baseline and `002_auth_session.sql` adds sessions. Treat migrations as the database source of truth. Do not treat the demo's in-memory Todo model or the frontend's mock data as persistent Roamboard behavior.
+- This is a Node.js 24, TypeScript, Express 5 API using npm. `src/app.ts` creates the app; `src/server.ts` starts it. `src/db.ts` owns the shared `pg` pool. The `auth` feature manages Google sign-in and sessions; `boards` and `images` persist canonical documents and protected uploads; `providers`, `destinations`, `users`, `search`, and `quotas` connect the existing frontend API surfaces. See `BOARD_API_CONTRACT.md` and `API_FEATURES_CONTRACT.md` for implemented behavior.
+- PostgreSQL schema lives in ordered files under `db/migrations/`: 001 is the baseline, 002 adds sessions, 003 adds canonical Board content/uploads, and 004 adds shared provider counters, caller-owned place references and profile timestamps. Treat migrations as the database source of truth. Do not treat the demo's in-memory Todo model or the frontend's mock data as persistent Roamboard behavior.
 - Check the relevant schema, `../frontend/REQUIREMENTS.md`, and `../frontend/src/types/` before defining a feature's contract. Preserve the product decisions already represented in the schema; ask about genuinely unresolved behavior instead of silently substituting the demo's choices.
 - Keep `backend/.env` and credentials out of Git. Document new variables in `.env.example` and `README.md` without real secrets.
 - Team development uses a shared PostgreSQL container on Azure through SSH tunnels; the backend still runs locally. See `README.md` for onboarding and `deploy/README.md` for maintenance. Do not recreate the shared database or rerun applied migrations when onboarding. `npm run check:setup` checks auth configuration and database access without changing data. Backend `GOOGLE_CLIENT_ID` must match frontend `NEXT_PUBLIC_GOOGLE_CLIENT_ID`.
@@ -49,6 +49,11 @@ Use a feature folder under `src/features/<feature>/` with the relevant files:
 - Use `.js` suffixes for relative TypeScript imports under NodeNext/ESM, as the current backend and demo do.
 
 ## API and data rules
+
+Country codes in application contracts and responses are validated ISO 3166-1
+alpha-3. Reuse `shared/country-codes.json` through `src/shared/countries.ts`;
+convert provider alpha-2 responses to alpha-3 and convert outgoing Geoapify
+country filters to alpha-2. Include the shared JSON when deploying backend builds.
 
 - Mount product endpoints under `/api/v1`, following the demo. Keep `/health` and `/health/db` as operational endpoints outside that prefix.
 - Define a feature's request/response contract, permissions, success cases, and failure cases before implementing its endpoint. Use consistent HTTP status codes and a consistent error shape. Never send raw SQL, stack traces, tokens, or provider secrets to clients.

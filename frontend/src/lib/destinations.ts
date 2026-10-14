@@ -37,10 +37,10 @@ export type DestinationContext = {
     unavailable: string[];
 };
 
-const apiOrigin = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001";
+const apiOrigin = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 async function request<T>(path: string, signal?: AbortSignal): Promise<T> {
-    const response = await fetch(`${apiOrigin}${path}`, { signal });
+    const response = await fetch(`${apiOrigin}${path}`, { signal, credentials: "include" });
     const body = (await response.json()) as {
         data?: T;
         error?: { message?: string };

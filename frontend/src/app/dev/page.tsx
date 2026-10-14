@@ -34,6 +34,11 @@ const routes = [
     },
     {
         href: "/dev/profile",
+        title: "Profile API lab",
+        description: "Edit your signed-in profile, inspect travel statistics, and create a test Board."
+    },
+    {
+        href: "/dev/profile",
         title: "Profile lab",
         description: "Edit the demo profile, create Boards, and inspect statistics and the travel map."
     },

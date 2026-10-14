@@ -7,6 +7,7 @@ import { createImagesRepository } from "./images.repository.js";
 import { createImagesRouter } from "./images.routes.js";
 import { createImagesService } from "./images.service.js";
 import type { ImageProvider, ImagesRepository, ImagesService } from "./images.types.js";
+import type { QuotaService } from "../quotas/quota.service.js";
 
 export interface ImagesModule {
     router: Router;
@@ -19,13 +20,15 @@ export function createImagesModule(
     attachUser: RequestHandler,
     boards: BoardRepository,
     repository: ImagesRepository = createImagesRepository(),
-    provider: ImageProvider = createCloudinaryProvider()
+    provider?: ImageProvider,
+    quota?: QuotaService
 ): ImagesModule {
-    const service = createImagesService(repository, provider, boards);
+    const imageProvider = provider ?? createCloudinaryProvider(quota);
+    const service = createImagesService(repository, imageProvider, boards);
     return {
         router: createImagesRouter(createImagesController(service), attachUser),
         service,
         repository,
-        provider
+        provider: imageProvider
     };
 }

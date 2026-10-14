@@ -31,7 +31,7 @@ export const mockBoards: Board[] = [
         visibility: "public",
         isCompleted: false,
         tags: ["foodie", "hiking"],
-        destinations: [{ country: "Japan", countryCode: "JP", cities: ["Tokyo"] }],
+        destinations: [{ country: "Japan", countryCode: "JPN", cities: ["Tokyo"] }],
         startDate: "2026-11-14",
         endDate: "2026-11-15",
         durationDays: 2,
@@ -56,7 +56,7 @@ export const mockBoards: Board[] = [
                     address: "Asakusa, Taito City, Tokyo",
                     latitude: 35.7148,
                     longitude: 139.7967,
-                    countryCode: "JP",
+                    countryCode: "JPN",
                     city: "Tokyo",
                     // Simulated selection only. This placeholder is not a real Google place ID.
                     googlePlaceId: "mock-google-place-senso-ji",
@@ -80,7 +80,7 @@ export const mockBoards: Board[] = [
                     name: "Ueno Park",
                     latitude: 35.7146,
                     longitude: 139.7745,
-                    countryCode: "JP",
+                    countryCode: "JPN",
                     city: "Tokyo"
                 },
                 notes: "Keep this as an option for a quiet afternoon walk.",
@@ -107,7 +107,7 @@ export const mockBoards: Board[] = [
         visibility: "friends",
         isCompleted: true,
         tags: ["foodie", "hiking", "photography"],
-        destinations: [{ country: "Denmark", countryCode: "DK", cities: ["Copenhagen"] }],
+        destinations: [{ country: "Denmark", countryCode: "DNK", cities: ["Copenhagen"] }],
         startDate: "2026-08-22",
         endDate: "2026-08-22",
         durationDays: 1,
@@ -131,7 +131,7 @@ export const mockBoards: Board[] = [
                     name: "Nyhavn",
                     latitude: 55.6798,
                     longitude: 12.5904,
-                    countryCode: "DK",
+                    countryCode: "DNK",
                     city: "Copenhagen"
                 },
                 date: "2026-08-22",
@@ -175,9 +175,9 @@ export const mockBoards: Board[] = [
         isCompleted: false,
         tags: ["nature", "culture"],
         destinations: [
-            { country: "France", countryCode: "FR", cities: ["Paris", "Lyon"] },
-            { country: "Switzerland", countryCode: "CH", cities: ["Zurich"] },
-            { country: "Italy", countryCode: "IT" }
+            { country: "France", countryCode: "FRA", cities: ["Paris", "Lyon"] },
+            { country: "Switzerland", countryCode: "CHE", cities: ["Zurich"] },
+            { country: "Italy", countryCode: "ITA" }
         ],
         durationDays: 14,
         budget: "high",
@@ -204,7 +204,7 @@ export const mockBoards: Board[] = [
                     name: "Burkliplatz, Zurich",
                     latitude: 47.3661,
                     longitude: 8.5413,
-                    countryCode: "CH",
+                    countryCode: "CHE",
                     city: "Zurich"
                 },
                 notes: "A possible stop by the lake. Choose a day once the trains are booked.",

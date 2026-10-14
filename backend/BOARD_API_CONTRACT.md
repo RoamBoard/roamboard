@@ -184,7 +184,7 @@ Example published request with an empty second day, a Board image, an activity p
 }
 ```
 
-`imageIds` defines the Board gallery and its order. An activity's `uploadedImageIds` must be a subset of it; image 12 is unattached in this example and becomes the Board cover. Each image ID can belong to at most one activity. `externalImage` may be `null`. `isCompleted` is omitted by this creator and defaults to `false`.
+`imageIds` defines the Board gallery and its order. An activity's `uploadedImageIds` must be a subset of it; image 12 is unattached in this example and becomes the Board cover. Each image ID can belong to at most one activity. `externalImage` may be `null`. Optional `isCompleted` defaults to `false` on creation and preserves the saved value when omitted on replacement. The creator omits it; the profile lab uses it for completed test trips. Only the owner can change completion; editors may retain its current value.
 
 An empty draft may send `{ "status": "draft", "title": "", "description": null, "visibility": "collaborators", "tagIds": [], "imageIds": [], "days": [] }`. Publication of that document fails validation and creates nothing.
 
@@ -243,6 +243,7 @@ Owner-only. Returns `204` with no body. Database relationships such as days, act
 | 403  | `ORIGIN_NOT_ALLOWED`                  | Cookie-authenticated mutation from an unapproved Origin                                                 |
 | 404  | `NOT_FOUND`                           | Board or child absent, or Board hidden from caller                                                      |
 | 409  | `STALE_BOARD_REVISION`                | Another save changed the Board since this editor loaded it                                              |
+| 429  | `PROVIDER_QUOTA_EXHAUSTED`            | Cloudinary Admin budget exhausted before upload verification                                            |
 | 409  | `UPLOAD_NOT_READY` / `UPLOAD_EXPIRED` | The direct upload has not arrived at Cloudinary or its authorization expired                            |
 | 413  | `IMAGE_TOO_LARGE`                     | A photo exceeds the 10,000,000-byte upload limit                                                        |
 | 422  | `PUBLISH_REQUIREMENTS_NOT_MET`        | Missing publish title, no confirmed located activity, or unconfirmed photo suggestion                   |

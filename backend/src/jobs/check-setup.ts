@@ -33,6 +33,11 @@ try {
     report(true, "Database connection works with this backend's DATABASE_URL.");
     await getPool().query("SELECT user_id, username, display_name FROM app_user LIMIT 0");
     await getPool().query("SELECT token_hash, user_id, expires_at FROM auth_session LIMIT 0");
+    await getPool().query("SELECT revision, status, updated_at FROM board LIMIT 0");
+    await getPool().query("SELECT created_at, updated_at FROM app_user LIMIT 0");
+    await getPool().query("SELECT policy_id, window_name FROM api_quota_usage LIMIT 0");
+    await getPool().query("SELECT user_id, place_id FROM google_place_reference LIMIT 0");
+    report(true, "Board and API feature migrations 003 and 004 exist.");
     const permissions = await getPool().query<{ writable: boolean }>(
         `SELECT has_table_privilege(current_user, 'app_user', 'INSERT')
             AND has_table_privilege(current_user, 'auth_session', 'INSERT')

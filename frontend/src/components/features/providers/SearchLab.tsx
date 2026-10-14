@@ -6,7 +6,6 @@ import { searchIndex, suggestIndex, type SearchResult } from "@/lib/search";
 export default function SearchLab() {
     const [query, setQuery] = useState("stokholm");
     const [filters, setFilters] = useState({
-        entityType: "",
         country: "",
         category: ""
     });
@@ -50,12 +49,13 @@ export default function SearchLab() {
     return (
         <div className="border-line mt-8 border p-6">
             <div className="flex flex-wrap items-baseline justify-between gap-3">
-                <h2 className="font-display text-24 text-foreground font-bold">Elasticsearch discovery index</h2>
+                <h2 className="font-display text-24 text-foreground font-bold">Public Board search index</h2>
                 <span className="text-10 tracking-label text-graphite font-bold uppercase">fuzzy + autocomplete</span>
             </div>
             <p className="text-14 text-graphite mt-3 max-w-2xl leading-6">
                 Try misspellings such as “stokholm”. Suggestions use search-as-you-type; results use fuzzy matching,
-                field boosts, public visibility, filters, and popularity scoring.
+                field boosts, public Board visibility and filters. Activities and locations are not indexed as search
+                results.
             </p>
             <form className="mt-6" onSubmit={(event) => void submit(event)}>
                 <label className="text-12 text-graphite">
@@ -92,25 +92,7 @@ export default function SearchLab() {
                         ))}
                     </div>
                 ) : null}
-                <div className="mt-5 grid gap-4 sm:grid-cols-3">
-                    <label className="text-12 text-graphite">
-                        Entity
-                        <select
-                            className="border-line text-14 text-foreground mt-2 w-full border-b bg-transparent py-2 outline-none"
-                            value={filters.entityType}
-                            onChange={(event) =>
-                                setFilters({
-                                    ...filters,
-                                    entityType: event.target.value
-                                })
-                            }
-                        >
-                            <option value="">All types</option>
-                            <option value="destination">Destination</option>
-                            <option value="place">Place</option>
-                            <option value="itinerary">Itinerary</option>
-                        </select>
-                    </label>
+                <div className="mt-5 grid gap-4 sm:grid-cols-2">
                     <label className="text-12 text-graphite">
                         Country
                         <input
@@ -150,8 +132,8 @@ export default function SearchLab() {
                 </div>
             </form>
             <p className="text-12 text-graphite mt-5">
-                Reindex the demo safely from the API container with <code>npm run search:reindex:container</code>. The
-                HTTP reindex route stays protected in Docker.
+                Reindex public Boards through <code>POST /api/v1/search/reindex</code> with a signed-in development
+                session. Find restaurants and landmarks in the Mapbox tab.
             </p>
             {error ? (
                 <p className="text-14 mt-5" role="alert">

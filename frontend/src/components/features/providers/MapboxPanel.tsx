@@ -29,7 +29,8 @@ function formatLocationType(type: string): string {
         place: "City / place",
         postcode: "Postal area",
         region: "Region",
-        street: "Street"
+        street: "Street",
+        poi: "Point of interest"
     };
     return labels[type] ?? type.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
 }
@@ -169,8 +170,8 @@ export default function MapboxPanel({ configured, initialPoint }: Props) {
                 <span className="text-10 tracking-label text-graphite font-bold uppercase">configured</span>
             </div>
             <p className="text-14 text-graphite mt-3 leading-6">
-                Search for an address, neighborhood, city, or region. Save results as numbered pinpoints, click the map
-                to add a location, then route between two or more saved stops.
+                Search for restaurants, landmarks, addresses or cities through Mapbox. Add temporary results as numbered
+                pinpoints, click the map to add a location, then route between two or more stops.
             </p>
             <form className="mt-6 flex flex-wrap items-end gap-4" onSubmit={(event) => void submitSearch(event)}>
                 <label className="text-12 text-graphite min-w-56 flex-1">

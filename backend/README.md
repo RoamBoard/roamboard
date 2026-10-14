@@ -1,5 +1,32 @@
 # Roamboard backend
 
+Existing frontend provider, destination, profile, developer Board browser and
+public search features run here. See
+[API_FEATURES_CONTRACT.md](API_FEATURES_CONTRACT.md) for routes, permissions,
+budgets and errors; the creator uses [BOARD_API_CONTRACT.md](BOARD_API_CONTRACT.md).
+
+Apply the new ordered `db/migrations/004_api_features.sql` once through the team's
+database maintenance workflow after migrations 001–003. Do not rerun older
+migrations or rebuild the shared database. Integration tests apply the files
+only inside temporary test schemas.
+
+`npm run dev` selects `NODE_ENV=development`. Cloudinary lab management, Google
+Places lab operations, the developer Board list and search reindexing also
+require a Google session. They are unavailable outside development. Deployed
+startup must use `npm start`, not the development command.
+
+Configure optional provider keys using `.env.example`. Missing keys produce
+explicit unavailable states. For fuzzy Board search, set `ELASTICSEARCH_NODE`
+and optionally `ELASTIC_API_KEY`; no Elasticsearch SDK or new dependency is used.
+With a signed-in development session, call `POST /api/v1/search/reindex` from
+`CLIENT_ORIGIN` once for existing public, published Boards. Later saves/deletes
+update the derived index; reindex after a search outage to reconcile missed updates.
+
+Indexed search contains only public Boards. POIs, restaurants and landmarks use
+the separate Mapbox Search Box text-search endpoint, with its own conservative
+495/month and 9/second application budget. These temporary provider results are
+not indexed or written to the database; persistent Board locations still use Geoapify.
+
 The API uses PostgreSQL through `pg`. `/health` checks Express; `/health/db`
 checks that PostgreSQL accepts a query. The latter does not verify migrations.
 
@@ -48,7 +75,7 @@ npm.cmd run check:setup
 npm.cmd run dev
 ```
 
-`check:setup` checks database connectivity, the authentication tables/permissions, and
+`check:setup` checks database connectivity, migrations 003/004, authentication tables/permissions, and
 Google configuration without changing data or printing credentials. If a frontend
 `.env.local` exists, it also checks that its Google client ID matches the backend.
 This checks configuration, not a complete Google login or every application migration.
@@ -108,12 +135,12 @@ follow [the shared database deployment guide](deploy/README.md). The existing
 2. Copy `.env.example` to `.env` and replace `your_password` with the role's
    password. The `.env` file is ignored by Git. If the password contains URL
    punctuation, URL-encode it in `DATABASE_URL`.
-3. Apply migrations in order: `001_initial.sql`, `002_auth_session.sql`, and
-   `003_board_creator.sql`. If your database already has the first two, apply
-   only `003_board_creator.sql`. From `backend/`, for example:
+3. Apply unapplied migrations in order: `001_initial.sql`, `002_auth_session.sql`,
+   `003_board_creator.sql`, `004_api_features.sql`. If the first three are already
+   applied, apply only 004. From `backend/`, for example:
 
     ```powershell
-    psql -h localhost -U roamboard_user -d roamboard_dev -v ON_ERROR_STOP=1 -f db/migrations/003_board_creator.sql
+    psql -h localhost -U roamboard_user -d roamboard_dev -v ON_ERROR_STOP=1 -f db/migrations/004_api_features.sql
     ```
 
     Use the database name and role from your own `DATABASE_URL`. Do not rerun an
