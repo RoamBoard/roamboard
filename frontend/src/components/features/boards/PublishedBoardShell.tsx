@@ -4,7 +4,6 @@ import { useEffect, useState, type ReactNode } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import Sidebar from "@/components/layout/Sidebar";
 import ProfileControl from "@/components/ui/ProfileControl";
-import ThemeSelect from "@/components/ui/ThemeSelect";
 
 type Props = {
     children: ReactNode;
@@ -47,9 +46,6 @@ export default function PublishedBoardShell({ children }: Props) {
                 className="pointer-events-none fixed inset-x-0 top-0 z-30 h-dvh [&_a]:pointer-events-auto [&_button]:pointer-events-auto"
             >
                 <ProfileControl />
-                <div className="absolute top-5 right-[8.25rem] sm:right-[18%]">
-                    <ThemeSelect />
-                </div>
             </motion.div>
             <main
                 id="published-board-content"
