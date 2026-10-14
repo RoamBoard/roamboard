@@ -27,13 +27,10 @@ async function validateDocument(repository: BoardRepository, input: BoardWrite):
     const normalized = normalize(input);
     if (new Set(input.tagIds).size !== input.tagIds.length) invalid();
     if (new Set(input.imageIds).size !== input.imageIds.length) invalid();
-    if (input.coverImageId !== undefined && input.coverImageId !== null &&
-        !input.imageIds.includes(input.coverImageId)) invalid();
+    if (input.coverImageId !== undefined && input.coverImageId !== null && !input.imageIds.includes(input.coverImageId))
+        invalid();
 
-    const [tags, categories] = await Promise.all([
-        repository.listTags(),
-        repository.listCategories()
-    ]);
+    const [tags, categories] = await Promise.all([repository.listTags(), repository.listCategories()]);
     const allowedTags = new Set(tags.map((tag) => tag.tagId));
     const allowedCategories = new Set(categories);
     if (input.tagIds.some((tagId) => !allowedTags.has(tagId))) invalid();
@@ -63,15 +60,23 @@ async function validateDocument(repository: BoardRepository, input: BoardWrite):
                 if (!input.imageIds.includes(imageId) || usedImages.has(imageId)) invalid();
                 usedImages.add(imageId);
             }
-            if (activity.coverImageId !== undefined && activity.coverImageId !== null &&
-                !activity.uploadedImageIds.includes(activity.coverImageId)) invalid();
+            if (
+                activity.coverImageId !== undefined &&
+                activity.coverImageId !== null &&
+                !activity.uploadedImageIds.includes(activity.coverImageId)
+            )
+                invalid();
         });
     });
 
     if (input.status === "published") {
-        if (!input.title.trim() || !hasConfirmedLocation ||
-            input.days.some((day) => day.activities.some((activity) =>
-                activity.source === "photo" && !activity.locationConfirmed))) {
+        if (
+            !input.title.trim() ||
+            !hasConfirmedLocation ||
+            input.days.some((day) =>
+                day.activities.some((activity) => activity.source === "photo" && !activity.locationConfirmed)
+            )
+        ) {
             throw new AppError(422, "Board is not ready to publish", "PUBLISH_REQUIREMENTS_NOT_MET");
         }
     }
@@ -83,8 +88,13 @@ export function createBoardsService(repository: BoardRepository): BoardsService 
         listTags: () => repository.listTags(),
         listCategories: () => repository.listCategories(),
         async create(userId, input) {
-            if (input.days.some((day) => day.dayId !== undefined ||
-                day.activities.some((activity) => activity.activityId !== undefined))) invalid();
+            if (
+                input.days.some(
+                    (day) =>
+                        day.dayId !== undefined || day.activities.some((activity) => activity.activityId !== undefined)
+                )
+            )
+                invalid();
             const validated = await validateDocument(repository, input);
             return repository.saveBoard(userId, null, null, validated);
         },
@@ -117,7 +127,7 @@ export function createBoardsService(repository: BoardRepository): BoardsService 
             if (access.ownerUserId !== userId) {
                 throw new AppError(403, "Cannot delete this Board", "FORBIDDEN");
             }
-            if (!await repository.deleteBoard(boardId, userId)) {
+            if (!(await repository.deleteBoard(boardId, userId))) {
                 throw new AppError(404, "Board not found", "NOT_FOUND");
             }
         }

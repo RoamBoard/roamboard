@@ -12,9 +12,7 @@ type Props = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const tag = getBoardTag((await params).id);
     return {
-        title: tag
-            ? `${tag.name} Boards | Roamboard`
-            : "Vibe not found | Roamboard",
+        title: tag ? `${tag.name} Boards | Roamboard` : "Vibe not found | Roamboard",
         description: tag?.description
     };
 }
@@ -42,9 +40,8 @@ export default async function VibePage({ params }: Props) {
                     </div>
                     <p className="text-20 mt-4 max-w-2xl">{tag.description}</p>
                     <p className="text-muted-foreground text-12 mt-5">
-                        Preview · {boards.length} sample{" "}
-                        {boards.length === 1 ? "Board" : "Boards"}. Live public
-                        Boards will appear when discovery is connected.
+                        Preview · {boards.length} sample {boards.length === 1 ? "Board" : "Boards"}. Live public Boards
+                        will appear when discovery is connected.
                     </p>
                 </header>
                 {boards.length ? (
@@ -53,21 +50,13 @@ export default async function VibePage({ params }: Props) {
                         className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3"
                     >
                         {boards.map((board) => (
-                            <DiscoverBoardCard
-                                key={board.id}
-                                board={board}
-                                activeTagId={tag.id}
-                            />
+                            <DiscoverBoardCard key={board.id} board={board} activeTagId={tag.id} />
                         ))}
                     </section>
                 ) : (
                     <section className="border-line mt-8 border p-8">
-                        <h2 className="font-display text-24">
-                            No sample Boards for {tag.name} yet.
-                        </h2>
-                        <p className="text-14 mt-3 max-w-xl">
-                            Explore another vibe while we build this collection.
-                        </p>
+                        <h2 className="font-display text-24">No sample Boards for {tag.name} yet.</h2>
+                        <p className="text-14 mt-3 max-w-xl">Explore another vibe while we build this collection.</p>
                         <Link
                             href="/discover#roam-by-vibe"
                             className="mt-5 inline-flex min-h-11 items-center underline underline-offset-4 focus-visible:outline-2"

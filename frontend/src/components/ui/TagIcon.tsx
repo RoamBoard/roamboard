@@ -13,13 +13,7 @@ export default function TagIcon({ tag, className, size = 20 }: Props) {
         .pop()
         ?.replace(/\.svg$/, "");
     if (!name || !iconNames.includes(name as IconName)) {
-        return (
-            <span
-                aria-hidden="true"
-                className={className}
-                style={{ width: size, height: size }}
-            />
-        );
+        return <span aria-hidden="true" className={className} style={{ width: size, height: size }} />;
     }
     return (
         <DynamicIcon
@@ -28,12 +22,7 @@ export default function TagIcon({ tag, className, size = 20 }: Props) {
             strokeWidth={1.6}
             aria-hidden="true"
             className={className}
-            fallback={() => (
-                <span
-                    aria-hidden="true"
-                    style={{ width: size, height: size }}
-                />
-            )}
+            fallback={() => <span aria-hidden="true" style={{ width: size, height: size }} />}
         />
     );
 }

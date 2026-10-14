@@ -1,20 +1,8 @@
 "use client";
 
-import {
-    createContext,
-    useContext,
-    useEffect,
-    useState,
-    type ReactNode
-} from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import {
-    motion,
-    useReducedMotion,
-    type AnimationDefinition,
-    type Transition,
-    type Variants
-} from "motion/react";
+import { motion, useReducedMotion, type AnimationDefinition, type Transition, type Variants } from "motion/react";
 
 type TransitionState = {
     entering: boolean;
@@ -60,11 +48,7 @@ function getOverlayVariants(transition: TransitionData): Variants {
     return {
         covering: {
             // Grow from the button to a wide bar, then cover the whole screen.
-            clipPath: [
-                transition.buttonClip,
-                transition.barClip,
-                fullScreenClip
-            ],
+            clipPath: [transition.buttonClip, transition.barClip, fullScreenClip],
             transition: coverTransition
         },
         waiting: {
@@ -126,9 +110,7 @@ export default function WelcomeTransitionProvider({ children }: Props) {
     function enter(button: HTMLAnchorElement | null) {
         if (entering) return;
 
-        const prefersReducedMotion =
-            reducedMotion ||
-            window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const prefersReducedMotion = reducedMotion || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
         // Reduced-motion users go straight to Home.
         if (!button || prefersReducedMotion) {
@@ -139,9 +121,7 @@ export default function WelcomeTransitionProvider({ children }: Props) {
         const buttonBounds = button.getBoundingClientRect();
         const screenWidth = window.innerWidth;
         const screenHeight = window.innerHeight;
-        const textPadding = Number.parseFloat(
-            getComputedStyle(button).paddingLeft
-        );
+        const textPadding = Number.parseFloat(getComputedStyle(button).paddingLeft);
 
         // Match ENTER's rectangle. inset() reads top, right, bottom, left.
         const topInset = buttonBounds.top;
@@ -151,8 +131,7 @@ export default function WelcomeTransitionProvider({ children }: Props) {
 
         const textStartX = buttonBounds.left + textPadding;
         // The text row is centered, so its starting height needs an offset.
-        const textStartY =
-            buttonBounds.top + buttonBounds.height / 2 - screenHeight / 2;
+        const textStartY = buttonBounds.top + buttonBounds.height / 2 - screenHeight / 2;
         const textEndX = -screenWidth * 0.04;
 
         router.prefetch("/home");

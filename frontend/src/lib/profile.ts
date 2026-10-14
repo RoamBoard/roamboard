@@ -44,15 +44,12 @@ export type MapDestination = {
     isCompleted?: boolean;
 };
 
-const apiOrigin =
-    process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001";
+const apiOrigin = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001";
 
 async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
     const response = await fetch(`${apiOrigin}${path}`, {
         ...init,
-        headers: init?.body
-            ? { "content-type": "application/json", ...init.headers }
-            : init?.headers
+        headers: init?.body ? { "content-type": "application/json", ...init.headers } : init?.headers
     });
     if (response.status === 204) return undefined as T;
     const body = (await response.json()) as {
@@ -60,10 +57,7 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
         error?: { message?: string };
     };
     if (!response.ok || body.data === undefined) {
-        throw new Error(
-            body.error?.message ??
-                "The Roamboard API could not complete that request."
-        );
+        throw new Error(body.error?.message ?? "The Roamboard API could not complete that request.");
     }
     return body.data;
 }
@@ -72,12 +66,7 @@ export function loadProfile() {
     return apiRequest<UserProfile>("/api/v1/users/me");
 }
 
-export function updateProfile(
-    changes: Pick<
-        UserProfile,
-        "displayName" | "description" | "location" | "interests"
-    >
-) {
+export function updateProfile(changes: Pick<UserProfile, "displayName" | "description" | "location" | "interests">) {
     return apiRequest<UserProfile>("/api/v1/users/me", {
         method: "PATCH",
         body: JSON.stringify(changes)

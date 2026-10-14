@@ -8,12 +8,7 @@ type Props = {
     position?: string;
 };
 
-export default function DiscoverPhoto({
-    photo,
-    eager = false,
-    width = 1000,
-    position = "center"
-}: Props) {
+export default function DiscoverPhoto({ photo, eager = false, width = 1000, position = "center" }: Props) {
     const url = new URL(photo.src);
     url.searchParams.set("w", String(width));
 

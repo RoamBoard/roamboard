@@ -10,9 +10,7 @@ type ApiError = {
     error?: { code?: string; message?: string };
 };
 
-export async function signInWithGoogle(
-    credential: string
-): Promise<{ user: AuthUser; isNew: boolean }> {
+export async function signInWithGoogle(credential: string): Promise<{ user: AuthUser; isNew: boolean }> {
     const response = await fetch(`${apiUrl}/api/v1/auth/google`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -22,9 +20,7 @@ export async function signInWithGoogle(
 
     if (!response.ok) {
         const payload = (await response.json().catch(() => ({}))) as ApiError;
-        throw new Error(
-            payload.error?.message ?? "Sign-in failed. Please try again."
-        );
+        throw new Error(payload.error?.message ?? "Sign-in failed. Please try again.");
     }
 
     const payload = (await response.json()) as {

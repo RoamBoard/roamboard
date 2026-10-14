@@ -3,12 +3,7 @@
 // Adapted from Magic UI's @magicui/marquee registry component (MIT).
 // See MAGICUI-LICENSE.txt. Playback-rate easing preserves the looping phase.
 import { animate } from "motion/react";
-import {
-    useEffect,
-    useRef,
-    useState,
-    type ComponentPropsWithoutRef
-} from "react";
+import { useEffect, useRef, useState, type ComponentPropsWithoutRef } from "react";
 
 type MarqueeProps = ComponentPropsWithoutRef<"div"> & {
     reverse?: boolean;
@@ -38,24 +33,16 @@ export function Marquee({
             container.current
                 ?.getAnimations({ subtree: true })
                 .filter(
-                    (animation) =>
-                        animation instanceof CSSAnimation &&
-                        animation.animationName.startsWith("marquee")
+                    (animation) => animation instanceof CSSAnimation && animation.animationName.startsWith("marquee")
                 ) ?? [];
-        const controls = animate(
-            speed.current,
-            paused || focused || hovered ? 0 : 1,
-            {
-                duration: focused || paused ? 0 : 0.7,
-                ease: "easeOut",
-                onUpdate: (value) => {
-                    speed.current = value;
-                    animations.forEach((animation) =>
-                        animation.updatePlaybackRate(value)
-                    );
-                }
+        const controls = animate(speed.current, paused || focused || hovered ? 0 : 1, {
+            duration: focused || paused ? 0 : 0.7,
+            ease: "easeOut",
+            onUpdate: (value) => {
+                speed.current = value;
+                animations.forEach((animation) => animation.updatePlaybackRate(value));
             }
-        );
+        });
         return () => controls.stop();
     }, [paused, focused, hovered]);
 

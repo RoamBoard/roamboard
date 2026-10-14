@@ -6,9 +6,7 @@ import BoardPageMessage from "@/components/features/boards/BoardPageMessage";
 export default function BoardError({ reset }: { reset: () => void }) {
     return (
         <BoardPageMessage title="Could not load this board">
-            <p role="alert">
-                Something went wrong while loading the board. Please try again.
-            </p>
+            <p role="alert">Something went wrong while loading the board. Please try again.</p>
             <button
                 type="button"
                 onClick={reset}

@@ -3,9 +3,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import InteractiveMap, {
-    type MapPoint
-} from "@/components/features/providers/InteractiveMap";
+import InteractiveMap, { type MapPoint } from "@/components/features/providers/InteractiveMap";
 import PinCategoryIcon from "@/components/ui/PinCategoryIcon";
 import { categoryFromMapboxType, pinCategories } from "@/lib/board-options";
 import { useDialogFocus } from "@/lib/use-dialog-focus";
@@ -30,11 +28,7 @@ type Props = {
     day: BoardDayDraft;
     days: BoardDayDraft[];
     onClose: () => void;
-    onAdd: (
-        dayId: string,
-        pin: BoardPinDraft,
-        image: BoardImageDraft | null
-    ) => void;
+    onAdd: (dayId: string, pin: BoardPinDraft, image: BoardImageDraft | null) => void;
     onEditExisting: (pinId: string) => void;
 };
 
@@ -84,13 +78,7 @@ function imageFromPhoto(photo: ProviderPhoto, pinId: string): BoardImageDraft {
     };
 }
 
-export default function AddPinDialog({
-    day,
-    days,
-    onClose,
-    onAdd,
-    onEditExisting
-}: Props) {
+export default function AddPinDialog({ day, days, onClose, onAdd, onEditExisting }: Props) {
     const photoRequestRef = useRef(0);
     const dialogRef = useRef<HTMLDivElement>(null);
     useDialogFocus(dialogRef, onClose);
@@ -128,9 +116,7 @@ export default function AddPinDialog({
                                   type: category,
                                   latitude: selected.latitude,
                                   longitude: selected.longitude,
-                                  color: dayColors[
-                                      (day.dayNumber - 1) % dayColors.length
-                                  ]
+                                  color: dayColors[(day.dayNumber - 1) % dayColors.length]
                               }
                           ]
                         : []
@@ -162,26 +148,13 @@ export default function AddPinDialog({
             const priority = (place: MapboxSearchResult) =>
                 ["place", "poi"].includes(place.placeType)
                     ? 0
-                    : [
-                            "locality",
-                            "neighborhood",
-                            "district",
-                            "region",
-                            "country"
-                        ].includes(place.placeType)
+                    : ["locality", "neighborhood", "district", "region", "country"].includes(place.placeType)
                       ? 1
                       : 2;
-            setResults(
-                [...places].sort(
-                    (first, second) => priority(first) - priority(second)
-                )
-            );
+            setResults([...places].sort((first, second) => priority(first) - priority(second)));
         } catch (caught) {
             setResults([]);
-            const message =
-                caught instanceof Error
-                    ? caught.message
-                    : "Location search failed.";
+            const message = caught instanceof Error ? caught.message : "Location search failed.";
             setError(
                 message.includes("Route GET")
                     ? "The Board search endpoint is not loaded. Restart the backend dev server, then try again."
@@ -205,18 +178,9 @@ export default function AddPinDialog({
         setError("");
         try {
             const name = place.name.replace(/-shi$/i, "");
-            const terms = [
-                ...new Set(
-                    [
-                        name,
-                        place.city?.replace(/-shi$/i, ""),
-                        place.country
-                    ].filter(Boolean)
-                )
-            ];
+            const terms = [...new Set([name, place.city?.replace(/-shi$/i, ""), place.country].filter(Boolean))];
             const photos = await searchUnsplashProvider(terms.join(" "));
-            if (photoRequestRef.current === requestId)
-                setPhoto(photos[0] ?? null);
+            if (photoRequestRef.current === requestId) setPhoto(photos[0] ?? null);
         } catch {
             if (photoRequestRef.current === requestId) {
                 setPhoto(null);
@@ -231,9 +195,7 @@ export default function AddPinDialog({
             setError("Give this pin a title.");
             return;
         }
-        const hasManualLocation = Boolean(
-            manualName.trim() || manualLatitude.trim() || manualLongitude.trim()
-        );
+        const hasManualLocation = Boolean(manualName.trim() || manualLatitude.trim() || manualLongitude.trim());
         if (hasManualLocation) {
             const latitude = Number(manualLatitude);
             const longitude = Number(manualLongitude);
@@ -246,9 +208,7 @@ export default function AddPinDialog({
                 Math.abs(latitude) > 90 ||
                 Math.abs(longitude) > 180
             ) {
-                setError(
-                    "Enter a location name, latitude from -90 to 90, and longitude from -180 to 180."
-                );
+                setError("Enter a location name, latitude from -90 to 90, and longitude from -180 to 180.");
                 return;
             }
         }
@@ -266,15 +226,9 @@ export default function AddPinDialog({
                       (selectedProviderPlace ? selected?.address : null) ??
                       `${Number(manualLatitude).toFixed(5)}, ${Number(manualLongitude).toFixed(5)}`,
                   city: selectedProviderPlace ? (selected?.city ?? null) : null,
-                  country: selectedProviderPlace
-                      ? (selected?.country ?? null)
-                      : null,
-                  countryCode: selectedProviderPlace
-                      ? (selected?.countryCode ?? null)
-                      : null,
-                  mapboxId: selectedProviderPlace
-                      ? (selected?.mapboxId ?? null)
-                      : null
+                  country: selectedProviderPlace ? (selected?.country ?? null) : null,
+                  countryCode: selectedProviderPlace ? (selected?.countryCode ?? null) : null,
+                  mapboxId: selectedProviderPlace ? (selected?.mapboxId ?? null) : null
               }
             : selected;
         const pinId = crypto.randomUUID();
@@ -316,10 +270,7 @@ export default function AddPinDialog({
                         <p className="text-10 tracking-label text-muted-foreground font-bold uppercase">
                             Day {day.dayNumber}
                         </p>
-                        <h2
-                            id="add-pin-heading"
-                            className="font-display text-30 mt-2 font-bold"
-                        >
+                        <h2 id="add-pin-heading" className="font-display text-30 mt-2 font-bold">
                             Add a pin
                         </h2>
                     </div>
@@ -335,19 +286,14 @@ export default function AddPinDialog({
                 <div className="grid lg:grid-cols-[0.85fr_1.15fr]">
                     <div className="border-line border-b p-5 sm:p-7 lg:border-r lg:border-b-0">
                         <form onSubmit={(event) => void search(event)}>
-                            <label
-                                htmlFor="pin-place-search"
-                                className="text-12 text-graphite"
-                            >
+                            <label htmlFor="pin-place-search" className="text-12 text-graphite">
                                 Search Mapbox
                             </label>
                             <div className="mt-2 flex gap-3">
                                 <input
                                     id="pin-place-search"
                                     value={query}
-                                    onChange={(event) =>
-                                        setQuery(event.target.value)
-                                    }
+                                    onChange={(event) => setQuery(event.target.value)}
                                     placeholder="Senso-ji, Tokyo"
                                     className="border-line text-15 focus:border-foreground min-w-0 flex-1 border-b bg-transparent py-3 outline-none"
                                 />
@@ -373,24 +319,16 @@ export default function AddPinDialog({
                                         className="border-line hover:border-foreground w-full border p-4 text-left focus-visible:outline-2 focus-visible:outline-offset-2"
                                     >
                                         <span className="flex flex-wrap items-center gap-2">
-                                            <strong className="text-14">
-                                                {place.name}
-                                            </strong>
+                                            <strong className="text-14">{place.name}</strong>
                                             <span className="border-line text-10 tracking-label text-graphite border px-2 py-1 uppercase">
                                                 {
                                                     pinCategories.find(
-                                                        (item) =>
-                                                            item.value ===
-                                                            categoryFromMapboxType(
-                                                                place.placeType
-                                                            )
+                                                        (item) => item.value === categoryFromMapboxType(place.placeType)
                                                     )?.label
                                                 }
                                             </span>
                                         </span>
-                                        <span className="text-12 text-graphite mt-1 block">
-                                            {place.address}
-                                        </span>
+                                        <span className="text-12 text-graphite mt-1 block">{place.address}</span>
                                     </button>
                                 </li>
                             ))}
@@ -400,9 +338,7 @@ export default function AddPinDialog({
                                 Location name
                                 <input
                                     value={manualName}
-                                    onChange={(event) =>
-                                        setManualName(event.target.value)
-                                    }
+                                    onChange={(event) => setManualName(event.target.value)}
                                     placeholder="Place name"
                                     className="border-line text-14 text-foreground mt-2 w-full border-b bg-transparent py-2"
                                 />
@@ -415,9 +351,7 @@ export default function AddPinDialog({
                                     min="-90"
                                     max="90"
                                     value={manualLatitude}
-                                    onChange={(event) =>
-                                        setManualLatitude(event.target.value)
-                                    }
+                                    onChange={(event) => setManualLatitude(event.target.value)}
                                     placeholder="59.3293"
                                     className="border-line text-14 text-foreground mt-2 w-full border-b bg-transparent py-2"
                                 />
@@ -430,22 +364,17 @@ export default function AddPinDialog({
                                     min="-180"
                                     max="180"
                                     value={manualLongitude}
-                                    onChange={(event) =>
-                                        setManualLongitude(event.target.value)
-                                    }
+                                    onChange={(event) => setManualLongitude(event.target.value)}
                                     placeholder="18.0686"
                                     className="border-line text-14 text-foreground mt-2 w-full border-b bg-transparent py-2"
                                 />
                             </label>
                             <p className="text-10 text-stone col-span-full">
-                                Search results fill these fields when available.
-                                You can also enter coordinates yourself.
+                                Search results fill these fields when available. You can also enter coordinates
+                                yourself.
                             </p>
                         </div>
-                        <form
-                            className="border-line mt-7 border-t pt-6"
-                            onSubmit={submit}
-                        >
+                        <form className="border-line mt-7 border-t pt-6" onSubmit={submit}>
                             {photo ? (
                                 <figure className="mb-5">
                                     <img
@@ -481,9 +410,7 @@ export default function AddPinDialog({
                                     <input
                                         type="time"
                                         value={time}
-                                        onChange={(event) =>
-                                            setTime(event.target.value)
-                                        }
+                                        onChange={(event) => setTime(event.target.value)}
                                         className="border-line text-15 text-foreground focus:border-foreground mt-2 w-full border-b bg-transparent py-2 outline-none"
                                     />
                                 </label>
@@ -491,9 +418,7 @@ export default function AddPinDialog({
                                     Pin title
                                     <input
                                         value={title}
-                                        onChange={(event) =>
-                                            setTitle(event.target.value)
-                                        }
+                                        onChange={(event) => setTitle(event.target.value)}
                                         placeholder="Activity or place"
                                         className="border-line text-15 text-foreground focus:border-foreground mt-2 w-full border-b bg-transparent py-2 outline-none"
                                     />
@@ -505,19 +430,11 @@ export default function AddPinDialog({
                                     <PinCategoryIcon category={category} />
                                     <select
                                         value={category}
-                                        onChange={(event) =>
-                                            setCategory(
-                                                event.target
-                                                    .value as PinCategory
-                                            )
-                                        }
+                                        onChange={(event) => setCategory(event.target.value as PinCategory)}
                                         className="text-14 text-foreground min-w-0 flex-1 bg-transparent outline-none"
                                     >
                                         {pinCategories.map((item) => (
-                                            <option
-                                                key={item.value}
-                                                value={item.value}
-                                            >
+                                            <option key={item.value} value={item.value}>
                                                 {item.label}
                                             </option>
                                         ))}
@@ -528,9 +445,7 @@ export default function AddPinDialog({
                                 Notes
                                 <textarea
                                     value={description}
-                                    onChange={(event) =>
-                                        setDescription(event.target.value)
-                                    }
+                                    onChange={(event) => setDescription(event.target.value)}
                                     placeholder="What should you remember?"
                                     rows={3}
                                     className="border-line text-14 text-foreground focus:border-foreground mt-2 w-full resize-y border bg-transparent p-3 outline-none"
@@ -549,17 +464,11 @@ export default function AddPinDialog({
                     <div className="p-5 sm:p-7">
                         <div className="text-12 text-graphite mb-4 flex flex-wrap gap-4">
                             {days.map((boardDay, index) => (
-                                <span
-                                    key={boardDay.id}
-                                    className="inline-flex items-center gap-2"
-                                >
+                                <span key={boardDay.id} className="inline-flex items-center gap-2">
                                     <span
                                         className="size-2.5 rounded-full"
                                         style={{
-                                            backgroundColor:
-                                                dayColors[
-                                                    index % dayColors.length
-                                                ]
+                                            backgroundColor: dayColors[index % dayColors.length]
                                         }}
                                     />
                                     Day {boardDay.dayNumber}
@@ -571,14 +480,12 @@ export default function AddPinDialog({
                             points={points}
                             routeGeometry={[]}
                             onPointClick={(point) => {
-                                if (point.id !== "selected-place")
-                                    onEditExisting(point.id);
+                                if (point.id !== "selected-place") onEditExisting(point.id);
                             }}
                         />
                         <p className="text-12 text-graphite mt-3">
-                            Existing Board pins are clickable. Search results
-                            must be selected from the list; the map itself does
-                            not create pins.
+                            Existing Board pins are clickable. Search results must be selected from the list; the map
+                            itself does not create pins.
                         </p>
                     </div>
                 </div>

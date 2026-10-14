@@ -7,9 +7,7 @@ import type { UploadIntentWrite } from "../boards/boards.schemas.js";
 import type { ImageProvider, ImagesRepository, ImagesService } from "./images.types.js";
 
 const MAX_IMAGE_BYTES = 10_000_000;
-const allowedTypes = new Set([
-    "image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"
-]);
+const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
 const allowedFormats = new Set(["jpg", "jpeg", "png", "webp", "heic", "heif"]);
 
 function imageUrl(imageId: number, variant: "display" | "thumbnail"): string {
@@ -34,9 +32,17 @@ export function createImagesService(
             const createdAt = new Date();
             const expiresAt = new Date(createdAt.getTime() + 60 * 60 * 1000);
             const authorization = provider.authorizeUpload(storageKey);
-            await repository.createIntent({ uploadId, userId, storageKey,
-                fileName: input.fileName, contentType: input.contentType,
-                sizeBytes: input.sizeBytes, createdAt, expiresAt, imageId: null });
+            await repository.createIntent({
+                uploadId,
+                userId,
+                storageKey,
+                fileName: input.fileName,
+                contentType: input.contentType,
+                sizeBytes: input.sizeBytes,
+                createdAt,
+                expiresAt,
+                imageId: null
+            });
             return { uploadId, ...authorization, expiresAt: expiresAt.toISOString() };
         },
         async complete(userId, uploadId) {
@@ -51,9 +57,11 @@ export function createImagesService(
             if (imageId === null) {
                 const asset = await provider.inspect(intent.storageKey);
                 if (!asset) throw new AppError(409, "Upload not complete", "UPLOAD_NOT_READY");
-                if (asset.storageKey !== intent.storageKey ||
+                if (
+                    asset.storageKey !== intent.storageKey ||
                     asset.createdAt.getTime() < intent.createdAt.getTime() - 60_000 ||
-                    !allowedFormats.has(asset.format)) {
+                    !allowedFormats.has(asset.format)
+                ) {
                     throw new AppError(400, "Invalid uploaded image", "INVALID_REQUEST");
                 }
                 if (asset.byteSize > MAX_IMAGE_BYTES) {

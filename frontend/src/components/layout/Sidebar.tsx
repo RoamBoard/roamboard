@@ -39,9 +39,7 @@ export default function Sidebar({ activeHref, discover }: Props) {
                             key={href}
                             href={href}
                             aria-label={label}
-                            aria-current={
-                                activeHref === href ? "page" : undefined
-                            }
+                            aria-current={activeHref === href ? "page" : undefined}
                             className="group text-12 relative flex min-h-10 min-w-11 items-center justify-center focus-visible:outline-2 focus-visible:outline-offset-2"
                         >
                             {discover.collapsed ? (
@@ -57,9 +55,7 @@ export default function Sidebar({ activeHref, discover }: Props) {
                             ) : (
                                 <span
                                     className={
-                                        activeHref === href
-                                            ? "underline underline-offset-4"
-                                            : "text-muted-foreground"
+                                        activeHref === href ? "underline underline-offset-4" : "text-muted-foreground"
                                     }
                                 >
                                     {label}
@@ -87,39 +83,19 @@ export default function Sidebar({ activeHref, discover }: Props) {
                 aria-label="Main navigation"
                 className="text-12 absolute top-[59%] bottom-[5%] left-1/2 flex -translate-x-1/2 flex-col items-start justify-between"
             >
-                <Link
-                    href="/home"
-                    aria-current={activeHref === "/home"}
-                    className={linkClasses}
-                >
+                <Link href="/home" aria-current={activeHref === "/home"} className={linkClasses}>
                     roam
                 </Link>
-                <Link
-                    href="/discover"
-                    aria-current={activeHref === "/discover"}
-                    className={linkClasses}
-                >
+                <Link href="/discover" aria-current={activeHref === "/discover"} className={linkClasses}>
                     discover
                 </Link>
-                <Link
-                    href="/boards"
-                    aria-current={activeHref === "/boards"}
-                    className={linkClasses}
-                >
+                <Link href="/boards" aria-current={activeHref === "/boards"} className={linkClasses}>
                     boards
                 </Link>
-                <Link
-                    href="/social"
-                    aria-current={activeHref === "/social"}
-                    className={linkClasses}
-                >
+                <Link href="/social" aria-current={activeHref === "/social"} className={linkClasses}>
                     social
                 </Link>
-                <Link
-                    href="/dev/providers"
-                    aria-current={activeHref === "/dev/providers"}
-                    className={linkClasses}
-                >
+                <Link href="/dev/providers" aria-current={activeHref === "/dev/providers"} className={linkClasses}>
                     labs
                 </Link>
             </nav>

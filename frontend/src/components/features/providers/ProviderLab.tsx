@@ -25,8 +25,7 @@ const tabs: Array<{ id: ProviderId; label: string; description: string }> = [
     {
         id: "mapbox",
         label: "Mapbox",
-        description:
-            "Search places, save pinpoint locations, reverse-geocode, and route between stops."
+        description: "Search places, save pinpoint locations, reverse-geocode, and route between stops."
     },
     {
         id: "unsplash",
@@ -36,67 +35,50 @@ const tabs: Array<{ id: ProviderId; label: string; description: string }> = [
     {
         id: "google",
         label: "Google Places",
-        description:
-            "Search POIs, persist stable Place IDs, fetch live details, and open exact places in Google Maps."
+        description: "Search POIs, persist stable Place IDs, fetch live details, and open exact places in Google Maps."
     },
     {
         id: "cloudinary",
         label: "Cloudinary",
-        description:
-            "Upload images, inspect metadata, and hand GPS coordinates to Mapbox."
+        description: "Upload images, inspect metadata, and hand GPS coordinates to Mapbox."
     },
     {
         id: "search",
         label: "Elasticsearch",
-        description:
-            "Explore fuzzy search, autocomplete, filters, scores, and reindexing."
+        description: "Explore fuzzy search, autocomplete, filters, scores, and reindexing."
     }
 ];
 
 export default function ProviderLab() {
     const [active, setActive] = useState<ProviderId>(() =>
-        typeof window !== "undefined" &&
-        new URLSearchParams(window.location.search).get("tab") === "mapbox"
+        typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "mapbox"
             ? "mapbox"
             : "mapbox"
     );
     const [config, setConfig] = useState<ProviderConfig | null>(null);
     const [configError, setConfigError] = useState("");
-    const [handoff] = useState<{ latitude: number; longitude: number } | null>(
-        () => {
-            if (typeof window === "undefined") return null;
-            const params = new URLSearchParams(window.location.search);
-            const latitude = Number(params.get("latitude"));
-            const longitude = Number(params.get("longitude"));
-            return params.get("tab") === "mapbox" &&
-                Number.isFinite(latitude) &&
-                Number.isFinite(longitude)
-                ? { latitude, longitude }
-                : null;
-        }
-    );
+    const [handoff] = useState<{ latitude: number; longitude: number } | null>(() => {
+        if (typeof window === "undefined") return null;
+        const params = new URLSearchParams(window.location.search);
+        const latitude = Number(params.get("latitude"));
+        const longitude = Number(params.get("longitude"));
+        return params.get("tab") === "mapbox" && Number.isFinite(latitude) && Number.isFinite(longitude)
+            ? { latitude, longitude }
+            : null;
+    });
 
     useEffect(() => {
         void loadProviderConfig()
             .then(setConfig)
             .catch((caught: unknown) =>
-                setConfigError(
-                    caught instanceof Error
-                        ? caught.message
-                        : "Provider configuration could not be loaded."
-                )
+                setConfigError(caught instanceof Error ? caught.message : "Provider configuration could not be loaded.")
             );
     }, []);
 
     const activeTab = tabs.find((tab) => tab.id === active) ?? tabs[0];
     return (
-        <section
-            className="w-full max-w-6xl px-6 py-14 sm:px-10 lg:px-20"
-            aria-labelledby="provider-lab-heading"
-        >
-            <p className="text-10 tracking-label text-graphite font-bold uppercase">
-                Developer lab
-            </p>
+        <section className="w-full max-w-6xl px-6 py-14 sm:px-10 lg:px-20" aria-labelledby="provider-lab-heading">
+            <p className="text-10 tracking-label text-graphite font-bold uppercase">Developer lab</p>
             <h1
                 id="provider-lab-heading"
                 className="font-display text-48 text-foreground sm:text-60 mt-5 leading-none font-bold"
@@ -104,21 +86,15 @@ export default function ProviderLab() {
                 Provider prototypes
             </h1>
             <p className="text-15 text-graphite mt-5 max-w-2xl leading-7">
-                Server-backed experiments for provider behavior. External
-                results are previewed here and are not persisted as Board data.
+                Server-backed experiments for provider behavior. External results are previewed here and are not
+                persisted as Board data.
             </p>
             {configError ? (
-                <p
-                    className="border-foreground text-14 mt-6 border-l-2 pl-3"
-                    role="alert"
-                >
+                <p className="border-foreground text-14 mt-6 border-l-2 pl-3" role="alert">
                     {configError}
                 </p>
             ) : null}
-            <nav
-                className="border-line mt-12 grid gap-2 border-y py-2 sm:grid-cols-5"
-                aria-label="Provider prototypes"
-            >
+            <nav className="border-line mt-12 grid gap-2 border-y py-2 sm:grid-cols-5" aria-label="Provider prototypes">
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
@@ -131,9 +107,7 @@ export default function ProviderLab() {
                         <span
                             className={`text-12 mt-1 block ${active === tab.id ? "text-background/70" : "text-graphite"}`}
                         >
-                            {statusFor(tab.id, config)
-                                ? "configured"
-                                : "key missing"}
+                            {statusFor(tab.id, config) ? "configured" : "key missing"}
                         </span>
                     </button>
                 ))}
@@ -141,25 +115,14 @@ export default function ProviderLab() {
             <div className="mt-10">
                 <p className="text-14 text-graphite">{activeTab.description}</p>
                 {active === "mapbox" ? (
-                    <MapboxPanel
-                        configured={Boolean(config?.mapbox.configured)}
-                        initialPoint={handoff}
-                    />
+                    <MapboxPanel configured={Boolean(config?.mapbox.configured)} initialPoint={handoff} />
                 ) : null}
-                {active === "unsplash" ? (
-                    <UnsplashPanel
-                        configured={Boolean(config?.unsplash.configured)}
-                    />
-                ) : null}
+                {active === "unsplash" ? <UnsplashPanel configured={Boolean(config?.unsplash.configured)} /> : null}
                 {active === "google" ? (
-                    <GooglePlacesPanel
-                        configured={Boolean(config?.googlePlaces.configured)}
-                    />
+                    <GooglePlacesPanel configured={Boolean(config?.googlePlaces.configured)} />
                 ) : null}
                 {active === "cloudinary" ? (
-                    <CloudinaryPanel
-                        configured={Boolean(config?.cloudinary.configured)}
-                    />
+                    <CloudinaryPanel configured={Boolean(config?.cloudinary.configured)} />
                 ) : null}
                 {active === "search" ? <SearchLab /> : null}
             </div>
@@ -192,9 +155,7 @@ function ProviderState({
     return (
         <div className="border-line mt-8 border p-6">
             <div className="flex flex-wrap items-baseline justify-between gap-3">
-                <h2 className="font-display text-24 text-foreground font-bold">
-                    {name}
-                </h2>
+                <h2 className="font-display text-24 text-foreground font-bold">{name}</h2>
                 <span className="text-10 tracking-label text-graphite font-bold uppercase">
                     {configured ? "configured" : "key missing"}
                 </span>
@@ -203,21 +164,14 @@ function ProviderState({
                 children
             ) : (
                 <p className="text-14 text-graphite mt-5 leading-6">
-                    Add this provider key to `layered-backend-demo1/.env`,
-                    restart the API container, and return here.
+                    Add this provider key to `layered-backend-demo1/.env`, restart the API container, and return here.
                 </p>
             )}
         </div>
     );
 }
 
-function SearchForm({
-    onSubmit,
-    placeholder
-}: {
-    onSubmit: (query: string) => Promise<void>;
-    placeholder: string;
-}) {
+function SearchForm({ onSubmit, placeholder }: { onSubmit: (query: string) => Promise<void>; placeholder: string }) {
     const [query, setQuery] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -232,9 +186,7 @@ function SearchForm({
         try {
             await onSubmit(query.trim());
         } catch (caught) {
-            setError(
-                caught instanceof Error ? caught.message : "The request failed."
-            );
+            setError(caught instanceof Error ? caught.message : "The request failed.");
         } finally {
             setLoading(false);
         }
@@ -271,35 +223,19 @@ function UnsplashPanel({ configured }: { configured: boolean }) {
         <ProviderState configured={configured} name="Unsplash">
             <SearchForm
                 placeholder="Stockholm Sweden travel"
-                onSubmit={async (query) =>
-                    setPhotos(await searchUnsplashProvider(query))
-                }
+                onSubmit={async (query) => setPhotos(await searchUnsplashProvider(query))}
             />
             <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {photos.map((photo) => (
                     <figure key={photo.id}>
-                        <img
-                            className="aspect-video w-full object-cover"
-                            src={photo.thumbnailUrl}
-                            alt={photo.alt}
-                        />
+                        <img className="aspect-video w-full object-cover" src={photo.thumbnailUrl} alt={photo.alt} />
                         <figcaption className="text-12 text-graphite mt-2 leading-5">
                             {photo.width} x {photo.height} · Photo by{" "}
-                            <a
-                                className="underline"
-                                href={photo.photographerUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                            >
+                            <a className="underline" href={photo.photographerUrl} target="_blank" rel="noreferrer">
                                 {photo.photographer}
                             </a>{" "}
                             on{" "}
-                            <a
-                                className="underline"
-                                href={photo.sourceUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                            >
+                            <a className="underline" href={photo.sourceUrl} target="_blank" rel="noreferrer">
                                 Unsplash
                             </a>
                         </figcaption>
@@ -313,9 +249,7 @@ function UnsplashPanel({ configured }: { configured: boolean }) {
 function GooglePlacesPanel({ configured }: { configured: boolean }) {
     const [places, setPlaces] = useState<ProviderPlace[]>([]);
     const [saved, setSaved] = useState<SavedGooglePlaceReference[]>([]);
-    const [details, setDetails] = useState<Record<string, GooglePlaceDetails>>(
-        {}
-    );
+    const [details, setDetails] = useState<Record<string, GooglePlaceDetails>>({});
     const [error, setError] = useState("");
 
     useEffect(() => {
@@ -323,11 +257,7 @@ function GooglePlacesPanel({ configured }: { configured: boolean }) {
         void loadSavedGooglePlaces()
             .then(setSaved)
             .catch((caught: unknown) =>
-                setError(
-                    caught instanceof Error
-                        ? caught.message
-                        : "Saved Place IDs could not be loaded."
-                )
+                setError(caught instanceof Error ? caught.message : "Saved Place IDs could not be loaded.")
             );
     }, [configured]);
 
@@ -335,17 +265,11 @@ function GooglePlacesPanel({ configured }: { configured: boolean }) {
         try {
             const reference = await saveGooglePlace(placeId);
             setSaved((current) =>
-                current.some((item) => item.placeId === placeId)
-                    ? current
-                    : [reference, ...current]
+                current.some((item) => item.placeId === placeId) ? current : [reference, ...current]
             );
             setError("");
         } catch (caught) {
-            setError(
-                caught instanceof Error
-                    ? caught.message
-                    : "The Place ID could not be saved."
-            );
+            setError(caught instanceof Error ? caught.message : "The Place ID could not be saved.");
         }
     }
 
@@ -355,42 +279,29 @@ function GooglePlacesPanel({ configured }: { configured: boolean }) {
             setDetails((current) => ({ ...current, [placeId]: place }));
             setError("");
         } catch (caught) {
-            setError(
-                caught instanceof Error
-                    ? caught.message
-                    : "Place details could not be loaded."
-            );
+            setError(caught instanceof Error ? caught.message : "Place details could not be loaded.");
         }
     }
 
     async function remove(placeId: string) {
         try {
             await deleteSavedGooglePlace(placeId);
-            setSaved((current) =>
-                current.filter((item) => item.placeId !== placeId)
-            );
+            setSaved((current) => current.filter((item) => item.placeId !== placeId));
             setError("");
         } catch (caught) {
-            setError(
-                caught instanceof Error
-                    ? caught.message
-                    : "The Place ID could not be deleted."
-            );
+            setError(caught instanceof Error ? caught.message : "The Place ID could not be deleted.");
         }
     }
 
     return (
         <ProviderState configured={configured} name="Google Places">
             <p className="border-foreground text-14 mt-5 border-l-2 pl-3 leading-6">
-                Google Places requires a billing-enabled project. The backend
-                enforces separate hard caps for POI search and live details.
-                Only stable Place IDs are persisted.
+                Google Places requires a billing-enabled project. The backend enforces separate hard caps for POI search
+                and live details. Only stable Place IDs are persisted.
             </p>
             <SearchForm
                 placeholder="Museums in Stockholm"
-                onSubmit={async (query) =>
-                    setPlaces(await searchGooglePlacesProvider(query))
-                }
+                onSubmit={async (query) => setPlaces(await searchGooglePlacesProvider(query))}
             />
             {error ? (
                 <p className="text-14 mt-4" role="alert">
@@ -400,59 +311,33 @@ function GooglePlacesPanel({ configured }: { configured: boolean }) {
             <div className="mt-8 grid gap-3 sm:grid-cols-2">
                 {places.map((place) => (
                     <article key={place.id} className="border-line border p-4">
-                        <h3 className="font-display text-20 text-foreground font-bold">
-                            {place.name}
-                        </h3>
-                        <p className="text-14 text-graphite mt-2">
-                            {place.address}
-                        </p>
-                        <p className="text-11 text-graphite mt-3 break-all">
-                            {place.id}
-                        </p>
+                        <h3 className="font-display text-20 text-foreground font-bold">{place.name}</h3>
+                        <p className="text-14 text-graphite mt-2">{place.address}</p>
+                        <p className="text-11 text-graphite mt-3 break-all">{place.id}</p>
                         <div className="text-12 mt-4 flex gap-4">
-                            <button
-                                type="button"
-                                className="underline"
-                                onClick={() => void save(place.id)}
-                            >
+                            <button type="button" className="underline" onClick={() => void save(place.id)}>
                                 Save Place ID
                             </button>
-                            <a
-                                className="underline"
-                                href={place.googleMapsUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                            >
+                            <a className="underline" href={place.googleMapsUrl} target="_blank" rel="noreferrer">
                                 Open in Google Maps
                             </a>
                         </div>
                     </article>
                 ))}
             </div>
-            <h3 className="font-display text-20 text-foreground mt-10 font-bold">
-                Saved Place IDs
-            </h3>
+            <h3 className="font-display text-20 text-foreground mt-10 font-bold">Saved Place IDs</h3>
             {saved.length === 0 ? (
-                <p className="text-14 text-graphite mt-3">
-                    No Google Place IDs saved yet.
-                </p>
+                <p className="text-14 text-graphite mt-3">No Google Place IDs saved yet.</p>
             ) : (
                 <div className="mt-4 space-y-3">
                     {saved.map((reference) => {
                         const place = details[reference.placeId];
                         return (
-                            <article
-                                key={reference.placeId}
-                                className="border-line border p-4"
-                            >
-                                <p className="text-12 text-graphite break-all">
-                                    {reference.placeId}
-                                </p>
+                            <article key={reference.placeId} className="border-line border p-4">
+                                <p className="text-12 text-graphite break-all">{reference.placeId}</p>
                                 {place ? (
                                     <>
-                                        <p className="text-14 text-foreground mt-2">
-                                            {place.address}
-                                        </p>
+                                        <p className="text-14 text-foreground mt-2">{place.address}</p>
                                         <a
                                             className="text-12 mt-2 inline-block underline"
                                             href={place.googleMapsUrl}
@@ -467,18 +352,14 @@ function GooglePlacesPanel({ configured }: { configured: boolean }) {
                                     <button
                                         type="button"
                                         className="underline"
-                                        onClick={() =>
-                                            void fetchDetails(reference.placeId)
-                                        }
+                                        onClick={() => void fetchDetails(reference.placeId)}
                                     >
                                         Fetch live details
                                     </button>
                                     <button
                                         type="button"
                                         className="underline"
-                                        onClick={() =>
-                                            void remove(reference.placeId)
-                                        }
+                                        onClick={() => void remove(reference.placeId)}
                                     >
                                         Remove
                                     </button>

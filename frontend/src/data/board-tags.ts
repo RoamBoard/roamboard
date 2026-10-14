@@ -38,7 +38,5 @@ export function filterBoardsByTags<T extends { tags: readonly BoardTagId[] }>(
     tagIds: readonly BoardTagId[]
 ): T[] {
     const validIds = tagIds.filter(isBoardTagId);
-    return boards.filter((board) =>
-        validIds.some((id) => board.tags.includes(id))
-    );
+    return boards.filter((board) => validIds.some((id) => board.tags.includes(id)));
 }

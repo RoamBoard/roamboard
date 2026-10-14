@@ -26,11 +26,7 @@ export const metadata: Metadata = {
         "Roamboard is a visual travel platform for discovering places, finding inspiration, and turning the things you love into journeys of your own."
 };
 
-export default function RootLayout({
-    children
-}: {
-    children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
         <html lang="en" suppressHydrationWarning>
             <head>
@@ -48,20 +44,12 @@ export default function RootLayout({
                     }}
                 />
             </head>
-            <body
-                className={`${cabinet.variable} ${satoshi.variable} antialiased`}
-            >
+            <body className={`${cabinet.variable} ${satoshi.variable} antialiased`}>
                 <WelcomeTransitionProvider>
                     {children}
                     <footer className="text-12 text-graphite px-6 py-3">
-                        Location data:{" "}
-                        <a href="https://www.geoapify.com/">
-                            Powered by Geoapify
-                        </a>{" "}
-                        &middot;{" "}
-                        <a href="https://www.openstreetmap.org/copyright">
-                            &copy; OpenStreetMap contributors
-                        </a>
+                        Location data: <a href="https://www.geoapify.com/">Powered by Geoapify</a> &middot;{" "}
+                        <a href="https://www.openstreetmap.org/copyright">&copy; OpenStreetMap contributors</a>
                     </footer>
                 </WelcomeTransitionProvider>
             </body>

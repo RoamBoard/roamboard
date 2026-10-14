@@ -3,19 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Marquee } from "@/components/ui/marquee";
-import {
-    discoverMoodRows,
-    discoverCollectionHref,
-    type DiscoverCollection
-} from "@/data/discover-collections";
+import { discoverMoodRows, discoverCollectionHref, type DiscoverCollection } from "@/data/discover-collections";
 
-function MoodLink({
-    collection,
-    moving = false
-}: {
-    collection: DiscoverCollection;
-    moving?: boolean;
-}) {
+function MoodLink({ collection, moving = false }: { collection: DiscoverCollection; moving?: boolean }) {
     const link = useRef<HTMLAnchorElement>(null);
     const [visible, setVisible] = useState(false);
     useEffect(() => {
@@ -25,13 +15,8 @@ function MoodLink({
             ([entry]) => {
                 // Large titles can exceed the mobile row width; keep a
                 // substantially visible title reachable by keyboard.
-                const rowWidth =
-                    entry.rootBounds?.width ?? entry.boundingClientRect.width;
-                const threshold = Math.min(
-                    0.95,
-                    (rowWidth / Math.max(entry.boundingClientRect.width, 1)) *
-                        0.65
-                );
+                const rowWidth = entry.rootBounds?.width ?? entry.boundingClientRect.width;
+                const threshold = Math.min(0.95, (rowWidth / Math.max(entry.boundingClientRect.width, 1)) * 0.65);
                 setVisible(entry.intersectionRatio >= threshold);
             },
             {
@@ -70,9 +55,7 @@ export default function DiscoverMoodMarquees() {
                 onClick={() => setShowAll(!showAll)}
                 className="focus:bg-background sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-20 focus:px-4 focus:py-3 focus:outline-2 motion-reduce:hidden"
             >
-                {showAll
-                    ? "Show animated collections"
-                    : "Browse all collections without motion"}
+                {showAll ? "Show animated collections" : "Browse all collections without motion"}
             </button>
             {!showAll && (
                 <div className="border-line grid grid-rows-5 border-t motion-reduce:hidden">
@@ -86,15 +69,9 @@ export default function DiscoverMoodMarquees() {
                             className="border-line text-muted-foreground font-display min-h-0 items-center border-b py-4 text-[clamp(1.5rem,3vw,3rem)] leading-none font-medium tracking-tight [--duration:90s] [--gap:2rem] md:py-6 md:[--gap:4rem]"
                         >
                             {collections.map((collection) => (
-                                <div
-                                    key={collection.id}
-                                    className="flex shrink-0 items-center gap-(--gap)"
-                                >
+                                <div key={collection.id} className="flex shrink-0 items-center gap-(--gap)">
                                     <MoodLink collection={collection} moving />
-                                    <span
-                                        className="text-faint"
-                                        aria-hidden="true"
-                                    >
+                                    <span className="text-faint" aria-hidden="true">
                                         ·
                                     </span>
                                 </div>
@@ -103,19 +80,14 @@ export default function DiscoverMoodMarquees() {
                     ))}
                 </div>
             )}
-            <div
-                className={`${showAll ? "grid" : "hidden motion-reduce:grid"} border-line grid-rows-5 border-t`}
-            >
+            <div className={`${showAll ? "grid" : "hidden motion-reduce:grid"} border-line grid-rows-5 border-t`}>
                 {discoverMoodRows.map((collections, row) => (
                     <div
                         key={row}
                         className="border-line text-muted-foreground font-display flex flex-wrap items-center gap-x-8 border-b py-4 text-[clamp(1.5rem,3vw,3rem)] leading-none font-medium tracking-tight md:py-6"
                     >
                         {collections.map((collection) => (
-                            <MoodLink
-                                key={collection.id}
-                                collection={collection}
-                            />
+                            <MoodLink key={collection.id} collection={collection} />
                         ))}
                     </div>
                 ))}

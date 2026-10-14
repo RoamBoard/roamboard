@@ -24,8 +24,7 @@ export default function BoardPreviewForm() {
         // Keep the browser on this page instead of submitting to a server.
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
-        const readText = (name: string) =>
-            String(formData.get(name) ?? "").trim();
+        const readText = (name: string) => String(formData.get(name) ?? "").trim();
         const title = readText("title");
         const country = readText("country");
         const countryCode = readText("countryCode").toUpperCase();
@@ -46,13 +45,8 @@ export default function BoardPreviewForm() {
             return;
         }
 
-        if (
-            (country || countryCode || cities.length > 0) &&
-            (!country || !countryCode)
-        ) {
-            setError(
-                "To add a destination, enter both its country and two-letter country code."
-            );
+        if ((country || countryCode || cities.length > 0) && (!country || !countryCode)) {
+            setError("To add a destination, enter both its country and two-letter country code.");
             return;
         }
 
@@ -61,11 +55,7 @@ export default function BoardPreviewForm() {
             return;
         }
 
-        if (
-            visibility !== "private" &&
-            visibility !== "friends" &&
-            visibility !== "public"
-        ) {
+        if (visibility !== "private" && visibility !== "friends" && visibility !== "public") {
             setError("Choose private, friends, or public visibility.");
             return;
         }
@@ -110,32 +100,19 @@ export default function BoardPreviewForm() {
             >
                 <div>
                     <label htmlFor="board-title">Title (required)</label>
-                    <input
-                        id="board-title"
-                        name="title"
-                        required
-                        className={inputClasses}
-                    />
+                    <input id="board-title" name="title" required className={inputClasses} />
                 </div>
 
                 <div>
-                    <label htmlFor="board-description">
-                        Description (optional)
-                    </label>
-                    <textarea
-                        id="board-description"
-                        name="description"
-                        rows={3}
-                        className={inputClasses}
-                    />
+                    <label htmlFor="board-description">Description (optional)</label>
+                    <textarea id="board-description" name="description" rows={3} className={inputClasses} />
                 </div>
 
                 <fieldset className="border-line space-y-4 rounded border p-4">
                     <legend className="px-2">Destination (optional)</legend>
                     <p id="destination-help" className="text-14">
-                        Leave these fields blank for an undecided destination.
-                        This test form accepts one country and any number of
-                        cities.
+                        Leave these fields blank for an undecided destination. This test form accepts one country and
+                        any number of cities.
                     </p>
                     <div>
                         <label htmlFor="board-country">Country</label>
@@ -167,20 +144,14 @@ export default function BoardPreviewForm() {
                             className={inputClasses}
                         />
                         <p id="cities-help" className="text-14 mt-2">
-                            Separate cities with commas, for example Stockholm,
-                            Gothenburg.
+                            Separate cities with commas, for example Stockholm, Gothenburg.
                         </p>
                     </div>
                 </fieldset>
 
                 <div>
                     <label htmlFor="board-visibility">Visibility</label>
-                    <select
-                        id="board-visibility"
-                        name="visibility"
-                        defaultValue="private"
-                        className={inputClasses}
-                    >
+                    <select id="board-visibility" name="visibility" defaultValue="private" className={inputClasses}>
                         <option value="private">Private (owner only)</option>
                         <option value="friends">Friends</option>
                         <option value="public">Public (anyone)</option>
@@ -199,10 +170,7 @@ export default function BoardPreviewForm() {
                 <BoardTagSelector />
 
                 {error ? (
-                    <p
-                        role="alert"
-                        className="border-foreground rounded border p-3"
-                    >
+                    <p role="alert" className="border-foreground rounded border p-3">
                         {error}
                     </p>
                 ) : null}
@@ -215,10 +183,7 @@ export default function BoardPreviewForm() {
                 </button>
             </form>
 
-            <section
-                aria-labelledby="board-preview-heading"
-                className="border-line mt-10 border-t pt-6"
-            >
+            <section aria-labelledby="board-preview-heading" className="border-line mt-10 border-t pt-6">
                 <h2 id="board-preview-heading" className="font-display text-24">
                     Collected Board data
                 </h2>

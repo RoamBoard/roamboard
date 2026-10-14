@@ -31,10 +31,8 @@
 /* Taken from Figma board */
 @theme inline {
     /* Typefaces: variables are registered in layout.tsx */
-    --font-display:
-        var(--font-cabinet), ui-sans-serif, system-ui, sans-serif; /* Cabinet Grotesk (primary) */
-    --font-body:
-        var(--font-satoshi), ui-sans-serif, system-ui, sans-serif; /* Satoshi (secondary) */
+    --font-display: var(--font-cabinet), ui-sans-serif, system-ui, sans-serif; /* Cabinet Grotesk (primary) */
+    --font-body: var(--font-satoshi), ui-sans-serif, system-ui, sans-serif; /* Satoshi (secondary) */
 
     /* Semantic colours (flip in dark mode) */
     --color-background: var(--background);

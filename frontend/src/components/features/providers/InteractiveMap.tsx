@@ -23,13 +23,7 @@ type Props = {
 
 const routeSource = "roamboard-provider-route";
 
-export default function InteractiveMap({
-    token,
-    points,
-    routeGeometry,
-    onMapClick,
-    onPointClick
-}: Props) {
+export default function InteractiveMap({ token, points, routeGeometry, onMapClick, onPointClick }: Props) {
     const containerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<MapboxMap | null>(null);
     const markersRef = useRef<Marker[]>([]);
@@ -81,15 +75,9 @@ export default function InteractiveMap({
                 setMapReady(true);
             });
             if (onMapClickRef.current) {
-                map.on("click", (event) =>
-                    onMapClickRef.current?.(event.lngLat.lat, event.lngLat.lng)
-                );
+                map.on("click", (event) => onMapClickRef.current?.(event.lngLat.lat, event.lngLat.lng));
             }
-            map.on("error", (event) =>
-                setMapError(
-                    event.error?.message ?? "The Mapbox map could not load."
-                )
-            );
+            map.on("error", (event) => setMapError(event.error?.message ?? "The Mapbox map could not load."));
             mapRef.current = map;
         }, 0);
         return () => {
@@ -134,17 +122,11 @@ export default function InteractiveMap({
                     Math.abs(candidate.latitude - point.latitude) < 0.00001 &&
                     Math.abs(candidate.longitude - point.longitude) < 0.00001
             );
-            const position = colocated.findIndex(
-                (candidate) => candidate.id === point.id
-            );
+            const position = colocated.findIndex((candidate) => candidate.id === point.id);
             const angle = (position / colocated.length) * Math.PI * 2;
             const offset: [number, number] =
-                colocated.length > 1
-                    ? [Math.cos(angle) * 22, Math.sin(angle) * 22]
-                    : [0, 0];
-            return new mapboxgl.Marker({ element, offset })
-                .setLngLat([point.longitude, point.latitude])
-                .addTo(map);
+                colocated.length > 1 ? [Math.cos(angle) * 22, Math.sin(angle) * 22] : [0, 0];
+            return new mapboxgl.Marker({ element, offset }).setLngLat([point.longitude, point.latitude]).addTo(map);
         });
         if (points.length === 1 && points[0]) {
             map.easeTo({
@@ -154,8 +136,7 @@ export default function InteractiveMap({
         }
         if (points.length > 1) {
             const bounds = points.reduce(
-                (current, point) =>
-                    current.extend([point.longitude, point.latitude]),
+                (current, point) => current.extend([point.longitude, point.latitude]),
                 new mapboxgl.LngLatBounds()
             );
             map.fitBounds(bounds, { padding: 64, maxZoom: 14 });
@@ -163,8 +144,7 @@ export default function InteractiveMap({
     }, [points, mapReady]);
 
     useEffect(() => {
-        const source = mapRef.current?.getSource(routeSource) as
-            mapboxgl.GeoJSONSource | undefined;
+        const source = mapRef.current?.getSource(routeSource) as mapboxgl.GeoJSONSource | undefined;
         if (!source) return;
         source.setData({
             type: "Feature",
@@ -181,16 +161,9 @@ export default function InteractiveMap({
         );
     return (
         <div className="relative">
-            <div
-                ref={containerRef}
-                className="h-96 w-full sm:h-120"
-                aria-label="Interactive Mapbox map"
-            />
+            <div ref={containerRef} className="h-96 w-full sm:h-120" aria-label="Interactive Mapbox map" />
             {mapError ? (
-                <p
-                    className="text-12 text-foreground absolute right-3 bottom-3 left-3 bg-white/95 p-3"
-                    role="alert"
-                >
+                <p className="text-12 text-foreground absolute right-3 bottom-3 left-3 bg-white/95 p-3" role="alert">
                     {mapError}
                 </p>
             ) : null}
