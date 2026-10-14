@@ -52,10 +52,10 @@ test("ProfileControl renders user preview menu when user prop is provided", () =
     );
 
     assert.ok(html.includes("User profile menu"));
-    assert.ok(html.includes("my profile"));
+    assert.ok(html.includes("Test Traveler"));
 });
 
-test("ProfileControl renders login link when signed out", () => {
+test("ProfileControl renders login trigger when signed out", () => {
     setMockAuthState(false);
     const html = renderToStaticMarkup(
         createElement(
@@ -67,7 +67,7 @@ test("ProfileControl renders login link when signed out", () => {
         )
     );
 
-    assert.ok(html.includes("log in"));
-    assert.ok(html.includes('href="/login"'));
+    assert.ok(html.includes("Sign up or log in"));
+    assert.ok(html.toLowerCase().includes("log in"));
 });
 

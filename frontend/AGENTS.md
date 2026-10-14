@@ -151,8 +151,15 @@ The frontend uses `pnpm test` for its Node/TSX integration tests. Documentation-
 `/boards/[boardId]` is a public viewer with the sample design at
 `/boards/lost-in-tokyo`. It reuses the homepage sidebar and account control,
 supports both themes and smaller screens, and opens full activity details in a
-native dialog. Account loading does not gate board viewing. The account control
-hides after the page is scrolled down.
+native dialog. Account loading does not gate board viewing.
+
+The published preview uses the same 5rem/6rem sidebar widths as Home.
+`Sidebar` has the light/dark control at the bottom, including its discovery
+variants. `ProfileControl` uses the same smaller decorative control at the top
+right across app pages. Theme choices are separate from the account dropdown.
+The account control has a transparent background and fades upward after 80px of
+page or main-content scrolling. Returning to the top shows it again. Reduced
+motion skips the animation.
 
 The mock loading boundary is `src/lib/published-board.ts`. The existing Board
 types now support optional one-based `dayNumber` on items and optional

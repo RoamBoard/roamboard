@@ -74,7 +74,7 @@ export default function PublishedBoard({ board, author, highlights }: PublishedB
                     <BoardPhoto
                         image={board.coverImage}
                         preload
-                        className="mx-auto h-[16rem] w-[82%] rounded-b-[50%] sm:h-[25rem] lg:h-[29rem] lg:w-[80%]"
+                        className="mx-auto mt-32 h-[16rem] w-[82%] rounded-b-[50%] sm:h-[25rem] lg:mt-0 lg:mr-48 lg:ml-auto lg:h-[29rem] lg:w-[calc(100%-14rem)] lg:max-w-[80%]"
                         sizes="80vw"
                     />
                     <div className={`relative mx-auto w-fit ${board.coverImage ? "-mt-7" : "pt-28"}`}>
