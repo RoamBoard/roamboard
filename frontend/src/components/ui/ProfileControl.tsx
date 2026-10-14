@@ -288,7 +288,7 @@ export default function ProfileControl({
                         <DropdownMenuItem asChild onSelect={(e) => e.preventDefault()}>
                             <button
                                 type="button"
-                                onClick={() => selectTheme(selectedTheme === "light" ? "dark" : "light")}
+                                onClick={toggleTheme}
                                 className="text-12 text-muted-foreground hover:text-foreground hover:bg-faint focus-visible:text-foreground focus-visible:bg-faint flex w-full cursor-pointer items-center justify-between rounded-[2px] px-3 py-2 text-left font-medium transition-colors"
                             >
                                 <div className="flex items-center gap-2">
