@@ -5,6 +5,10 @@ checks that PostgreSQL accepts a query. The latter does not verify migrations.
 
 ## Local setup
 
+For a shared PostgreSQL database in Docker on Azure while running the backend locally,
+follow [the shared database deployment guide](deploy/README.md). The existing
+`DATABASE_URL` configuration supports that setup without connection-code changes.
+
 1. Connect to your local PostgreSQL server as an administrator, for example
    with `psql -h localhost -U postgres -d postgres`, and run these two SQL
    statements (choose your own password):
