@@ -594,6 +594,10 @@ export function getMockAuthState(): boolean {
     return store.isLoggedIn;
 }
 
+export function getMockAuthStateServerSnapshot(): boolean {
+    return false;
+}
+
 export function setMockAuthState(isLoggedIn: boolean): void {
     store.isLoggedIn = isLoggedIn;
     if (typeof window !== "undefined") {

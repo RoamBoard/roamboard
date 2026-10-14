@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect, useSyncExternalStore, type ReactNode } from "react";
 import { getCurrentUser, signOut, type AuthUser } from "@/lib/auth";
 import {
+    getMockAuthState,
+    getMockAuthStateServerSnapshot,
     getMockProfile,
     getMockProfileServerSnapshot,
     restoreMockStore,
@@ -47,13 +49,13 @@ export default function ProfileControl({
 }: ProfileControlProps) {
     const router = useRouter();
     const [sessionUser, setSessionUser] = useState<AuthUser | null>(null);
-    const [loaded, setLoaded] = useState(Boolean(user));
     const [signingOut, setSigningOut] = useState(false);
     const [logoutError, setLogoutError] = useState("");
     const [selectedTheme, setSelectedTheme] = useState("light");
 
     // Sync with external mock store
     const profile = useSyncExternalStore(subscribeMockStore, getMockProfile, getMockProfileServerSnapshot);
+    const mockIsLoggedIn = useSyncExternalStore(subscribeMockStore, getMockAuthState, getMockAuthStateServerSnapshot);
 
     const selectTheme = (theme: string) => {
         if (theme !== "light" && theme !== "dark") return;
@@ -75,14 +77,12 @@ export default function ProfileControl({
             .then((currentUser) => {
                 if (state.active) {
                     setSessionUser(currentUser);
-                    setLoaded(true);
                 }
             })
             .catch(() => {
                 // Silently fallback to unauthenticated state if offline or 401
                 if (state.active) {
                     setSessionUser(null);
-                    setLoaded(true);
                 }
             });
         return () => {
@@ -94,7 +94,9 @@ export default function ProfileControl({
         setSigningOut(true);
         setLogoutError("");
         try {
-            await signOut();
+            if (sessionUser) {
+                await signOut();
+            }
             setSessionUser(null);
             setMockAuthState(false);
             router.replace("/login");
@@ -105,8 +107,8 @@ export default function ProfileControl({
         }
     }
 
-    // Real account controls tied to backend session; demo user enabled only through explicit user prop
-    const isLoggedIn = Boolean(user || sessionUser);
+    // Real account controls tied to backend session; demo user enabled through explicit user prop or demo login
+    const isLoggedIn = Boolean(user || sessionUser || mockIsLoggedIn);
 
     const displayName = user?.name || sessionUser?.displayName || userName || profile.name || "Rowan";
     const displayAvatar = user?.avatarUrl || avatarUrl || profile.avatarUrl;
@@ -119,8 +121,6 @@ export default function ProfileControl({
         : floating
           ? "fixed top-6 right-6 z-40 sm:top-8 sm:right-10"
           : "absolute top-6 right-6 z-40 sm:top-8 sm:right-10";
-
-    if (!loaded) return null;
 
     if (!isLoggedIn) {
         return (
@@ -169,7 +169,7 @@ export default function ProfileControl({
                     >
                         {displayAvatar ? (
                             <div className="bg-faint relative h-5 w-5 shrink-0 overflow-hidden rounded-[1px]">
-                                <Image src={displayAvatar} alt="" fill sizes="20px" className="object-cover" />
+                                <Image src={displayAvatar} alt="" fill sizes="20px" className="object-cover" unoptimized />
                             </div>
                         ) : (
                             <svg
