@@ -4,6 +4,7 @@ import { createElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import ProfileControl from "../src/components/ui/ProfileControl";
+import Sidebar from "../src/components/layout/Sidebar";
 import {
     getMockAuthState,
     getMockAuthStateServerSnapshot,
@@ -71,4 +72,13 @@ test("ProfileControl renders login link and theme select when signed out", () =>
     assert.ok(html.includes('href="/login"'));
     assert.ok(html.includes("Color theme"));
 });
+
+test("Sidebar renders navigation links and does not render theme select", () => {
+    const html = renderToStaticMarkup(createElement(Sidebar, { activeHref: "/home" }));
+    assert.ok(html.includes("ROAMBOARD"));
+    assert.ok(html.includes('href="/home"'));
+    assert.ok(html.includes('href="/discover"'));
+    assert.ok(!html.includes("Color theme"));
+});
+
 
