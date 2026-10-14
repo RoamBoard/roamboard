@@ -270,7 +270,6 @@ export default function PublishedBoard({
                     {feedback}
                 </ActivityDetailsDialog>
             )}
-            {/* Clearing the draft closes the copy editor. */}
             {preview.draft ? (
                 <BoardDialog
                     title="Make it yours"

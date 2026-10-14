@@ -153,14 +153,12 @@ contract. Backend photo URLs and fallbacks belong in the supplied image data.
 
 `src/lib/board-preview.ts` uses tab-local session storage for preview bookmarks,
 saved activities, and editable copies. These actions do not write to the backend
-or represent account-owned resources. See [PUBLISHED_BOARDS.md](PUBLISHED_BOARDS.md)
-for the data and mutation boundaries, sample photos, and remaining integration.
+or represent account-owned resources.
 
 `PublishedBoard` owns the selected activity and its open/close handlers.
 `PublishedBoardDay` renders the timeline and cards, `ActivityDetailsDialog`
 renders the selected activity, and `useBoardPreview` manages preview save/copy
-state. See [PUBLISHED_BOARD_REVIEW.md](PUBLISHED_BOARD_REVIEW.md) for the
-readability review and a guide to following the popup interaction.
+state.
 
 ### Independent frontend and API testing
 

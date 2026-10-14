@@ -1,7 +1,6 @@
 "use client";
 
 import {
-    // Open the modal and stop the page behind it from scrolling.
     useEffect,
     useId,
     useRef,
@@ -19,7 +18,6 @@ type Props = {
 
 // Both the activity popup and copy editor use this dialog.
 export default function BoardDialog({ title, onClose, children }: Props) {
-    // The ref lets us call the browser's dialog methods.
     const dialogRef = useRef<HTMLDialogElement>(null);
     // Give this dialog its own heading ID for screen readers.
     const titleId = useId();

@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import type { Board, BoardActivity } from "@/types/board";
 import { savePreviewCopy } from "@/lib/board-preview";
+import { getBoardDays } from "@/lib/board-presentation";
 
 type Props = {
     sourceBoardId: string;
@@ -10,7 +11,6 @@ type Props = {
     onSaved: (draft: Board) => void;
 };
 
-// All editor fields use these styles.
 const fieldClasses =
     "border-line bg-background w-full border px-3 py-2 text-14 focus-visible:outline-2 focus-visible:outline-offset-2";
 
@@ -21,7 +21,21 @@ export default function BoardCopyEditor({
     onSaved
 }: Props) {
     // Keep edits here until the user presses Save preview copy.
-    const [draft, setDraft] = useState(initialDraft);
+    const [draft, setDraft] = useState(() => {
+        // Use the viewer's day calculation for copies that only have dates.
+        const dayNumbers = new Map(
+            getBoardDays(initialDraft).flatMap((day) =>
+                day.items.map((item) => [item.id, day.number] as const)
+            )
+        );
+        return {
+            ...initialDraft,
+            items: initialDraft.items.map((item) => ({
+                ...item,
+                dayNumber: dayNumbers.get(item.id) ?? 1
+            }))
+        };
+    });
     const [message, setMessage] = useState("");
     const [error, setError] = useState("");
 
