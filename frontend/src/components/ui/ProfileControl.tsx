@@ -21,6 +21,7 @@ import {
     DropdownMenuContent,
     DropdownMenuItem
 } from "@/components/ui/dropdown-menu";
+import ThemeSelect from "@/components/ui/ThemeSelect";
 
 export type ProfileControlProps = {
     user?: { name: string; avatarUrl?: string; handle?: string } | null;
@@ -124,7 +125,11 @@ export default function ProfileControl({
 
     if (!isLoggedIn) {
         return (
-            <div className={containerClasses}>
+            <div className={`${containerClasses} flex items-center gap-2 sm:gap-2.5`}>
+                <ThemeSelect
+                    side="bottom"
+                    className="border-line text-12 text-muted-foreground hover:text-foreground hover:border-foreground font-body bg-background/90 hover:bg-background flex min-h-0 cursor-pointer items-center gap-2 rounded-[2px] border px-2.5 py-1.5 font-medium transition-colors focus-visible:outline-1 focus-visible:outline-offset-4"
+                />
                 <Link
                     href="/login"
                     className="border-line text-12 text-muted-foreground hover:text-foreground hover:border-foreground font-body bg-background/90 hover:bg-background flex cursor-pointer items-center gap-2 rounded-[2px] border px-3 py-1.5 font-medium transition-colors focus-visible:outline-1 focus-visible:outline-offset-4"

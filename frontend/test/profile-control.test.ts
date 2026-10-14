@@ -55,7 +55,7 @@ test("ProfileControl renders user preview menu when user prop is provided", () =
     assert.ok(html.includes("my profile"));
 });
 
-test("ProfileControl renders login link when signed out", () => {
+test("ProfileControl renders login link and theme select when signed out", () => {
     setMockAuthState(false);
     const html = renderToStaticMarkup(
         createElement(
@@ -69,5 +69,6 @@ test("ProfileControl renders login link when signed out", () => {
 
     assert.ok(html.toLowerCase().includes("log in"));
     assert.ok(html.includes('href="/login"'));
+    assert.ok(html.includes("Color theme"));
 });
 
