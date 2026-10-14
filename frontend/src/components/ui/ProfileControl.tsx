@@ -11,8 +11,9 @@ import {
 } from "react";
 import { getCurrentUser, signOut, type AuthUser } from "@/lib/auth";
 import {
-    getMockAuthState,
     getMockProfile,
+    getMockProfileServerSnapshot,
+    restoreMockStore,
     setMockAuthState,
     subscribeMockStore,
     updateMockSettings
@@ -51,6 +52,7 @@ export default function ProfileControl({
 }: ProfileControlProps) {
     const router = useRouter();
     const [sessionUser, setSessionUser] = useState<AuthUser | null>(null);
+    const [loaded, setLoaded] = useState(Boolean(user));
     const [signingOut, setSigningOut] = useState(false);
     const [logoutError, setLogoutError] = useState("");
     const [selectedTheme, setSelectedTheme] = useState("light");
@@ -59,12 +61,7 @@ export default function ProfileControl({
     const profile = useSyncExternalStore(
         subscribeMockStore,
         getMockProfile,
-        getMockProfile
-    );
-    const mockIsLoggedIn = useSyncExternalStore(
-        subscribeMockStore,
-        getMockAuthState,
-        () => true
+        getMockProfileServerSnapshot
     );
 
     const selectTheme = (theme: string) => {
@@ -80,15 +77,22 @@ export default function ProfileControl({
     };
 
     useEffect(() => {
+        restoreMockStore();
         if (user) return;
         const state = { active: true };
         getCurrentUser()
             .then((currentUser) => {
-                if (state.active) setSessionUser(currentUser);
+                if (state.active) {
+                    setSessionUser(currentUser);
+                    setLoaded(true);
+                }
             })
             .catch(() => {
-                // Silently fallback to mock profile if not authenticated or offline
-                if (state.active) setSessionUser(null);
+                // Silently fallback to unauthenticated state if offline or 401
+                if (state.active) {
+                    setSessionUser(null);
+                    setLoaded(true);
+                }
             });
         return () => {
             state.active = false;
@@ -112,14 +116,15 @@ export default function ProfileControl({
         }
     }
 
-    // Determine login status and display info
-    const isLoggedIn =
-        user === null && !sessionUser
-            ? mockIsLoggedIn
-            : Boolean(user || sessionUser || mockIsLoggedIn);
+    // Real account controls tied to backend session; demo user enabled only through explicit user prop
+    const isLoggedIn = Boolean(user || sessionUser);
 
     const displayName =
-        user?.name || sessionUser?.displayName || userName || profile.name || "Rowan";
+        user?.name ||
+        sessionUser?.displayName ||
+        userName ||
+        profile.name ||
+        "Rowan";
     const displayAvatar = user?.avatarUrl || avatarUrl || profile.avatarUrl;
     const rawHandle = user?.handle || handle || profile.handle;
     const displayHandle = rawHandle
@@ -134,6 +139,8 @@ export default function ProfileControl({
         : floating
           ? "fixed top-6 right-6 z-40 sm:top-8 sm:right-10"
           : "absolute top-6 right-6 z-40 sm:top-8 sm:right-10";
+
+    if (!loaded) return null;
 
     if (!isLoggedIn) {
         return (
@@ -235,11 +242,11 @@ export default function ProfileControl({
                     align="end"
                     sideOffset={8}
                     collisionPadding={8}
-                    className="border-line bg-background shadow-xs min-w-[13rem] rounded-[2px] border p-1"
+                    className="border-line bg-background min-w-[13rem] rounded-[2px] border p-1 shadow-xs"
                 >
                     {Boolean(displayName) && (
                         <div className="border-line border-b px-3 py-2">
-                            <span className="font-display text-12 text-foreground block font-bold uppercase tracking-tight">
+                            <span className="font-display text-12 text-foreground block font-bold tracking-tight uppercase">
                                 {displayName}
                             </span>
                             {Boolean(displayHandle) && (
@@ -266,7 +273,10 @@ export default function ProfileControl({
                             </Link>
                         </DropdownMenuItem>
 
-                        <div className="bg-line my-0.5 h-px" aria-hidden="true" />
+                        <div
+                            className="bg-line my-0.5 h-px"
+                            aria-hidden="true"
+                        />
 
                         <DropdownMenuItem asChild>
                             <Link
@@ -283,7 +293,10 @@ export default function ProfileControl({
                             </Link>
                         </DropdownMenuItem>
 
-                        <div className="bg-line my-0.5 h-px" aria-hidden="true" />
+                        <div
+                            className="bg-line my-0.5 h-px"
+                            aria-hidden="true"
+                        />
 
                         {/* Theme row: completely uniform with other menu items */}
                         <DropdownMenuItem
@@ -294,10 +307,12 @@ export default function ProfileControl({
                                 type="button"
                                 onClick={() =>
                                     selectTheme(
-                                        selectedTheme === "light" ? "dark" : "light"
+                                        selectedTheme === "light"
+                                            ? "dark"
+                                            : "light"
                                     )
                                 }
-                                className="text-12 text-muted-foreground hover:text-foreground hover:bg-faint focus-visible:text-foreground focus-visible:bg-faint flex w-full cursor-pointer items-center justify-between rounded-[2px] px-3 py-2 font-medium transition-colors text-left"
+                                className="text-12 text-muted-foreground hover:text-foreground hover:bg-faint focus-visible:text-foreground focus-visible:bg-faint flex w-full cursor-pointer items-center justify-between rounded-[2px] px-3 py-2 text-left font-medium transition-colors"
                             >
                                 <div className="flex items-center gap-2">
                                     <span
@@ -306,22 +321,30 @@ export default function ProfileControl({
                                     />
                                     <span>theme</span>
                                 </div>
-                                <span className="text-10 text-muted-foreground uppercase font-normal tracking-label">
+                                <span className="text-10 text-muted-foreground tracking-label font-normal uppercase">
                                     {selectedTheme}
                                 </span>
                             </button>
                         </DropdownMenuItem>
 
-                        <div className="bg-line my-0.5 h-px" aria-hidden="true" />
+                        <div
+                            className="bg-line my-0.5 h-px"
+                            aria-hidden="true"
+                        />
 
-                        <DropdownMenuItem asChild disabled={signingOut}>
+                        <DropdownMenuItem
+                            asChild
+                            disabled={Boolean(user) || signingOut}
+                        >
                             <button
                                 type="button"
-                                disabled={signingOut}
+                                disabled={Boolean(user) || signingOut}
                                 onClick={() => void handleSignOut()}
-                                className="text-12 text-muted-foreground hover:text-foreground hover:bg-faint focus-visible:text-foreground focus-visible:bg-faint flex w-full cursor-pointer items-center justify-between rounded-[2px] px-3 py-2 font-medium transition-colors text-left"
+                                className="text-12 text-muted-foreground hover:text-foreground hover:bg-faint focus-visible:text-foreground focus-visible:bg-faint flex w-full cursor-pointer items-center justify-between rounded-[2px] px-3 py-2 text-left font-medium transition-colors disabled:pointer-events-none disabled:opacity-50"
                             >
-                                <span>{signingOut ? "signing out…" : "log out"}</span>
+                                <span>
+                                    {signingOut ? "signing out…" : "log out"}
+                                </span>
                                 <span
                                     className="text-10 text-muted-foreground font-normal"
                                     aria-hidden="true"
@@ -334,7 +357,10 @@ export default function ProfileControl({
 
                     {logoutError && (
                         <div className="border-line border-t px-3 py-2">
-                            <p role="alert" className="text-11 text-red-600 font-medium">
+                            <p
+                                role="alert"
+                                className="text-11 font-medium text-red-600"
+                            >
                                 {logoutError}
                             </p>
                         </div>

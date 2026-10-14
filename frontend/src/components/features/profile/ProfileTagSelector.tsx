@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { boardTags, getBoardTag, type BoardTag, type BoardTagId } from "@/data/board-tags";
+import {
+    boardTags,
+    getBoardTag,
+    type BoardTag,
+    type BoardTagId
+} from "@/data/board-tags";
 import TagIcon from "@/components/ui/TagIcon";
 
 type Props = {
@@ -47,7 +52,9 @@ export default function ProfileTagSelector({
     function handleToggleTag(tag: BoardTag) {
         if (activeTagIdSet.has(tag.id)) {
             // Remove
-            onChange(activeTags.filter((t) => t.id !== tag.id).map((t) => t.id));
+            onChange(
+                activeTags.filter((t) => t.id !== tag.id).map((t) => t.id)
+            );
         } else {
             // Add if limit not reached
             if (isMaxReached) return;
@@ -64,7 +71,7 @@ export default function ProfileTagSelector({
             {/* Header: Title and Selection Counter (matches Languages Spoken style) */}
             <div>
                 <div className="flex items-center justify-between">
-                    <h2 className="font-display text-16 text-foreground font-bold uppercase tracking-tight">
+                    <h2 className="font-display text-16 text-foreground font-bold tracking-tight uppercase">
                         Tags
                     </h2>
                     <span className="text-11 text-muted-foreground font-medium">
@@ -72,7 +79,8 @@ export default function ProfileTagSelector({
                     </span>
                 </div>
                 <p className="text-12 text-muted-foreground mt-0.5">
-                    Tags that describe your favorite types of activities and trips.
+                    Tags that describe your favorite types of activities and
+                    trips.
                 </p>
             </div>
 
@@ -84,7 +92,11 @@ export default function ProfileTagSelector({
                             key={tag.id}
                             className="border-line bg-faint text-12 text-foreground font-body flex items-center gap-1.5 rounded-[2px] border px-2.5 py-1 font-medium"
                         >
-                            <TagIcon tag={tag} size={13} className="text-foreground shrink-0" />
+                            <TagIcon
+                                tag={tag}
+                                size={13}
+                                className="text-foreground shrink-0"
+                            />
                             <span>{tag.name}</span>
                             <button
                                 type="button"
@@ -112,14 +124,14 @@ export default function ProfileTagSelector({
                                 ? `Limit reached (${maxTags} max)`
                                 : "Filter catalog (e.g. Hiking, Foodie, Beach)..."
                         }
-                        className="border-line text-12 text-foreground placeholder:text-muted-foreground font-body focus:border-foreground w-full rounded-[2px] border bg-background px-3 py-1.5 pr-7 transition-colors focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                        className="border-line text-12 text-foreground placeholder:text-muted-foreground font-body focus:border-foreground bg-background w-full rounded-[2px] border px-3 py-1.5 pr-7 transition-colors focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                     />
                     {searchQuery && (
                         <button
                             type="button"
                             onClick={() => setSearchQuery("")}
                             aria-label="Clear search"
-                            className="text-muted-foreground hover:text-foreground absolute inset-y-0 right-0 flex items-center pr-2.5 text-xs cursor-pointer"
+                            className="text-muted-foreground hover:text-foreground absolute inset-y-0 right-0 flex cursor-pointer items-center pr-2.5 text-xs"
                         >
                             ✕
                         </button>
@@ -148,9 +160,9 @@ export default function ProfileTagSelector({
                                     title={tag.description}
                                     className={`text-11 font-body flex items-center gap-1.5 rounded-[2px] border px-2.5 py-1 transition-colors ${
                                         isSelected
-                                            ? "border-foreground bg-foreground text-background font-medium cursor-pointer"
+                                            ? "border-foreground bg-foreground text-background cursor-pointer font-medium"
                                             : isDisabled
-                                              ? "border-line/60 bg-background text-muted-foreground/40 opacity-40 cursor-not-allowed"
+                                              ? "border-line/60 bg-background text-muted-foreground/40 cursor-not-allowed opacity-40"
                                               : "border-line bg-background text-muted-foreground hover:border-foreground hover:text-foreground hover:bg-faint/40 cursor-pointer"
                                     }`}
                                 >
@@ -158,7 +170,9 @@ export default function ProfileTagSelector({
                                         tag={tag}
                                         size={12}
                                         className={`shrink-0 ${
-                                            isSelected ? "text-background" : "text-muted-foreground"
+                                            isSelected
+                                                ? "text-background"
+                                                : "text-muted-foreground"
                                         }`}
                                     />
                                     <span>{tag.name}</span>

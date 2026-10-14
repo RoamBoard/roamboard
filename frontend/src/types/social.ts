@@ -79,4 +79,3 @@ export type UserSettings = {
     defaultBoardVisibility: "private" | "friends" | "public";
     emailNotifications: boolean;
 };
-

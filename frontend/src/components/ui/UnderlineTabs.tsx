@@ -41,4 +41,3 @@ export default function UnderlineTabs<T extends string>({
         </nav>
     );
 }
-

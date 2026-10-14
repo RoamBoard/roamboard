@@ -27,6 +27,10 @@ export default function SettingsSaveBar({
     const remainingRef = useRef(AUTO_DISMISS_MS);
     const startRef = useRef<number>(0);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const onDismissToastRef = useRef(onDismissToast);
+    useEffect(() => {
+        onDismissToastRef.current = onDismissToast;
+    }, [onDismissToast]);
 
     // Auto-dismiss 6-second timer management with hover-pause support
     useEffect(() => {
@@ -39,13 +43,13 @@ export default function SettingsSaveBar({
         startRef.current = Date.now();
 
         timerRef.current = setTimeout(() => {
-            onDismissToast();
+            onDismissToastRef.current();
         }, AUTO_DISMISS_MS);
 
         return () => {
             if (timerRef.current) clearTimeout(timerRef.current);
         };
-    }, [showToast, toastKey, onDismissToast]);
+    }, [showToast, toastKey]);
 
     const handleMouseEnter = () => {
         if (!showToast) return;
@@ -62,10 +66,10 @@ export default function SettingsSaveBar({
         startRef.current = Date.now();
         if (remainingRef.current > 0) {
             timerRef.current = setTimeout(() => {
-                onDismissToast();
+                onDismissToastRef.current();
             }, remainingRef.current);
         } else {
-            onDismissToast();
+            onDismissToastRef.current();
         }
     };
 
@@ -75,16 +79,16 @@ export default function SettingsSaveBar({
             <aside
                 aria-label="Form actions"
                 inert={!isDirty ? true : undefined}
-                className={`fixed bottom-6 inset-x-4 max-w-3xl mx-auto z-40 bg-background/95 backdrop-blur-md border border-line rounded-[2px] shadow-xl px-4 py-3 sm:px-6 flex flex-wrap items-center justify-between gap-3 transition-all duration-300 ease-out ${
+                className={`bg-background/95 border-line fixed inset-x-4 bottom-6 z-40 mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3 rounded-[2px] border px-4 py-3 shadow-xl backdrop-blur-md transition-all duration-300 ease-out motion-reduce:transform-none motion-reduce:transition-none sm:px-6 ${
                     isDirty
-                        ? "translate-y-0 opacity-100 pointer-events-auto"
-                        : "translate-y-16 opacity-0 pointer-events-none"
+                        ? "pointer-events-auto translate-y-0 opacity-100"
+                        : "pointer-events-none translate-y-16 opacity-0"
                 }`}
             >
                 <div className="flex items-center gap-3">
                     <button
                         type="submit"
-                        className="bg-foreground text-background hover:bg-foreground/90 font-body text-12 cursor-pointer rounded-[2px] px-5 py-2.5 font-bold uppercase tracking-wider transition-colors focus-visible:outline-1 focus-visible:outline-offset-4"
+                        className="bg-foreground text-background hover:bg-foreground/90 font-body text-12 cursor-pointer rounded-[2px] px-5 py-2.5 font-bold tracking-wider uppercase transition-colors focus-visible:outline-1 focus-visible:outline-offset-4"
                     >
                         Save Changes
                     </button>
@@ -112,15 +116,15 @@ export default function SettingsSaveBar({
                 inert={!showToast ? true : undefined}
                 onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}
-                className={`group fixed bottom-6 inset-x-0 mx-auto w-fit max-w-sm sm:max-w-md z-50 bg-background/95 backdrop-blur-md border border-line rounded-[2px] shadow-2xl px-4 py-2.5 flex items-center gap-3 overflow-hidden transition-all duration-300 ease-out ${
+                className={`group bg-background/95 border-line fixed inset-x-0 bottom-6 z-50 mx-auto flex w-fit max-w-sm items-center gap-3 overflow-hidden rounded-[2px] border px-4 py-2.5 shadow-2xl backdrop-blur-md transition-all duration-300 ease-out motion-reduce:transform-none motion-reduce:transition-none sm:max-w-md ${
                     showToast
-                        ? "translate-y-0 opacity-100 pointer-events-auto"
-                        : "translate-y-12 opacity-0 pointer-events-none"
+                        ? "pointer-events-auto translate-y-0 opacity-100"
+                        : "pointer-events-none translate-y-12 opacity-0"
                 }`}
             >
                 <span
                     aria-hidden="true"
-                    className="size-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-10 font-bold shrink-0"
+                    className="text-10 flex size-4 shrink-0 items-center justify-center rounded-full bg-emerald-600 font-bold text-white"
                 >
                     ✓
                 </span>
@@ -135,7 +139,7 @@ export default function SettingsSaveBar({
                             onUndo();
                             onDismissToast();
                         }}
-                        className="text-11 font-bold uppercase tracking-wider text-foreground underline hover:text-muted-foreground cursor-pointer transition-colors ml-1 whitespace-nowrap"
+                        className="text-11 text-foreground hover:text-muted-foreground ml-1 cursor-pointer font-bold tracking-wider whitespace-nowrap uppercase underline transition-colors"
                     >
                         Undo
                     </button>
@@ -145,17 +149,17 @@ export default function SettingsSaveBar({
                     type="button"
                     onClick={onDismissToast}
                     aria-label="Dismiss notification"
-                    className="text-muted-foreground hover:text-foreground text-xs cursor-pointer ml-1 p-0.5 rounded hover:bg-faint transition-colors"
+                    className="text-muted-foreground hover:text-foreground hover:bg-faint ml-1 cursor-pointer rounded p-0.5 text-xs transition-colors"
                 >
                     ✕
                 </button>
 
                 {/* 6s countdown line at the bottom */}
-                <div className="absolute bottom-0 inset-x-0 h-[2.5px] bg-line/40 overflow-hidden">
+                <div className="bg-line/40 absolute inset-x-0 bottom-0 h-[2.5px] overflow-hidden">
                     {showToast && (
                         <div
                             key={toastKey}
-                            className="h-full bg-emerald-600 dark:bg-emerald-500 origin-left animate-toast-progress"
+                            className="animate-toast-progress h-full origin-left bg-emerald-600 dark:bg-emerald-500"
                         />
                     )}
                 </div>

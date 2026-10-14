@@ -24,6 +24,14 @@ function getNameStyle(nameStr: string): string {
 }
 
 export default function ProfileHero({ profile }: Props) {
+    const occupation = profile.occupation || profile.details?.occupation;
+    const languages = profile.details?.languages ?? [];
+    const rawTags = profile.details?.tags ?? profile.details?.interests ?? [];
+    const hasOccupation = Boolean(occupation);
+    const hasLanguages = languages.length > 0;
+    const hasTags = rawTags.length > 0;
+    const hasBioMeta = hasOccupation || hasLanguages || hasTags;
+
     return (
         <section
             aria-label="Profile overview"
@@ -42,10 +50,10 @@ export default function ProfileHero({ profile }: Props) {
                     />
 
                     {/* Subtle bottom fade to guarantee readable contrast when display name overlaps */}
-                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 sm:h-28 bg-gradient-to-t from-background/90 via-background/40 to-transparent" />
+                    <div className="from-background/90 via-background/40 pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t to-transparent sm:h-28" />
 
                     {/* Notice in the box: photo upload implementation pending backend */}
-                    <div className="border-line bg-background/95 shadow-xs absolute top-3 right-3 left-3 rounded-[2px] border p-2.5 backdrop-blur-xs">
+                    <div className="border-line bg-background/95 absolute top-3 right-3 left-3 rounded-[2px] border p-2.5 shadow-xs backdrop-blur-xs">
                         <div className="flex items-center gap-1.5">
                             <span className="bg-foreground h-1.5 w-1.5 shrink-0 rounded-full" />
                             <span className="text-10 tracking-label text-foreground block font-bold uppercase">
@@ -53,14 +61,15 @@ export default function ProfileHero({ profile }: Props) {
                             </span>
                         </div>
                         <p className="text-10 text-muted-foreground mt-1 leading-normal font-medium">
-                            Upload should be implemented later when the backend framework is created.
+                            Upload should be implemented later when the backend
+                            framework is created.
                         </p>
                     </div>
                 </div>
 
                 {/* Display Name slightly overlapping the picture with responsive font sizing */}
                 <h2
-                    className={`font-display text-foreground relative z-10 px-1 font-black tracking-tight uppercase select-none break-words ${getNameStyle(
+                    className={`font-display text-foreground relative z-10 px-1 font-black tracking-tight break-words uppercase select-none ${getNameStyle(
                         profile.name
                     )}`}
                 >
@@ -113,12 +122,13 @@ export default function ProfileHero({ profile }: Props) {
                     {/* Headline & Bio */}
                     <div className="mt-8">
                         <h3 className="font-display text-30 sm:text-36 text-foreground leading-tight font-bold">
-                            {profile.headline || "Chasing places, collecting stories."}
+                            {profile.headline ||
+                                "Chasing places, collecting stories."}
                         </h3>
                         <p className="text-13 text-muted-foreground mt-3 max-w-xl leading-relaxed">
                             {profile.bio}{" "}
                             <span
-                                className="text-muted-foreground/30 animate-pulse font-normal select-none pointer-events-none"
+                                className="text-muted-foreground/30 pointer-events-none animate-pulse font-normal select-none"
                                 aria-hidden="true"
                             >
                                 |
@@ -126,17 +136,11 @@ export default function ProfileHero({ profile }: Props) {
                         </p>
 
                         {/* Bio Meta: Occupation, Languages & Tags */}
-                        {Boolean(
-                            (profile.occupation || profile.details?.occupation) ||
-                            (profile.details?.languages && profile.details.languages.length > 0) ||
-                            ((profile.details?.tags ?? profile.details?.interests) &&
-                                (profile.details?.tags ?? profile.details?.interests)!.length > 0)
-                        ) && (
+                        {hasBioMeta && (
                             <div className="border-line/60 mt-5 space-y-3 border-t pt-4">
-                                {(Boolean(profile.occupation || profile.details?.occupation) ||
-                                    Boolean(profile.details?.languages && profile.details.languages.length > 0)) && (
+                                {(hasOccupation || hasLanguages) && (
                                     <div className="text-12 text-muted-foreground font-body flex flex-wrap items-center gap-x-6 gap-y-2">
-                                        {(profile.occupation || profile.details?.occupation) && (
+                                        {hasOccupation && (
                                             <div className="text-foreground flex items-center gap-1.5 font-medium">
                                                 <svg
                                                     width="14"
@@ -150,14 +154,20 @@ export default function ProfileHero({ profile }: Props) {
                                                     className="text-muted-foreground shrink-0"
                                                     aria-hidden="true"
                                                 >
-                                                    <rect width="20" height="14" x="2" y="7" rx="2" />
+                                                    <rect
+                                                        width="20"
+                                                        height="14"
+                                                        x="2"
+                                                        y="7"
+                                                        rx="2"
+                                                    />
                                                     <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
                                                 </svg>
-                                                <span>{profile.occupation || profile.details?.occupation}</span>
+                                                <span>{occupation}</span>
                                             </div>
                                         )}
 
-                                        {profile.details?.languages && profile.details.languages.length > 0 && (
+                                        {hasLanguages && (
                                             <div className="text-foreground flex items-center gap-1.5 font-medium">
                                                 <svg
                                                     width="14"
@@ -171,21 +181,26 @@ export default function ProfileHero({ profile }: Props) {
                                                     className="text-muted-foreground shrink-0"
                                                     aria-hidden="true"
                                                 >
-                                                    <circle cx="12" cy="12" r="10" />
+                                                    <circle
+                                                        cx="12"
+                                                        cy="12"
+                                                        r="10"
+                                                    />
                                                     <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
                                                     <path d="M2 12h20" />
                                                 </svg>
-                                                <span>Speaks {profile.details.languages.join(", ")}</span>
+                                                <span>
+                                                    Speaks{" "}
+                                                    {languages.join(", ")}
+                                                </span>
                                             </div>
                                         )}
                                     </div>
                                 )}
 
-                                {Boolean(
-                                    (profile.details?.tags ?? profile.details?.interests)?.length
-                                ) && (
+                                {hasTags && (
                                     <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                                        <div className="text-foreground flex items-center gap-1.5 font-medium shrink-0 mr-1">
+                                        <div className="text-foreground mr-1 flex shrink-0 items-center gap-1.5 font-medium">
                                             <svg
                                                 width="14"
                                                 height="14"
@@ -198,25 +213,36 @@ export default function ProfileHero({ profile }: Props) {
                                                 className="text-muted-foreground shrink-0"
                                                 aria-hidden="true"
                                             >
-                                                <circle cx="12" cy="12" r="10" />
+                                                <circle
+                                                    cx="12"
+                                                    cy="12"
+                                                    r="10"
+                                                />
                                                 <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
                                             </svg>
-                                            <span className="text-muted-foreground font-normal text-12">Tags:</span>
+                                            <span className="text-muted-foreground text-12 font-normal">
+                                                Tags:
+                                            </span>
                                         </div>
-                                        {(profile.details?.tags ?? profile.details?.interests)!
+                                        {rawTags
                                             .map((id) => getBoardTag(id))
-                                            .filter((t): t is NonNullable<typeof t> => Boolean(t))
+                                            .filter(
+                                                (
+                                                    t
+                                                ): t is NonNullable<typeof t> =>
+                                                    Boolean(t)
+                                            )
                                             .map((tag) => (
                                                 <Link
                                                     key={tag.id}
                                                     href={boardTagHref(tag.id)}
                                                     title={`Explore ${tag.name} tag: ${tag.description}`}
-                                                    className="group border-line/60 bg-transparent hover:bg-faint/60 hover:border-foreground/70 text-11 text-muted-foreground hover:text-foreground font-body flex items-center gap-1.5 rounded-[2px] border px-2 py-0.5 font-medium transition-colors cursor-pointer"
+                                                    className="group border-line/60 hover:bg-faint/60 hover:border-foreground/70 text-11 text-muted-foreground hover:text-foreground font-body flex cursor-pointer items-center gap-1.5 rounded-[2px] border bg-transparent px-2 py-0.5 font-medium transition-colors"
                                                 >
                                                     <TagIcon
                                                         tag={tag}
                                                         size={11}
-                                                        className="text-muted-foreground/60 group-hover:text-foreground transition-colors shrink-0"
+                                                        className="text-muted-foreground/60 group-hover:text-foreground shrink-0 transition-colors"
                                                     />
                                                     <span>{tag.name}</span>
                                                 </Link>
@@ -324,12 +350,12 @@ export default function ProfileHero({ profile }: Props) {
                 </div>
 
                 {/* Traveler tier banner with metallic styling extending into open space */}
-                <div className="mt-12 sm:mt-16 pt-4">
+                <div className="mt-12 pt-4 sm:mt-16">
                     <span className="text-10 tracking-label text-muted-foreground mb-1.5 block font-bold uppercase">
                         Traveler Tier
                     </span>
                     <div
-                        className={`font-display text-44 sm:text-56 lg:text-68 leading-none font-black tracking-wider uppercase select-none transition-all ${getTierGradientStyle(
+                        className={`font-display text-44 sm:text-56 lg:text-68 leading-none font-black tracking-wider uppercase transition-all select-none ${getTierGradientStyle(
                             profile.tier
                         )}`}
                     >

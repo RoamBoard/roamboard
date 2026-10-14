@@ -519,10 +519,18 @@ const store: {
 } = {
     profile: { ...mockRowanProfile },
     settings: { ...defaultUserSettings },
-    isLoggedIn: true
+    isLoggedIn: false
 };
 
-if (typeof window !== "undefined") {
+const storeMeta = {
+    isRestored: false
+};
+
+export function restoreMockStore(): void {
+    if (storeMeta.isRestored) return;
+    if (typeof window === "undefined") return;
+    storeMeta.isRestored = true;
+
     try {
         const rawStoredProfile = localStorage.getItem(PROFILE_STORAGE_KEY);
         if (rawStoredProfile) {
@@ -531,8 +539,7 @@ if (typeof window !== "undefined") {
                 "photo-1550340499-a6c60fc8287c"
             );
             const parsed = JSON.parse(cleanedProfileStr);
-            const rawTags =
-                parsed.details?.tags ?? parsed.details?.interests;
+            const rawTags = parsed.details?.tags ?? parsed.details?.interests;
             const migratedTags: BoardTagId[] = Array.isArray(rawTags)
                 ? (rawTags as unknown[])
                       .map((val): BoardTagId | undefined => {
@@ -550,28 +557,27 @@ if (typeof window !== "undefined") {
                       .slice(0, 10)
                 : mockRowanProfile.details.tags;
 
+            const hasStoredTags = Array.isArray(rawTags);
+            const resolvedTags: BoardTagId[] = hasStoredTags
+                ? migratedTags
+                : mockRowanProfile.details.tags;
+
             store.profile = {
                 ...store.profile,
                 ...parsed,
                 details: {
                     ...store.profile.details,
                     ...(parsed.details ?? {}),
-                    tags:
-                        migratedTags.length > 0
-                            ? migratedTags
-                            : mockRowanProfile.details.tags,
-                    interests:
-                        migratedTags.length > 0
-                            ? migratedTags
-                            : mockRowanProfile.details.tags
+                    tags: resolvedTags,
+                    interests: resolvedTags
                 },
                 // Curated boards always use the source mock definitions so image fixes take effect
                 inspiredBoards: mockRowanProfile.inspiredBoards,
                 myBoards: mockRowanProfile.myBoards
             };
-            store.profile.tier = calculateTravelerTier(
-                store.profile.mapStats
-            ).name;
+            store.profile.tier =
+                parsed.tier ??
+                calculateTravelerTier(store.profile.mapStats).name;
             Object.assign(mockRowanProfile, store.profile);
 
             // Persist the migrated profile immediately so localStorage is permanently fixed
@@ -595,9 +601,18 @@ if (typeof window !== "undefined") {
         if (storedAuth !== null) {
             store.isLoggedIn = storedAuth === "true";
         }
+        notify();
     } catch {
         // Ignore parse errors in local storage
     }
+}
+
+export function getMockProfileServerSnapshot(): UserProfile {
+    return initialRowanProfile;
+}
+
+export function getMockSettingsServerSnapshot(): UserSettings {
+    return defaultUserSettings;
 }
 
 export function getMockAuthState(): boolean {
@@ -621,6 +636,7 @@ export function getMockProfile(): UserProfile {
 }
 
 export function updateMockProfile(patch: Partial<UserProfile>): UserProfile {
+    storeMeta.isRestored = true;
     store.profile = {
         ...store.profile,
         ...patch,
@@ -654,9 +670,7 @@ export function updateMockProfile(patch: Partial<UserProfile>): UserProfile {
     if (patch.tier) {
         store.profile.tier = patch.tier;
     } else if (!store.profile.tier) {
-        store.profile.tier = calculateTravelerTier(
-            store.profile.mapStats
-        ).name;
+        store.profile.tier = calculateTravelerTier(store.profile.mapStats).name;
     }
 
     Object.assign(mockRowanProfile, store.profile);
@@ -677,10 +691,9 @@ export function updateMockProfile(patch: Partial<UserProfile>): UserProfile {
 }
 
 export function resetMockProfile(): UserProfile {
+    storeMeta.isRestored = true;
     store.profile = JSON.parse(JSON.stringify(initialRowanProfile));
-    store.profile.tier = calculateTravelerTier(
-        store.profile.mapStats
-    ).name;
+    store.profile.tier = calculateTravelerTier(store.profile.mapStats).name;
     Object.assign(mockRowanProfile, store.profile);
     if (typeof window !== "undefined") {
         try {
@@ -698,6 +711,7 @@ export function getMockSettings(): UserSettings {
 }
 
 export function updateMockSettings(patch: Partial<UserSettings>): UserSettings {
+    storeMeta.isRestored = true;
     store.settings = { ...store.settings, ...patch };
 
     if (typeof window !== "undefined") {
@@ -720,4 +734,3 @@ export function updateMockSettings(patch: Partial<UserSettings>): UserSettings {
     notify();
     return store.settings;
 }
-

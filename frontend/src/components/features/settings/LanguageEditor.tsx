@@ -31,7 +31,7 @@ export default function LanguageEditor({
     return (
         <div className="border-line bg-background rounded-[2px] border p-6">
             <div className="flex items-center justify-between">
-                <h2 className="font-display text-16 text-foreground font-bold uppercase tracking-tight">
+                <h2 className="font-display text-16 text-foreground font-bold tracking-tight uppercase">
                     Languages Spoken
                 </h2>
                 <span className="text-11 text-muted-foreground font-medium">
@@ -39,8 +39,8 @@ export default function LanguageEditor({
                 </span>
             </div>
             <p className="text-12 text-muted-foreground mt-0.5">
-                Languages you can communicate in when
-                collaborating on boards or meeting travelers.
+                Languages you can communicate in when collaborating on boards or
+                meeting travelers.
             </p>
 
             <div className="mt-4 flex flex-wrap gap-2">
@@ -84,8 +84,7 @@ export default function LanguageEditor({
                 <button
                     type="button"
                     disabled={
-                        languages.length >= maxLanguages ||
-                        !newLanguage.trim()
+                        languages.length >= maxLanguages || !newLanguage.trim()
                     }
                     onClick={handleAddLanguage}
                     className="border-line bg-background text-12 text-muted-foreground hover:text-foreground hover:border-foreground font-body cursor-pointer rounded-[2px] border px-3 py-1.5 font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
@@ -101,4 +100,3 @@ export default function LanguageEditor({
         </div>
     );
 }
-

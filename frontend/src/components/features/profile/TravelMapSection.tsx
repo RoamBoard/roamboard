@@ -100,25 +100,25 @@ export default function TravelMapSection({ profile, mapComponent }: Props) {
                             {/* Drafting corner crosshairs */}
                             <span
                                 aria-hidden="true"
-                                className="text-muted-foreground/40 absolute top-2.5 left-2.5 text-10 font-mono select-none"
+                                className="text-muted-foreground/40 text-10 absolute top-2.5 left-2.5 font-mono select-none"
                             >
                                 +
                             </span>
                             <span
                                 aria-hidden="true"
-                                className="text-muted-foreground/40 absolute top-2.5 right-2.5 text-10 font-mono select-none"
+                                className="text-muted-foreground/40 text-10 absolute top-2.5 right-2.5 font-mono select-none"
                             >
                                 +
                             </span>
                             <span
                                 aria-hidden="true"
-                                className="text-muted-foreground/40 absolute bottom-2.5 left-2.5 text-10 font-mono select-none"
+                                className="text-muted-foreground/40 text-10 absolute bottom-2.5 left-2.5 font-mono select-none"
                             >
                                 +
                             </span>
                             <span
                                 aria-hidden="true"
-                                className="text-muted-foreground/40 absolute bottom-2.5 right-2.5 text-10 font-mono select-none"
+                                className="text-muted-foreground/40 text-10 absolute right-2.5 bottom-2.5 font-mono select-none"
                             >
                                 +
                             </span>
@@ -147,7 +147,8 @@ export default function TravelMapSection({ profile, mapComponent }: Props) {
                                 Map Component Placeholder
                             </span>
                             <p className="text-11 text-muted-foreground mt-1 max-w-xs leading-relaxed font-medium">
-                                Reserved for collaborator travel map integration.
+                                Reserved for collaborator travel map
+                                integration.
                             </p>
                         </div>
                     )}

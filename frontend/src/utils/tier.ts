@@ -22,7 +22,8 @@ export const TRAVELER_TIERS: readonly TravelerTierInfo[] = [
         minCountries: 20,
         minCities: 35,
         minContinents: 3,
-        description: "Elite explorer with extensive cross-continental adventures."
+        description:
+            "Elite explorer with extensive cross-continental adventures."
     },
     {
         name: "SILVER TRAVELER",
@@ -88,4 +89,3 @@ export function getTierGradientStyle(tier: string): string {
     }
     return "from-foreground via-muted-foreground to-stone-400 bg-gradient-to-r bg-clip-text text-transparent drop-shadow-[0_6px_14px_rgba(0,0,0,0.15)]";
 }
-

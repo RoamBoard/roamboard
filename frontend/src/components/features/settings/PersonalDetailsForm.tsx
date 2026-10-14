@@ -29,12 +29,11 @@ export default function PersonalDetailsForm({
 }: Props) {
     return (
         <div className="border-line bg-background rounded-[2px] border p-6">
-            <h2 className="font-display text-16 text-foreground font-bold uppercase tracking-tight">
+            <h2 className="font-display text-16 text-foreground font-bold tracking-tight uppercase">
                 Personal Details
             </h2>
             <p className="text-12 text-muted-foreground mt-0.5">
-                Public information visible on your social
-                traveler profile.
+                Public information visible on your social traveler profile.
             </p>
 
             <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -147,4 +146,3 @@ export default function PersonalDetailsForm({
         </div>
     );
 }
-

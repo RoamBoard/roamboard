@@ -1,11 +1,20 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import {
+    useCallback,
+    useEffect,
+    useRef,
+    useState,
+    useSyncExternalStore
+} from "react";
 import Link from "next/link";
 import {
     getMockProfile,
+    getMockProfileServerSnapshot,
     getMockSettings,
+    getMockSettingsServerSnapshot,
     resetMockProfile,
+    restoreMockStore,
     subscribeMockStore,
     updateMockProfile,
     updateMockSettings
@@ -17,7 +26,7 @@ import ProfileTagSelector from "@/components/features/profile/ProfileTagSelector
 import UnderlineTabs from "@/components/ui/UnderlineTabs";
 import type { BoardTagId } from "@/data/board-tags";
 import TravelerTierSelector from "./TravelerTierSelector";
-import ProfileAvatarEditor from "./ProfileAvatarEditor";
+import ProfileAvatarEditor, { validateAvatarUrl } from "./ProfileAvatarEditor";
 import PersonalDetailsForm from "./PersonalDetailsForm";
 import LanguageEditor from "./LanguageEditor";
 import ThemeSelectorCard from "./ThemeSelectorCard";
@@ -42,9 +51,9 @@ type ProfileSnapshotState = {
 export default function SettingsContent() {
     const [activeTab, setActiveTab] = useState<TabType>("PROFILE");
 
-    // Initialize form states directly from mock store
-    const initialProfile = getMockProfile();
-    const initialSettings = getMockSettings();
+    // Initialize form states using fixed server snapshot
+    const initialProfile = getMockProfileServerSnapshot();
+    const initialSettings = getMockSettingsServerSnapshot();
 
     const [name, setName] = useState(() => initialProfile.name);
     const [handle, setHandle] = useState(() => initialProfile.handle);
@@ -52,7 +61,10 @@ export default function SettingsContent() {
     const [bio, setBio] = useState(() => initialProfile.bio);
     const [location, setLocation] = useState(() => initialProfile.location);
     const [occupation, setOccupation] = useState(
-        () => initialProfile.occupation ?? initialProfile.details?.occupation ?? ""
+        () =>
+            initialProfile.occupation ??
+            initialProfile.details?.occupation ??
+            ""
     );
     const [avatarUrl, setAvatarUrl] = useState(() => initialProfile.avatarUrl);
 
@@ -60,7 +72,7 @@ export default function SettingsContent() {
     const profileSnapshot = useSyncExternalStore(
         subscribeMockStore,
         getMockProfile,
-        getMockProfile
+        getMockProfileServerSnapshot
     );
     const currentTier = calculateTravelerTier(profileSnapshot.mapStats);
     const [selectedTier, setSelectedTier] = useState<string>(
@@ -74,14 +86,17 @@ export default function SettingsContent() {
         () => initialProfile.details.languages
     );
     const [tags, setTags] = useState<BoardTagId[]>(
-        () => initialProfile.details.tags ?? initialProfile.details.interests ?? []
+        () =>
+            initialProfile.details.tags ??
+            initialProfile.details.interests ??
+            []
     );
 
     // Account settings state
     const settingsSnapshot = useSyncExternalStore(
         subscribeMockStore,
         getMockSettings,
-        getMockSettings
+        getMockSettingsServerSnapshot
     );
     const theme = settingsSnapshot.theme;
 
@@ -95,9 +110,42 @@ export default function SettingsContent() {
     }
 
     const [defaultBoardVisibility, setDefaultBoardVisibility] =
-        useState<BoardVisibility>(
-            () => initialSettings.defaultBoardVisibility
-        );
+        useState<BoardVisibility>(() => initialSettings.defaultBoardVisibility);
+
+    // Load saved values afterward and initialize form through the same path
+    const isFormInitializedRef = useRef(false);
+
+    useEffect(() => {
+        restoreMockStore();
+    }, []);
+
+    useEffect(() => {
+        if (!isFormInitializedRef.current) {
+            setName(profileSnapshot.name);
+            setHandle(profileSnapshot.handle);
+            setHeadline(profileSnapshot.headline);
+            setBio(profileSnapshot.bio);
+            setLocation(profileSnapshot.location);
+            setOccupation(
+                profileSnapshot.occupation ??
+                    profileSnapshot.details?.occupation ??
+                    ""
+            );
+            setAvatarUrl(profileSnapshot.avatarUrl);
+            setSelectedTier(
+                profileSnapshot.tier ||
+                    calculateTravelerTier(profileSnapshot.mapStats).name
+            );
+            setLanguages(profileSnapshot.details?.languages ?? []);
+            setTags(
+                profileSnapshot.details?.tags ??
+                    profileSnapshot.details?.interests ??
+                    []
+            );
+            setDefaultBoardVisibility(settingsSnapshot.defaultBoardVisibility);
+            isFormInitializedRef.current = true;
+        }
+    }, [profileSnapshot, settingsSnapshot]);
 
     // UI Feedback state
     const [lastSavedSnapshot, setLastSavedSnapshot] =
@@ -108,17 +156,29 @@ export default function SettingsContent() {
 
     // Dirty tracking: compares current form state against saved store snapshots
     const savedOccupation =
-        profileSnapshot.occupation ??
-        profileSnapshot.details?.occupation ??
-        "";
+        profileSnapshot.occupation ?? profileSnapshot.details?.occupation ?? "";
     const savedLanguages = profileSnapshot.details?.languages ?? [];
     const savedTags =
         profileSnapshot.details?.tags ??
         profileSnapshot.details?.interests ??
         [];
 
-    const isNameDirty = name.trim() !== profileSnapshot.name.trim();
-    const isHandleDirty = handle.trim() !== profileSnapshot.handle.trim();
+    const normalizedName = name.trim().toUpperCase();
+    const isNameDirty =
+        normalizedName !== profileSnapshot.name.trim().toUpperCase();
+
+    const formattedCurrentHandle = handle.trim()
+        ? handle.trim().startsWith("@")
+            ? handle.trim()
+            : `@${handle.trim()}`
+        : "";
+    const formattedSnapshotHandle = profileSnapshot.handle.trim()
+        ? profileSnapshot.handle.trim().startsWith("@")
+            ? profileSnapshot.handle.trim()
+            : `@${profileSnapshot.handle.trim()}`
+        : "";
+    const isHandleDirty = formattedCurrentHandle !== formattedSnapshotHandle;
+
     const isHeadlineDirty = headline.trim() !== profileSnapshot.headline.trim();
     const isBioDirty = bio.trim() !== profileSnapshot.bio.trim();
     const isLocationDirty = location.trim() !== profileSnapshot.location.trim();
@@ -151,10 +211,10 @@ export default function SettingsContent() {
     // Derived toast visibility: automatically hidden if user starts making fresh uncommitted edits
     const effectiveShowToast = showSaveToast && !isDirty;
 
-    function handleDismissToast() {
+    const handleDismissToast = useCallback(() => {
         setShowSaveToast(false);
         setLastSavedSnapshot(null);
-    }
+    }, []);
 
     // Save changes handler
     function handleSave(e: React.FormEvent) {
@@ -165,6 +225,16 @@ export default function SettingsContent() {
         if (!name.trim()) {
             setErrorMessage("Display name cannot be empty.");
             return;
+        }
+
+        if (avatarUrl.trim()) {
+            const avatarVal = validateAvatarUrl(avatarUrl);
+            if (!avatarVal.isValid) {
+                setErrorMessage(
+                    avatarVal.error ?? "Invalid profile picture URL."
+                );
+                return;
+            }
         }
 
         const formattedHandle = handle.startsWith("@")
@@ -190,23 +260,40 @@ export default function SettingsContent() {
                     [])
             ],
             tier: profileSnapshot.tier,
-            defaultBoardVisibility
+            defaultBoardVisibility: settingsSnapshot.defaultBoardVisibility
         };
         setLastSavedSnapshot(previousState);
 
+        const savedName = name.trim().toUpperCase();
+        const savedHandle = formattedHandle;
+        const savedHeadline = headline.trim();
+        const savedBio = bio.trim();
+        const savedLocation = location.trim();
+        const savedOccupation = occupation.trim();
+        const savedAvatarUrl = avatarUrl.trim();
+
+        // Update local form state to match the normalized saved values
+        setName(savedName);
+        setHandle(savedHandle);
+        setHeadline(savedHeadline);
+        setBio(savedBio);
+        setLocation(savedLocation);
+        setOccupation(savedOccupation);
+        setAvatarUrl(savedAvatarUrl);
+
         // Update mock data store
         updateMockProfile({
-            name: name.trim().toUpperCase(),
-            handle: formattedHandle,
-            headline: headline.trim(),
-            bio: bio.trim(),
-            location: location.trim(),
-            occupation: occupation.trim(),
-            avatarUrl: avatarUrl.trim(),
+            name: savedName,
+            handle: savedHandle,
+            headline: savedHeadline,
+            bio: savedBio,
+            location: savedLocation,
+            occupation: savedOccupation,
+            avatarUrl: savedAvatarUrl,
             tier: selectedTier,
             details: {
-                location: location.trim(),
-                occupation: occupation.trim(),
+                location: savedLocation,
+                occupation: savedOccupation,
                 languages,
                 tags,
                 interests: tags
@@ -276,7 +363,9 @@ export default function SettingsContent() {
         );
         setAvatarUrl(resetProfile.avatarUrl);
         setLanguages(resetProfile.details.languages);
-        setTags(resetProfile.details.tags ?? resetProfile.details.interests ?? []);
+        setTags(
+            resetProfile.details.tags ?? resetProfile.details.interests ?? []
+        );
         setSelectedTier(resetProfile.tier);
 
         setDefaultBoardVisibility("friends");
@@ -302,7 +391,7 @@ export default function SettingsContent() {
 
                     <Link
                         href="/profile"
-                        className="text-12 text-muted-foreground hover:text-foreground font-body font-medium transition-colors hover:underline pb-2 flex items-center gap-1"
+                        className="text-12 text-muted-foreground hover:text-foreground font-body flex items-center gap-1 pb-2 font-medium transition-colors hover:underline"
                     >
                         view live profile →
                     </Link>
@@ -385,7 +474,7 @@ export default function SettingsContent() {
 
                         {/* Default Board Visibility */}
                         <div className="border-line bg-background rounded-[2px] border p-6">
-                            <h2 className="font-display text-16 text-foreground font-bold uppercase tracking-tight">
+                            <h2 className="font-display text-16 text-foreground font-bold tracking-tight uppercase">
                                 Default Board Visibility
                             </h2>
                             <p className="text-12 text-muted-foreground mt-0.5 mb-5">
@@ -395,7 +484,9 @@ export default function SettingsContent() {
 
                             <VisibilitySelector
                                 value={defaultBoardVisibility}
-                                onChange={(val) => setDefaultBoardVisibility(val)}
+                                onChange={(val) =>
+                                    setDefaultBoardVisibility(val)
+                                }
                                 showLabel={false}
                             />
                         </div>

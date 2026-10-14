@@ -27,6 +27,7 @@ import type {
     BoardPinDraft,
     BoardStatus
 } from "@/types/board-creator";
+import { getMockSettings, restoreMockStore } from "@/data/mock-social";
 
 function newDay(dayNumber: number, date: string | null = null): BoardDayDraft {
     return { id: crypto.randomUUID(), dayNumber, date, pins: [] };
@@ -86,6 +87,14 @@ function addPhotoSuggestions(
     }, current);
 }
 
+function getDefaultBoardCreatorVisibility(): BoardCreatorPayload["visibility"] {
+    restoreMockStore();
+    const defaultVis = getMockSettings().defaultBoardVisibility;
+    if (defaultVis === "friends") return "friends";
+    if (defaultVis === "public") return "public";
+    return "collaborators";
+}
+
 export default function BoardCreator({
     initialBoardId,
     expectedStatus = "draft"
@@ -104,8 +113,13 @@ export default function BoardCreator({
     const [allowedTags, setAllowedTags] = useState<
         Array<{ tagId: number; name: string }>
     >([]);
-    const [visibility, setVisibility] =
-        useState<BoardCreatorPayload["visibility"]>("collaborators");
+    const [visibility, setVisibility] = useState<
+        BoardCreatorPayload["visibility"]
+    >(() =>
+        initialBoardId !== undefined
+            ? "collaborators"
+            : getDefaultBoardCreatorVisibility()
+    );
     const [confirmedPhotoPins, setConfirmedPhotoPins] = useState<Set<string>>(
         () => new Set()
     );

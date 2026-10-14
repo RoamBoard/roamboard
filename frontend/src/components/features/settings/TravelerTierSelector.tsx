@@ -23,7 +23,7 @@ export default function TravelerTierSelector({
                         <span className="font-display text-24 sm:text-28 text-foreground font-bold uppercase">
                             {selectedTier}
                         </span>
-                        <span className="border-line text-10 tracking-label text-foreground font-body rounded-[2px] border bg-faint px-2.5 py-1 font-bold uppercase">
+                        <span className="border-line text-10 tracking-label text-foreground font-body bg-faint rounded-[2px] border px-2.5 py-1 font-bold uppercase">
                             Design &amp; Testing Mode
                         </span>
                     </div>
@@ -31,7 +31,9 @@ export default function TravelerTierSelector({
             </div>
 
             <p className="text-12 text-muted-foreground mt-2 max-w-2xl leading-relaxed font-medium">
-                Select any tier below to test and preview how each metallic grade renders across your profile and boards. Saving changes will persist this tier to mock data.
+                Select any tier below to test and preview how each metallic
+                grade renders across your profile and boards. Saving changes
+                will persist this tier to mock data.
             </p>
 
             {/* Current Qualifying Stats */}
@@ -84,15 +86,15 @@ export default function TravelerTierSelector({
                                 key={t.name}
                                 type="button"
                                 onClick={() => onSelectTier(t.name)}
-                                className={`border-line flex w-full items-center justify-between rounded-[2px] border px-3.5 py-2.5 text-12 text-left cursor-pointer transition-all ${
+                                className={`border-line text-12 flex w-full cursor-pointer items-center justify-between rounded-[2px] border px-3.5 py-2.5 text-left transition-all ${
                                     isSelected
-                                        ? "border-foreground bg-faint font-bold text-foreground ring-1 ring-foreground/30 shadow-2xs"
-                                        : "bg-background font-medium text-muted-foreground hover:text-foreground hover:bg-faint/30"
+                                        ? "border-foreground bg-faint text-foreground ring-foreground/30 font-bold shadow-2xs ring-1"
+                                        : "bg-background text-muted-foreground hover:text-foreground hover:bg-faint/30 font-medium"
                                 }`}
                             >
                                 <div className="flex items-center gap-2.5">
                                     <span
-                                        className={`size-3.5 rounded-full border flex items-center justify-center shrink-0 ${
+                                        className={`flex size-3.5 shrink-0 items-center justify-center rounded-full border ${
                                             isSelected
                                                 ? "border-foreground bg-foreground"
                                                 : "border-line"
@@ -100,10 +102,10 @@ export default function TravelerTierSelector({
                                         aria-hidden="true"
                                     >
                                         {isSelected && (
-                                            <span className="size-1.5 rounded-full bg-background" />
+                                            <span className="bg-background size-1.5 rounded-full" />
                                         )}
                                     </span>
-                                    <span className="font-display uppercase tracking-tight text-13">
+                                    <span className="font-display text-13 tracking-tight uppercase">
                                         {t.name}
                                     </span>
                                     {isSelected && (
@@ -126,4 +128,3 @@ export default function TravelerTierSelector({
         </div>
     );
 }
-

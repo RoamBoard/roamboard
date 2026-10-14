@@ -8,7 +8,7 @@ type Props = {
 
 export default function SocialBoardCard({ board }: Props) {
     return (
-        <article className="bg-background relative flex flex-col pt-6 px-6 pb-6 overflow-visible">
+        <article className="bg-background relative flex flex-col overflow-visible px-6 pt-6 pb-6">
             {/* Main content grid: Left side (Header & 6-photo collage), Right side (Narrative, highlights, stats, watermark) */}
             <div className="relative z-10 grid grid-cols-12 gap-5">
                 {/* Left side: Header + 2-column photo collage */}
@@ -18,12 +18,12 @@ export default function SocialBoardCard({ board }: Props) {
                         {/* Top horizontal drafting line */}
                         <span
                             aria-hidden="true"
-                            className="bg-line absolute top-0 -left-6 right-0 h-px pointer-events-none"
+                            className="bg-line pointer-events-none absolute top-0 right-0 -left-6 h-px"
                         />
                         {/* Left vertical drafting line: begins 20px above top line and continues down through header */}
                         <span
                             aria-hidden="true"
-                            className="bg-line absolute -top-5 left-0 bottom-0 w-px pointer-events-none"
+                            className="bg-line pointer-events-none absolute -top-5 bottom-0 left-0 w-px"
                         />
 
                         <h4 className="font-display text-24 sm:text-26 text-foreground leading-none font-bold tracking-tight">
@@ -44,7 +44,7 @@ export default function SocialBoardCard({ board }: Props) {
                             <div className="relative">
                                 <span
                                     aria-hidden="true"
-                                    className="bg-line absolute top-0 bottom-0 -left-6 w-px pointer-events-none"
+                                    className="bg-line pointer-events-none absolute top-0 bottom-0 -left-6 w-px"
                                 />
                                 <div className="bg-faint relative aspect-[3/4] w-full overflow-hidden rounded-[1px]">
                                     <Image
@@ -110,11 +110,11 @@ export default function SocialBoardCard({ board }: Props) {
                 </div>
 
                 {/* Right side: Duration, Narrative, List tags, Highlights, Saved stats, and Watermark */}
-                <div className="col-span-6 relative flex flex-col justify-between text-right pt-16 sm:pt-20 pr-8 sm:pr-10">
+                <div className="relative col-span-6 flex flex-col justify-between pt-16 pr-8 text-right sm:pt-20 sm:pr-10">
                     {/* Right vertical drafting line: starts above duration and extends down past watermark */}
                     <span
                         aria-hidden="true"
-                        className="bg-line absolute -top-4 -bottom-16 right-2 w-px pointer-events-none"
+                        className="bg-line pointer-events-none absolute -top-4 right-2 -bottom-16 w-px"
                     />
 
                     <div className="flex flex-col">
@@ -154,7 +154,7 @@ export default function SocialBoardCard({ board }: Props) {
                         <div className="mt-6">
                             <span
                                 aria-hidden="true"
-                                className="bg-line block h-px w-[85%] ml-auto mb-2 pointer-events-none"
+                                className="bg-line pointer-events-none mb-2 ml-auto block h-px w-[85%]"
                             />
                             <div className="text-10 text-muted-foreground font-medium">
                                 {board.savedCount}
@@ -167,7 +167,7 @@ export default function SocialBoardCard({ board }: Props) {
                         {/* Bottom horizontal drafting line: starts under 2nd photo column, cuts through lower watermark, crosses right vertical line to form crosshair */}
                         <span
                             aria-hidden="true"
-                            className="bg-line absolute bottom-3.5 -left-[45%] -right-8 h-px pointer-events-none"
+                            className="bg-line pointer-events-none absolute -right-8 bottom-3.5 -left-[45%] h-px"
                         />
                         <span className="font-display text-72 sm:text-80 text-faint/80 leading-none font-black tracking-tight uppercase">
                             {board.countryCode}

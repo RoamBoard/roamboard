@@ -37,7 +37,7 @@ export default function SocialPage() {
                         </header>
 
                         <div className="border-line bg-background rounded-[2px] border p-8 text-center sm:p-12">
-                            <span className="border-line text-10 tracking-label text-muted-foreground font-body rounded-[2px] border bg-faint px-3 py-1 font-bold uppercase">
+                            <span className="border-line text-10 tracking-label text-muted-foreground font-body bg-faint rounded-[2px] border px-3 py-1 font-bold uppercase">
                                 In Development
                             </span>
                             <h2 className="font-display text-24 sm:text-30 text-foreground mt-4 font-bold">
