@@ -67,10 +67,7 @@ type Props = {
     onChangeAvatarUrl: (url: string) => void;
 };
 
-export default function ProfileAvatarEditor({
-    avatarUrl,
-    onChangeAvatarUrl
-}: Props) {
+export default function ProfileAvatarEditor({ avatarUrl, onChangeAvatarUrl }: Props) {
     const [draftUrl, setDraftUrl] = useState(avatarUrl);
     const [prevPropUrl, setPrevPropUrl] = useState(avatarUrl);
     const [hasLoadError, setHasLoadError] = useState(false);
@@ -100,12 +97,9 @@ export default function ProfileAvatarEditor({
 
     return (
         <div className="border-line bg-background rounded-[2px] border p-6">
-            <h2 className="font-display text-16 text-foreground font-bold tracking-tight uppercase">
-                Profile Picture
-            </h2>
+            <h2 className="font-display text-16 text-foreground font-bold tracking-tight uppercase">Profile Picture</h2>
             <p className="text-12 text-muted-foreground mt-0.5">
-                Set your profile portrait displayed across your boards and
-                traveler cards.
+                Set your profile portrait displayed across your boards and traveler cards.
             </p>
 
             <div className="mt-5 flex flex-col gap-6 sm:flex-row sm:items-center">
@@ -153,10 +147,7 @@ export default function ProfileAvatarEditor({
                             className="border-line bg-background text-12 text-foreground placeholder:text-muted-foreground font-body focus:border-foreground mt-1 w-full rounded-[2px] border px-3 py-2 transition-colors focus-visible:outline-none"
                         />
                         {validation.error && draftUrl.trim() !== "" && (
-                            <p
-                                role="alert"
-                                className="text-11 mt-1 font-medium text-amber-600 dark:text-amber-400"
-                            >
+                            <p role="alert" className="text-11 mt-1 font-medium text-amber-600 dark:text-amber-400">
                                 {validation.error}
                             </p>
                         )}
@@ -172,9 +163,7 @@ export default function ProfileAvatarEditor({
                                 <button
                                     key={preset.label}
                                     type="button"
-                                    onClick={() =>
-                                        handlePresetSelect(preset.url)
-                                    }
+                                    onClick={() => handlePresetSelect(preset.url)}
                                     className={`border-line text-10 text-muted-foreground hover:text-foreground hover:border-foreground cursor-pointer rounded-[2px] border px-2.5 py-1 font-medium transition-colors ${
                                         draftUrl === preset.url
                                             ? "bg-faint border-foreground text-foreground"
@@ -196,9 +185,8 @@ export default function ProfileAvatarEditor({
                             </span>
                         </div>
                         <p className="text-11 text-muted-foreground mt-1 leading-normal font-medium">
-                            Upload should be implemented later when the backend
-                            framework is created. Currently using image URL and
-                            presets.
+                            Upload should be implemented later when the backend framework is created. Currently using
+                            image URL and presets.
                         </p>
                     </div>
                 </div>

@@ -11,14 +11,10 @@ export default function ThemeSelectorCard({ theme, onThemeChange }: Props) {
                     Appearance / Theme
                 </h2>
                 <span className="border-line bg-faint text-10 tracking-label text-muted-foreground font-body rounded-[2px] border px-2 py-0.5 font-bold uppercase">
-                    {theme === "dark"
-                        ? "Dark Mode Active"
-                        : "Light Mode Active"}
+                    {theme === "dark" ? "Dark Mode Active" : "Light Mode Active"}
                 </span>
             </div>
-            <p className="text-12 text-muted-foreground mt-0.5">
-                Choose how Roamboard looks on your device.
-            </p>
+            <p className="text-12 text-muted-foreground mt-0.5">Choose how Roamboard looks on your device.</p>
 
             <div className="mt-4 grid max-w-md grid-cols-2 gap-4">
                 <button
@@ -30,12 +26,9 @@ export default function ThemeSelectorCard({ theme, onThemeChange }: Props) {
                             : "hover:border-foreground text-muted-foreground hover:text-foreground"
                     }`}
                 >
-                    <div className="text-14 text-foreground font-bold">
-                        Light Mode
-                    </div>
+                    <div className="text-14 text-foreground font-bold">Light Mode</div>
                     <p className="text-11 text-muted-foreground mt-1">
-                        Clean architectural white canvas with graphite
-                        typography.
+                        Clean architectural white canvas with graphite typography.
                     </p>
                 </button>
 
@@ -48,9 +41,7 @@ export default function ThemeSelectorCard({ theme, onThemeChange }: Props) {
                             : "hover:border-foreground text-muted-foreground hover:text-foreground"
                     }`}
                 >
-                    <div className="text-14 text-foreground font-bold">
-                        Dark Mode
-                    </div>
+                    <div className="text-14 text-foreground font-bold">Dark Mode</div>
                     <p className="text-11 text-muted-foreground mt-1">
                         Obsidian night palette with high-contrast stone lines.
                     </p>

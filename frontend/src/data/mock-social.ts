@@ -6,8 +6,7 @@ export const mockRowanProfile: UserProfile = {
     id: "user-rowan-mercer",
     name: "ROWAN",
     handle: "@rowan.mercer",
-    avatarUrl:
-        "https://images.unsplash.com/photo-1769786186317-272d062fcf93?auto=format&fit=crop&w=400&q=80",
+    avatarUrl: "https://images.unsplash.com/photo-1769786186317-272d062fcf93?auto=format&fit=crop&w=400&q=80",
     location: "San Fransisco, USA",
     headline: "Chasing places, collecting stories.",
     bio: 'Usually somewhere between "I made an itinerary" and "we\'ll figure it out when we get there." I travel for the food, the views, the people, and the completely unnecessary side quests that somehow become the best part of the trip.',
@@ -124,14 +123,7 @@ export const mockRowanProfile: UserProfile = {
             countryCode: "THA",
             quote: "Street food at sunrise, temples before the heat and somehow already three iced coffees deep before most of the city has properly woken up.",
             tags: ["street-food", "markets", "culture"],
-            highlights: [
-                "Wat Arun",
-                "Chinatown",
-                "Chatuchak Market",
-                "Talat Noi",
-                "Wat Pho",
-                "Yaowarat Road"
-            ],
+            highlights: ["Wat Arun", "Chinatown", "Chatuchak Market", "Talat Noi", "Wat Pho", "Yaowarat Road"],
             savedCount: "Saved by 1,932 travelers",
             images: [
                 {
@@ -258,14 +250,7 @@ export const mockRowanProfile: UserProfile = {
             countryCode: "THA",
             quote: "Street food at sunrise, temples before the heat and somehow already three iced coffees deep before most of the city has properly woken up.",
             tags: ["street-food", "markets", "culture"],
-            highlights: [
-                "Wat Arun",
-                "Chinatown",
-                "Chatuchak Market",
-                "Talat Noi",
-                "Wat Pho",
-                "Yaowarat Road"
-            ],
+            highlights: ["Wat Arun", "Chinatown", "Chatuchak Market", "Talat Noi", "Wat Pho", "Yaowarat Road"],
             savedCount: "Saved by 1,932 travelers",
             images: [
                 {
@@ -493,9 +478,7 @@ const PROFILE_STORAGE_KEY = "roamboard_mock_profile";
 const SETTINGS_STORAGE_KEY = "roamboard_mock_settings";
 
 // Cached baseline copy for resetting
-const initialRowanProfile: UserProfile = JSON.parse(
-    JSON.stringify(mockRowanProfile)
-);
+const initialRowanProfile: UserProfile = JSON.parse(JSON.stringify(mockRowanProfile));
 
 const listeners = new Set<() => void>();
 
@@ -548,8 +531,7 @@ export function restoreMockStore(): void {
                           if (direct) return direct.id;
                           const found = boardTags.find(
                               (t) =>
-                                  t.id.toLowerCase() === str.toLowerCase() ||
-                                  t.name.toLowerCase() === str.toLowerCase()
+                                  t.id.toLowerCase() === str.toLowerCase() || t.name.toLowerCase() === str.toLowerCase()
                           );
                           return found?.id;
                       })
@@ -558,9 +540,7 @@ export function restoreMockStore(): void {
                 : mockRowanProfile.details.tags;
 
             const hasStoredTags = Array.isArray(rawTags);
-            const resolvedTags: BoardTagId[] = hasStoredTags
-                ? migratedTags
-                : mockRowanProfile.details.tags;
+            const resolvedTags: BoardTagId[] = hasStoredTags ? migratedTags : mockRowanProfile.details.tags;
 
             store.profile = {
                 ...store.profile,
@@ -575,16 +555,11 @@ export function restoreMockStore(): void {
                 inspiredBoards: mockRowanProfile.inspiredBoards,
                 myBoards: mockRowanProfile.myBoards
             };
-            store.profile.tier =
-                parsed.tier ??
-                calculateTravelerTier(store.profile.mapStats).name;
+            store.profile.tier = parsed.tier ?? calculateTravelerTier(store.profile.mapStats).name;
             Object.assign(mockRowanProfile, store.profile);
 
             // Persist the migrated profile immediately so localStorage is permanently fixed
-            localStorage.setItem(
-                PROFILE_STORAGE_KEY,
-                JSON.stringify(store.profile)
-            );
+            localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(store.profile));
         }
         const storedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY);
         if (storedSettings) {
@@ -677,10 +652,7 @@ export function updateMockProfile(patch: Partial<UserProfile>): UserProfile {
 
     if (typeof window !== "undefined") {
         try {
-            localStorage.setItem(
-                PROFILE_STORAGE_KEY,
-                JSON.stringify(store.profile)
-            );
+            localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(store.profile));
         } catch {
             // Ignore storage errors
         }
@@ -716,10 +688,7 @@ export function updateMockSettings(patch: Partial<UserSettings>): UserSettings {
 
     if (typeof window !== "undefined") {
         try {
-            localStorage.setItem(
-                SETTINGS_STORAGE_KEY,
-                JSON.stringify(store.settings)
-            );
+            localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(store.settings));
             if (patch.theme) {
                 if (patch.theme === "dark") {
                     document.documentElement.classList.add("dark");

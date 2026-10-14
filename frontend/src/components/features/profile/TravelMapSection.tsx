@@ -9,15 +9,10 @@ type Props = {
 
 export default function TravelMapSection({ profile, mapComponent }: Props) {
     return (
-        <section
-            aria-label="Travel map"
-            className="border-line mt-12 border-t pt-8"
-        >
+        <section aria-label="Travel map" className="border-line mt-12 border-t pt-8">
             {/* Header */}
             <div>
-                <h3 className="font-display text-20 sm:text-22 text-foreground font-bold">
-                    my map
-                </h3>
+                <h3 className="font-display text-20 sm:text-22 text-foreground font-bold">my map</h3>
                 <p className="text-12 text-muted-foreground mt-0.5 font-medium">
                     places I&apos;ve been &amp; want to go
                 </p>
@@ -30,10 +25,7 @@ export default function TravelMapSection({ profile, mapComponent }: Props) {
                     <div>
                         <div className="font-display text-22 text-foreground flex items-center gap-1 font-bold">
                             {profile.mapStats.countriesVisited}
-                            <span
-                                className="text-12 text-muted-foreground font-normal"
-                                aria-hidden="true"
-                            >
+                            <span className="text-12 text-muted-foreground font-normal" aria-hidden="true">
                                 →
                             </span>
                         </div>
@@ -45,10 +37,7 @@ export default function TravelMapSection({ profile, mapComponent }: Props) {
                     <div>
                         <div className="font-display text-22 text-foreground flex items-center gap-1 font-bold">
                             {profile.mapStats.citiesExplored}
-                            <span
-                                className="text-12 text-muted-foreground font-normal"
-                                aria-hidden="true"
-                            >
+                            <span className="text-12 text-muted-foreground font-normal" aria-hidden="true">
                                 →
                             </span>
                         </div>
@@ -60,10 +49,7 @@ export default function TravelMapSection({ profile, mapComponent }: Props) {
                     <div>
                         <div className="font-display text-22 text-foreground flex items-center gap-1 font-bold">
                             {profile.mapStats.continentsCovered}
-                            <span
-                                className="text-12 text-muted-foreground font-normal"
-                                aria-hidden="true"
-                            >
+                            <span className="text-12 text-muted-foreground font-normal" aria-hidden="true">
                                 →
                             </span>
                         </div>
@@ -74,13 +60,8 @@ export default function TravelMapSection({ profile, mapComponent }: Props) {
 
                     <div>
                         <div className="font-display text-22 text-foreground flex items-center gap-1 font-bold">
-                            {profile.mapStats.photosTaken.toLocaleString(
-                                "en-US"
-                            )}
-                            <span
-                                className="text-12 text-muted-foreground font-normal"
-                                aria-hidden="true"
-                            >
+                            {profile.mapStats.photosTaken.toLocaleString("en-US")}
+                            <span className="text-12 text-muted-foreground font-normal" aria-hidden="true">
                                 →
                             </span>
                         </div>
@@ -147,8 +128,7 @@ export default function TravelMapSection({ profile, mapComponent }: Props) {
                                 Map Component Placeholder
                             </span>
                             <p className="text-11 text-muted-foreground mt-1 max-w-xs leading-relaxed font-medium">
-                                Reserved for collaborator travel map
-                                integration.
+                                Reserved for collaborator travel map integration.
                             </p>
                         </div>
                     )}
@@ -158,10 +138,7 @@ export default function TravelMapSection({ profile, mapComponent }: Props) {
             {/* Bottom travel milestones row with tightly grouped units */}
             <div className="border-line mt-12 grid grid-cols-1 gap-10 border-t pt-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8 xl:gap-12">
                 {profile.milestones.map((milestone) => (
-                    <div
-                        key={milestone.id}
-                        className="flex items-center justify-start gap-3.5"
-                    >
+                    <div key={milestone.id} className="flex items-center justify-start gap-3.5">
                         {/* Text block: right-aligned directly against the divider */}
                         <div className="flex flex-col items-end text-right">
                             <span className="text-11 text-muted-foreground leading-tight font-normal">
@@ -176,10 +153,7 @@ export default function TravelMapSection({ profile, mapComponent }: Props) {
                         </div>
 
                         {/* Thin vertical separator line */}
-                        <div
-                            className="bg-line h-22 w-px shrink-0 self-center"
-                            aria-hidden="true"
-                        />
+                        <div className="bg-line h-22 w-px shrink-0 self-center" aria-hidden="true" />
 
                         {/* Tightly adjacent overlapping 3-photo cluster */}
                         <div className="relative h-26 w-28 shrink-0">

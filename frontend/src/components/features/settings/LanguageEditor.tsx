@@ -8,11 +8,7 @@ type Props = {
     maxLanguages?: number;
 };
 
-export default function LanguageEditor({
-    languages,
-    onChangeLanguages,
-    maxLanguages = 10
-}: Props) {
+export default function LanguageEditor({ languages, onChangeLanguages, maxLanguages = 10 }: Props) {
     const [newLanguage, setNewLanguage] = useState("");
 
     function handleAddLanguage() {
@@ -39,8 +35,7 @@ export default function LanguageEditor({
                 </span>
             </div>
             <p className="text-12 text-muted-foreground mt-0.5">
-                Languages you can communicate in when collaborating on boards or
-                meeting travelers.
+                Languages you can communicate in when collaborating on boards or meeting travelers.
             </p>
 
             <div className="mt-4 flex flex-wrap gap-2">
@@ -83,9 +78,7 @@ export default function LanguageEditor({
                 />
                 <button
                     type="button"
-                    disabled={
-                        languages.length >= maxLanguages || !newLanguage.trim()
-                    }
+                    disabled={languages.length >= maxLanguages || !newLanguage.trim()}
                     onClick={handleAddLanguage}
                     className="border-line bg-background text-12 text-muted-foreground hover:text-foreground hover:border-foreground font-body cursor-pointer rounded-[2px] border px-3 py-1.5 font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                 >

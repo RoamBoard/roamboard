@@ -1,12 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import {
-    boardTags,
-    getBoardTag,
-    type BoardTag,
-    type BoardTagId
-} from "@/data/board-tags";
+import { boardTags, getBoardTag, type BoardTag, type BoardTagId } from "@/data/board-tags";
 import TagIcon from "@/components/ui/TagIcon";
 
 type Props = {
@@ -16,19 +11,12 @@ type Props = {
     className?: string;
 };
 
-export default function ProfileTagSelector({
-    selectedTagIds,
-    onChange,
-    maxTags = 10,
-    className = ""
-}: Props) {
+export default function ProfileTagSelector({ selectedTagIds, onChange, maxTags = 10, className = "" }: Props) {
     const [searchQuery, setSearchQuery] = useState("");
 
     // Resolve active tags strictly from catalog IDs
     const activeTags = useMemo(() => {
-        return selectedTagIds
-            .map((id) => getBoardTag(id))
-            .filter((t): t is BoardTag => Boolean(t));
+        return selectedTagIds.map((id) => getBoardTag(id)).filter((t): t is BoardTag => Boolean(t));
     }, [selectedTagIds]);
 
     const activeTagIdSet = useMemo(() => {
@@ -52,9 +40,7 @@ export default function ProfileTagSelector({
     function handleToggleTag(tag: BoardTag) {
         if (activeTagIdSet.has(tag.id)) {
             // Remove
-            onChange(
-                activeTags.filter((t) => t.id !== tag.id).map((t) => t.id)
-            );
+            onChange(activeTags.filter((t) => t.id !== tag.id).map((t) => t.id));
         } else {
             // Add if limit not reached
             if (isMaxReached) return;
@@ -71,16 +57,13 @@ export default function ProfileTagSelector({
             {/* Header: Title and Selection Counter (matches Languages Spoken style) */}
             <div>
                 <div className="flex items-center justify-between">
-                    <h2 className="font-display text-16 text-foreground font-bold tracking-tight uppercase">
-                        Tags
-                    </h2>
+                    <h2 className="font-display text-16 text-foreground font-bold tracking-tight uppercase">Tags</h2>
                     <span className="text-11 text-muted-foreground font-medium">
                         ({activeTags.length}/{maxTags})
                     </span>
                 </div>
                 <p className="text-12 text-muted-foreground mt-0.5">
-                    Tags that describe your favorite types of activities and
-                    trips.
+                    Tags that describe your favorite types of activities and trips.
                 </p>
             </div>
 
@@ -92,11 +75,7 @@ export default function ProfileTagSelector({
                             key={tag.id}
                             className="border-line bg-faint text-12 text-foreground font-body flex items-center gap-1.5 rounded-[2px] border px-2.5 py-1 font-medium"
                         >
-                            <TagIcon
-                                tag={tag}
-                                size={13}
-                                className="text-foreground shrink-0"
-                            />
+                            <TagIcon tag={tag} size={13} className="text-foreground shrink-0" />
                             <span>{tag.name}</span>
                             <button
                                 type="button"
@@ -170,9 +149,7 @@ export default function ProfileTagSelector({
                                         tag={tag}
                                         size={12}
                                         className={`shrink-0 ${
-                                            isSelected
-                                                ? "text-background"
-                                                : "text-muted-foreground"
+                                            isSelected ? "text-background" : "text-muted-foreground"
                                         }`}
                                     />
                                     <span>{tag.name}</span>
@@ -183,9 +160,7 @@ export default function ProfileTagSelector({
                 </div>
 
                 {isMaxReached && (
-                    <p className="text-11 text-muted-foreground font-body mt-2.5">
-                        Maximum of {maxTags} tags reached.
-                    </p>
+                    <p className="text-11 text-muted-foreground font-body mt-2.5">Maximum of {maxTags} tags reached.</p>
                 )}
             </div>
         </div>

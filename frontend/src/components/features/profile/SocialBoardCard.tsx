@@ -31,9 +31,7 @@ export default function SocialBoardCard({ board }: Props) {
                             <br />
                             {board.titleLines[1]}
                         </h4>
-                        <p className="text-10 text-muted-foreground mt-2 font-medium">
-                            {board.author}
-                        </p>
+                        <p className="text-10 text-muted-foreground mt-2 font-medium">{board.author}</p>
                     </div>
 
                     {/* 6-Photo Collage: 2 sub-columns */}
@@ -118,23 +116,15 @@ export default function SocialBoardCard({ board }: Props) {
                     />
 
                     <div className="flex flex-col">
-                        <div className="font-display text-14 text-foreground font-bold">
-                            {board.duration}
-                        </div>
+                        <div className="font-display text-14 text-foreground font-bold">{board.duration}</div>
 
-                        <p className="text-11 text-foreground/90 mt-2.5 leading-relaxed">
-                            {board.quote}
-                        </p>
+                        <p className="text-11 text-foreground/90 mt-2.5 leading-relaxed">{board.quote}</p>
 
                         {/* List tags */}
                         <div className="text-10 text-muted-foreground mt-3.5 space-y-0.5">
                             {board.tags.map((tagId, idx) => {
                                 const catalogTag = getBoardTag(tagId);
-                                return (
-                                    <div key={idx}>
-                                        - {catalogTag ? catalogTag.name : tagId}
-                                    </div>
-                                );
+                                return <div key={idx}>- {catalogTag ? catalogTag.name : tagId}</div>;
                             })}
                         </div>
 
@@ -156,9 +146,7 @@ export default function SocialBoardCard({ board }: Props) {
                                 aria-hidden="true"
                                 className="bg-line pointer-events-none mb-2 ml-auto block h-px w-[85%]"
                             />
-                            <div className="text-10 text-muted-foreground font-medium">
-                                {board.savedCount}
-                            </div>
+                            <div className="text-10 text-muted-foreground font-medium">{board.savedCount}</div>
                         </div>
                     </div>
 

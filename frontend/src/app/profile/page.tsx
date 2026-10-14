@@ -5,8 +5,7 @@ import { mockRowanProfile } from "@/data/mock-social";
 
 export const metadata: Metadata = {
     title: "Profile | Roamboard",
-    description:
-        "Traveler profile, shared boards, and visited places map on Roamboard."
+    description: "Traveler profile, shared boards, and visited places map on Roamboard."
 };
 
 export default function ProfilePage() {

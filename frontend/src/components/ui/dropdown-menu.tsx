@@ -70,10 +70,7 @@ function DropdownMenuRadioItem({
     );
 }
 
-function DropdownMenuSeparator({
-    className,
-    ...props
-}: ComponentProps<typeof DropdownMenuPrimitive.Separator>) {
+function DropdownMenuSeparator({ className, ...props }: ComponentProps<typeof DropdownMenuPrimitive.Separator>) {
     return (
         <DropdownMenuPrimitive.Separator
             data-slot="dropdown-menu-separator"

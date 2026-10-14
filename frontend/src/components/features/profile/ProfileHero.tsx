@@ -33,10 +33,7 @@ export default function ProfileHero({ profile }: Props) {
     const hasBioMeta = hasOccupation || hasLanguages || hasTags;
 
     return (
-        <section
-            aria-label="Profile overview"
-            className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:gap-12"
-        >
+        <section aria-label="Profile overview" className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:gap-12">
             {/* Left column: Hero photo + Name */}
             <div className="flex flex-col lg:col-span-5">
                 <div className="bg-faint border-line relative aspect-[3/4] w-full overflow-hidden rounded-[2px] border">
@@ -61,8 +58,7 @@ export default function ProfileHero({ profile }: Props) {
                             </span>
                         </div>
                         <p className="text-10 text-muted-foreground mt-1 leading-normal font-medium">
-                            Upload should be implemented later when the backend
-                            framework is created.
+                            Upload should be implemented later when the backend framework is created.
                         </p>
                     </div>
                 </div>
@@ -122,8 +118,7 @@ export default function ProfileHero({ profile }: Props) {
                     {/* Headline & Bio */}
                     <div className="mt-8">
                         <h3 className="font-display text-30 sm:text-36 text-foreground leading-tight font-bold">
-                            {profile.headline ||
-                                "Chasing places, collecting stories."}
+                            {profile.headline || "Chasing places, collecting stories."}
                         </h3>
                         <p className="text-13 text-muted-foreground mt-3 max-w-xl leading-relaxed">
                             {profile.bio}{" "}
@@ -154,13 +149,7 @@ export default function ProfileHero({ profile }: Props) {
                                                     className="text-muted-foreground shrink-0"
                                                     aria-hidden="true"
                                                 >
-                                                    <rect
-                                                        width="20"
-                                                        height="14"
-                                                        x="2"
-                                                        y="7"
-                                                        rx="2"
-                                                    />
+                                                    <rect width="20" height="14" x="2" y="7" rx="2" />
                                                     <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
                                                 </svg>
                                                 <span>{occupation}</span>
@@ -181,18 +170,11 @@ export default function ProfileHero({ profile }: Props) {
                                                     className="text-muted-foreground shrink-0"
                                                     aria-hidden="true"
                                                 >
-                                                    <circle
-                                                        cx="12"
-                                                        cy="12"
-                                                        r="10"
-                                                    />
+                                                    <circle cx="12" cy="12" r="10" />
                                                     <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
                                                     <path d="M2 12h20" />
                                                 </svg>
-                                                <span>
-                                                    Speaks{" "}
-                                                    {languages.join(", ")}
-                                                </span>
+                                                <span>Speaks {languages.join(", ")}</span>
                                             </div>
                                         )}
                                     </div>
@@ -213,25 +195,14 @@ export default function ProfileHero({ profile }: Props) {
                                                 className="text-muted-foreground shrink-0"
                                                 aria-hidden="true"
                                             >
-                                                <circle
-                                                    cx="12"
-                                                    cy="12"
-                                                    r="10"
-                                                />
+                                                <circle cx="12" cy="12" r="10" />
                                                 <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
                                             </svg>
-                                            <span className="text-muted-foreground text-12 font-normal">
-                                                Tags:
-                                            </span>
+                                            <span className="text-muted-foreground text-12 font-normal">Tags:</span>
                                         </div>
                                         {rawTags
                                             .map((id) => getBoardTag(id))
-                                            .filter(
-                                                (
-                                                    t
-                                                ): t is NonNullable<typeof t> =>
-                                                    Boolean(t)
-                                            )
+                                            .filter((t): t is NonNullable<typeof t> => Boolean(t))
                                             .map((tag) => (
                                                 <Link
                                                     key={tag.id}
@@ -260,10 +231,7 @@ export default function ProfileHero({ profile }: Props) {
                             <div className="pr-3">
                                 <div className="font-display text-24 sm:text-30 text-foreground flex items-center gap-1.5 font-bold">
                                     {profile.stats.countriesVisited}
-                                    <span
-                                        className="text-14 text-muted-foreground font-normal"
-                                        aria-hidden="true"
-                                    >
+                                    <span className="text-14 text-muted-foreground font-normal" aria-hidden="true">
                                         →
                                     </span>
                                 </div>
@@ -278,10 +246,7 @@ export default function ProfileHero({ profile }: Props) {
                             <div className="px-3">
                                 <div className="font-display text-24 sm:text-30 text-foreground flex items-center gap-1.5 font-bold">
                                     {profile.stats.boardsCreated}
-                                    <span
-                                        className="text-14 text-muted-foreground font-normal"
-                                        aria-hidden="true"
-                                    >
+                                    <span className="text-14 text-muted-foreground font-normal" aria-hidden="true">
                                         →
                                     </span>
                                 </div>
@@ -296,10 +261,7 @@ export default function ProfileHero({ profile }: Props) {
                             <div className="px-3">
                                 <div className="font-display text-24 sm:text-30 text-foreground flex items-center gap-1.5 font-bold">
                                     {profile.stats.friendsMade}
-                                    <span
-                                        className="text-14 text-muted-foreground font-normal"
-                                        aria-hidden="true"
-                                    >
+                                    <span className="text-14 text-muted-foreground font-normal" aria-hidden="true">
                                         →
                                     </span>
                                 </div>
@@ -314,10 +276,7 @@ export default function ProfileHero({ profile }: Props) {
                             <div className="px-3">
                                 <div className="font-display text-24 sm:text-30 text-foreground flex items-center gap-1.5 font-bold">
                                     {profile.stats.placesSaved}
-                                    <span
-                                        className="text-14 text-muted-foreground font-normal"
-                                        aria-hidden="true"
-                                    >
+                                    <span className="text-14 text-muted-foreground font-normal" aria-hidden="true">
                                         →
                                     </span>
                                 </div>
@@ -332,10 +291,7 @@ export default function ProfileHero({ profile }: Props) {
                             <div className="pl-3">
                                 <div className="font-display text-24 sm:text-30 text-foreground flex items-center gap-1.5 font-bold">
                                     {profile.stats.boardsSaved}
-                                    <span
-                                        className="text-14 text-muted-foreground font-normal"
-                                        aria-hidden="true"
-                                    >
+                                    <span className="text-14 text-muted-foreground font-normal" aria-hidden="true">
                                         →
                                     </span>
                                 </div>

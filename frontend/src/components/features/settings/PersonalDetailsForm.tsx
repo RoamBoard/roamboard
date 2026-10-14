@@ -138,9 +138,7 @@ export default function PersonalDetailsForm({
                         placeholder="Write about your travel philosophy, memorable adventures, and plans..."
                         className="border-line bg-background text-13 text-foreground placeholder:text-muted-foreground font-body focus:border-foreground mt-1 w-full rounded-[2px] border px-3 py-2.5 leading-relaxed transition-colors focus-visible:outline-none"
                     />
-                    <span className="text-10 text-muted-foreground mt-1 block text-right">
-                        {bio.length} characters
-                    </span>
+                    <span className="text-10 text-muted-foreground mt-1 block text-right">{bio.length} characters</span>
                 </div>
             </div>
         </div>

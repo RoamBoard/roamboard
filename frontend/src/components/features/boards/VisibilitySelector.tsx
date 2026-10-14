@@ -133,9 +133,7 @@ export default function VisibilitySelector({
 
             <div
                 role="radiogroup"
-                aria-labelledby={
-                    showLabel ? "visibility-group-label" : undefined
-                }
+                aria-labelledby={showLabel ? "visibility-group-label" : undefined}
                 className="grid grid-cols-1 gap-2.5 sm:grid-cols-3"
             >
                 {VISIBILITY_OPTIONS.map((option) => {
@@ -153,9 +151,7 @@ export default function VisibilitySelector({
                                     : "border-line bg-background hover:border-line hover:bg-faint/20"
                             }`}
                         >
-                            <div className="mt-0.5">
-                                {option.icon(isSelected)}
-                            </div>
+                            <div className="mt-0.5">{option.icon(isSelected)}</div>
                             <div className="flex-1">
                                 <div
                                     className={`text-12 font-bold tracking-tight ${

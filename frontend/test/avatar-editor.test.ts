@@ -2,9 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import ProfileAvatarEditor, {
-    validateAvatarUrl
-} from "../src/components/features/settings/ProfileAvatarEditor";
+import ProfileAvatarEditor, { validateAvatarUrl } from "../src/components/features/settings/ProfileAvatarEditor";
 
 test("validateAvatarUrl accepts empty string and valid Unsplash URLs", () => {
     assert.deepEqual(validateAvatarUrl(""), {
@@ -55,8 +53,7 @@ test("ProfileAvatarEditor renders fallback safely without crashing when avatarUr
 });
 
 test("ProfileAvatarEditor renders Image tag when avatarUrl is a valid Unsplash URL", () => {
-    const validUrl =
-        "https://images.unsplash.com/photo-1769786186317-272d062fcf93?auto=format&fit=crop&w=400&q=80";
+    const validUrl = "https://images.unsplash.com/photo-1769786186317-272d062fcf93?auto=format&fit=crop&w=400&q=80";
     const html = renderToStaticMarkup(
         createElement(ProfileAvatarEditor, {
             avatarUrl: validUrl,

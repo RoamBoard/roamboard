@@ -1,12 +1,6 @@
 "use client";
 
-import {
-    useCallback,
-    useEffect,
-    useRef,
-    useState,
-    useSyncExternalStore
-} from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import {
     getMockProfile,
@@ -61,43 +55,25 @@ export default function SettingsContent() {
     const [bio, setBio] = useState(() => initialProfile.bio);
     const [location, setLocation] = useState(() => initialProfile.location);
     const [occupation, setOccupation] = useState(
-        () =>
-            initialProfile.occupation ??
-            initialProfile.details?.occupation ??
-            ""
+        () => initialProfile.occupation ?? initialProfile.details?.occupation ?? ""
     );
     const [avatarUrl, setAvatarUrl] = useState(() => initialProfile.avatarUrl);
 
     // Profile snapshot and automatic tier calculation
-    const profileSnapshot = useSyncExternalStore(
-        subscribeMockStore,
-        getMockProfile,
-        getMockProfileServerSnapshot
-    );
+    const profileSnapshot = useSyncExternalStore(subscribeMockStore, getMockProfile, getMockProfileServerSnapshot);
     const currentTier = calculateTravelerTier(profileSnapshot.mapStats);
-    const [selectedTier, setSelectedTier] = useState<string>(
-        () => initialProfile.tier || currentTier.name
-    );
+    const [selectedTier, setSelectedTier] = useState<string>(() => initialProfile.tier || currentTier.name);
 
     const MAX_LANGUAGES = 10;
 
     // Details state
-    const [languages, setLanguages] = useState<string[]>(
-        () => initialProfile.details.languages
-    );
+    const [languages, setLanguages] = useState<string[]>(() => initialProfile.details.languages);
     const [tags, setTags] = useState<BoardTagId[]>(
-        () =>
-            initialProfile.details.tags ??
-            initialProfile.details.interests ??
-            []
+        () => initialProfile.details.tags ?? initialProfile.details.interests ?? []
     );
 
     // Account settings state
-    const settingsSnapshot = useSyncExternalStore(
-        subscribeMockStore,
-        getMockSettings,
-        getMockSettingsServerSnapshot
-    );
+    const settingsSnapshot = useSyncExternalStore(subscribeMockStore, getMockSettings, getMockSettingsServerSnapshot);
     const theme = settingsSnapshot.theme;
 
     function handleThemeChange(newTheme: "light" | "dark") {
@@ -109,8 +85,9 @@ export default function SettingsContent() {
         }
     }
 
-    const [defaultBoardVisibility, setDefaultBoardVisibility] =
-        useState<BoardVisibility>(() => initialSettings.defaultBoardVisibility);
+    const [defaultBoardVisibility, setDefaultBoardVisibility] = useState<BoardVisibility>(
+        () => initialSettings.defaultBoardVisibility
+    );
 
     // Load saved values afterward and initialize form through the same path
     const isFormInitializedRef = useRef(false);
@@ -126,46 +103,29 @@ export default function SettingsContent() {
             setHeadline(profileSnapshot.headline);
             setBio(profileSnapshot.bio);
             setLocation(profileSnapshot.location);
-            setOccupation(
-                profileSnapshot.occupation ??
-                    profileSnapshot.details?.occupation ??
-                    ""
-            );
+            setOccupation(profileSnapshot.occupation ?? profileSnapshot.details?.occupation ?? "");
             setAvatarUrl(profileSnapshot.avatarUrl);
-            setSelectedTier(
-                profileSnapshot.tier ||
-                    calculateTravelerTier(profileSnapshot.mapStats).name
-            );
+            setSelectedTier(profileSnapshot.tier || calculateTravelerTier(profileSnapshot.mapStats).name);
             setLanguages(profileSnapshot.details?.languages ?? []);
-            setTags(
-                profileSnapshot.details?.tags ??
-                    profileSnapshot.details?.interests ??
-                    []
-            );
+            setTags(profileSnapshot.details?.tags ?? profileSnapshot.details?.interests ?? []);
             setDefaultBoardVisibility(settingsSnapshot.defaultBoardVisibility);
             isFormInitializedRef.current = true;
         }
     }, [profileSnapshot, settingsSnapshot]);
 
     // UI Feedback state
-    const [lastSavedSnapshot, setLastSavedSnapshot] =
-        useState<ProfileSnapshotState | null>(null);
+    const [lastSavedSnapshot, setLastSavedSnapshot] = useState<ProfileSnapshotState | null>(null);
     const [showSaveToast, setShowSaveToast] = useState(false);
     const [toastKey, setToastKey] = useState(0);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     // Dirty tracking: compares current form state against saved store snapshots
-    const savedOccupation =
-        profileSnapshot.occupation ?? profileSnapshot.details?.occupation ?? "";
+    const savedOccupation = profileSnapshot.occupation ?? profileSnapshot.details?.occupation ?? "";
     const savedLanguages = profileSnapshot.details?.languages ?? [];
-    const savedTags =
-        profileSnapshot.details?.tags ??
-        profileSnapshot.details?.interests ??
-        [];
+    const savedTags = profileSnapshot.details?.tags ?? profileSnapshot.details?.interests ?? [];
 
     const normalizedName = name.trim().toUpperCase();
-    const isNameDirty =
-        normalizedName !== profileSnapshot.name.trim().toUpperCase();
+    const isNameDirty = normalizedName !== profileSnapshot.name.trim().toUpperCase();
 
     const formattedCurrentHandle = handle.trim()
         ? handle.trim().startsWith("@")
@@ -184,16 +144,11 @@ export default function SettingsContent() {
     const isLocationDirty = location.trim() !== profileSnapshot.location.trim();
     const isOccupationDirty = occupation.trim() !== savedOccupation.trim();
     const isAvatarDirty = avatarUrl.trim() !== profileSnapshot.avatarUrl.trim();
-    const isTierDirty =
-        selectedTier !== (profileSnapshot.tier || currentTier.name);
+    const isTierDirty = selectedTier !== (profileSnapshot.tier || currentTier.name);
     const isLanguagesDirty =
-        languages.length !== savedLanguages.length ||
-        languages.some((l, i) => l !== savedLanguages[i]);
-    const isTagsDirty =
-        tags.length !== savedTags.length ||
-        tags.some((t, i) => t !== savedTags[i]);
-    const isVisibilityDirty =
-        defaultBoardVisibility !== settingsSnapshot.defaultBoardVisibility;
+        languages.length !== savedLanguages.length || languages.some((l, i) => l !== savedLanguages[i]);
+    const isTagsDirty = tags.length !== savedTags.length || tags.some((t, i) => t !== savedTags[i]);
+    const isVisibilityDirty = defaultBoardVisibility !== settingsSnapshot.defaultBoardVisibility;
 
     const isDirty =
         isNameDirty ||
@@ -230,16 +185,12 @@ export default function SettingsContent() {
         if (avatarUrl.trim()) {
             const avatarVal = validateAvatarUrl(avatarUrl);
             if (!avatarVal.isValid) {
-                setErrorMessage(
-                    avatarVal.error ?? "Invalid profile picture URL."
-                );
+                setErrorMessage(avatarVal.error ?? "Invalid profile picture URL.");
                 return;
             }
         }
 
-        const formattedHandle = handle.startsWith("@")
-            ? handle.trim()
-            : `@${handle.trim()}`;
+        const formattedHandle = handle.startsWith("@") ? handle.trim() : `@${handle.trim()}`;
 
         // Save previous snapshot so user can Undo
         const previousState: ProfileSnapshotState = {
@@ -248,17 +199,10 @@ export default function SettingsContent() {
             headline: profileSnapshot.headline,
             bio: profileSnapshot.bio,
             location: profileSnapshot.location,
-            occupation:
-                profileSnapshot.occupation ??
-                profileSnapshot.details?.occupation ??
-                "",
+            occupation: profileSnapshot.occupation ?? profileSnapshot.details?.occupation ?? "",
             avatarUrl: profileSnapshot.avatarUrl,
             languages: [...profileSnapshot.details.languages],
-            tags: [
-                ...(profileSnapshot.details.tags ??
-                    profileSnapshot.details.interests ??
-                    [])
-            ],
+            tags: [...(profileSnapshot.details.tags ?? profileSnapshot.details.interests ?? [])],
             tier: profileSnapshot.tier,
             defaultBoardVisibility: settingsSnapshot.defaultBoardVisibility
         };
@@ -358,14 +302,10 @@ export default function SettingsContent() {
         setHeadline(resetProfile.headline);
         setBio(resetProfile.bio);
         setLocation(resetProfile.location);
-        setOccupation(
-            resetProfile.occupation ?? resetProfile.details?.occupation ?? ""
-        );
+        setOccupation(resetProfile.occupation ?? resetProfile.details?.occupation ?? "");
         setAvatarUrl(resetProfile.avatarUrl);
         setLanguages(resetProfile.details.languages);
-        setTags(
-            resetProfile.details.tags ?? resetProfile.details.interests ?? []
-        );
+        setTags(resetProfile.details.tags ?? resetProfile.details.interests ?? []);
         setSelectedTier(resetProfile.tier);
 
         setDefaultBoardVisibility("friends");
@@ -428,10 +368,7 @@ export default function SettingsContent() {
                             mapStats={profileSnapshot.mapStats}
                         />
 
-                        <ProfileAvatarEditor
-                            avatarUrl={avatarUrl}
-                            onChangeAvatarUrl={setAvatarUrl}
-                        />
+                        <ProfileAvatarEditor avatarUrl={avatarUrl} onChangeAvatarUrl={setAvatarUrl} />
 
                         <PersonalDetailsForm
                             name={name}
@@ -455,11 +392,7 @@ export default function SettingsContent() {
                         />
 
                         <div className="border-line bg-background rounded-[2px] border p-6">
-                            <ProfileTagSelector
-                                selectedTagIds={tags}
-                                onChange={setTags}
-                                maxTags={10}
-                            />
+                            <ProfileTagSelector selectedTagIds={tags} onChange={setTags} maxTags={10} />
                         </div>
                     </div>
                 )}
@@ -467,10 +400,7 @@ export default function SettingsContent() {
                 {/* TAB 2: ACCOUNT & PRIVACY */}
                 {activeTab === "ACCOUNT" && (
                     <div className="space-y-6">
-                        <ThemeSelectorCard
-                            theme={theme}
-                            onThemeChange={handleThemeChange}
-                        />
+                        <ThemeSelectorCard theme={theme} onThemeChange={handleThemeChange} />
 
                         {/* Default Board Visibility */}
                         <div className="border-line bg-background rounded-[2px] border p-6">
@@ -478,15 +408,12 @@ export default function SettingsContent() {
                                 Default Board Visibility
                             </h2>
                             <p className="text-12 text-muted-foreground mt-0.5 mb-5">
-                                Choose who can view new boards you create by
-                                default.
+                                Choose who can view new boards you create by default.
                             </p>
 
                             <VisibilitySelector
                                 value={defaultBoardVisibility}
-                                onChange={(val) =>
-                                    setDefaultBoardVisibility(val)
-                                }
+                                onChange={(val) => setDefaultBoardVisibility(val)}
                                 showLabel={false}
                             />
                         </div>

@@ -14,11 +14,7 @@ type Props = {
 };
 
 export default function ProfilePageContent({ profile: initialProfile }: Props) {
-    const profile = useSyncExternalStore(
-        subscribeMockStore,
-        getMockProfile,
-        () => initialProfile
-    );
+    const profile = useSyncExternalStore(subscribeMockStore, getMockProfile, () => initialProfile);
     const [activeFilter, setActiveFilter] = useState<AudienceFilter>("ME");
 
     const filters: AudienceFilter[] = ["ME", "FRIENDS", "EXPLORE"];
@@ -27,9 +23,7 @@ export default function ProfilePageContent({ profile: initialProfile }: Props) {
         <div className="mx-auto w-full max-w-6xl pb-20">
             {/* Top Page Header */}
             <header className="mb-8">
-                <span className="text-10 tracking-label text-muted-foreground font-bold uppercase">
-                    SOCIAL
-                </span>
+                <span className="text-10 tracking-label text-muted-foreground font-bold uppercase">SOCIAL</span>
                 <h1 className="font-display text-48 sm:text-60 text-foreground mt-1 font-bold tracking-tight uppercase">
                     {activeFilter}
                 </h1>
@@ -50,18 +44,14 @@ export default function ProfilePageContent({ profile: initialProfile }: Props) {
                     <ProfileHero profile={profile} />
 
                     {/* Currently inspired by section */}
-                    <section
-                        aria-label="Currently inspired by"
-                        className="border-line mt-12 border-t pt-8"
-                    >
+                    <section aria-label="Currently inspired by" className="border-line mt-12 border-t pt-8">
                         <div className="flex items-end justify-between">
                             <div>
                                 <h3 className="font-display text-20 sm:text-22 text-foreground font-bold">
                                     currently inspired by
                                 </h3>
                                 <p className="text-12 text-muted-foreground mt-0.5 font-medium">
-                                    boards and destinations on my radar right
-                                    now
+                                    boards and destinations on my radar right now
                                 </p>
                             </div>
                             <Link
@@ -80,18 +70,12 @@ export default function ProfilePageContent({ profile: initialProfile }: Props) {
                     </section>
 
                     {/* My boards section */}
-                    <section
-                        aria-label="My boards"
-                        className="border-line mt-12 border-t pt-8"
-                    >
+                    <section aria-label="My boards" className="border-line mt-12 border-t pt-8">
                         <div className="flex items-end justify-between">
                             <div>
-                                <h3 className="font-display text-20 sm:text-22 text-foreground font-bold">
-                                    my boards
-                                </h3>
+                                <h3 className="font-display text-20 sm:text-22 text-foreground font-bold">my boards</h3>
                                 <p className="text-12 text-muted-foreground mt-0.5 font-medium">
-                                    turns out daydreams of new trips looks
-                                    better as Roamboards
+                                    turns out daydreams of new trips looks better as Roamboards
                                 </p>
                             </div>
                             <Link
@@ -116,16 +100,10 @@ export default function ProfilePageContent({ profile: initialProfile }: Props) {
 
             {/* FRIENDS View */}
             {activeFilter === "FRIENDS" && (
-                <section
-                    aria-label="Friends feed"
-                    className="py-12 text-center"
-                >
-                    <h3 className="font-display text-24 text-foreground font-bold">
-                        Friends &amp; Shared Itineraries
-                    </h3>
+                <section aria-label="Friends feed" className="py-12 text-center">
+                    <h3 className="font-display text-24 text-foreground font-bold">Friends &amp; Shared Itineraries</h3>
                     <p className="text-14 text-muted-foreground mx-auto mt-2 max-w-md">
-                        Connect with fellow wanderers and view trips shared by
-                        your friends on Roamboard.
+                        Connect with fellow wanderers and view trips shared by your friends on Roamboard.
                     </p>
                     <div className="mt-8 grid grid-cols-1 gap-6 text-left sm:grid-cols-2 lg:grid-cols-3">
                         {profile.inspiredBoards.slice(0, 2).map((board) => (
@@ -137,16 +115,10 @@ export default function ProfilePageContent({ profile: initialProfile }: Props) {
 
             {/* EXPLORE View */}
             {activeFilter === "EXPLORE" && (
-                <section
-                    aria-label="Community explore"
-                    className="py-12 text-center"
-                >
-                    <h3 className="font-display text-24 text-foreground font-bold">
-                        Explore Community Boards
-                    </h3>
+                <section aria-label="Community explore" className="py-12 text-center">
+                    <h3 className="font-display text-24 text-foreground font-bold">Explore Community Boards</h3>
                     <p className="text-14 text-muted-foreground mx-auto mt-2 max-w-md">
-                        Discover public boards, trending destinations, and
-                        stories from travelers worldwide.
+                        Discover public boards, trending destinations, and stories from travelers worldwide.
                     </p>
                     <div className="mt-8 grid grid-cols-1 gap-6 text-left sm:grid-cols-2 lg:grid-cols-3">
                         {profile.inspiredBoards.map((board) => (

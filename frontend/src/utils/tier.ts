@@ -22,8 +22,7 @@ export const TRAVELER_TIERS: readonly TravelerTierInfo[] = [
         minCountries: 20,
         minCities: 35,
         minContinents: 3,
-        description:
-            "Elite explorer with extensive cross-continental adventures."
+        description: "Elite explorer with extensive cross-continental adventures."
     },
     {
         name: "SILVER TRAVELER",
@@ -61,11 +60,7 @@ export function calculateTravelerTier(stats?: {
     const continents = stats?.continentsCovered ?? 1;
 
     for (const tier of TRAVELER_TIERS) {
-        if (
-            countries >= tier.minCountries &&
-            cities >= tier.minCities &&
-            continents >= tier.minContinents
-        ) {
+        if (countries >= tier.minCountries && cities >= tier.minCities && continents >= tier.minContinents) {
             return tier;
         }
     }

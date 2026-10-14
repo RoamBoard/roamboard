@@ -16,10 +16,7 @@ export default function UnderlineTabs<T extends string>({
     className = ""
 }: Props<T>) {
     return (
-        <nav
-            aria-label={ariaLabel}
-            className={`border-line mt-4 flex items-center gap-6 border-b pb-3 ${className}`}
-        >
+        <nav aria-label={ariaLabel} className={`border-line mt-4 flex items-center gap-6 border-b pb-3 ${className}`}>
             {tabs.map((tab) => {
                 const isActive = activeTab === tab;
                 return (

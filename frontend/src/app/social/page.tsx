@@ -4,8 +4,7 @@ import AppShell from "@/components/layout/AppShell";
 
 export const metadata: Metadata = {
     title: "Social | Roamboard",
-    description:
-        "Connect with travelers and discover shared journeys on Roamboard."
+    description: "Connect with travelers and discover shared journeys on Roamboard."
 };
 
 export default function SocialPage() {
@@ -44,10 +43,9 @@ export default function SocialPage() {
                                 Social Feed &amp; Friends Hub
                             </h2>
                             <p className="text-14 text-muted-foreground mx-auto mt-2 max-w-md leading-relaxed font-medium">
-                                The social discovery experience is currently
-                                being built. You will soon be able to connect
-                                with friends, share boards, and discover travel
-                                inspiration across the community.
+                                The social discovery experience is currently being built. You will soon be able to
+                                connect with friends, share boards, and discover travel inspiration across the
+                                community.
                             </p>
                             <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
                                 <Link

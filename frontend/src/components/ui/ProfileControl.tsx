@@ -3,12 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-    useState,
-    useEffect,
-    useSyncExternalStore,
-    type ReactNode
-} from "react";
+import { useState, useEffect, useSyncExternalStore, type ReactNode } from "react";
 import { getCurrentUser, signOut, type AuthUser } from "@/lib/auth";
 import {
     getMockProfile,
@@ -58,11 +53,7 @@ export default function ProfileControl({
     const [selectedTheme, setSelectedTheme] = useState("light");
 
     // Sync with external mock store
-    const profile = useSyncExternalStore(
-        subscribeMockStore,
-        getMockProfile,
-        getMockProfileServerSnapshot
-    );
+    const profile = useSyncExternalStore(subscribeMockStore, getMockProfile, getMockProfileServerSnapshot);
 
     const selectTheme = (theme: string) => {
         if (theme !== "light" && theme !== "dark") return;
@@ -108,9 +99,7 @@ export default function ProfileControl({
             setMockAuthState(false);
             router.replace("/login");
         } catch (cause) {
-            setLogoutError(
-                cause instanceof Error ? cause.message : "Could not sign out."
-            );
+            setLogoutError(cause instanceof Error ? cause.message : "Could not sign out.");
         } finally {
             setSigningOut(false);
         }
@@ -119,19 +108,10 @@ export default function ProfileControl({
     // Real account controls tied to backend session; demo user enabled only through explicit user prop
     const isLoggedIn = Boolean(user || sessionUser);
 
-    const displayName =
-        user?.name ||
-        sessionUser?.displayName ||
-        userName ||
-        profile.name ||
-        "Rowan";
+    const displayName = user?.name || sessionUser?.displayName || userName || profile.name || "Rowan";
     const displayAvatar = user?.avatarUrl || avatarUrl || profile.avatarUrl;
     const rawHandle = user?.handle || handle || profile.handle;
-    const displayHandle = rawHandle
-        ? rawHandle.startsWith("@")
-            ? rawHandle
-            : `@${rawHandle}`
-        : null;
+    const displayHandle = rawHandle ? (rawHandle.startsWith("@") ? rawHandle : `@${rawHandle}`) : null;
     const resolvedProfileHref = href ?? profileHref;
 
     const containerClasses = compact
@@ -177,11 +157,7 @@ export default function ProfileControl({
                 modal={false}
                 onOpenChange={(open) => {
                     if (open) {
-                        setSelectedTheme(
-                            document.documentElement.classList.contains("dark")
-                                ? "dark"
-                                : "light"
-                        );
+                        setSelectedTheme(document.documentElement.classList.contains("dark") ? "dark" : "light");
                     }
                 }}
             >
@@ -193,13 +169,7 @@ export default function ProfileControl({
                     >
                         {displayAvatar ? (
                             <div className="bg-faint relative h-5 w-5 shrink-0 overflow-hidden rounded-[1px]">
-                                <Image
-                                    src={displayAvatar}
-                                    alt=""
-                                    fill
-                                    sizes="20px"
-                                    className="object-cover"
-                                />
+                                <Image src={displayAvatar} alt="" fill sizes="20px" className="object-cover" />
                             </div>
                         ) : (
                             <svg
@@ -264,19 +234,13 @@ export default function ProfileControl({
                                 className="text-12 text-muted-foreground hover:text-foreground hover:bg-faint focus-visible:text-foreground focus-visible:bg-faint flex cursor-pointer items-center justify-between rounded-[2px] px-3 py-2 font-medium transition-colors"
                             >
                                 <span>my profile</span>
-                                <span
-                                    className="text-10 text-muted-foreground font-normal"
-                                    aria-hidden="true"
-                                >
+                                <span className="text-10 text-muted-foreground font-normal" aria-hidden="true">
                                     →
                                 </span>
                             </Link>
                         </DropdownMenuItem>
 
-                        <div
-                            className="bg-line my-0.5 h-px"
-                            aria-hidden="true"
-                        />
+                        <div className="bg-line my-0.5 h-px" aria-hidden="true" />
 
                         <DropdownMenuItem asChild>
                             <Link
@@ -284,34 +248,19 @@ export default function ProfileControl({
                                 className="text-12 text-muted-foreground hover:text-foreground hover:bg-faint focus-visible:text-foreground focus-visible:bg-faint flex cursor-pointer items-center justify-between rounded-[2px] px-3 py-2 font-medium transition-colors"
                             >
                                 <span>settings</span>
-                                <span
-                                    className="text-10 text-muted-foreground font-normal"
-                                    aria-hidden="true"
-                                >
+                                <span className="text-10 text-muted-foreground font-normal" aria-hidden="true">
                                     →
                                 </span>
                             </Link>
                         </DropdownMenuItem>
 
-                        <div
-                            className="bg-line my-0.5 h-px"
-                            aria-hidden="true"
-                        />
+                        <div className="bg-line my-0.5 h-px" aria-hidden="true" />
 
                         {/* Theme row: completely uniform with other menu items */}
-                        <DropdownMenuItem
-                            asChild
-                            onSelect={(e) => e.preventDefault()}
-                        >
+                        <DropdownMenuItem asChild onSelect={(e) => e.preventDefault()}>
                             <button
                                 type="button"
-                                onClick={() =>
-                                    selectTheme(
-                                        selectedTheme === "light"
-                                            ? "dark"
-                                            : "light"
-                                    )
-                                }
+                                onClick={() => selectTheme(selectedTheme === "light" ? "dark" : "light")}
                                 className="text-12 text-muted-foreground hover:text-foreground hover:bg-faint focus-visible:text-foreground focus-visible:bg-faint flex w-full cursor-pointer items-center justify-between rounded-[2px] px-3 py-2 text-left font-medium transition-colors"
                             >
                                 <div className="flex items-center gap-2">
@@ -327,28 +276,17 @@ export default function ProfileControl({
                             </button>
                         </DropdownMenuItem>
 
-                        <div
-                            className="bg-line my-0.5 h-px"
-                            aria-hidden="true"
-                        />
+                        <div className="bg-line my-0.5 h-px" aria-hidden="true" />
 
-                        <DropdownMenuItem
-                            asChild
-                            disabled={Boolean(user) || signingOut}
-                        >
+                        <DropdownMenuItem asChild disabled={Boolean(user) || signingOut}>
                             <button
                                 type="button"
                                 disabled={Boolean(user) || signingOut}
                                 onClick={() => void handleSignOut()}
                                 className="text-12 text-muted-foreground hover:text-foreground hover:bg-faint focus-visible:text-foreground focus-visible:bg-faint flex w-full cursor-pointer items-center justify-between rounded-[2px] px-3 py-2 text-left font-medium transition-colors disabled:pointer-events-none disabled:opacity-50"
                             >
-                                <span>
-                                    {signingOut ? "signing out…" : "log out"}
-                                </span>
-                                <span
-                                    className="text-10 text-muted-foreground font-normal"
-                                    aria-hidden="true"
-                                >
+                                <span>{signingOut ? "signing out…" : "log out"}</span>
+                                <span className="text-10 text-muted-foreground font-normal" aria-hidden="true">
                                     ↳
                                 </span>
                             </button>
@@ -357,10 +295,7 @@ export default function ProfileControl({
 
                     {logoutError && (
                         <div className="border-line border-t px-3 py-2">
-                            <p
-                                role="alert"
-                                className="text-11 font-medium text-red-600"
-                            >
+                            <p role="alert" className="text-11 font-medium text-red-600">
                                 {logoutError}
                             </p>
                         </div>

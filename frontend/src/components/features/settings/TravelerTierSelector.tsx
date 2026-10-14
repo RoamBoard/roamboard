@@ -7,11 +7,7 @@ type Props = {
     mapStats: UserProfile["mapStats"];
 };
 
-export default function TravelerTierSelector({
-    selectedTier,
-    onSelectTier,
-    mapStats
-}: Props) {
+export default function TravelerTierSelector({ selectedTier, onSelectTier, mapStats }: Props) {
     return (
         <div className="border-line bg-background rounded-[2px] border p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -31,41 +27,26 @@ export default function TravelerTierSelector({
             </div>
 
             <p className="text-12 text-muted-foreground mt-2 max-w-2xl leading-relaxed font-medium">
-                Select any tier below to test and preview how each metallic
-                grade renders across your profile and boards. Saving changes
-                will persist this tier to mock data.
+                Select any tier below to test and preview how each metallic grade renders across your profile and
+                boards. Saving changes will persist this tier to mock data.
             </p>
 
             {/* Current Qualifying Stats */}
             <div className="border-line mt-5 grid grid-cols-2 gap-3 border-t pt-5 sm:grid-cols-4">
                 <div className="bg-faint/40 border-line rounded-[2px] border p-3">
-                    <span className="text-10 text-muted-foreground block font-medium">
-                        Countries Visited
-                    </span>
-                    <span className="font-display text-18 text-foreground font-bold">
-                        {mapStats.countriesVisited}
-                    </span>
+                    <span className="text-10 text-muted-foreground block font-medium">Countries Visited</span>
+                    <span className="font-display text-18 text-foreground font-bold">{mapStats.countriesVisited}</span>
                 </div>
                 <div className="bg-faint/40 border-line rounded-[2px] border p-3">
-                    <span className="text-10 text-muted-foreground block font-medium">
-                        Cities Explored
-                    </span>
-                    <span className="font-display text-18 text-foreground font-bold">
-                        {mapStats.citiesExplored}
-                    </span>
+                    <span className="text-10 text-muted-foreground block font-medium">Cities Explored</span>
+                    <span className="font-display text-18 text-foreground font-bold">{mapStats.citiesExplored}</span>
                 </div>
                 <div className="bg-faint/40 border-line rounded-[2px] border p-3">
-                    <span className="text-10 text-muted-foreground block font-medium">
-                        Continents Covered
-                    </span>
-                    <span className="font-display text-18 text-foreground font-bold">
-                        {mapStats.continentsCovered}
-                    </span>
+                    <span className="text-10 text-muted-foreground block font-medium">Continents Covered</span>
+                    <span className="font-display text-18 text-foreground font-bold">{mapStats.continentsCovered}</span>
                 </div>
                 <div className="bg-faint/40 border-line rounded-[2px] border p-3">
-                    <span className="text-10 text-muted-foreground block font-medium">
-                        Photos Taken
-                    </span>
+                    <span className="text-10 text-muted-foreground block font-medium">Photos Taken</span>
                     <span className="font-display text-18 text-foreground font-bold">
                         {mapStats.photosTaken.toLocaleString("en-US")}
                     </span>
@@ -95,19 +76,13 @@ export default function TravelerTierSelector({
                                 <div className="flex items-center gap-2.5">
                                     <span
                                         className={`flex size-3.5 shrink-0 items-center justify-center rounded-full border ${
-                                            isSelected
-                                                ? "border-foreground bg-foreground"
-                                                : "border-line"
+                                            isSelected ? "border-foreground bg-foreground" : "border-line"
                                         }`}
                                         aria-hidden="true"
                                     >
-                                        {isSelected && (
-                                            <span className="bg-background size-1.5 rounded-full" />
-                                        )}
+                                        {isSelected && <span className="bg-background size-1.5 rounded-full" />}
                                     </span>
-                                    <span className="font-display text-13 tracking-tight uppercase">
-                                        {t.name}
-                                    </span>
+                                    <span className="font-display text-13 tracking-tight uppercase">{t.name}</span>
                                     {isSelected && (
                                         <span className="bg-foreground text-10 text-background rounded-[2px] px-1.5 py-0.5 font-bold uppercase">
                                             Active

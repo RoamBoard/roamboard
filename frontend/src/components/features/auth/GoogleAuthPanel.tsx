@@ -112,10 +112,7 @@ export default function GoogleAuthPanel({ mode }: Props) {
                     >
                         {isSignup ? "Sign up (Demo)" : "Log in as Rowan (Demo)"}
                     </button>
-                    <p
-                        id="auth-preview"
-                        className="text-11 text-muted-foreground mt-2 text-center"
-                    >
+                    <p id="auth-preview" className="text-11 text-muted-foreground mt-2 text-center">
                         Google sign-in is not configured. Demo login enabled.
                     </p>
                 </div>
