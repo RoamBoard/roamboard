@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import Sidebar from "@/components/layout/Sidebar";
-import ThemeSelect from "@/components/ui/ThemeSelect";
 import ProfileControl, {
     type ProfileControlProps
 } from "@/components/ui/ProfileControl";
@@ -36,20 +35,7 @@ export default function AppShell({
             >
                 {children}
             </main>
-            <ProfileControl
-                {...profile}
-                compact={discover?.collapsed}
-                floating={Boolean(discover)}
-            />
-            <div
-                className={
-                    discover
-                        ? "bg-background/90 fixed top-4 right-4 z-30 rounded-full p-2"
-                        : "absolute top-5 right-[8.25rem] z-10 sm:right-[18%]"
-                }
-            >
-                <ThemeSelect />
-            </div>
+            <ProfileControl {...profile} />
         </div>
     );
 }

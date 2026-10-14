@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ThemeSelect from "@/components/ui/ThemeSelect";
 
 type Props = {
     activeHref: string;
@@ -15,6 +16,11 @@ const navigation = [
 export default function Sidebar({ activeHref, discover }: Props) {
     const linkClasses =
         "inline-flex min-h-6 items-center text-muted-foreground underline-offset-2 hover:underline aria-[current=true]:text-foreground aria-[current=true]:underline focus-visible:outline-foreground focus-visible:outline-1 focus-visible:outline-offset-4";
+    const themeControl = (
+        <div className="absolute inset-x-0 bottom-3 flex justify-center">
+            <ThemeSelect side="top" />
+        </div>
+    );
 
     if (discover) {
         return (
@@ -68,12 +74,13 @@ export default function Sidebar({ activeHref, discover }: Props) {
                         </Link>
                     ))}
                 </nav>
+                {themeControl}
             </aside>
         );
     }
 
     return (
-        <aside className="relative z-10 min-h-dvh">
+        <aside className="bg-background relative z-10 min-h-dvh">
             <header className="absolute top-[3%] left-1/2 -translate-x-1/2">
                 <Link
                     href="/home"
@@ -85,7 +92,7 @@ export default function Sidebar({ activeHref, discover }: Props) {
             </header>
             <nav
                 aria-label="Main navigation"
-                className="text-12 absolute top-[59%] bottom-[5%] left-1/2 flex -translate-x-1/2 flex-col items-start justify-between"
+                className="text-12 absolute top-[59%] bottom-20 left-1/2 flex -translate-x-1/2 flex-col items-start justify-between"
             >
                 <Link
                     href="/home"
@@ -123,6 +130,7 @@ export default function Sidebar({ activeHref, discover }: Props) {
                     labs
                 </Link>
             </nav>
+            {themeControl}
         </aside>
     );
 }
