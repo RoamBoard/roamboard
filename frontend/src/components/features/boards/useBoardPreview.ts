@@ -44,15 +44,18 @@ export default function useBoardPreview(
         },
         () => false
     );
+    // A draft opens the copy editor. null means the editor is closed.
     const [draft, setDraft] = useState<Board | null>(null);
     const [message, setMessage] = useState("");
     const [error, setError] = useState("");
 
+    // Remove the previous action's message before starting another action.
     function clearFeedback() {
         setMessage("");
         setError("");
     }
 
+    // Pressing the bookmark again removes the saved marker.
     function saveBoard() {
         clearFeedback();
         try {
@@ -70,6 +73,7 @@ export default function useBoardPreview(
         }
     }
 
+    // Reopen a saved copy if there is one, otherwise start with a fresh copy.
     function copyBoard() {
         clearFeedback();
         try {
@@ -82,6 +86,7 @@ export default function useBoardPreview(
         }
     }
 
+    // Store or remove the selected activity in this tab.
     function saveActivity() {
         if (!selectedActivity) return;
         clearFeedback();
@@ -103,6 +108,7 @@ export default function useBoardPreview(
         }
     }
 
+    // Return true so the page knows it can close the activity popup.
     function copyActivity(): boolean {
         if (!selectedActivity) return false;
         clearFeedback();
@@ -121,6 +127,7 @@ export default function useBoardPreview(
         }
     }
 
+    // The page uses these values and functions to connect its buttons and popups.
     return {
         boardSaved,
         activitySaved,

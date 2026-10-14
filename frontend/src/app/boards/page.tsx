@@ -6,6 +6,7 @@ export const metadata: Metadata = {
     title: "Boards | Roamboard"
 };
 
+// The board list is still a placeholder with a link to the published sample.
 export default function BoardsPage() {
     return (
         <AppShell activeHref="/boards">

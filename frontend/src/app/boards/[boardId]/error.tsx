@@ -2,6 +2,7 @@
 
 import BoardPageMessage from "@/components/features/boards/BoardPageMessage";
 
+// Next.js shows this if loading or rendering fails. reset retries the page.
 export default function BoardError({ reset }: { reset: () => void }) {
     return (
         <BoardPageMessage title="Could not load this board">

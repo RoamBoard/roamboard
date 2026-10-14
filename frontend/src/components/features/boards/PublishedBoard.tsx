@@ -18,6 +18,7 @@ const actionClasses =
 
 const numberLabel = (number: number) => String(number).padStart(2, "0");
 
+// Temporary icon lookup until the tag database is connected.
 function getTagIcon(tag: string) {
     const name = tag.toLowerCase();
     if (name.includes("nature")) return "leaf";
@@ -32,11 +33,12 @@ export default function PublishedBoard({
 }: PublishedBoardData) {
     const days = getBoardDays(board);
     const places = getBoardPlaceNames(board);
-    // null means no popup. Selecting an activity makes its details appear below.
     const [selectedActivity, setSelectedActivity] =
         useState<BoardActivity | null>(null);
+    // Preview saves and copies only stay in this browser tab.
     const preview = useBoardPreview(board, selectedActivity);
 
+    // Don't carry a previous activity's save message into this popup.
     function handleOpenActivity(activity: BoardActivity) {
         preview.clearFeedback();
         setSelectedActivity(activity);
@@ -46,6 +48,7 @@ export default function PublishedBoard({
         setSelectedActivity(null);
     }
 
+    // Keep the popup open if copying fails, so the error stays visible.
     function handleCopyActivity() {
         if (preview.copyActivity()) handleCloseActivity();
     }
@@ -116,6 +119,7 @@ export default function PublishedBoard({
                             className={`size-5 ${preview.boardSaved ? "fill-current" : ""}`}
                         />
                     </button>
+                    {/* Show feedback on the page when no popup is open. */}
                     <div className="mx-auto max-w-md px-5">
                         {selectedActivity || preview.draft ? null : feedback}
                     </div>
@@ -140,9 +144,10 @@ export default function PublishedBoard({
                             </dd>
                         </div>
                     </dl>
+                    {/* Only show the first three tags. */}
                     {board.tags.length ? (
                         <ul className="border-line text-muted-foreground text-12 mx-auto mt-8 flex w-fit max-w-[90%] flex-wrap justify-center gap-x-7 gap-y-4 border-b px-2 pb-8">
-                            {board.tags.map((tag) => (
+                            {board.tags.slice(0, 3).map((tag) => (
                                 <li
                                     key={tag}
                                     className="flex items-center gap-2"
@@ -215,6 +220,7 @@ export default function PublishedBoard({
                         <div className="mt-6 grid gap-5 sm:grid-cols-[1fr_1.1fr]">
                             <div className="text-muted-foreground text-right">
                                 <dl className="mb-6 flex justify-end gap-7 sm:flex-col sm:gap-5">
+                                    {/* Zero is a valid count; only hide missing values. */}
                                     {author.countriesVisited !== undefined ? (
                                         <div>
                                             <dt className="text-10">
@@ -264,6 +270,7 @@ export default function PublishedBoard({
                     {feedback}
                 </ActivityDetailsDialog>
             )}
+            {/* Clearing the draft closes the copy editor. */}
             {preview.draft ? (
                 <BoardDialog
                     title="Make it yours"

@@ -10,18 +10,22 @@ type Props = {
     onSaved: (draft: Board) => void;
 };
 
+// All editor fields use these styles.
 const fieldClasses =
     "border-line bg-background w-full border px-3 py-2 text-14 focus-visible:outline-2 focus-visible:outline-offset-2";
 
+// Edit a preview copy without changing the published board.
 export default function BoardCopyEditor({
     sourceBoardId,
     initialDraft,
     onSaved
 }: Props) {
+    // Keep edits here until the user presses Save preview copy.
     const [draft, setDraft] = useState(initialDraft);
     const [message, setMessage] = useState("");
     const [error, setError] = useState("");
 
+    // Replace the edited activity while leaving the other items as they are.
     function updateActivity(
         activityId: string,
         changes: Partial<BoardActivity>
@@ -36,10 +40,12 @@ export default function BoardCopyEditor({
         }));
     }
 
+    // Handle the save here so submitting the form does not reload the page.
     function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         setMessage("");
         setError("");
+        // A title made of spaces should count as empty too.
         if (!draft.title.trim()) {
             setError("Enter a title for your copy.");
             return;
@@ -53,6 +59,7 @@ export default function BoardCopyEditor({
             return;
         }
         try {
+            // Keep the duration long enough to include the last numbered day.
             const saved = {
                 ...draft,
                 title: draft.title.trim(),
@@ -62,6 +69,7 @@ export default function BoardCopyEditor({
                 ),
                 updatedAt: new Date().toISOString()
             };
+            // Store this copy in the tab, then give the updated draft to the parent.
             savePreviewCopy(sourceBoardId, saved);
             onSaved(saved);
             setMessage(
@@ -108,6 +116,7 @@ export default function BoardCopyEditor({
                     Your activities
                 </legend>
                 {draft.items.map((item, index) => {
+                    // Non-activity items stay in the copy, but have no editing fields yet.
                     if (item.type !== "activity") {
                         return (
                             <p

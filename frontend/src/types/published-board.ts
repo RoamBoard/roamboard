@@ -10,12 +10,14 @@ export type BoardAuthor = {
     boardsCreated?: number;
 };
 
+// Everything the viewer needs, including the author section below the board.
 export type PublishedBoardData = {
     board: Board;
     author: BoardAuthor;
     highlights: string[];
 };
 
+// One day after the board's items have been grouped for display.
 export type PublishedBoardDay = {
     number: number;
     title: string;

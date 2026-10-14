@@ -4,8 +4,10 @@ import type { Board, BoardActivity } from "@/types/board";
 // backend mutations when save/copy endpoints have been agreed and implemented.
 const prefix = "roamboard:published-board-preview:";
 
+// React listens here to update bookmark buttons when storage changes.
 export function subscribeToPreviewChanges(onChange: () => void): () => void {
     window.addEventListener("storage", onChange);
+    // storage events do not fire in the window that wrote the data, so we send our own.
     window.addEventListener("roamboard-preview-change", onChange);
     return () => {
         window.removeEventListener("storage", onChange);
@@ -13,15 +15,18 @@ export function subscribeToPreviewChanges(onChange: () => void): () => void {
     };
 }
 
+// Each board ID has its own saved marker in this tab's session storage.
 export function isPreviewBoardSaved(boardId: string): boolean {
     return sessionStorage.getItem(`${prefix}saved:${boardId}`) === "true";
 }
 
+// Tell the UI about the change after writing the marker.
 export function setPreviewBoardSaved(boardId: string, saved: boolean): void {
     sessionStorage.setItem(`${prefix}saved:${boardId}`, String(saved));
     window.dispatchEvent(new Event("roamboard-preview-change"));
 }
 
+// Having a stored activity means it is saved, even if the board is not bookmarked.
 export function isPreviewActivitySaved(
     boardId: string,
     activityId: string
@@ -32,6 +37,7 @@ export function isPreviewActivitySaved(
     );
 }
 
+// JSON turns the activity object into text that session storage can hold.
 export function setPreviewActivitySaved(
     boardId: string,
     activity: BoardActivity,
@@ -43,6 +49,7 @@ export function setPreviewActivitySaved(
     window.dispatchEvent(new Event("roamboard-preview-change"));
 }
 
+// Read a saved draft and check that it has the basic board fields.
 export function readPreviewCopy(boardId: string): Board | null {
     const stored = sessionStorage.getItem(`${prefix}copy:${boardId}`);
     if (!stored) return null;
@@ -53,6 +60,7 @@ export function readPreviewCopy(boardId: string): Board | null {
     return board;
 }
 
+// Use the original board ID to find this copy again later.
 export function savePreviewCopy(sourceBoardId: string, draft: Board): void {
     sessionStorage.setItem(
         `${prefix}copy:${sourceBoardId}`,
@@ -60,8 +68,10 @@ export function savePreviewCopy(sourceBoardId: string, draft: Board): void {
     );
 }
 
+// Clone nested items too, so editing a copy cannot change the original data.
 export function createPreviewCopy(board: Board): Board {
     const copy = structuredClone(board);
+    // New IDs and dates make this a separate, private preview board.
     const now = new Date().toISOString();
     return {
         ...copy,
@@ -78,12 +88,14 @@ export function createPreviewCopy(board: Board): Board {
     };
 }
 
+// Add to an existing copy, or start a new board with just this activity.
 export function addActivityToPreviewCopy(
     source: Board,
     activity: BoardActivity,
     existing: Board | null
 ): Board {
     const draft = existing ?? createPreviewCopy(source);
+    // Give the copied activity its own ID so it can be edited separately.
     const copied: BoardActivity = {
         ...structuredClone(activity),
         id: `preview-${crypto.randomUUID()}`,

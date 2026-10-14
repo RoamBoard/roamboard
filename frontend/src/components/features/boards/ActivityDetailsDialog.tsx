@@ -30,6 +30,7 @@ export default function ActivityDetailsDialog({
     onCopy,
     children
 }: Props) {
+    // Use the activity's day if it has one, otherwise find the day it belongs to.
     const dayNumber =
         activity.dayNumber ??
         days.find((day) => day.items.some((item) => item.id === activity.id))
@@ -42,6 +43,7 @@ export default function ActivityDetailsDialog({
                 Day {dayNumber}
                 {activity.time ? ` · ${activity.time}` : ""}
             </p>
+            {/* Show every photo here; the card only shows the first one. */}
             {activity.images.length ? (
                 <div className="mb-6 grid gap-4 sm:grid-cols-2">
                     {activity.images.map((image, index) => (
@@ -70,6 +72,7 @@ export default function ActivityDetailsDialog({
                     ) : null}
                 </div>
             ) : null}
+            {/* The parent handles saving and copying, so this popup just calls it. */}
             <div className="mt-7 flex flex-wrap gap-3">
                 <button
                     type="button"
@@ -93,6 +96,7 @@ export default function ActivityDetailsDialog({
                 Preview only. Saving stores this activity in this tab; copying
                 opens an editable board copy. No database changes are made.
             </p>
+            {/* The parent passes save messages and errors into this space. */}
             {children}
         </BoardDialog>
     );

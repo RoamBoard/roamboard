@@ -3,6 +3,7 @@ type Props = {
     className?: string;
 };
 
+// These SVG paths are the shapes of the icons used on the board page.
 const paths = {
     bookmark: "M6 3h12v18l-6-4-6 4V3Z",
     copy: "M9 9h12v12H9V9ZM3 15V3h12",
@@ -13,8 +14,10 @@ const paths = {
     gem: "m3 8 4-5h10l4 5-9 13L3 8Zm0 0h18M7 3l5 18 5-18"
 };
 
+// The icon takes its color from the surrounding text.
 export default function BoardIcon({ name, className = "size-5" }: Props) {
     return (
+        // Buttons and tag text provide the label, so screen readers can skip the icon.
         <svg
             aria-hidden="true"
             viewBox="0 0 24 24"

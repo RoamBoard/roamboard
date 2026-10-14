@@ -10,21 +10,25 @@ type Props = {
     children: ReactNode;
 };
 
+// Keep the sidebar and account controls around the board content.
 export default function PublishedBoardShell({ children }: Props) {
     const [scrolled, setScrolled] = useState(false);
     const reducedMotion = useReducedMotion();
 
+    // Hide the top controls after scrolling 80 pixels down the page.
     useEffect(() => {
         function handleScroll() {
             setScrolled(window.scrollY > 80);
         }
         handleScroll();
         window.addEventListener("scroll", handleScroll, { passive: true });
+        // Remove the listener when we leave this page.
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
 
     return (
         <div className="bg-background text-foreground min-h-dvh">
+            {/* Keyboard users can skip the sidebar and go straight to the board. */}
             <a
                 href="#published-board-content"
                 className="bg-background fixed top-3 left-3 z-50 -translate-y-24 border px-4 py-2 focus:translate-y-0"
@@ -34,6 +38,7 @@ export default function PublishedBoardShell({ children }: Props) {
             <div className="pointer-events-none fixed inset-0 z-20 [&_a]:pointer-events-auto">
                 <Sidebar activeHref="/boards" />
             </div>
+            {/* inert also stops hidden controls from receiving keyboard focus. */}
             <motion.div
                 aria-hidden={scrolled}
                 inert={scrolled}

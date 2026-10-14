@@ -15,10 +15,12 @@ const itemPositions = [
     { row: 4, column: "3 / span 6" }
 ];
 
+// Repeat the desktop layout for each group of five items.
 function getItemStyle(index: number, evenDay: boolean): CSSProperties {
     const positionIndex = index % itemPositions.length;
     const position = itemPositions[positionIndex];
     const group = Math.floor(index / itemPositions.length);
+    // Move the first card on even days to alternate the layout.
     const column =
         evenDay && positionIndex === 0 ? "2 / span 5" : position.column;
     const row = group * 4 + position.row;
@@ -31,6 +33,7 @@ function getItemStyle(index: number, evenDay: boolean): CSSProperties {
 
 const numberLabel = (number: number) => String(number).padStart(2, "0");
 
+// A card shows a short preview. The popup has the full activity details.
 function ActivityCard({
     activity,
     index,
@@ -69,6 +72,7 @@ function ActivityCard({
                 image={activity.images[0]}
                 className="aspect-[4/3] sm:aspect-auto sm:min-h-60"
             />
+            {/* This button covers the card so the whole card can be clicked. */}
             <button
                 type="button"
                 onClick={() => onSelectActivity(activity)}
@@ -79,6 +83,7 @@ function ActivityCard({
     );
 }
 
+// Boards can also have photos, text, or locations without an activity.
 function OtherBoardItem({ item }: { item: Exclude<BoardItem, BoardActivity> }) {
     if (item.type === "image")
         return <BoardPhoto image={item.image} className="aspect-[16/10]" />;
@@ -104,6 +109,7 @@ function OtherBoardItem({ item }: { item: Exclude<BoardItem, BoardActivity> }) {
     );
 }
 
+// Render one day, including links that jump to its activity cards.
 export default function PublishedBoardDay({
     day,
     onSelectActivity
@@ -111,6 +117,7 @@ export default function PublishedBoardDay({
     day: BoardDay;
     onSelectActivity: (activity: BoardActivity) => void;
 }) {
+    // Keep a separate activity list for the timeline and card numbering.
     const activities = day.items.filter((item) => item.type === "activity");
     const first = activities[0];
     const fourth = activities[3];
@@ -140,6 +147,7 @@ export default function PublishedBoardDay({
                 </p>
             ) : (
                 <div className="grid gap-7 px-5 sm:px-9 lg:grid-cols-12 lg:gap-6">
+                    {/* These links jump down the page without opening a popup. */}
                     {activities.length > 0 ? (
                         <nav
                             aria-label={`Day ${day.number} activities`}
@@ -173,6 +181,7 @@ export default function PublishedBoardDay({
                     <div
                         className={`grid min-w-0 gap-x-6 gap-y-7 lg:grid-cols-10 ${activities.length > 0 ? "lg:col-span-10" : "lg:col-span-12"}`}
                     >
+                        {/* Extra photos fill spaces in the desktop layout. */}
                         {first?.images[1] ? (
                             <BoardPhoto
                                 image={first.images[1]}

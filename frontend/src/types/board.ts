@@ -36,6 +36,7 @@ export type BoardImage = {
     source: "application" | "upload";
 };
 
+// The type field tells the renderer which kind of board item it has.
 export type BoardActivity = {
     id: string;
     type: "activity";
@@ -74,6 +75,7 @@ export type BoardImageItem = {
     dayNumber?: number;
 };
 
+// A board's item list can mix activities with other kinds of content.
 export type BoardItem =
     BoardActivity | BoardLocationItem | BoardTextItem | BoardImageItem;
 
@@ -86,6 +88,7 @@ export type Board = {
     visibility: BoardVisibility;
     // Tracks the owner's completed trip. New Boards and copies should start false.
     isCompleted: boolean;
+    // Tag names for now. Their icons will come from the tag database later.
     tags: string[];
     // An empty array allows a Board without a chosen destination.
     destinations: BoardDestination[];

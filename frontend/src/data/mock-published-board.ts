@@ -1,6 +1,7 @@
 import type { BoardActivity, BoardImage } from "@/types/board";
 import type { PublishedBoardData } from "@/types/published-board";
 
+// Build photo objects from files in public/images/boards.
 function photo(name: string, alt: string): BoardImage {
     return {
         id: `preview-photo-${name}`,
@@ -10,6 +11,7 @@ function photo(name: string, alt: string): BoardImage {
     };
 }
 
+// Reuse these photo objects across the sample board.
 const photos = {
     cover: photo(
         "cover",
@@ -20,6 +22,7 @@ const photos = {
         "A Tokyo street filled with people and neon signs"
     ),
     ramen: photo("ramen", "A bowl of ramen with noodles and toppings"),
+    // This fictional author fills the profile section at the bottom of the page.
     author: photo("author", "A portrait outdoors among the trees"),
     temple: photo(
         "temple",
@@ -199,6 +202,7 @@ const activities: BoardActivity[] = [
     }
 ];
 
+// Sample data for /boards/lost-in-tokyo while the board API is being built.
 export const mockPublishedBoard: PublishedBoardData = {
     board: {
         id: "lost-in-tokyo",
@@ -208,16 +212,19 @@ export const mockPublishedBoard: PublishedBoardData = {
             "Neon streets, tiny bars, late-night ramen, and absolutely no idea which train exit to take. This board is for wandering first and figuring things out somewhere along the way — from crowded crossings and hidden alleyways to quiet shrines, tiny cafes, record stores, rooftops, and neighborhoods that somehow keep you out much later than planned. Expect long days, even longer walks, spontaneous detours, vending-machine stops, way too many convenience-store snacks, and at least a few meals you'll still be thinking about when you get home. It's less about ticking off every famous sight and more about getting a little lost, following whatever looks interesting, and letting Tokyo do what it does best: surprise you around every corner.",
         visibility: "public",
         isCompleted: false,
+        // The viewer shows up to three tags from this list.
         tags: ["Nature", "Romantic", "Hidden Gems"],
         destinations: [
             { country: "Japan", countryCode: "JP", cities: ["Tokyo"] }
         ],
         durationDays: 2,
+        // Custom headings are matched to day numbers, starting at 1.
         dayTitles: {
             1: "Shibuya Sky → late night ramen",
             2: "Senso-ji & Asakusa → Akihabara"
         },
         coverImage: photos.cover,
+        // dayNumber on each activity decides which day it appears under.
         items: activities,
         createdAt: "2026-10-01T12:00:00Z",
         updatedAt: "2026-10-01T12:00:00Z"

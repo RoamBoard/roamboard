@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import PublishedBoardShell from "@/components/features/boards/PublishedBoardShell";
 
+// Loading, error, and missing-board pages share this layout and back link.
 export default function BoardPageMessage({
     title,
     children

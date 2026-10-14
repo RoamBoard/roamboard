@@ -1,6 +1,7 @@
 "use client";
 
 import {
+    // Open the modal and stop the page behind it from scrolling.
     useEffect,
     useId,
     useRef,
@@ -16,11 +17,15 @@ type Props = {
     children: ReactNode;
 };
 
+// Both the activity popup and copy editor use this dialog.
 export default function BoardDialog({ title, onClose, children }: Props) {
+    // The ref lets us call the browser's dialog methods.
     const dialogRef = useRef<HTMLDialogElement>(null);
+    // Give this dialog its own heading ID for screen readers.
     const titleId = useId();
     const reducedMotion = useReducedMotion();
 
+    // A click on the backdrop closes it; clicks inside the content do not.
     function handleBackdropClick(event: MouseEvent<HTMLDialogElement>) {
         if (event.target === event.currentTarget) onClose();
     }
@@ -30,6 +35,7 @@ export default function BoardDialog({ title, onClose, children }: Props) {
         const previousOverflow = document.body.style.overflow;
         dialog?.showModal();
         document.body.style.overflow = "hidden";
+        // Restore scrolling when the popup is removed.
         return () => {
             dialog?.close();
             document.body.style.overflow = previousOverflow;
@@ -44,6 +50,7 @@ export default function BoardDialog({ title, onClose, children }: Props) {
             onClick={handleBackdropClick}
             className="bg-background text-foreground border-line fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-3xl overflow-y-auto border p-0 backdrop:bg-black/45"
         >
+            {/* Skip the movement when reduced motion is enabled. */}
             <motion.div
                 initial={{ opacity: 0, y: reducedMotion ? 0 : 12 }}
                 animate={{ opacity: 1, y: 0 }}
