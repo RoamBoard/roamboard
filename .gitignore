@@ -14,3 +14,4 @@ node_modules/
 /backend/dist/
 backend/SCHEMA_DRAFT.md
 .env
+.pnpm-store/
