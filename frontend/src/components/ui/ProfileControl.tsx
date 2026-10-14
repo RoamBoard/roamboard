@@ -21,7 +21,6 @@ import {
     DropdownMenuContent,
     DropdownMenuItem
 } from "@/components/ui/dropdown-menu";
-import ThemeSelect from "@/components/ui/ThemeSelect";
 
 export type ProfileControlProps = {
     user?: { name: string; avatarUrl?: string; handle?: string } | null;
@@ -52,7 +51,9 @@ export default function ProfileControl({
     const [sessionUser, setSessionUser] = useState<AuthUser | null>(null);
     const [signingOut, setSigningOut] = useState(false);
     const [logoutError, setLogoutError] = useState("");
-    const [selectedTheme, setSelectedTheme] = useState("light");
+    const [selectedTheme, setSelectedTheme] = useState(() =>
+        typeof document !== "undefined" && document.documentElement.classList.contains("dark") ? "dark" : "light"
+    );
 
     // Sync with external mock store
     const profile = useSyncExternalStore(subscribeMockStore, getMockProfile, getMockProfileServerSnapshot);
@@ -68,6 +69,12 @@ export default function ProfileControl({
         } catch {
             // Theme still switches in memory
         }
+    };
+
+    const toggleTheme = () => {
+        if (typeof document === "undefined") return;
+        const isDark = document.documentElement.classList.contains("dark");
+        selectTheme(isDark ? "light" : "dark");
     };
 
     useEffect(() => {
@@ -126,10 +133,19 @@ export default function ProfileControl({
     if (!isLoggedIn) {
         return (
             <div className={`${containerClasses} flex items-center gap-2 sm:gap-2.5`}>
-                <ThemeSelect
-                    side="bottom"
-                    className="border-line text-12 text-muted-foreground hover:text-foreground hover:border-foreground font-body bg-background/90 hover:bg-background flex min-h-0 cursor-pointer items-center gap-2 rounded-[2px] border px-2.5 py-1.5 font-medium transition-colors focus-visible:outline-1 focus-visible:outline-offset-4"
-                />
+                <button
+                    type="button"
+                    onClick={toggleTheme}
+                    aria-label="Color theme"
+                    className="text-12 text-muted-foreground hover:text-foreground hover:bg-faint font-body flex cursor-pointer items-center gap-1.5 rounded-[2px] px-2.5 py-1.5 font-medium transition-colors focus-visible:outline-1 focus-visible:outline-offset-4"
+                >
+                    <span
+                        aria-hidden="true"
+                        className="size-4 bg-current mask-[url('/icons/sun.svg')] mask-contain mask-center mask-no-repeat dark:mask-[url('/icons/moon.svg')]"
+                    />
+                    <span className="dark:hidden">light</span>
+                    <span className="hidden dark:inline">dark</span>
+                </button>
                 <Link
                     href="/login"
                     className="border-line text-12 text-muted-foreground hover:text-foreground hover:border-foreground font-body bg-background/90 hover:bg-background flex cursor-pointer items-center gap-2 rounded-[2px] border px-3 py-1.5 font-medium transition-colors focus-visible:outline-1 focus-visible:outline-offset-4"
