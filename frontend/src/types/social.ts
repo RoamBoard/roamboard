@@ -1,14 +1,15 @@
+import type { BoardTagId } from "@/data/board-tags";
+
 export type SocialBoardPreview = {
     id: string;
     titleLines: string[];
     author: string;
     duration: string;
     quote: string;
-    tags: string[];
+    tags: BoardTagId[];
     highlights: string[];
     savedCount: string;
     countryCode: string;
-    vibes?: string[];
     images: {
         url: string;
         alt: string;
@@ -39,11 +40,11 @@ export type UserProfile = {
     id: string;
     name: string;
     handle: string;
-    whatsapp: string;
     avatarUrl: string;
     location: string;
     headline: string;
     bio: string;
+    occupation?: string;
     tier: string;
     stats: {
         countriesVisited: number;
@@ -52,12 +53,12 @@ export type UserProfile = {
         placesSaved: number;
         boardsSaved: number;
     };
-    facts: string[];
     details: {
         location: string;
         languages: string[];
-        overlappingDestinations: number;
-        interests: string[];
+        occupation?: string;
+        tags: BoardTagId[];
+        interests?: BoardTagId[];
     };
     inspiredBoards: SocialBoardPreview[];
     myBoards: SocialBoardPreview[];
@@ -78,3 +79,4 @@ export type UserSettings = {
     defaultBoardVisibility: "private" | "friends" | "public";
     emailNotifications: boolean;
 };
+

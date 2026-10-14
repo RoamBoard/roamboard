@@ -71,3 +71,21 @@ export function calculateTravelerTier(stats?: {
 
     return TRAVELER_TIERS[TRAVELER_TIERS.length - 1];
 }
+
+export function getTierGradientStyle(tier: string): string {
+    const normalized = (tier || "").toUpperCase();
+    if (normalized.includes("PLATINUM")) {
+        return "from-stone-400 via-stone-100 to-slate-400 bg-gradient-to-r bg-clip-text text-transparent drop-shadow-[0_8px_20px_rgba(0,0,0,0.18)]";
+    }
+    if (normalized.includes("GOLD")) {
+        return "from-amber-600 via-yellow-200 to-amber-500 bg-gradient-to-r bg-clip-text text-transparent drop-shadow-[0_8px_20px_rgba(180,83,9,0.25)]";
+    }
+    if (normalized.includes("SILVER")) {
+        return "from-slate-500 via-stone-200 to-slate-300 bg-gradient-to-r bg-clip-text text-transparent drop-shadow-[0_8px_20px_rgba(0,0,0,0.15)]";
+    }
+    if (normalized.includes("BRONZE")) {
+        return "from-amber-800 via-amber-300 to-stone-600 bg-gradient-to-r bg-clip-text text-transparent drop-shadow-[0_8px_20px_rgba(120,53,15,0.25)]";
+    }
+    return "from-foreground via-muted-foreground to-stone-400 bg-gradient-to-r bg-clip-text text-transparent drop-shadow-[0_6px_14px_rgba(0,0,0,0.15)]";
+}
+

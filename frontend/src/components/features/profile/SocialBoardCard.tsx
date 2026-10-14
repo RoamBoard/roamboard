@@ -1,5 +1,6 @@
 import Image from "next/image";
 import type { SocialBoardPreview } from "@/types/social";
+import { getBoardTag } from "@/data/board-tags";
 
 type Props = {
     board: SocialBoardPreview;
@@ -7,155 +8,172 @@ type Props = {
 
 export default function SocialBoardCard({ board }: Props) {
     return (
-        <article className="border-line bg-background relative flex flex-col justify-between border p-6 pb-2">
-            {/* Architectural blueprint extension lines */}
-            <div
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-0"
-            >
-                {/* Top vertical overshoot on left border */}
-                <span className="bg-slate absolute -top-3 left-0 h-3 w-px" />
-                {/* Bottom vertical overshoot on right border */}
-                <span className="bg-slate absolute right-0 -bottom-6 h-6 w-px" />
-                {/* Horizontal line extending slightly left at top */}
-                <span className="bg-slate absolute top-0 -left-3 h-px w-3" />
-                {/* Horizontal line extending slightly right at bottom */}
-                <span className="bg-slate absolute -right-4 bottom-0 h-px w-4" />
-            </div>
+        <article className="bg-background relative flex flex-col pt-6 px-6 pb-6 overflow-visible">
+            {/* Main content grid: Left side (Header & 6-photo collage), Right side (Narrative, highlights, stats, watermark) */}
+            <div className="relative z-10 grid grid-cols-12 gap-5">
+                {/* Left side: Header + 2-column photo collage */}
+                <div className="col-span-6 flex flex-col">
+                    {/* Header: Two-line Title & Author with generous margins from lines */}
+                    <div className="relative pt-6 pb-5 pl-6">
+                        {/* Top horizontal drafting line */}
+                        <span
+                            aria-hidden="true"
+                            className="bg-line absolute top-0 -left-6 right-0 h-px pointer-events-none"
+                        />
+                        {/* Left vertical drafting line: begins 20px above top line and continues down through header */}
+                        <span
+                            aria-hidden="true"
+                            className="bg-line absolute -top-5 left-0 bottom-0 w-px pointer-events-none"
+                        />
 
-            {/* Header: Two-line Title & Author */}
-            <div className="relative z-10">
-                <h4 className="font-display text-24 sm:text-26 text-obsidian leading-none font-bold tracking-tight">
-                    {board.titleLines[0]}
-                    <br />
-                    {board.titleLines[1]}
-                </h4>
-                <p className="text-10 text-graphite mt-1.5 font-medium">
-                    {board.author}
-                </p>
-            </div>
-
-            {/* Main content grid: 6-photo collage on left, detailed narrative & highlights on right */}
-            <div className="relative z-10 mt-6 grid grid-cols-12 gap-4">
-                {/* Left side: 2-column photo collage (6 images total) */}
-                <div className="col-span-6 grid grid-cols-2 gap-1.5">
-                    {/* Left photo column */}
-                    <div className="flex flex-col gap-1.5">
-                        <div className="bg-porcelain relative aspect-[3/4] w-full overflow-hidden rounded-[1px]">
-                            <Image
-                                src={board.images[0]?.url ?? ""}
-                                alt={board.images[0]?.alt ?? ""}
-                                fill
-                                sizes="120px"
-                                className="object-cover"
-                            />
-                        </div>
-                        <div className="bg-porcelain relative aspect-square w-full overflow-hidden rounded-[1px]">
-                            <Image
-                                src={board.images[1]?.url ?? ""}
-                                alt={board.images[1]?.alt ?? ""}
-                                fill
-                                sizes="120px"
-                                className="object-cover"
-                            />
-                        </div>
-                        <div className="bg-porcelain relative aspect-square w-full overflow-hidden rounded-[1px]">
-                            <Image
-                                src={board.images[2]?.url ?? ""}
-                                alt={board.images[2]?.alt ?? ""}
-                                fill
-                                sizes="120px"
-                                className="object-cover"
-                            />
-                        </div>
+                        <h4 className="font-display text-24 sm:text-26 text-foreground leading-none font-bold tracking-tight">
+                            {board.titleLines[0]}
+                            <br />
+                            {board.titleLines[1]}
+                        </h4>
+                        <p className="text-10 text-muted-foreground mt-2 font-medium">
+                            {board.author}
+                        </p>
                     </div>
 
-                    {/* Right photo column */}
-                    <div className="flex flex-col gap-1.5">
-                        <div className="bg-porcelain relative aspect-square w-full overflow-hidden rounded-[1px]">
-                            <Image
-                                src={board.images[3]?.url ?? ""}
-                                alt={board.images[3]?.alt ?? ""}
-                                fill
-                                sizes="120px"
-                                className="object-cover"
-                            />
+                    {/* 6-Photo Collage: 2 sub-columns */}
+                    <div className="grid grid-cols-2 gap-1.5">
+                        {/* Left photo column */}
+                        <div className="relative flex flex-col gap-1.5 pl-6">
+                            {/* Photo 1: vertical line continues down from header and terminates at the bottom edge */}
+                            <div className="relative">
+                                <span
+                                    aria-hidden="true"
+                                    className="bg-line absolute top-0 bottom-0 -left-6 w-px pointer-events-none"
+                                />
+                                <div className="bg-faint relative aspect-[3/4] w-full overflow-hidden rounded-[1px]">
+                                    <Image
+                                        src={board.images[0]?.url ?? ""}
+                                        alt={board.images[0]?.alt ?? ""}
+                                        fill
+                                        sizes="120px"
+                                        className="object-cover"
+                                    />
+                                </div>
+                            </div>
+                            <div className="bg-faint relative aspect-square w-full overflow-hidden rounded-[1px]">
+                                <Image
+                                    src={board.images[1]?.url ?? ""}
+                                    alt={board.images[1]?.alt ?? ""}
+                                    fill
+                                    sizes="120px"
+                                    className="object-cover"
+                                />
+                            </div>
+                            <div className="bg-faint relative aspect-square w-full overflow-hidden rounded-[1px]">
+                                <Image
+                                    src={board.images[2]?.url ?? ""}
+                                    alt={board.images[2]?.alt ?? ""}
+                                    fill
+                                    sizes="120px"
+                                    className="object-cover"
+                                />
+                            </div>
                         </div>
-                        <div className="bg-porcelain relative aspect-square w-full overflow-hidden rounded-[1px]">
-                            <Image
-                                src={board.images[4]?.url ?? ""}
-                                alt={board.images[4]?.alt ?? ""}
-                                fill
-                                sizes="120px"
-                                className="object-cover"
-                            />
-                        </div>
-                        <div className="bg-porcelain relative aspect-[3/4] w-full overflow-hidden rounded-[1px]">
-                            <Image
-                                src={board.images[5]?.url ?? ""}
-                                alt={board.images[5]?.alt ?? ""}
-                                fill
-                                sizes="120px"
-                                className="object-cover"
-                            />
+
+                        {/* Right photo column */}
+                        <div className="flex flex-col gap-1.5">
+                            <div className="bg-faint relative aspect-square w-full overflow-hidden rounded-[1px]">
+                                <Image
+                                    src={board.images[3]?.url ?? ""}
+                                    alt={board.images[3]?.alt ?? ""}
+                                    fill
+                                    sizes="120px"
+                                    className="object-cover"
+                                />
+                            </div>
+                            <div className="bg-faint relative aspect-square w-full overflow-hidden rounded-[1px]">
+                                <Image
+                                    src={board.images[4]?.url ?? ""}
+                                    alt={board.images[4]?.alt ?? ""}
+                                    fill
+                                    sizes="120px"
+                                    className="object-cover"
+                                />
+                            </div>
+                            <div className="bg-faint relative aspect-[3/4] w-full overflow-hidden rounded-[1px]">
+                                <Image
+                                    src={board.images[5]?.url ?? ""}
+                                    alt={board.images[5]?.alt ?? ""}
+                                    fill
+                                    sizes="120px"
+                                    className="object-cover"
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Right side: Duration, Narrative, List tags, Highlights, and Saved stats */}
-                <div className="col-span-6 flex flex-col justify-between text-right">
-                    <div>
-                        <div className="font-display text-14 text-obsidian font-bold">
+                {/* Right side: Duration, Narrative, List tags, Highlights, Saved stats, and Watermark */}
+                <div className="col-span-6 relative flex flex-col justify-between text-right pt-16 sm:pt-20 pr-8 sm:pr-10">
+                    {/* Right vertical drafting line: starts above duration and extends down past watermark */}
+                    <span
+                        aria-hidden="true"
+                        className="bg-line absolute -top-4 -bottom-16 right-2 w-px pointer-events-none"
+                    />
+
+                    <div className="flex flex-col">
+                        <div className="font-display text-14 text-foreground font-bold">
                             {board.duration}
                         </div>
 
-                        <p className="text-11 text-obsidian/90 mt-2 leading-relaxed">
+                        <p className="text-11 text-foreground/90 mt-2.5 leading-relaxed">
                             {board.quote}
                         </p>
 
                         {/* List tags */}
-                        <div className="text-10 text-graphite mt-3 space-y-0.5">
-                            {board.tags.map((tag, idx) => (
-                                <div key={idx}>- {tag}</div>
-                            ))}
+                        <div className="text-10 text-muted-foreground mt-3.5 space-y-0.5">
+                            {board.tags.map((tagId, idx) => {
+                                const catalogTag = getBoardTag(tagId);
+                                return (
+                                    <div key={idx}>
+                                        - {catalogTag ? catalogTag.name : tagId}
+                                    </div>
+                                );
+                            })}
                         </div>
 
-                        {/* Vibes list */}
-                        {board.vibes && board.vibes.length > 0 && (
-                            <div className="mt-3">
-                                <div className="text-10 tracking-label text-graphite font-bold uppercase">
-                                    Vibe:
-                                </div>
-                                <div className="text-10 text-stone mt-0.5 leading-tight">
-                                    {board.vibes.join(" · ")}
-                                </div>
-                            </div>
-                        )}
-
                         {/* Highlights list */}
-                        <div className="mt-3.5">
-                            <div className="text-10 tracking-label text-graphite font-bold uppercase">
+                        <div className="mt-4">
+                            <div className="text-10 tracking-label text-muted-foreground font-bold uppercase">
                                 Highlights:
                             </div>
-                            <div className="text-10 text-stone mt-1 space-y-0.5 leading-tight">
+                            <div className="text-10 text-muted-foreground mt-1 space-y-0.5 leading-tight">
                                 {board.highlights.map((h, idx) => (
                                     <div key={idx}>{h}</div>
                                 ))}
                             </div>
                         </div>
+
+                        {/* Divider above saved count with generous spacing */}
+                        <div className="mt-6">
+                            <span
+                                aria-hidden="true"
+                                className="bg-line block h-px w-[85%] ml-auto mb-2 pointer-events-none"
+                            />
+                            <div className="text-10 text-muted-foreground font-medium">
+                                {board.savedCount}
+                            </div>
+                        </div>
                     </div>
 
-                    <div className="text-10 text-stone mt-4 italic">
-                        {board.savedCount}
+                    {/* Watermark at bottom of right column & bottom horizontal drafting line */}
+                    <div className="pointer-events-none relative mt-4 flex justify-end select-none">
+                        {/* Bottom horizontal drafting line: starts under 2nd photo column, cuts through lower watermark, crosses right vertical line to form crosshair */}
+                        <span
+                            aria-hidden="true"
+                            className="bg-line absolute bottom-3.5 -left-[45%] -right-8 h-px pointer-events-none"
+                        />
+                        <span className="font-display text-72 sm:text-80 text-faint/80 leading-none font-black tracking-tight uppercase">
+                            {board.countryCode}
+                        </span>
                     </div>
                 </div>
-            </div>
-
-            {/* Huge watermark at bottom (JPN, FRA, THA) */}
-            <div className="pointer-events-none mt-2 flex justify-end select-none">
-                <span className="font-display text-72 sm:text-80 text-faint/80 leading-none font-black tracking-tight uppercase">
-                    {board.countryCode}
-                </span>
             </div>
         </article>
     );

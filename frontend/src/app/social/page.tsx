@@ -28,22 +28,22 @@ export default function SocialPage() {
                 <div className="h-full w-full overflow-y-auto pt-10 pr-8 pl-[11.5rem] sm:pr-16 sm:pl-[12.5rem] lg:pr-24 lg:pl-[14rem]">
                     <div className="mx-auto w-full max-w-4xl pb-20">
                         <header className="mb-8">
-                            <span className="text-10 tracking-label text-graphite font-bold uppercase">
+                            <span className="text-10 tracking-label text-muted-foreground font-bold uppercase">
                                 SOCIAL
                             </span>
-                            <h1 className="font-display text-48 sm:text-60 text-obsidian mt-1 font-bold tracking-tight uppercase">
+                            <h1 className="font-display text-48 sm:text-60 text-foreground mt-1 font-bold tracking-tight uppercase">
                                 COMMUNITY
                             </h1>
                         </header>
 
                         <div className="border-line bg-background rounded-[2px] border p-8 text-center sm:p-12">
-                            <span className="border-line text-10 tracking-label text-graphite font-body rounded-[2px] border bg-porcelain px-3 py-1 font-bold uppercase">
+                            <span className="border-line text-10 tracking-label text-muted-foreground font-body rounded-[2px] border bg-faint px-3 py-1 font-bold uppercase">
                                 In Development
                             </span>
-                            <h2 className="font-display text-24 sm:text-30 text-obsidian mt-4 font-bold">
+                            <h2 className="font-display text-24 sm:text-30 text-foreground mt-4 font-bold">
                                 Social Feed &amp; Friends Hub
                             </h2>
-                            <p className="text-14 text-graphite mx-auto mt-2 max-w-md leading-relaxed font-medium">
+                            <p className="text-14 text-muted-foreground mx-auto mt-2 max-w-md leading-relaxed font-medium">
                                 The social discovery experience is currently
                                 being built. You will soon be able to connect
                                 with friends, share boards, and discover travel
@@ -52,13 +52,13 @@ export default function SocialPage() {
                             <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
                                 <Link
                                     href="/profile"
-                                    className="border-line text-12 text-graphite hover:text-obsidian hover:border-obsidian font-body cursor-pointer rounded-[2px] border px-4 py-2 font-medium transition-colors"
+                                    className="border-line text-12 text-muted-foreground hover:text-foreground hover:border-foreground font-body cursor-pointer rounded-[2px] border px-4 py-2 font-medium transition-colors"
                                 >
                                     Go to My Profile →
                                 </Link>
                                 <Link
                                     href="/boards"
-                                    className="border-line text-12 text-graphite hover:text-obsidian hover:border-obsidian font-body cursor-pointer rounded-[2px] border px-4 py-2 font-medium transition-colors"
+                                    className="border-line text-12 text-muted-foreground hover:text-foreground hover:border-foreground font-body cursor-pointer rounded-[2px] border px-4 py-2 font-medium transition-colors"
                                 >
                                     Explore Boards →
                                 </Link>

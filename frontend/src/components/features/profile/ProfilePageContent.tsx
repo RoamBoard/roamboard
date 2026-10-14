@@ -4,8 +4,8 @@ import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { getMockProfile, subscribeMockStore } from "@/data/mock-social";
 import type { AudienceFilter, UserProfile } from "@/types/social";
+import UnderlineTabs from "@/components/ui/UnderlineTabs";
 import ProfileHero from "./ProfileHero";
-import InterestingFacts from "./InterestingFacts";
 import SocialBoardCard from "./SocialBoardCard";
 import TravelMapSection from "./TravelMapSection";
 
@@ -27,37 +27,20 @@ export default function ProfilePageContent({ profile: initialProfile }: Props) {
         <div className="mx-auto w-full max-w-6xl pb-20">
             {/* Top Page Header */}
             <header className="mb-8">
-                <span className="text-10 tracking-label text-graphite font-bold uppercase">
+                <span className="text-10 tracking-label text-muted-foreground font-bold uppercase">
                     SOCIAL
                 </span>
-                <h1 className="font-display text-48 sm:text-60 text-obsidian mt-1 font-bold tracking-tight uppercase">
+                <h1 className="font-display text-48 sm:text-60 text-foreground mt-1 font-bold tracking-tight uppercase">
                     {activeFilter}
                 </h1>
 
                 {/* Audience filter tabs */}
-                <nav
-                    aria-label="Audience filter"
-                    className="border-line mt-4 flex items-center gap-6 border-b pb-3"
-                >
-                    {filters.map((filter) => {
-                        const isActive = activeFilter === filter;
-                        return (
-                            <button
-                                key={filter}
-                                type="button"
-                                onClick={() => setActiveFilter(filter)}
-                                aria-current={isActive ? "true" : undefined}
-                                className={`text-12 cursor-pointer font-bold tracking-wider uppercase transition-colors focus-visible:outline-1 focus-visible:outline-offset-4 ${
-                                    isActive
-                                        ? "text-obsidian underline decoration-2 underline-offset-8"
-                                        : "text-graphite hover:text-obsidian"
-                                }`}
-                            >
-                                {filter}
-                            </button>
-                        );
-                    })}
-                </nav>
+                <UnderlineTabs
+                    tabs={filters}
+                    activeTab={activeFilter}
+                    onChange={setActiveFilter}
+                    ariaLabel="Audience filter"
+                />
             </header>
 
             {/* ME View (Profile & Personal Boards) */}
@@ -66,9 +49,6 @@ export default function ProfilePageContent({ profile: initialProfile }: Props) {
                     {/* Hero Section */}
                     <ProfileHero profile={profile} />
 
-                    {/* Facts Section */}
-                    <InterestingFacts profile={profile} />
-
                     {/* Currently inspired by section */}
                     <section
                         aria-label="Currently inspired by"
@@ -76,17 +56,17 @@ export default function ProfilePageContent({ profile: initialProfile }: Props) {
                     >
                         <div className="flex items-end justify-between">
                             <div>
-                                <h3 className="font-display text-20 sm:text-22 text-obsidian font-bold">
+                                <h3 className="font-display text-20 sm:text-22 text-foreground font-bold">
                                     currently inspired by
                                 </h3>
-                                <p className="text-12 text-graphite mt-0.5 font-medium">
+                                <p className="text-12 text-muted-foreground mt-0.5 font-medium">
                                     boards and destinations on my radar right
                                     now
                                 </p>
                             </div>
                             <Link
                                 href="/boards"
-                                className="text-12 text-graphite hover:text-obsidian transition-colors hover:underline"
+                                className="text-12 text-muted-foreground hover:text-foreground transition-colors hover:underline"
                             >
                                 view all →
                             </Link>
@@ -106,17 +86,17 @@ export default function ProfilePageContent({ profile: initialProfile }: Props) {
                     >
                         <div className="flex items-end justify-between">
                             <div>
-                                <h3 className="font-display text-20 sm:text-22 text-obsidian font-bold">
+                                <h3 className="font-display text-20 sm:text-22 text-foreground font-bold">
                                     my boards
                                 </h3>
-                                <p className="text-12 text-graphite mt-0.5 font-medium">
+                                <p className="text-12 text-muted-foreground mt-0.5 font-medium">
                                     turns out daydreams of new trips looks
                                     better as Roamboards
                                 </p>
                             </div>
                             <Link
                                 href="/boards"
-                                className="text-12 text-graphite hover:text-obsidian transition-colors hover:underline"
+                                className="text-12 text-muted-foreground hover:text-foreground transition-colors hover:underline"
                             >
                                 view all →
                             </Link>
@@ -140,10 +120,10 @@ export default function ProfilePageContent({ profile: initialProfile }: Props) {
                     aria-label="Friends feed"
                     className="py-12 text-center"
                 >
-                    <h3 className="font-display text-24 text-obsidian font-bold">
+                    <h3 className="font-display text-24 text-foreground font-bold">
                         Friends &amp; Shared Itineraries
                     </h3>
-                    <p className="text-14 text-graphite mx-auto mt-2 max-w-md">
+                    <p className="text-14 text-muted-foreground mx-auto mt-2 max-w-md">
                         Connect with fellow wanderers and view trips shared by
                         your friends on Roamboard.
                     </p>
@@ -161,10 +141,10 @@ export default function ProfilePageContent({ profile: initialProfile }: Props) {
                     aria-label="Community explore"
                     className="py-12 text-center"
                 >
-                    <h3 className="font-display text-24 text-obsidian font-bold">
+                    <h3 className="font-display text-24 text-foreground font-bold">
                         Explore Community Boards
                     </h3>
-                    <p className="text-14 text-graphite mx-auto mt-2 max-w-md">
+                    <p className="text-14 text-muted-foreground mx-auto mt-2 max-w-md">
                         Discover public boards, trending destinations, and
                         stories from travelers worldwide.
                     </p>

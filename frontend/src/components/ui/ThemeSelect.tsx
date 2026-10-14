@@ -1,6 +1,7 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
+import { updateMockSettings } from "@/data/mock-social";
 import {
     DropdownMenu,
     DropdownMenuTrigger,
@@ -27,6 +28,7 @@ export default function ThemeSelect({ side = "bottom" }: Props) {
         // The root class changes the whole site's colors. layout.tsx restores it on load.
         document.documentElement.classList.toggle("dark", theme === "dark");
         setSelectedTheme(theme);
+        updateMockSettings({ theme });
         try {
             localStorage.setItem("roamboard-theme", theme);
         } catch {

@@ -17,7 +17,7 @@ const VISIBILITY_OPTIONS: VisibilityOption[] = [
         icon: (isActive: boolean) => (
             <svg
                 className={`size-4 shrink-0 transition-colors ${
-                    isActive ? "text-obsidian" : "text-graphite"
+                    isActive ? "text-foreground" : "text-muted-foreground"
                 }`}
                 viewBox="0 0 24 24"
                 fill="none"
@@ -39,7 +39,7 @@ const VISIBILITY_OPTIONS: VisibilityOption[] = [
         icon: (isActive: boolean) => (
             <svg
                 className={`size-4 shrink-0 transition-colors ${
-                    isActive ? "text-obsidian" : "text-graphite"
+                    isActive ? "text-foreground" : "text-muted-foreground"
                 }`}
                 viewBox="0 0 24 24"
                 fill="none"
@@ -63,7 +63,7 @@ const VISIBILITY_OPTIONS: VisibilityOption[] = [
         icon: (isActive: boolean) => (
             <svg
                 className={`size-4 shrink-0 transition-colors ${
-                    isActive ? "text-obsidian" : "text-graphite"
+                    isActive ? "text-foreground" : "text-muted-foreground"
                 }`}
                 viewBox="0 0 24 24"
                 fill="none"
@@ -102,12 +102,12 @@ export default function VisibilitySelector({
                 <div className="flex items-center gap-1.5">
                     <label
                         id="visibility-group-label"
-                        className="text-11 tracking-label text-graphite font-bold uppercase"
+                        className="text-11 tracking-label text-muted-foreground font-bold uppercase"
                     >
                         Visibility
                     </label>
                     <span
-                        className="text-stone hover:text-graphite inline-flex cursor-help items-center"
+                        className="text-muted-foreground hover:text-foreground inline-flex cursor-help items-center"
                         title="Choose who can see and discover this board"
                         aria-label="Visibility information"
                     >
@@ -147,8 +147,8 @@ export default function VisibilitySelector({
                             onClick={() => onChange(option.value)}
                             className={`group relative flex cursor-pointer items-start gap-3 rounded-[2px] border p-3 text-left transition-all focus-visible:outline-1 focus-visible:outline-offset-2 ${
                                 isSelected
-                                    ? "border-obsidian bg-porcelain/50 shadow-xs"
-                                    : "border-line bg-background hover:border-slate/60 hover:bg-porcelain/20"
+                                    ? "border-foreground bg-faint/50 shadow-xs"
+                                    : "border-line bg-background hover:border-line hover:bg-faint/20"
                             }`}
                         >
                             <div className="mt-0.5">{option.icon(isSelected)}</div>
@@ -156,13 +156,13 @@ export default function VisibilitySelector({
                                 <div
                                     className={`text-12 font-bold tracking-tight ${
                                         isSelected
-                                            ? "text-obsidian"
-                                            : "text-graphite group-hover:text-obsidian"
+                                            ? "text-foreground"
+                                            : "text-muted-foreground group-hover:text-foreground"
                                     }`}
                                 >
                                     {option.label}
                                 </div>
-                                <p className="text-10 text-stone mt-0.5 leading-snug">
+                                <p className="text-10 text-muted-foreground mt-0.5 leading-snug">
                                     {option.description}
                                 </p>
                             </div>
@@ -171,7 +171,7 @@ export default function VisibilitySelector({
                             {isSelected && (
                                 <span
                                     aria-hidden="true"
-                                    className="bg-obsidian absolute bottom-0 left-0 h-[2px] w-full"
+                                    className="bg-foreground absolute bottom-0 left-0 h-[2px] w-full"
                                 />
                             )}
                         </button>

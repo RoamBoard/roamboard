@@ -1,16 +1,17 @@
 import type { UserProfile, UserSettings } from "@/types/social";
 import { calculateTravelerTier } from "@/utils/tier";
+import { getBoardTag, boardTags, type BoardTagId } from "@/data/board-tags";
 
 export const mockRowanProfile: UserProfile = {
     id: "user-rowan-mercer",
     name: "ROWAN",
     handle: "@rowan.mercer",
-    whatsapp: "07012545678",
     avatarUrl:
         "https://images.unsplash.com/photo-1769786186317-272d062fcf93?auto=format&fit=crop&w=400&q=80",
     location: "San Fransisco, USA",
     headline: "Chasing places, collecting stories.",
     bio: 'Usually somewhere between "I made an itinerary" and "we\'ll figure it out when we get there." I travel for the food, the views, the people, and the completely unnecessary side quests that somehow become the best part of the trip.',
+    occupation: "Travel Writer & Photographer",
     tier: "PLATINUM TRAVELER",
     stats: {
         countriesVisited: 32,
@@ -19,17 +20,12 @@ export const mockRowanProfile: UserProfile = {
         placesSaved: 127,
         boardsSaved: 68
     },
-    facts: [
-        "First solo trip at nineteen, backpacking through the Balkans by train.",
-        "Lost my passport in Hanoi, found it 48 hours later behind a noodle shop.",
-        "Will always wake up for sunrise over mountains; will never wake up early for a museum.",
-        "Has a habit of buying local vinyl records in every city, despite rarely owning a turntable."
-    ],
     details: {
         location: "San Francisco, USA",
         languages: ["English", "Italian", "German"],
-        overlappingDestinations: 14,
-        interests: ["Photography", "Food", "Hiking"]
+        occupation: "Travel Writer & Photographer",
+        tags: ["photography", "foodie", "hiking"],
+        interests: ["photography", "foodie", "hiking"]
     },
     inspiredBoards: [
         {
@@ -39,8 +35,7 @@ export const mockRowanProfile: UserProfile = {
             duration: "4 days",
             countryCode: "JPN",
             quote: "Neon streets, tiny bars, late-night ramen and absolutely no idea which train exit to take.",
-            tags: ["Neighborhoods", "Hidden bars", "Ramen"],
-            vibes: ["Nature", "Romantic", "Hidden Gems"],
+            tags: ["city-life", "hidden-gems", "foodie"],
             highlights: [
                 "Shibuya Crossing",
                 "Senso-ji",
@@ -84,7 +79,7 @@ export const mockRowanProfile: UserProfile = {
             duration: "3 days",
             countryCode: "FRA",
             quote: "Croissants for breakfast, wine by sunset and somehow another hour spent wandering streets we definitely didn't mean to take.",
-            tags: ["Café hopping", "Scenic lunches", "Late-night walks"],
+            tags: ["cafe-hopping", "romantic", "city-life"],
             highlights: [
                 "Montmartre",
                 "Le Marais",
@@ -104,7 +99,7 @@ export const mockRowanProfile: UserProfile = {
                     alt: "Pont Alexandre III at sunset"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1520939817895-060bdef4dc1b?auto=format&fit=crop&w=400&q=80",
+                    url: "https://images.unsplash.com/photo-1550340499-a6c60fc8287c?auto=format&fit=crop&w=400&q=80",
                     alt: "Parisian sidewalk café"
                 },
                 {
@@ -128,7 +123,7 @@ export const mockRowanProfile: UserProfile = {
             duration: "5 days",
             countryCode: "THA",
             quote: "Street food at sunrise, temples before the heat and somehow already three iced coffees deep before most of the city has properly woken up.",
-            tags: ["Night markets", "Temple hopping", "Street food"],
+            tags: ["street-food", "markets", "culture"],
             highlights: [
                 "Wat Arun",
                 "Chinatown",
@@ -174,7 +169,7 @@ export const mockRowanProfile: UserProfile = {
             duration: "4 days",
             countryCode: "JPN",
             quote: "Neon streets, tiny bars, late-night ramen and absolutely no idea which train exit to take.",
-            tags: ["Neighborhoods", "Hidden bars", "Ramen"],
+            tags: ["city-life", "hidden-gems", "foodie"],
             highlights: [
                 "Shibuya Crossing",
                 "Senso-ji",
@@ -218,7 +213,7 @@ export const mockRowanProfile: UserProfile = {
             duration: "3 days",
             countryCode: "FRA",
             quote: "Croissants for breakfast, wine by sunset and somehow another hour spent wandering streets we definitely didn't mean to take.",
-            tags: ["Café hopping", "Scenic lunches", "Late-night walks"],
+            tags: ["cafe-hopping", "romantic", "city-life"],
             highlights: [
                 "Montmartre",
                 "Le Marais",
@@ -238,7 +233,7 @@ export const mockRowanProfile: UserProfile = {
                     alt: "Pont Alexandre III at sunset"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1520939817895-060bdef4dc1b?auto=format&fit=crop&w=400&q=80",
+                    url: "https://images.unsplash.com/photo-1550340499-a6c60fc8287c?auto=format&fit=crop&w=400&q=80",
                     alt: "Parisian sidewalk café"
                 },
                 {
@@ -262,7 +257,7 @@ export const mockRowanProfile: UserProfile = {
             duration: "5 days",
             countryCode: "THA",
             quote: "Street food at sunrise, temples before the heat and somehow already three iced coffees deep before most of the city has properly woken up.",
-            tags: ["Night markets", "Temple hopping", "Street food"],
+            tags: ["street-food", "markets", "culture"],
             highlights: [
                 "Wat Arun",
                 "Chinatown",
@@ -529,16 +524,61 @@ const store: {
 
 if (typeof window !== "undefined") {
     try {
-        const storedProfile = localStorage.getItem(PROFILE_STORAGE_KEY);
-        if (storedProfile) {
+        const rawStoredProfile = localStorage.getItem(PROFILE_STORAGE_KEY);
+        if (rawStoredProfile) {
+            const cleanedProfileStr = rawStoredProfile.replace(
+                /photo-1520939817895-060bdef4dc1b/g,
+                "photo-1550340499-a6c60fc8287c"
+            );
+            const parsed = JSON.parse(cleanedProfileStr);
+            const rawTags =
+                parsed.details?.tags ?? parsed.details?.interests;
+            const migratedTags: BoardTagId[] = Array.isArray(rawTags)
+                ? (rawTags as unknown[])
+                      .map((val): BoardTagId | undefined => {
+                          const str = String(val ?? "");
+                          const direct = getBoardTag(str);
+                          if (direct) return direct.id;
+                          const found = boardTags.find(
+                              (t) =>
+                                  t.id.toLowerCase() === str.toLowerCase() ||
+                                  t.name.toLowerCase() === str.toLowerCase()
+                          );
+                          return found?.id;
+                      })
+                      .filter((id): id is BoardTagId => Boolean(id))
+                      .slice(0, 10)
+                : mockRowanProfile.details.tags;
+
             store.profile = {
                 ...store.profile,
-                ...JSON.parse(storedProfile)
+                ...parsed,
+                details: {
+                    ...store.profile.details,
+                    ...(parsed.details ?? {}),
+                    tags:
+                        migratedTags.length > 0
+                            ? migratedTags
+                            : mockRowanProfile.details.tags,
+                    interests:
+                        migratedTags.length > 0
+                            ? migratedTags
+                            : mockRowanProfile.details.tags
+                },
+                // Curated boards always use the source mock definitions so image fixes take effect
+                inspiredBoards: mockRowanProfile.inspiredBoards,
+                myBoards: mockRowanProfile.myBoards
             };
             store.profile.tier = calculateTravelerTier(
                 store.profile.mapStats
             ).name;
             Object.assign(mockRowanProfile, store.profile);
+
+            // Persist the migrated profile immediately so localStorage is permanently fixed
+            localStorage.setItem(
+                PROFILE_STORAGE_KEY,
+                JSON.stringify(store.profile)
+            );
         }
         const storedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY);
         if (storedSettings) {
@@ -546,6 +586,10 @@ if (typeof window !== "undefined") {
                 ...store.settings,
                 ...JSON.parse(storedSettings)
             };
+        }
+        const storedRoamTheme = localStorage.getItem("roamboard-theme");
+        if (storedRoamTheme === "dark" || storedRoamTheme === "light") {
+            store.settings.theme = storedRoamTheme;
         }
         const storedAuth = localStorage.getItem(AUTH_STORAGE_KEY);
         if (storedAuth !== null) {
@@ -596,11 +640,24 @@ export function updateMockProfile(patch: Partial<UserProfile>): UserProfile {
     if (patch.location) {
         store.profile.details.location = patch.location;
     }
+    if (patch.occupation) {
+        store.profile.details.occupation = patch.occupation;
+    }
+    if (patch.details?.tags) {
+        store.profile.details.tags = patch.details.tags;
+        store.profile.details.interests = patch.details.tags;
+    } else if (patch.details?.interests) {
+        store.profile.details.tags = patch.details.interests;
+        store.profile.details.interests = patch.details.interests;
+    }
 
-    // Traveler tier is automatically granted based on travel history
-    store.profile.tier = calculateTravelerTier(
-        store.profile.mapStats
-    ).name;
+    if (patch.tier) {
+        store.profile.tier = patch.tier;
+    } else if (!store.profile.tier) {
+        store.profile.tier = calculateTravelerTier(
+            store.profile.mapStats
+        ).name;
+    }
 
     Object.assign(mockRowanProfile, store.profile);
 

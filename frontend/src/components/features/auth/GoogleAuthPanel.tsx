@@ -123,11 +123,11 @@ export default function GoogleAuthPanel({ mode }: Props) {
                     <button
                         type="button"
                         onClick={handleDemoLogin}
-                        className="border-obsidian bg-obsidian text-background hover:bg-obsidian/90 text-13 w-full cursor-pointer rounded-[2px] border px-4 py-3 text-center font-bold tracking-wider uppercase transition-colors"
+                        className="border-foreground bg-foreground text-background hover:bg-foreground/90 text-13 w-full cursor-pointer rounded-[2px] border px-4 py-3 text-center font-bold tracking-wider uppercase transition-colors"
                     >
                         {isSignup ? "Sign up (Demo)" : "Log in as Rowan (Demo)"}
                     </button>
-                    <p id="auth-preview" className="text-11 text-stone mt-2 text-center">
+                    <p id="auth-preview" className="text-11 text-muted-foreground mt-2 text-center">
                         Google sign-in is not configured. Demo login enabled.
                     </p>
                 </div>

@@ -3,20 +3,25 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import {
+    useState,
+    useEffect,
+    useSyncExternalStore,
+    type ReactNode
+} from "react";
 import { getCurrentUser, signOut, type AuthUser } from "@/lib/auth";
 import {
     getMockAuthState,
     getMockProfile,
     setMockAuthState,
-    subscribeMockStore
+    subscribeMockStore,
+    updateMockSettings
 } from "@/data/mock-social";
 import {
     DropdownMenu,
     DropdownMenuTrigger,
     DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator
+    DropdownMenuItem
 } from "@/components/ui/dropdown-menu";
 
 export type ProfileControlProps = {
@@ -37,17 +42,18 @@ export default function ProfileControl({
     href,
     profileHref = "/profile",
     settingsHref = "/settings",
-    label,
+    label = "my profile",
     userName,
     avatarUrl,
+    handle,
     compact = false,
     floating = false
 }: ProfileControlProps) {
     const router = useRouter();
     const [sessionUser, setSessionUser] = useState<AuthUser | null>(null);
-    const [loaded, setLoaded] = useState(Boolean(user));
     const [signingOut, setSigningOut] = useState(false);
     const [logoutError, setLogoutError] = useState("");
+    const [selectedTheme, setSelectedTheme] = useState("light");
 
     // Sync with external mock store
     const profile = useSyncExternalStore(
@@ -61,12 +67,11 @@ export default function ProfileControl({
         () => true
     );
 
-    const [selectedTheme, setSelectedTheme] = useState("light");
-
     const selectTheme = (theme: string) => {
         if (theme !== "light" && theme !== "dark") return;
         document.documentElement.classList.toggle("dark", theme === "dark");
         setSelectedTheme(theme);
+        updateMockSettings({ theme });
         try {
             localStorage.setItem("roamboard-theme", theme);
         } catch {
@@ -82,11 +87,8 @@ export default function ProfileControl({
                 if (state.active) setSessionUser(currentUser);
             })
             .catch(() => {
-                if (state.active)
-                    setLogoutError("Account status is unavailable.");
-            })
-            .finally(() => {
-                if (state.active) setLoaded(true);
+                // Silently fallback to mock profile if not authenticated or offline
+                if (state.active) setSessionUser(null);
             });
         return () => {
             state.active = false;
@@ -117,185 +119,228 @@ export default function ProfileControl({
             : Boolean(user || sessionUser || mockIsLoggedIn);
 
     const displayName =
-        user?.name || sessionUser?.displayName || userName || profile.name || (typeof label === "string" ? label : "my profile");
+        user?.name || sessionUser?.displayName || userName || profile.name || "Rowan";
     const displayAvatar = user?.avatarUrl || avatarUrl || profile.avatarUrl;
+    const rawHandle = user?.handle || handle || profile.handle;
+    const displayHandle = rawHandle
+        ? rawHandle.startsWith("@")
+            ? rawHandle
+            : `@${rawHandle}`
+        : null;
     const resolvedProfileHref = href ?? profileHref;
 
-    const controlClasses = compact
-        ? "absolute inset-x-1 top-[46%] min-h-11 text-center text-10 leading-tight underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 flex flex-col items-center justify-center gap-1 cursor-pointer"
-        : "absolute left-[36%] right-[8%] top-[45%] text-left text-14 leading-tight underline-offset-2 outline-none hover:underline focus-visible:underline focus-visible:decoration-2 focus-visible:underline-offset-4 flex items-center gap-2 cursor-pointer";
+    const containerClasses = compact
+        ? "fixed bottom-4 left-4 z-40"
+        : floating
+          ? "fixed top-6 right-6 z-40 sm:top-8 sm:right-10"
+          : "absolute top-6 right-6 z-40 sm:top-8 sm:right-10";
+
+    if (!isLoggedIn) {
+        return (
+            <div className={containerClasses}>
+                <Link
+                    href="/login"
+                    className="border-line text-12 text-muted-foreground hover:text-foreground hover:border-foreground font-body bg-background/90 hover:bg-background flex cursor-pointer items-center gap-2 rounded-[2px] border px-3 py-1.5 font-medium transition-colors focus-visible:outline-1 focus-visible:outline-offset-4"
+                >
+                    <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.75"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="text-muted-foreground shrink-0"
+                        aria-hidden="true"
+                    >
+                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                        <polyline points="10 17 15 12 10 7" />
+                        <line x1="15" y1="12" x2="3" y2="12" />
+                    </svg>
+                    <span>log in</span>
+                </Link>
+            </div>
+        );
+    }
 
     return (
-        <div
-            aria-busy={!loaded}
-            className={
-                compact
-                    ? "bg-background fixed bottom-0 left-0 z-40 h-28 w-16 md:w-20"
-                    : floating
-                      ? "bg-background/90 fixed top-0 right-16 z-30 h-28 w-32 md:h-40 md:w-44"
-                      : "absolute top-0 right-[1.3%] z-10 h-[8.75rem] w-[8.25rem] sm:h-[24%] sm:w-[14.5%]"
-            }
-        >
-            <div
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-0"
+        <div className={containerClasses}>
+            <DropdownMenu
+                modal={false}
+                onOpenChange={(open) => {
+                    if (open) {
+                        setSelectedTheme(
+                            document.documentElement.classList.contains("dark")
+                                ? "dark"
+                                : "light"
+                        );
+                    }
+                }}
             >
-                <span className="bg-decorative-line absolute top-[18%] right-[9%] left-0 h-0.5" />
-                <span className="bg-decorative-line absolute top-0 right-[17%] h-[39%] w-0.5" />
-                <span className="bg-decorative-line absolute top-[25%] bottom-0 left-[32%] w-0.5" />
-                <span className="bg-decorative-line absolute top-[66%] right-0 left-[16%] h-0.5" />
-            </div>
-
-            {isLoggedIn ? (
-                <DropdownMenu
-                    modal={false}
-                    onOpenChange={(open) => {
-                        if (open) {
-                            setSelectedTheme(
-                                document.documentElement.classList.contains("dark")
-                                    ? "dark"
-                                    : "light"
-                            );
-                        }
-                    }}
-                >
-                    <DropdownMenuTrigger asChild>
-                        <button
-                            type="button"
-                            className={`${controlClasses} truncate`}
-                        >
-                            {displayAvatar && !compact ? (
-                                <div className="bg-porcelain relative h-5 w-5 shrink-0 overflow-hidden rounded-[1px]">
-                                    <Image
-                                        src={displayAvatar}
-                                        alt=""
-                                        fill
-                                        sizes="20px"
-                                        className="object-cover"
-                                    />
-                                </div>
-                            ) : null}
-                            <span className="truncate">{displayName}</span>
-                        </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                        aria-label="Account"
-                        align="end"
-                        sideOffset={8}
-                        collisionPadding={8}
-                        className="w-48"
+                <DropdownMenuTrigger asChild>
+                    <button
+                        type="button"
+                        aria-label="User profile menu"
+                        className="border-line text-12 text-muted-foreground hover:text-foreground hover:border-foreground font-body bg-background/90 hover:bg-background flex cursor-pointer items-center gap-2.5 rounded-[2px] border px-3 py-1.5 font-medium transition-colors focus-visible:outline-1 focus-visible:outline-offset-4"
                     >
-                        <div className="border-line border-b px-2 py-1.5 mb-1">
-                            <p className="text-12 font-bold text-foreground truncate">
-                                {displayName}
-                            </p>
-                            {profile?.handle ? (
-                                <p className="text-10 text-muted-foreground font-mono truncate">
-                                    @{profile.handle}
-                                </p>
-                            ) : null}
-                        </div>
-
-                        <DropdownMenuItem asChild>
-                            <Link href={resolvedProfileHref}>my profile</Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                            <Link href={settingsHref}>settings</Link>
-                        </DropdownMenuItem>
-
-                        <DropdownMenuSeparator />
-
-                        <div className="flex items-center justify-between px-2 py-1.5">
-                            <span className="text-12 text-muted-foreground font-medium">
-                                theme
-                            </span>
-                            <div
-                                role="radiogroup"
-                                aria-label="Color theme"
-                                className="border-line bg-faint flex items-center rounded border p-0.5 text-11"
-                            >
-                                <button
-                                    type="button"
-                                    role="radio"
-                                    aria-checked={selectedTheme === "light"}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        selectTheme("light");
-                                    }}
-                                    className={`flex items-center gap-1 rounded px-2 py-0.5 transition-colors cursor-pointer ${
-                                        selectedTheme === "light"
-                                            ? "bg-background text-foreground font-semibold shadow-xs"
-                                            : "text-muted-foreground hover:text-foreground"
-                                    }`}
-                                >
-                                    <span
-                                        aria-hidden="true"
-                                        className="size-3.5 bg-current mask-[url('/icons/sun.svg')] mask-contain mask-center mask-no-repeat"
-                                    />
-                                    <span>light</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    role="radio"
-                                    aria-checked={selectedTheme === "dark"}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        selectTheme("dark");
-                                    }}
-                                    className={`flex items-center gap-1 rounded px-2 py-0.5 transition-colors cursor-pointer ${
-                                        selectedTheme === "dark"
-                                            ? "bg-background text-foreground font-semibold shadow-xs"
-                                            : "text-muted-foreground hover:text-foreground"
-                                    }`}
-                                >
-                                    <span
-                                        aria-hidden="true"
-                                        className="size-3.5 bg-current mask-[url('/icons/moon.svg')] mask-contain mask-center mask-no-repeat"
-                                    />
-                                    <span>dark</span>
-                                </button>
+                        {displayAvatar ? (
+                            <div className="bg-faint relative h-5 w-5 shrink-0 overflow-hidden rounded-[1px]">
+                                <Image
+                                    src={displayAvatar}
+                                    alt=""
+                                    fill
+                                    sizes="20px"
+                                    className="object-cover"
+                                />
                             </div>
+                        ) : (
+                            <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.75"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="text-muted-foreground shrink-0"
+                                aria-hidden="true"
+                            >
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                                <circle cx="12" cy="7" r="4" />
+                            </svg>
+                        )}
+
+                        <span className="truncate">{label}</span>
+
+                        <svg
+                            width="10"
+                            height="10"
+                            viewBox="0 0 10 10"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="text-muted-foreground"
+                            aria-hidden="true"
+                        >
+                            <path d="m2 3.5 3 3 3-3" />
+                        </svg>
+                    </button>
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent
+                    align="end"
+                    sideOffset={8}
+                    collisionPadding={8}
+                    className="border-line bg-background shadow-xs min-w-[13rem] rounded-[2px] border p-1"
+                >
+                    {Boolean(displayName) && (
+                        <div className="border-line border-b px-3 py-2">
+                            <span className="font-display text-12 text-foreground block font-bold uppercase tracking-tight">
+                                {displayName}
+                            </span>
+                            {Boolean(displayHandle) && (
+                                <span className="text-10 text-muted-foreground block font-medium lowercase">
+                                    {displayHandle}
+                                </span>
+                            )}
                         </div>
+                    )}
 
-                        <DropdownMenuSeparator />
+                    <div className="flex flex-col py-0.5">
+                        <DropdownMenuItem asChild>
+                            <Link
+                                href={resolvedProfileHref}
+                                className="text-12 text-muted-foreground hover:text-foreground hover:bg-faint focus-visible:text-foreground focus-visible:bg-faint flex cursor-pointer items-center justify-between rounded-[2px] px-3 py-2 font-medium transition-colors"
+                            >
+                                <span>my profile</span>
+                                <span
+                                    className="text-10 text-muted-foreground font-normal"
+                                    aria-hidden="true"
+                                >
+                                    →
+                                </span>
+                            </Link>
+                        </DropdownMenuItem>
 
+                        <div className="bg-line my-0.5 h-px" aria-hidden="true" />
+
+                        <DropdownMenuItem asChild>
+                            <Link
+                                href={settingsHref}
+                                className="text-12 text-muted-foreground hover:text-foreground hover:bg-faint focus-visible:text-foreground focus-visible:bg-faint flex cursor-pointer items-center justify-between rounded-[2px] px-3 py-2 font-medium transition-colors"
+                            >
+                                <span>settings</span>
+                                <span
+                                    className="text-10 text-muted-foreground font-normal"
+                                    aria-hidden="true"
+                                >
+                                    →
+                                </span>
+                            </Link>
+                        </DropdownMenuItem>
+
+                        <div className="bg-line my-0.5 h-px" aria-hidden="true" />
+
+                        {/* Theme row: completely uniform with other menu items */}
                         <DropdownMenuItem
                             asChild
-                            disabled={signingOut}
+                            onSelect={(e) => e.preventDefault()}
                         >
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    selectTheme(
+                                        selectedTheme === "light" ? "dark" : "light"
+                                    )
+                                }
+                                className="text-12 text-muted-foreground hover:text-foreground hover:bg-faint focus-visible:text-foreground focus-visible:bg-faint flex w-full cursor-pointer items-center justify-between rounded-[2px] px-3 py-2 font-medium transition-colors text-left"
+                            >
+                                <div className="flex items-center gap-2">
+                                    <span
+                                        aria-hidden="true"
+                                        className="size-3.5 shrink-0 bg-current mask-[url('/icons/sun.svg')] mask-contain mask-center mask-no-repeat dark:mask-[url('/icons/moon.svg')]"
+                                    />
+                                    <span>theme</span>
+                                </div>
+                                <span className="text-10 text-muted-foreground uppercase font-normal tracking-label">
+                                    {selectedTheme}
+                                </span>
+                            </button>
+                        </DropdownMenuItem>
+
+                        <div className="bg-line my-0.5 h-px" aria-hidden="true" />
+
+                        <DropdownMenuItem asChild disabled={signingOut}>
                             <button
                                 type="button"
                                 disabled={signingOut}
                                 onClick={() => void handleSignOut()}
-                                className="w-full text-left cursor-pointer"
+                                className="text-12 text-muted-foreground hover:text-foreground hover:bg-faint focus-visible:text-foreground focus-visible:bg-faint flex w-full cursor-pointer items-center justify-between rounded-[2px] px-3 py-2 font-medium transition-colors text-left"
                             >
-                                {signingOut ? "Signing out…" : "log out"}
+                                <span>{signingOut ? "signing out…" : "log out"}</span>
+                                <span
+                                    className="text-10 text-muted-foreground font-normal"
+                                    aria-hidden="true"
+                                >
+                                    ↳
+                                </span>
                             </button>
                         </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            ) : loaded ? (
-                <Link href="/login" className={controlClasses}>
-                    Sign up /
-                    <br />
-                    Log in
-                </Link>
-            ) : null}
+                    </div>
 
-            {logoutError ? (
-                <p
-                    role="alert"
-                    className={
-                        compact
-                            ? "bg-background border-line text-12 absolute bottom-2 left-full ml-2 w-40 border p-2"
-                            : floating
-                              ? "bg-background text-12 absolute top-full right-0 max-w-48 p-2"
-                              : "text-14 absolute top-full right-0 max-w-48"
-                    }
-                >
-                    {logoutError}
-                </p>
-            ) : null}
+                    {logoutError && (
+                        <div className="border-line border-t px-3 py-2">
+                            <p role="alert" className="text-11 text-red-600 font-medium">
+                                {logoutError}
+                            </p>
+                        </div>
+                    )}
+                </DropdownMenuContent>
+            </DropdownMenu>
         </div>
     );
 }
