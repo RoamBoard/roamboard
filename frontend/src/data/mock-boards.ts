@@ -6,6 +6,7 @@ export const mockOwnerId = "mock-user-1";
 
 // Image URLs use existing local SVG placeholders. "upload" simulates the
 // source of a future user photo; no upload has taken place.
+// The published viewer also uses public boards from this list.
 export const mockBoards: Board[] = [
     // A new Board can have no destination, dates, cover, or content yet.
     {

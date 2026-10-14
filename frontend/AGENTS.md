@@ -146,6 +146,29 @@ For UI changes, inspect the affected flow on desktop and a smaller screen, inclu
 
 The frontend uses `pnpm test` for its Node/TSX integration tests. Documentation-only edits need content and link checks, not application tests.
 
+### Published board preview
+
+`/boards/[boardId]` is a public viewer with the sample design at
+`/boards/lost-in-tokyo`. It reuses the homepage sidebar and account control,
+supports both themes and smaller screens, and opens full activity details in a
+native dialog. Account loading does not gate board viewing. The account control
+hides after the page is scrolled down.
+
+The mock loading boundary is `src/lib/published-board.ts`. The existing Board
+types now support optional one-based `dayNumber` on items and optional
+`dayTitles`; calendar dates and activity times remain optional. Public board
+author/highlight data is a frontend presentation shape awaiting a backend
+contract. Backend photo URLs and fallbacks belong in the supplied image data.
+
+`src/lib/board-preview.ts` uses tab-local session storage for preview bookmarks,
+saved activities, and editable copies. These actions do not write to the backend
+or represent account-owned resources.
+
+`PublishedBoard` owns the selected activity and its open/close handlers.
+`PublishedBoardDay` renders the timeline and cards, `ActivityDetailsDialog`
+renders the selected activity, and `useBoardPreview` manages preview save/copy
+state.
+
 ### Independent frontend and API testing
 
 Tests are a first-class deliverable when a feature needs them, not self-validation added merely to make an implementation appear complete. Separate implementation from test authorship whenever practical:
