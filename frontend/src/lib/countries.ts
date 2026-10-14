@@ -33,10 +33,7 @@ function normalize(value: string): string {
 }
 
 function editDistance(left: string, right: string): number {
-    const previous = Array.from(
-        { length: right.length + 1 },
-        (_, index) => index
-    );
+    const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
     return (
         [...left].reduce((row, leftCharacter, leftIndex) => {
             const next = [leftIndex + 1];
@@ -45,8 +42,7 @@ function editDistance(left: string, right: string): number {
                     Math.min(
                         (next[rightIndex] ?? 0) + 1,
                         (row[rightIndex + 1] ?? 0) + 1,
-                        (row[rightIndex] ?? 0) +
-                            (leftCharacter === rightCharacter ? 0 : 1)
+                        (row[rightIndex] ?? 0) + (leftCharacter === rightCharacter ? 0 : 1)
                     )
                 );
             });
@@ -60,9 +56,7 @@ export function findCountry(value: string): Country | undefined {
     const aliasCode = aliases.get(query);
     return countries.find(
         (country) =>
-            normalize(country.name) === query ||
-            country.code.toLowerCase() === query ||
-            country.code === aliasCode
+            normalize(country.name) === query || country.code.toLowerCase() === query || country.code === aliasCode
     );
 }
 
@@ -73,10 +67,7 @@ export function suggestCountries(value: string, limit = 6): Country[] {
     return countries
         .map((country) => {
             const name = normalize(country.name);
-            const aliasMatches = [...aliases].some(
-                ([alias, code]) =>
-                    code === country.code && alias.startsWith(query)
-            );
+            const aliasMatches = [...aliases].some(([alias, code]) => code === country.code && alias.startsWith(query));
             const distance = editDistance(query, name);
             const score =
                 name === query || country.code.toLowerCase() === query
@@ -90,12 +81,7 @@ export function suggestCountries(value: string, limit = 6): Country[] {
         })
         .filter(
             ({ country, distance, score }) =>
-                score <= 2 ||
-                distance <=
-                    Math.max(
-                        2,
-                        Math.floor(normalize(country.name).length * 0.3)
-                    )
+                score <= 2 || distance <= Math.max(2, Math.floor(normalize(country.name).length * 0.3))
         )
         .sort(
             (left, right) =>

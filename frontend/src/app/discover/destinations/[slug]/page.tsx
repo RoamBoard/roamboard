@@ -21,9 +21,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function DestinationPage({ params }: Props) {
     const destination = getDiscoverDestination((await params).slug);
     if (!destination) notFound();
-    const { boards, available } = await getDiscoverBoardsByDestination(
-        destination.countryCode
-    );
+    const { boards, available } = await getDiscoverBoardsByDestination(destination.countryCode);
 
     return (
         <AppShell activeHref="/discover" discover={{ collapsed: true }}>
@@ -37,22 +35,14 @@ export default async function DestinationPage({ params }: Props) {
                 </Link>
                 <header className="border-line mt-6 grid gap-6 border-b pb-8 md:grid-cols-2 md:items-center">
                     <div>
-                        <p className="text-muted-foreground text-12 mb-4">
-                            TRENDING DESTINATION
-                        </p>
+                        <p className="text-muted-foreground text-12 mb-4">TRENDING DESTINATION</p>
                         <h1 className="font-display text-[clamp(2rem,6vw,5rem)] leading-none font-bold tracking-tight">
                             {destination.name}
                         </h1>
-                        <p className="text-20 mt-4 max-w-2xl">
-                            {destination.description}
-                        </p>
+                        <p className="text-20 mt-4 max-w-2xl">{destination.description}</p>
                     </div>
                     <div className="bg-faint relative aspect-[4/3] overflow-hidden">
-                        <DiscoverPhoto
-                            photo={destination.coverImage}
-                            width={1200}
-                            eager
-                        />
+                        <DiscoverPhoto photo={destination.coverImage} width={1200} eager />
                     </div>
                 </header>
                 {boards.length ? (
@@ -65,17 +55,9 @@ export default async function DestinationPage({ params }: Props) {
                         ))}
                     </section>
                 ) : (
-                    <section
-                        aria-labelledby="destination-empty-title"
-                        className="border-line mt-8 border p-6 md:p-8"
-                    >
-                        <h2
-                            id="destination-empty-title"
-                            className="font-display text-24"
-                        >
-                            {available
-                                ? "No Boards for this destination yet."
-                                : "Destination Boards are coming soon."}
+                    <section aria-labelledby="destination-empty-title" className="border-line mt-8 border p-6 md:p-8">
+                        <h2 id="destination-empty-title" className="font-display text-24">
+                            {available ? "No Boards for this destination yet." : "Destination Boards are coming soon."}
                         </h2>
                         <p className="text-14 mt-3 max-w-xl">
                             {available

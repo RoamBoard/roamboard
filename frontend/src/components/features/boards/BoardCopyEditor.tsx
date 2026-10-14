@@ -15,18 +15,12 @@ const fieldClasses =
     "border-line bg-background w-full border px-3 py-2 text-14 focus-visible:outline-2 focus-visible:outline-offset-2";
 
 // Edit a preview copy without changing the published board.
-export default function BoardCopyEditor({
-    sourceBoardId,
-    initialDraft,
-    onSaved
-}: Props) {
+export default function BoardCopyEditor({ sourceBoardId, initialDraft, onSaved }: Props) {
     // Keep edits here until the user presses Save preview copy.
     const [draft, setDraft] = useState(() => {
         // Use the viewer's day calculation for copies that only have dates.
         const dayNumbers = new Map(
-            getBoardDays(initialDraft).flatMap((day) =>
-                day.items.map((item) => [item.id, day.number] as const)
-            )
+            getBoardDays(initialDraft).flatMap((day) => day.items.map((item) => [item.id, day.number] as const))
         );
         return {
             ...initialDraft,
@@ -40,16 +34,11 @@ export default function BoardCopyEditor({
     const [error, setError] = useState("");
 
     // Replace the edited activity while leaving the other items as they are.
-    function updateActivity(
-        activityId: string,
-        changes: Partial<BoardActivity>
-    ) {
+    function updateActivity(activityId: string, changes: Partial<BoardActivity>) {
         setDraft((currentDraft) => ({
             ...currentDraft,
             items: currentDraft.items.map((item) =>
-                item.type === "activity" && item.id === activityId
-                    ? { ...item, ...changes }
-                    : item
+                item.type === "activity" && item.id === activityId ? { ...item, ...changes } : item
             )
         }));
     }
@@ -64,11 +53,7 @@ export default function BoardCopyEditor({
             setError("Enter a title for your copy.");
             return;
         }
-        if (
-            draft.items.some(
-                (item) => item.type === "activity" && !item.title.trim()
-            )
-        ) {
+        if (draft.items.some((item) => item.type === "activity" && !item.title.trim())) {
             setError("Each activity needs a title.");
             return;
         }
@@ -77,40 +62,30 @@ export default function BoardCopyEditor({
             const saved = {
                 ...draft,
                 title: draft.title.trim(),
-                durationDays: Math.max(
-                    draft.durationDays ?? 0,
-                    ...draft.items.map((item) => item.dayNumber ?? 1)
-                ),
+                durationDays: Math.max(draft.durationDays ?? 0, ...draft.items.map((item) => item.dayNumber ?? 1)),
                 updatedAt: new Date().toISOString()
             };
             // Store this copy in the tab, then give the updated draft to the parent.
             savePreviewCopy(sourceBoardId, saved);
             onSaved(saved);
-            setMessage(
-                "Preview copy saved in this tab. The original board is unchanged."
-            );
+            setMessage("Preview copy saved in this tab. The original board is unchanged.");
         } catch {
-            setError(
-                "This browser could not save the preview copy. Your edits are still here; try again."
-            );
+            setError("This browser could not save the preview copy. Your edits are still here; try again.");
         }
     }
 
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
             <p className="text-muted-foreground text-14">
-                Preview only. This is your editable copy, stored in this browser
-                tab. It is not saved to an account or database. Closing the tab
-                clears it.
+                Preview only. This is your editable copy, stored in this browser tab. It is not saved to an account or
+                database. Closing the tab clears it.
             </p>
             <label className="block space-y-2">
                 <span className="text-14">Board title</span>
                 <input
                     required
                     value={draft.title}
-                    onChange={(event) =>
-                        setDraft({ ...draft, title: event.target.value })
-                    }
+                    onChange={(event) => setDraft({ ...draft, title: event.target.value })}
                     className={fieldClasses}
                 />
             </label>
@@ -119,43 +94,29 @@ export default function BoardCopyEditor({
                 <textarea
                     rows={4}
                     value={draft.description}
-                    onChange={(event) =>
-                        setDraft({ ...draft, description: event.target.value })
-                    }
+                    onChange={(event) => setDraft({ ...draft, description: event.target.value })}
                     className={fieldClasses}
                 />
             </label>
             <fieldset className="space-y-5">
-                <legend className="font-display text-24 mb-4 font-bold">
-                    Your activities
-                </legend>
+                <legend className="font-display text-24 mb-4 font-bold">Your activities</legend>
                 {draft.items.map((item, index) => {
                     // Non-activity items stay in the copy, but have no editing fields yet.
                     if (item.type !== "activity") {
                         return (
-                            <p
-                                key={item.id}
-                                className="text-muted-foreground text-14"
-                            >
+                            <p key={item.id} className="text-muted-foreground text-14">
                                 {item.type === "location"
                                     ? item.location.name
                                     : item.type === "text"
                                       ? item.text
                                       : item.image.alt}
-                                <span className="text-12 block">
-                                    Included in your copy.
-                                </span>
+                                <span className="text-12 block">Included in your copy.</span>
                             </p>
                         );
                     }
                     return (
-                        <fieldset
-                            key={item.id}
-                            className="border-line grid gap-3 border-t pt-5 sm:grid-cols-2"
-                        >
-                            <legend className="text-muted-foreground text-12 px-1">
-                                Activity {index + 1}
-                            </legend>
+                        <fieldset key={item.id} className="border-line grid gap-3 border-t pt-5 sm:grid-cols-2">
+                            <legend className="text-muted-foreground text-12 px-1">Activity {index + 1}</legend>
                             <label className="space-y-1 sm:col-span-2">
                                 <span className="text-14">Title</span>
                                 <input
@@ -179,9 +140,7 @@ export default function BoardCopyEditor({
                                     value={item.dayNumber ?? 1}
                                     onChange={(event) =>
                                         updateActivity(item.id, {
-                                            dayNumber: Number(
-                                                event.target.value
-                                            )
+                                            dayNumber: Number(event.target.value)
                                         })
                                     }
                                     className={fieldClasses}
@@ -194,8 +153,7 @@ export default function BoardCopyEditor({
                                     value={item.time ?? ""}
                                     onChange={(event) =>
                                         updateActivity(item.id, {
-                                            time:
-                                                event.target.value || undefined
+                                            time: event.target.value || undefined
                                         })
                                     }
                                     className={fieldClasses}

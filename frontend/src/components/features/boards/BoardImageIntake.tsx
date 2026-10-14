@@ -33,15 +33,10 @@ function capturedTime(value: string | null, index: number): string {
 
 function capturedDate(value: string | null): string | null {
     const match = value?.match(/(\d{4})[:-](\d{2})[:-](\d{2})/);
-    return match?.[1] && match[2] && match[3]
-        ? `${match[1]}-${match[2]}-${match[3]}`
-        : null;
+    return match?.[1] && match[2] && match[3] ? `${match[1]}-${match[2]}-${match[3]}` : null;
 }
 
-function prepareUpload(
-    asset: Awaited<ReturnType<typeof uploadBoardImage>>,
-    index: number
-): UploadedBoardImage {
+function prepareUpload(asset: Awaited<ReturnType<typeof uploadBoardImage>>, index: number): UploadedBoardImage {
     const imageId = crypto.randomUUID();
     const image: BoardImageDraft = {
         id: imageId,
@@ -77,8 +72,7 @@ function prepareUpload(
             order: index,
             time: capturedTime(asset.capturedAt, index),
             title: "Photo location",
-            description:
-                "Suggested from embedded GPS. Confirm the place before publishing.",
+            description: "Suggested from embedded GPS. Confirm the place before publishing.",
             category: "other",
             source: "photo",
             location: {
@@ -109,16 +103,12 @@ export default function BoardImageIntake({
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState("");
     const remaining = MAX_IMAGES - images.length;
-    const cover = images.find(
-        (image) => image.uploadedImageId === coverImageId
-    );
+    const cover = images.find((image) => image.uploadedImageId === coverImageId);
 
     async function upload(files: File[]) {
         if (disabled || busy || files.length === 0) return;
         if (files.length > remaining) {
-            setError(
-                `Choose no more than ${remaining} additional image${remaining === 1 ? "" : "s"}.`
-            );
+            setError(`Choose no more than ${remaining} additional image${remaining === 1 ? "" : "s"}.`);
             return;
         }
         setBusy(true);
@@ -126,19 +116,11 @@ export default function BoardImageIntake({
         setError("");
         const uploadTask = (async () => {
             try {
-                const assets = await Promise.all(
-                    files.map((file) => uploadBoardImage(file))
-                );
-                const prepared = assets.map((asset, index) =>
-                    prepareUpload(asset, images.length + index)
-                );
+                const assets = await Promise.all(files.map((file) => uploadBoardImage(file)));
+                const prepared = assets.map((asset, index) => prepareUpload(asset, images.length + index));
                 onUploaded(prepared);
             } catch (caught) {
-                setError(
-                    caught instanceof Error
-                        ? caught.message
-                        : "The images could not be uploaded."
-                );
+                setError(caught instanceof Error ? caught.message : "The images could not be uploaded.");
             } finally {
                 setBusy(false);
                 onUploadingChange?.(false);
@@ -150,10 +132,7 @@ export default function BoardImageIntake({
     }
 
     return (
-        <section
-            aria-labelledby="image-intake-heading"
-            className="mx-auto w-full max-w-5xl"
-        >
+        <section aria-labelledby="image-intake-heading" className="mx-auto w-full max-w-5xl">
             <div
                 className="border-line relative grid min-h-80 place-items-center overflow-hidden border-x px-8 text-center sm:min-h-96"
                 onDragOver={(event) => {
@@ -166,10 +145,7 @@ export default function BoardImageIntake({
                     }
                 }}
             >
-                <div
-                    aria-hidden="true"
-                    className="absolute inset-x-[6%] top-20 bottom-0 opacity-70"
-                >
+                <div aria-hidden="true" className="absolute inset-x-[6%] top-20 bottom-0 opacity-70">
                     {Array.from({ length: 24 }, (_, index) => (
                         <span
                             key={index}
@@ -184,10 +160,7 @@ export default function BoardImageIntake({
                     ))}
                 </div>
                 <div className="relative z-10">
-                    <h2
-                        id="image-intake-heading"
-                        className="font-display text-24 text-line sm:text-30 leading-none"
-                    >
+                    <h2 id="image-intake-heading" className="font-display text-24 text-line sm:text-30 leading-none">
                         drop your
                         <br />
                         images
@@ -195,8 +168,7 @@ export default function BoardImageIntake({
                         here
                     </h2>
                     <p className="text-12 text-graphite mt-5">
-                        Up to 10 images. GPS and capture time become suggestions
-                        you can edit.
+                        Up to 10 images. GPS and capture time become suggestions you can edit.
                     </p>
                     <button
                         type="button"
@@ -204,11 +176,7 @@ export default function BoardImageIntake({
                         onClick={() => inputRef.current?.click()}
                         className="border-foreground bg-background text-12 text-foreground hover:bg-foreground hover:text-background mt-5 border px-5 py-3 transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none"
                     >
-                        {busy
-                            ? "Reading images..."
-                            : remaining === 0
-                              ? "10 images added"
-                              : "choose images"}
+                        {busy ? "Reading images..." : remaining === 0 ? "10 images added" : "choose images"}
                     </button>
                     <input
                         ref={inputRef}
@@ -217,20 +185,14 @@ export default function BoardImageIntake({
                         multiple
                         className="sr-only"
                         disabled={disabled || busy || remaining === 0}
-                        onChange={(event) =>
-                            void upload(Array.from(event.target.files ?? []))
-                        }
+                        onChange={(event) => void upload(Array.from(event.target.files ?? []))}
                     />
                 </div>
             </div>
 
             <div className="relative min-h-52 overflow-hidden rounded-b-[50%] bg-[url('/boards-create-cover.svg')] bg-cover bg-center sm:min-h-72">
                 {cover ? (
-                    <img
-                        src={cover.url}
-                        alt="Board cover"
-                        className="absolute inset-0 size-full object-cover"
-                    />
+                    <img src={cover.url} alt="Board cover" className="absolute inset-0 size-full object-cover" />
                 ) : null}
                 <button
                     type="button"
@@ -250,45 +212,32 @@ export default function BoardImageIntake({
             ) : null}
             {images.length > 0 ? (
                 <p className="text-11 text-graphite mt-4">
-                    One image is the Board cover. Open an activity to attach its
-                    photos.
+                    One image is the Board cover. Open an activity to attach its photos.
                 </p>
             ) : null}
             {images.length > 0 ? (
-                <ul
-                    className="mt-5 flex snap-x gap-3 overflow-x-auto pb-2"
-                    aria-label="Uploaded Board images"
-                >
+                <ul className="mt-5 flex snap-x gap-3 overflow-x-auto pb-2" aria-label="Uploaded Board images">
                     {images.map((image, index) => (
-                        <li
-                            key={image.id}
-                            className="relative w-24 shrink-0 snap-start"
-                        >
+                        <li key={image.id} className="relative w-24 shrink-0 snap-start">
                             <img
                                 src={image.thumbnailUrl}
                                 alt={`Board image ${index + 1}`}
                                 className="aspect-square w-full object-cover"
                             />
                             {image.uploadedImageId === coverImageId ? (
-                                <span className="text-9 mt-1 block font-bold">
-                                    Board cover
-                                </span>
+                                <span className="text-9 mt-1 block font-bold">Board cover</span>
                             ) : (
                                 <button
                                     type="button"
                                     disabled={disabled || busy}
-                                    onClick={() =>
-                                        onSelectCover(image.uploadedImageId!)
-                                    }
+                                    onClick={() => onSelectCover(image.uploadedImageId!)}
                                     className="text-9 mt-1 block underline disabled:opacity-40"
                                 >
                                     Set as cover
                                 </button>
                             )}
                             {image.capturedAt === null ? (
-                                <span className="text-9 text-graphite mt-1 block">
-                                    No metadata available
-                                </span>
+                                <span className="text-9 text-graphite mt-1 block">No metadata available</span>
                             ) : null}
                             <button
                                 type="button"

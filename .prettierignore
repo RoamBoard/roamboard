@@ -26,3 +26,6 @@ bun.lockb
 
 **/*.woff2
 **/*.ico
+
+# SQL is maintained manually; Prettier has no built-in SQL support.
+**/*.sql

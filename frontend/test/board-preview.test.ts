@@ -75,9 +75,7 @@ test("preview shows one Board cover and the photos linked to an activity", () =>
             }
         ]
     };
-    const markup = renderToStaticMarkup(
-        createElement(BoardCreationPreview, { board })
-    );
+    const markup = renderToStaticMarkup(createElement(BoardCreationPreview, { board }));
     assert.equal((markup.match(/alt="Cover of City walk"/g) ?? []).length, 1);
     assert.match(markup, /src="\/image\/2"/);
     assert.match(markup, /aria-label="Images for Museum"/);

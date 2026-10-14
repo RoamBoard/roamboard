@@ -23,8 +23,7 @@ function config(): CloudinaryConfig {
     if (!cloudName || !/^[a-zA-Z0-9_-]+$/.test(cloudName) || !apiKey || !apiSecret) {
         throw new AppError(503, "Image storage is not configured", "IMAGE_STORAGE_UNAVAILABLE");
     }
-    cloudinary.config({ cloud_name: cloudName, api_key: apiKey,
-        api_secret: apiSecret, secure: true });
+    cloudinary.config({ cloud_name: cloudName, api_key: apiKey, api_secret: apiSecret, secure: true });
     return { cloudName, apiKey, apiSecret };
 }
 
@@ -57,9 +56,14 @@ function gpsPart(value: unknown, ref: unknown): number | null {
 }
 
 function parseAsset(raw: Record<string, unknown>): ProviderAsset | null {
-    if (typeof raw.public_id !== "string" || raw.type !== "authenticated" ||
-        raw.resource_type !== "image" || typeof raw.format !== "string" ||
-        typeof raw.bytes !== "number") return null;
+    if (
+        typeof raw.public_id !== "string" ||
+        raw.type !== "authenticated" ||
+        raw.resource_type !== "image" ||
+        typeof raw.format !== "string" ||
+        typeof raw.bytes !== "number"
+    )
+        return null;
     const createdAt = metadataDate(raw.created_at);
     if (!createdAt) return null;
     const meta = (raw.media_metadata ?? raw.image_metadata ?? raw.exif ?? {}) as Record<string, unknown>;
@@ -67,8 +71,11 @@ function parseAsset(raw: Record<string, unknown>): ProviderAsset | null {
     const latitude = gpsPart(meta.GPSLatitude, meta.GPSLatitudeRef);
     const longitude = gpsPart(meta.GPSLongitude, meta.GPSLongitudeRef);
     return {
-        storageKey: raw.public_id, format: raw.format.toLowerCase(), byteSize: raw.bytes,
-        createdAt, capturedAt,
+        storageKey: raw.public_id,
+        format: raw.format.toLowerCase(),
+        byteSize: raw.bytes,
+        createdAt,
+        capturedAt,
         latitude: latitude !== null && Math.abs(latitude) <= 90 ? latitude : null,
         longitude: longitude !== null && Math.abs(longitude) <= 180 ? longitude : null
     };
@@ -80,7 +87,10 @@ export function createCloudinaryProvider(): ImageProvider {
             const { cloudName, apiKey, apiSecret } = config();
             const timestamp = Math.floor(Date.now() / 1000).toString();
             const signed = {
-                timestamp, public_id: storageKey, type: "authenticated", overwrite: "false",
+                timestamp,
+                public_id: storageKey,
+                type: "authenticated",
+                overwrite: "false",
                 allowed_formats: "jpg,jpeg,png,webp,heic,heif",
                 eager: `${cloudinary.utils.generate_transformation_string(variants.display)}|${cloudinary.utils.generate_transformation_string(variants.thumbnail)}`
             };
@@ -98,25 +108,30 @@ export function createCloudinaryProvider(): ImageProvider {
         async inspect(storageKey) {
             config();
             try {
-                const raw = await cloudinary.api.resource(storageKey, {
-                    resource_type: "image", type: "authenticated", image_metadata: true
-                }) as Record<string, unknown>;
+                const raw = (await cloudinary.api.resource(storageKey, {
+                    resource_type: "image",
+                    type: "authenticated",
+                    image_metadata: true
+                })) as Record<string, unknown>;
                 return parseAsset(raw);
             } catch (error) {
-                if (typeof error === "object" && error !== null &&
-                    "http_code" in error && error.http_code === 404) return null;
+                if (typeof error === "object" && error !== null && "http_code" in error && error.http_code === 404)
+                    return null;
                 throw error;
             }
         },
         async openVariant(storageKey, variant) {
             config();
             const url = cloudinary.url(storageKey, {
-                secure: true, sign_url: true, type: "authenticated", resource_type: "image",
-                transformation: variants[variant], format: "jpg"
+                secure: true,
+                sign_url: true,
+                type: "authenticated",
+                resource_type: "image",
+                transformation: variants[variant],
+                format: "jpg"
             });
             const response = await fetch(url, { redirect: "error", signal: AbortSignal.timeout(15000) });
-            if (!response.ok || !response.body ||
-                !response.headers.get("content-type")?.startsWith("image/jpeg")) {
+            if (!response.ok || !response.body || !response.headers.get("content-type")?.startsWith("image/jpeg")) {
                 throw new AppError(502, "Image delivery failed", "IMAGE_DELIVERY_FAILED");
             }
             return {
@@ -126,9 +141,11 @@ export function createCloudinaryProvider(): ImageProvider {
         },
         async destroy(storageKey) {
             config();
-            const result = await cloudinary.uploader.destroy(storageKey, {
-                resource_type: "image", type: "authenticated", invalidate: true
-            }) as { result?: string };
+            const result = (await cloudinary.uploader.destroy(storageKey, {
+                resource_type: "image",
+                type: "authenticated",
+                invalidate: true
+            })) as { result?: string };
             if (result.result !== "ok" && result.result !== "not found") {
                 throw new Error("Cloudinary deletion failed");
             }

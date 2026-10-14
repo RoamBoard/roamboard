@@ -1,13 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 
 import { AppError } from "../../shared/app-error.js";
-import type {
-    AppUser,
-    AuthRepository,
-    AuthService,
-    GoogleIdentity,
-    GoogleVerifier
-} from "./auth.types.js";
+import type { AppUser, AuthRepository, AuthService, GoogleIdentity, GoogleVerifier } from "./auth.types.js";
 
 export const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -54,24 +48,14 @@ async function findOrCreateUser(
     throw new Error("Could not generate a unique username");
 }
 
-export function createAuthService(
-    repository: AuthRepository,
-    verifier: GoogleVerifier
-): AuthService {
+export function createAuthService(repository: AuthRepository, verifier: GoogleVerifier): AuthService {
     return {
         async signIn(idToken) {
             const identity = await verifier.verify(idToken);
-            const { user, isNew } = await findOrCreateUser(
-                repository,
-                identity
-            );
+            const { user, isNew } = await findOrCreateUser(repository, identity);
             const sessionToken = randomBytes(32).toString("base64url");
             const expiresAt = new Date(Date.now() + SESSION_MAX_AGE_MS);
-            await repository.createSession(
-                hashToken(sessionToken),
-                user.userId,
-                expiresAt
-            );
+            await repository.createSession(hashToken(sessionToken), user.userId, expiresAt);
             return { user, isNew, sessionToken, expiresAt };
         },
         async currentUser(sessionToken) {

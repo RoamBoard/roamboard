@@ -8,21 +8,12 @@ import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 // Shared by ThemeSelect and ProfileControl. Colors use Roamboard's existing tokens;
 // the selected dot uses CSS, and the Radix dropdown package is imported directly.
 
-function DropdownMenu({
-    ...props
-}: ComponentProps<typeof DropdownMenuPrimitive.Root>) {
+function DropdownMenu({ ...props }: ComponentProps<typeof DropdownMenuPrimitive.Root>) {
     return <DropdownMenuPrimitive.Root data-slot="dropdown-menu" {...props} />;
 }
 
-function DropdownMenuTrigger({
-    ...props
-}: ComponentProps<typeof DropdownMenuPrimitive.Trigger>) {
-    return (
-        <DropdownMenuPrimitive.Trigger
-            data-slot="dropdown-menu-trigger"
-            {...props}
-        />
-    );
+function DropdownMenuTrigger({ ...props }: ComponentProps<typeof DropdownMenuPrimitive.Trigger>) {
+    return <DropdownMenuPrimitive.Trigger data-slot="dropdown-menu-trigger" {...props} />;
 }
 
 function DropdownMenuContent({
@@ -43,10 +34,7 @@ function DropdownMenuContent({
     );
 }
 
-function DropdownMenuItem({
-    className,
-    ...props
-}: ComponentProps<typeof DropdownMenuPrimitive.Item>) {
+function DropdownMenuItem({ className, ...props }: ComponentProps<typeof DropdownMenuPrimitive.Item>) {
     return (
         <DropdownMenuPrimitive.Item
             data-slot="dropdown-menu-item"
@@ -56,15 +44,8 @@ function DropdownMenuItem({
     );
 }
 
-function DropdownMenuRadioGroup({
-    ...props
-}: ComponentProps<typeof DropdownMenuPrimitive.RadioGroup>) {
-    return (
-        <DropdownMenuPrimitive.RadioGroup
-            data-slot="dropdown-menu-radio-group"
-            {...props}
-        />
-    );
+function DropdownMenuRadioGroup({ ...props }: ComponentProps<typeof DropdownMenuPrimitive.RadioGroup>) {
+    return <DropdownMenuPrimitive.RadioGroup data-slot="dropdown-menu-radio-group" {...props} />;
 }
 
 function DropdownMenuRadioItem({

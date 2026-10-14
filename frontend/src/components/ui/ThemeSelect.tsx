@@ -20,10 +20,7 @@ type Props = {
 export default function ThemeSelect({ side = "bottom" }: Props) {
     // This state marks the selected option. The component manages opening and focus.
     const [selectedTheme, setSelectedTheme] = useState(() =>
-        typeof document !== "undefined" &&
-        document.documentElement.classList.contains("dark")
-            ? "dark"
-            : "light"
+        typeof document !== "undefined" && document.documentElement.classList.contains("dark") ? "dark" : "light"
     );
 
     const selectTheme = (theme: string) => {
@@ -40,10 +37,7 @@ export default function ThemeSelect({ side = "bottom" }: Props) {
     };
 
     const options = (
-        <DropdownMenuRadioGroup
-            value={selectedTheme}
-            onValueChange={selectTheme}
-        >
+        <DropdownMenuRadioGroup value={selectedTheme} onValueChange={selectTheme}>
             <DropdownMenuRadioItem value="light">
                 <span
                     aria-hidden="true"
@@ -67,11 +61,7 @@ export default function ThemeSelect({ side = "bottom" }: Props) {
             onOpenChange={(open) => {
                 // Read the current theme when opening, including after page navigation.
                 if (open) {
-                    setSelectedTheme(
-                        document.documentElement.classList.contains("dark")
-                            ? "dark"
-                            : "light"
-                    );
+                    setSelectedTheme(document.documentElement.classList.contains("dark") ? "dark" : "light");
                 }
             }}
         >

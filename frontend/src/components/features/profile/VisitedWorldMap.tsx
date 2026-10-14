@@ -32,33 +32,23 @@ function countryFilter(countryCodes: string[]): mapboxgl.FilterSpecification {
     return [
         "all",
         ["==", ["get", "disputed"], "false"],
-        [
-            "any",
-            ["==", ["get", "worldview"], "all"],
-            ["in", "US", ["get", "worldview"]]
-        ],
+        ["any", ["==", ["get", "worldview"], "all"], ["in", "US", ["get", "worldview"]]],
         ["in", ["get", "iso_3166_1"], ["literal", countryCodes]]
     ];
 }
 
-function cityData(
-    destinations: MapDestination[]
-): GeoJSONSourceSpecification["data"] {
+function cityData(destinations: MapDestination[]): GeoJSONSourceSpecification["data"] {
     return {
         type: "FeatureCollection",
         features: destinations.flatMap((destination) => {
-            if (destination.latitude === null || destination.longitude === null)
-                return [];
+            if (destination.latitude === null || destination.longitude === null) return [];
             return [
                 {
                     type: "Feature" as const,
                     id: destination.id,
                     geometry: {
                         type: "Point" as const,
-                        coordinates: [
-                            destination.longitude,
-                            destination.latitude
-                        ]
+                        coordinates: [destination.longitude, destination.latitude]
                     },
                     properties: {
                         label: destination.city ?? destination.country,
@@ -73,16 +63,10 @@ function cityData(
     };
 }
 
-function popupForCity(
-    event: MapLayerMouseEvent,
-    feature: ClickedMapFeature
-): void {
+function popupForCity(event: MapLayerMouseEvent, feature: ClickedMapFeature): void {
     const properties = feature.properties;
     if (!properties) return;
-    const status =
-        properties.completed === true || properties.completed === "true"
-            ? "Visited"
-            : "Planned";
+    const status = properties.completed === true || properties.completed === "true" ? "Visited" : "Planned";
     new mapboxgl.Popup({ closeButton: false, offset: 12 })
         .setLngLat(event.lngLat)
         .setText(`${properties.label} · ${status} · ${properties.boardTitle}`)
@@ -91,22 +75,14 @@ function popupForCity(
 
 function popupForSelection(event: MapLayerMouseEvent): void {
     const features = (event.features ?? []) as unknown as ClickedMapFeature[];
-    const cityFeature = features.find(
-        (feature) => feature.layer && cityLayerIds.includes(feature.layer.id)
-    );
+    const cityFeature = features.find((feature) => feature.layer && cityLayerIds.includes(feature.layer.id));
     if (cityFeature) popupForCity(event, cityFeature);
 }
 
-export default function VisitedWorldMap({
-    destinations
-}: {
-    destinations: MapDestination[];
-}) {
+export default function VisitedWorldMap({ destinations }: { destinations: MapDestination[] }) {
     const containerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<MapboxMap | null>(null);
-    const sessionRequestRef = useRef<ReturnType<
-        typeof loadMapboxMapSession
-    > | null>(null);
+    const sessionRequestRef = useRef<ReturnType<typeof loadMapboxMapSession> | null>(null);
     const [token, setToken] = useState<string>();
     const [mapReady, setMapReady] = useState(false);
     const [error, setError] = useState("");
@@ -126,38 +102,26 @@ export default function VisitedWorldMap({
                 destinations
                     .filter(
                         (destination) =>
-                            !destination.isCompleted &&
-                            !visitedCountryCodes.includes(
-                                destination.countryCode
-                            )
+                            !destination.isCompleted && !visitedCountryCodes.includes(destination.countryCode)
                     )
                     .map((destination) => destination.countryCode)
             ),
         [destinations, visitedCountryCodes]
     );
-    const destinationCities = useMemo(
-        () => cityData(destinations),
-        [destinations]
-    );
+    const destinationCities = useMemo(() => cityData(destinations), [destinations]);
 
     useEffect(() => {
         if (sessionRequestRef.current) return;
         const request = loadProviderConfig().then((config) => {
             if (!config.mapbox.configured)
-                throw new Error(
-                    "Add a Mapbox public token to the backend to display the world map."
-                );
+                throw new Error("Add a Mapbox public token to the backend to display the world map.");
             return loadMapboxMapSession();
         });
         sessionRequestRef.current = request;
         void request
             .then((session) => setToken(session.publicToken))
             .catch((caught: unknown) =>
-                setError(
-                    caught instanceof Error
-                        ? caught.message
-                        : "The world map could not be loaded."
-                )
+                setError(caught instanceof Error ? caught.message : "The world map could not be loaded.")
             );
     }, []);
 
@@ -174,10 +138,7 @@ export default function VisitedWorldMap({
                 zoom: 1.15,
                 minZoom: 0.7
             });
-            map.addControl(
-                new mapboxgl.NavigationControl({ showCompass: false }),
-                "top-right"
-            );
+            map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
             map.on("style.load", () => {
                 map.setFog({
                     color: "rgb(231, 231, 231)",
@@ -252,11 +213,7 @@ export default function VisitedWorldMap({
                 });
                 setMapReady(true);
             });
-            map.on("error", (event) =>
-                setError(
-                    event.error?.message ?? "The world map could not be loaded."
-                )
-            );
+            map.on("error", (event) => setError(event.error?.message ?? "The world map could not be loaded."));
             mapRef.current = map;
         }, 0);
         return () => {
@@ -269,44 +226,30 @@ export default function VisitedWorldMap({
     useEffect(() => {
         const map = mapRef.current;
         if (!map || !mapReady) return;
-        (map.getSource(citySourceId) as GeoJSONSource | undefined)?.setData(
-            destinationCities
-        );
-        map.setFilter(
-            visitedCountryLayerId,
-            countryFilter(visitedCountryCodes)
-        );
-        map.setFilter(
-            plannedCountryLayerId,
-            countryFilter(plannedCountryCodes)
-        );
+        (map.getSource(citySourceId) as GeoJSONSource | undefined)?.setData(destinationCities);
+        map.setFilter(visitedCountryLayerId, countryFilter(visitedCountryCodes));
+        map.setFilter(plannedCountryLayerId, countryFilter(plannedCountryCodes));
     }, [destinationCities, mapReady, plannedCountryCodes, visitedCountryCodes]);
 
     return (
         <section className="border-line mt-16 border-t pt-10">
             <div className="flex flex-wrap items-end justify-between gap-4">
                 <div>
-                    <p className="text-10 tracking-label text-graphite font-bold uppercase">
-                        Travel footprint
-                    </p>
-                    <h2 className="font-display text-28 mt-2 font-bold">
-                        Places around the world
-                    </h2>
+                    <p className="text-10 tracking-label text-graphite font-bold uppercase">Travel footprint</p>
+                    <h2 className="font-display text-28 mt-2 font-bold">Places around the world</h2>
                 </div>
                 <div className="text-12 text-graphite flex gap-4">
                     <span className="flex items-center gap-2">
-                        <i className="size-3 rounded-full bg-[#e46f45]" />{" "}
-                        Visited
+                        <i className="size-3 rounded-full bg-[#e46f45]" /> Visited
                     </span>
                     <span className="flex items-center gap-2">
-                        <i className="size-3 rounded-full border border-[#e46f45] bg-[#e46f45]/25" />{" "}
-                        Planned
+                        <i className="size-3 rounded-full border border-[#e46f45] bg-[#e46f45]/25" /> Planned
                     </span>
                 </div>
             </div>
             <p className="text-14 text-graphite mt-3 max-w-2xl leading-6">
-                Completed Boards fill countries as visited. Planned Board
-                destinations stay light. Select a city marker for its details.
+                Completed Boards fill countries as visited. Planned Board destinations stay light. Select a city marker
+                for its details.
             </p>
             {error ? (
                 <div
@@ -325,8 +268,7 @@ export default function VisitedWorldMap({
             <ul className="text-12 text-graphite mt-4 flex flex-wrap gap-x-5 gap-y-2">
                 {destinations.map((destination) => (
                     <li key={destination.id}>
-                        {destination.city ?? destination.country} ·{" "}
-                        {destination.isCompleted ? "visited" : "planned"}
+                        {destination.city ?? destination.country} · {destination.isCompleted ? "visited" : "planned"}
                     </li>
                 ))}
             </ul>

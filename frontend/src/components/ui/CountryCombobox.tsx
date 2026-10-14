@@ -11,11 +11,7 @@ type CountryComboboxProps = {
     inputClassName: string;
 };
 
-export default function CountryCombobox({
-    value,
-    onChange,
-    inputClassName
-}: CountryComboboxProps) {
+export default function CountryCombobox({ value, onChange, inputClassName }: CountryComboboxProps) {
     const listboxId = useId();
     const container = useRef<HTMLDivElement>(null);
     const [open, setOpen] = useState(false);
@@ -33,16 +29,12 @@ export default function CountryCombobox({
         if (event.key === "ArrowDown" && suggestions.length) {
             event.preventDefault();
             setOpen(true);
-            setActiveIndex((current) =>
-                open ? (current + 1) % suggestions.length : 0
-            );
+            setActiveIndex((current) => (open ? (current + 1) % suggestions.length : 0));
         } else if (event.key === "ArrowUp" && suggestions.length) {
             event.preventDefault();
             setOpen(true);
             setActiveIndex((current) =>
-                open
-                    ? (current - 1 + suggestions.length) % suggestions.length
-                    : suggestions.length - 1
+                open ? (current - 1 + suggestions.length) % suggestions.length : suggestions.length - 1
             );
         } else if (event.key === "Enter" && open && suggestions[activeIndex]) {
             event.preventDefault();
@@ -57,8 +49,7 @@ export default function CountryCombobox({
             className="relative"
             ref={container}
             onBlur={(event) => {
-                if (!container.current?.contains(event.relatedTarget))
-                    setOpen(false);
+                if (!container.current?.contains(event.relatedTarget)) setOpen(false);
             }}
         >
             <input
@@ -80,9 +71,7 @@ export default function CountryCombobox({
                 aria-controls={listboxId}
                 aria-expanded={open && suggestions.length > 0}
                 aria-activedescendant={
-                    open && suggestions[activeIndex]
-                        ? `${listboxId}-${suggestions[activeIndex].code}`
-                        : undefined
+                    open && suggestions[activeIndex] ? `${listboxId}-${suggestions[activeIndex].code}` : undefined
                 }
                 aria-invalid={Boolean(value.trim()) && !exactCountry}
                 aria-describedby={`${listboxId}-help`}
@@ -102,17 +91,13 @@ export default function CountryCombobox({
                                 id={`${listboxId}-${country.code}`}
                                 type="button"
                                 role="option"
-                                aria-selected={
-                                    country.code === exactCountry?.code
-                                }
+                                aria-selected={country.code === exactCountry?.code}
                                 className={`text-14 hover:bg-faint focus:bg-faint flex w-full items-center justify-between px-4 py-3 text-left focus:outline-none${index === activeIndex ? "bg-faint" : ""}`}
                                 onMouseDown={(event) => event.preventDefault()}
                                 onClick={() => select(country)}
                             >
                                 <span>{country.name}</span>
-                                <span className="text-11 text-graphite">
-                                    {country.code}
-                                </span>
+                                <span className="text-11 text-graphite">{country.code}</span>
                             </button>
                         </li>
                     ))}

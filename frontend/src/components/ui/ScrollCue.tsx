@@ -4,11 +4,7 @@ type Props = {
     className?: string;
 };
 
-export default function ScrollCue({
-    targetId,
-    label = "Scroll down",
-    className = ""
-}: Props) {
+export default function ScrollCue({ targetId, label = "Scroll down", className = "" }: Props) {
     return (
         <a
             href={`#${targetId}`}

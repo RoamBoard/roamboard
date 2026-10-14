@@ -55,7 +55,7 @@ Show useful validation errors and action failures. Display loading or progress f
 
 ## Code organization and readability
 
-Prettier is the source of truth for formatting. Use the repository's root `.prettierrc`: indent with four spaces and never tabs, use double quotes in JavaScript and TypeScript, do not use trailing commas, and use LF line endings with a final newline. Do not add a nested Prettier configuration. After editing supported files, run `pnpm format` and `pnpm format:check` from the repository root.
+Prettier is the source of truth for formatting. Use the repository's root [`.prettierrc`](../.prettierrc): indent with four spaces and never tabs, use double quotes in JavaScript and TypeScript, do not use trailing commas, and use LF line endings with a final newline. Use the configured print width of 120 to keep longer lines together where Prettier allows. Do not add a nested Prettier configuration. After editing supported files, run `pnpm format:apps` and `pnpm format:apps:check` from the repository root. For smaller changes, format edited paths with `pnpm exec prettier --write <paths>`, then run `pnpm format:apps:check`. Respect the root `.prettierignore` and exclude generated output, lockfiles, and SQL files; preserve existing SQL formatting.
 
 Follow the existing structure:
 

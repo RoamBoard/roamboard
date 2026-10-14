@@ -12,12 +12,8 @@ const optionClasses =
 export default function BoardPathOption({ title, description, href }: Props) {
     const content = (
         <span className="relative top-2 block leading-none">
-            <strong className="font-body text-14 text-foreground block font-medium">
-                {title}
-            </strong>
-            <span className="text-10 text-graphite mt-1 block">
-                {description}
-            </span>
+            <strong className="font-body text-14 text-foreground block font-medium">{title}</strong>
+            <span className="text-10 text-graphite mt-1 block">{description}</span>
         </span>
     );
 

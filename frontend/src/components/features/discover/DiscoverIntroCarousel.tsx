@@ -49,10 +49,7 @@ export default function DiscoverIntroCarousel({
             className="w-full focus-visible:outline-2 focus-visible:-outline-offset-2"
         >
             <CarouselContent>
-                <CarouselItem
-                    aria-label="Destination of the month"
-                    className="flex"
-                >
+                <CarouselItem aria-label="Destination of the month" className="flex">
                     {hero}
                 </CarouselItem>
                 {journey.map((panel, index) => (

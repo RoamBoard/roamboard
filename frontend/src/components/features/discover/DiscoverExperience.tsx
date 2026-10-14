@@ -1,20 +1,11 @@
 "use client";
 
-import {
-    useEffect,
-    useCallback,
-    useRef,
-    useState,
-    useSyncExternalStore,
-    type MouseEvent,
-    type ReactNode
-} from "react";
+import { useEffect, useCallback, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
 import { motion, useMotionValue } from "motion/react";
 import AppShell from "@/components/layout/AppShell";
 import DiscoverIntroCarousel from "./DiscoverIntroCarousel";
 
-const desktopQuery =
-    "(min-width: 1024px) and (min-height: 620px) and (prefers-reduced-motion: no-preference)";
+const desktopQuery = "(min-width: 1024px) and (min-height: 620px) and (prefers-reduced-motion: no-preference)";
 function subscribe(callback: () => void) {
     const query = window.matchMedia(desktopQuery);
     query.addEventListener("change", callback);
@@ -30,17 +21,8 @@ type Props = {
     children: ReactNode;
 };
 
-export default function DiscoverExperience({
-    hero,
-    journey,
-    mobileJourney,
-    children
-}: Props) {
-    const desktop = useSyncExternalStore(
-        subscribe,
-        getSnapshot,
-        getServerSnapshot
-    );
+export default function DiscoverExperience({ hero, journey, mobileJourney, children }: Props) {
+    const desktop = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
     const [collapsed, setCollapsed] = useState(false);
     const [dimensions, setDimensions] = useState({ travel: 0, height: 0 });
     const section = useRef<HTMLDivElement>(null);
@@ -73,12 +55,8 @@ export default function DiscoverExperience({
         const update = () => {
             const offset = section.current?.offsetTop ?? 0;
             const distance = Math.max(0, window.scrollY - offset);
-            horizontal.set(
-                desktop ? -Math.min(distance, dimensions.travel) : 0
-            );
-            setCollapsed(
-                distance > 48 || (!desktop && carouselTravelled.current)
-            );
+            horizontal.set(desktop ? -Math.min(distance, dimensions.travel) : 0);
+            setCollapsed(distance > 48 || (!desktop && carouselTravelled.current));
         };
         update();
         window.addEventListener("scroll", update, { passive: true });
@@ -92,25 +70,15 @@ export default function DiscoverExperience({
             // Returning from a collection can measure the intro before its
             // desktop layout settles. Restore again when the travel changes.
             const signature = `${hash}:${desktop}:${dimensions.travel}`;
-            if (
-                !hash ||
-                handledHash.current === signature ||
-                (desktop && !dimensions.travel)
-            )
-                return;
+            if (!hash || handledHash.current === signature || (desktop && !dimensions.travel)) return;
             const target = document.getElementById(hash.slice(1));
             const feedElement = feed.current;
             if (!target || !feedElement?.contains(target)) return;
             handledHash.current = signature;
             state.frame = requestAnimationFrame(() => {
-                const withinFeed =
-                    target.getBoundingClientRect().top -
-                    feedElement.getBoundingClientRect().top;
+                const withinFeed = target.getBoundingClientRect().top - feedElement.getBoundingClientRect().top;
                 const top = desktop
-                    ? (section.current?.offsetTop ?? 0) +
-                      dimensions.travel +
-                      withinFeed -
-                      24
+                    ? (section.current?.offsetTop ?? 0) + dimensions.travel + withinFeed - 24
                     : window.scrollY + target.getBoundingClientRect().top - 24;
                 horizontal.set(desktop ? -dimensions.travel : 0);
                 window.scrollTo({ top, behavior: "instant" });
@@ -135,18 +103,12 @@ export default function DiscoverExperience({
             : (feed.current?.getBoundingClientRect().top ?? 0) + window.scrollY;
         horizontal.set(desktop ? -dimensions.travel : 0);
         window.scrollTo({ top, behavior: "instant" });
-        document
-            .getElementById("discover-feed")
-            ?.focus({ preventScroll: true });
+        document.getElementById("discover-feed")?.focus({ preventScroll: true });
     }
 
     function handleAnchor(event: MouseEvent<HTMLDivElement>) {
         const target = event.target;
-        if (
-            target instanceof Element &&
-            target.closest('a[href="#discover-feed"]')
-        )
-            revealFeed(event);
+        if (target instanceof Element && target.closest('a[href="#discover-feed"]')) revealFeed(event);
     }
 
     return (
@@ -164,25 +126,12 @@ export default function DiscoverExperience({
             >
                 <div
                     ref={section}
-                    style={
-                        desktop && dimensions.height
-                            ? { height: dimensions.height + dimensions.travel }
-                            : undefined
-                    }
+                    style={desktop && dimensions.height ? { height: dimensions.height + dimensions.travel } : undefined}
                 >
                     {/* The tall sticky track releases after horizontal travel. The feed then
                         scrolls naturally with the document: no wheel interception or duplicate feed. */}
-                    <div
-                        className={
-                            desktop
-                                ? "sticky top-0 w-[var(--panel-width)] overflow-clip"
-                                : ""
-                        }
-                    >
-                        <motion.div
-                            style={{ x: horizontal }}
-                            className={desktop ? "flex w-max items-start" : ""}
-                        >
+                    <div className={desktop ? "sticky top-0 w-[var(--panel-width)] overflow-clip" : ""}>
+                        <motion.div style={{ x: horizontal }} className={desktop ? "flex w-max items-start" : ""}>
                             {desktop ? (
                                 <div
                                     ref={intro}
@@ -204,11 +153,7 @@ export default function DiscoverExperience({
                             <div
                                 ref={feed}
                                 onFocusCapture={() => {
-                                    if (
-                                        desktop &&
-                                        window.scrollY < dimensions.travel
-                                    )
-                                        revealFeed();
+                                    if (desktop && window.scrollY < dimensions.travel) revealFeed();
                                 }}
                             >
                                 {children}
@@ -219,9 +164,7 @@ export default function DiscoverExperience({
             </div>
             {!collapsed && (
                 <p className="bg-background/90 text-12 pointer-events-none fixed right-5 bottom-4 z-20 px-3 py-2">
-                    {desktop
-                        ? "Scroll to discover →"
-                        : "Swipe to explore → · scroll for discoveries ↓"}
+                    {desktop ? "Scroll to discover →" : "Swipe to explore → · scroll for discoveries ↓"}
                 </p>
             )}
         </AppShell>

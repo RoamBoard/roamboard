@@ -7,11 +7,7 @@ import PinCategoryIcon from "@/components/ui/PinCategoryIcon";
 import { pinCategories } from "@/lib/board-options";
 import { uploadBoardImage } from "@/lib/board-creator-api";
 import { useDialogFocus } from "@/lib/use-dialog-focus";
-import type {
-    BoardImageDraft,
-    BoardPinDraft,
-    PinCategory
-} from "@/types/board-creator";
+import type { BoardImageDraft, BoardPinDraft, PinCategory } from "@/types/board-creator";
 
 type Props = {
     pin: BoardPinDraft;
@@ -47,21 +43,12 @@ export default function PinEditorDialog({
 
     const activityImages = images
         .filter((image) => image.pinId === pin.id)
-        .sort(
-            (first, second) =>
-                (first.activityOrder ?? first.order) -
-                (second.activityOrder ?? second.order)
-        );
-    const availableImages = images.filter(
-        (image) => image.source === "upload" && image.pinId !== pin.id
-    );
+        .sort((first, second) => (first.activityOrder ?? first.order) - (second.activityOrder ?? second.order));
+    const availableImages = images.filter((image) => image.source === "upload" && image.pinId !== pin.id);
     const cover =
         draft.coverImageId === null
-            ? (activityImages.find((image) => image.source === "unsplash") ??
-              null)
-            : (activityImages.find(
-                  (image) => image.uploadedImageId === draft.coverImageId
-              ) ?? activityImages[0]);
+            ? (activityImages.find((image) => image.source === "unsplash") ?? null)
+            : (activityImages.find((image) => image.uploadedImageId === draft.coverImageId) ?? activityImages[0]);
 
     async function upload(files: File[]) {
         if (files.length === 0) return;
@@ -96,11 +83,7 @@ export default function PinEditorDialog({
                 });
             }
         } catch (caught) {
-            setError(
-                caught instanceof Error
-                    ? caught.message
-                    : "The activity images could not be uploaded."
-            );
+            setError(caught instanceof Error ? caught.message : "The activity images could not be uploaded.");
         } finally {
             setUploading(false);
             if (inputRef.current) inputRef.current.value = "";
@@ -125,13 +108,8 @@ export default function PinEditorDialog({
             >
                 <div className="flex items-start justify-between">
                     <div>
-                        <p className="text-10 tracking-label text-stone font-bold uppercase">
-                            Edit itinerary pin
-                        </p>
-                        <h2
-                            id="edit-pin-heading"
-                            className="font-display text-30 mt-2 font-bold"
-                        >
+                        <p className="text-10 tracking-label text-stone font-bold uppercase">Edit itinerary pin</p>
+                        <h2 id="edit-pin-heading" className="font-display text-30 mt-2 font-bold">
                             {pin.title}
                         </h2>
                     </div>
@@ -148,30 +126,18 @@ export default function PinEditorDialog({
                     <figure className="mt-6">
                         <img
                             src={cover.url}
-                            onError={() =>
-                                setError("The activity image could not load.")
-                            }
+                            onError={() => setError("The activity image could not load.")}
                             alt={`Image for ${pin.title}`}
                             className="aspect-video w-full object-cover"
                         />
                         {cover.credit && cover.creditUrl && cover.sourceUrl ? (
                             <figcaption className="text-10 text-stone mt-1">
                                 Photo by{" "}
-                                <a
-                                    href={cover.creditUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="underline"
-                                >
+                                <a href={cover.creditUrl} target="_blank" rel="noreferrer" className="underline">
                                     {cover.credit}
                                 </a>{" "}
                                 on{" "}
-                                <a
-                                    href={cover.sourceUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="underline"
-                                >
+                                <a href={cover.sourceUrl} target="_blank" rel="noreferrer" className="underline">
                                     Unsplash
                                 </a>
                             </figcaption>
@@ -184,9 +150,7 @@ export default function PinEditorDialog({
                     accept="image/*,.heic,.heif"
                     multiple
                     className="sr-only"
-                    onChange={(event) =>
-                        void upload(Array.from(event.target.files ?? []))
-                    }
+                    onChange={(event) => void upload(Array.from(event.target.files ?? []))}
                 />
                 <button
                     type="button"
@@ -199,31 +163,23 @@ export default function PinEditorDialog({
                 <section className="mt-5" aria-label="Activity images">
                     <h3 className="text-12 font-bold">Activity images</h3>
                     {activityImages.length === 0 ? (
-                        <p className="text-12 text-graphite mt-2">
-                            No images attached yet.
-                        </p>
+                        <p className="text-12 text-graphite mt-2">No images attached yet.</p>
                     ) : null}
                     <ul className="mt-3 grid grid-cols-2 gap-3">
                         {activityImages.map((item, index) => (
-                            <li
-                                key={item.id}
-                                className="border-line border p-2"
-                            >
+                            <li key={item.id} className="border-line border p-2">
                                 <img
                                     src={item.thumbnailUrl}
                                     alt={`${pin.title} image ${index + 1}`}
                                     className="aspect-square w-full object-cover"
                                 />
                                 {item.id === cover?.id ? (
-                                    <span className="text-10 mt-2 block font-bold">
-                                        Activity cover
-                                    </span>
+                                    <span className="text-10 mt-2 block font-bold">Activity cover</span>
                                 ) : (
                                     <button
                                         type="button"
                                         onClick={() => {
-                                            const nextCoverId =
-                                                item.uploadedImageId ?? null;
+                                            const nextCoverId = item.uploadedImageId ?? null;
                                             onSetCover(pin.id, nextCoverId);
                                             setDraft((current) => ({
                                                 ...current,
@@ -240,13 +196,7 @@ export default function PinEditorDialog({
                                         <button
                                             type="button"
                                             disabled={index === 0}
-                                            onClick={() =>
-                                                onReorderImage(
-                                                    pin.id,
-                                                    item.id,
-                                                    -1
-                                                )
-                                            }
+                                            onClick={() => onReorderImage(pin.id, item.id, -1)}
                                             aria-label={`Move image ${index + 1} earlier`}
                                             className="underline disabled:opacity-40"
                                         >
@@ -254,17 +204,8 @@ export default function PinEditorDialog({
                                         </button>
                                         <button
                                             type="button"
-                                            disabled={
-                                                index ===
-                                                activityImages.length - 1
-                                            }
-                                            onClick={() =>
-                                                onReorderImage(
-                                                    pin.id,
-                                                    item.id,
-                                                    1
-                                                )
-                                            }
+                                            disabled={index === activityImages.length - 1}
+                                            onClick={() => onReorderImage(pin.id, item.id, 1)}
                                             aria-label={`Move image ${index + 1} later`}
                                             className="underline disabled:opacity-40"
                                         >
@@ -272,9 +213,7 @@ export default function PinEditorDialog({
                                         </button>
                                         <button
                                             type="button"
-                                            onClick={() =>
-                                                onAssignImage(item.id, null)
-                                            }
+                                            onClick={() => onAssignImage(item.id, null)}
                                             className="underline"
                                         >
                                             Detach
@@ -286,13 +225,8 @@ export default function PinEditorDialog({
                     </ul>
                 </section>
                 {availableImages.length > 0 ? (
-                    <section
-                        className="mt-5"
-                        aria-label="Other uploaded images"
-                    >
-                        <h3 className="text-12 font-bold">
-                            Attach a Board upload
-                        </h3>
+                    <section className="mt-5" aria-label="Other uploaded images">
+                        <h3 className="text-12 font-bold">Attach a Board upload</h3>
                         <ul className="mt-3 flex gap-3 overflow-x-auto">
                             {availableImages.map((item) => (
                                 <li key={item.id} className="w-24 shrink-0">
@@ -303,9 +237,7 @@ export default function PinEditorDialog({
                                     />
                                     <button
                                         type="button"
-                                        onClick={() =>
-                                            onAssignImage(item.id, pin.id)
-                                        }
+                                        onClick={() => onAssignImage(item.id, pin.id)}
                                         className="text-10 mt-1 underline"
                                     >
                                         {item.pinId ? "Move here" : "Attach"}
@@ -326,9 +258,7 @@ export default function PinEditorDialog({
                         <input
                             type="time"
                             value={draft.time}
-                            onChange={(event) =>
-                                setDraft({ ...draft, time: event.target.value })
-                            }
+                            onChange={(event) => setDraft({ ...draft, time: event.target.value })}
                             className="border-line text-15 text-foreground mt-2 w-full border-b bg-transparent py-2 outline-none"
                         />
                     </label>
@@ -383,16 +313,10 @@ export default function PinEditorDialog({
                     />
                 </label>
                 {draft.location ? (
-                    <p className="text-12 text-muted-foreground mt-4 leading-5">
-                        {draft.location.address}
-                    </p>
+                    <p className="text-12 text-muted-foreground mt-4 leading-5">{draft.location.address}</p>
                 ) : null}
                 <div className="mt-8 flex flex-wrap justify-between gap-3">
-                    <button
-                        type="button"
-                        onClick={onDelete}
-                        className="border-line text-13 border px-5 py-3"
-                    >
+                    <button type="button" onClick={onDelete} className="border-line text-13 border px-5 py-3">
                         Delete activity
                     </button>
                     <button

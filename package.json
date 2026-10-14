@@ -6,6 +6,8 @@
     "scripts": {
         "format": "prettier --write .",
         "format:check": "prettier --check .",
+        "format:apps": "prettier --write frontend backend",
+        "format:apps:check": "prettier --check frontend backend",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "keywords": [],

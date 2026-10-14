@@ -53,8 +53,17 @@ export interface BoardRepository {
     getAccess(boardId: number, userId: string | null): Promise<BoardAccess | null>;
     getBoard(boardId: number, userId?: string | null): Promise<BoardDocument | null>;
     listDrafts(userId: string, page: number, limit: number): Promise<{ items: DraftSummary[]; hasMore: boolean }>;
-    listPublished(userId: string, page: number, limit: number): Promise<{ items: PublishedSummary[]; hasMore: boolean }>;
-    saveBoard(userId: string, boardId: number | null, expectedRevision: number | null, input: BoardWrite): Promise<BoardDocument>;
+    listPublished(
+        userId: string,
+        page: number,
+        limit: number
+    ): Promise<{ items: PublishedSummary[]; hasMore: boolean }>;
+    saveBoard(
+        userId: string,
+        boardId: number | null,
+        expectedRevision: number | null,
+        input: BoardWrite
+    ): Promise<BoardDocument>;
     deleteBoard(boardId: number, userId: string): Promise<boolean>;
 }
 
@@ -65,6 +74,10 @@ export interface BoardsService {
     replace(userId: string, boardId: number, revision: number, input: BoardWrite): Promise<BoardDocument>;
     read(boardId: number, userId: string | null): Promise<BoardDocument>;
     listDrafts(userId: string, page: number, limit: number): Promise<{ items: DraftSummary[]; hasMore: boolean }>;
-    listPublished(userId: string, page: number, limit: number): Promise<{ items: PublishedSummary[]; hasMore: boolean }>;
+    listPublished(
+        userId: string,
+        page: number,
+        limit: number
+    ): Promise<{ items: PublishedSummary[]; hasMore: boolean }>;
     delete(boardId: number, userId: string): Promise<void>;
 }

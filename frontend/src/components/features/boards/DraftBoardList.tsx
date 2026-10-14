@@ -19,11 +19,7 @@ export default function DraftBoardList() {
                 setHasMore(result.hasMore);
             })
             .catch((caught: unknown) =>
-                setError(
-                    caught instanceof Error
-                        ? caught.message
-                        : "Drafts could not be loaded."
-                )
+                setError(caught instanceof Error ? caught.message : "Drafts could not be loaded.")
             );
     }, []);
 
@@ -37,11 +33,7 @@ export default function DraftBoardList() {
             setPage(nextPage);
             setHasMore(result.hasMore);
         } catch (caught) {
-            setError(
-                caught instanceof Error
-                    ? caught.message
-                    : "More drafts could not be loaded."
-            );
+            setError(caught instanceof Error ? caught.message : "More drafts could not be loaded.");
         } finally {
             setLoadingMore(false);
         }
@@ -50,9 +42,7 @@ export default function DraftBoardList() {
     return (
         <article className="text-foreground mx-auto min-h-[70dvh] max-w-5xl px-5 py-16 sm:px-10">
             <h1 className="font-display text-48 font-bold">YOUR DRAFTS</h1>
-            <p className="text-14 text-graphite mt-4">
-                Continue a Board you saved earlier.
-            </p>
+            <p className="text-14 text-graphite mt-4">Continue a Board you saved earlier.</p>
             {error ? (
                 <p className="text-14 mt-8" role="alert">
                     {error}
@@ -79,12 +69,9 @@ export default function DraftBoardList() {
                                 href={`/boards/drafts/${item.boardId}`}
                                 className="border-line hover:border-foreground block border px-5 py-4 focus-visible:outline-2 focus-visible:outline-offset-2"
                             >
-                                <strong className="font-display text-20 block">
-                                    {item.title || "Untitled Board"}
-                                </strong>
+                                <strong className="font-display text-20 block">{item.title || "Untitled Board"}</strong>
                                 <span className="text-11 text-graphite mt-1 block">
-                                    Last saved{" "}
-                                    {new Date(item.updatedAt).toLocaleString()}
+                                    Last saved {new Date(item.updatedAt).toLocaleString()}
                                 </span>
                             </Link>
                         </li>

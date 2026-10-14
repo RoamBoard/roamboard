@@ -7,12 +7,7 @@ import AddPinDialog from "@/components/features/boards/AddPinDialog";
 import PinEditorDialog from "@/components/features/boards/PinEditorDialog";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import PinCategoryIcon from "@/components/ui/PinCategoryIcon";
-import {
-    dayColors,
-    type BoardDayDraft,
-    type BoardImageDraft,
-    type BoardPinDraft
-} from "@/types/board-creator";
+import { dayColors, type BoardDayDraft, type BoardImageDraft, type BoardPinDraft } from "@/types/board-creator";
 
 type Props = {
     disabled?: boolean;
@@ -20,22 +15,14 @@ type Props = {
     images: BoardImageDraft[];
     onAddDay: () => void;
     onRemoveDay: (dayId: string) => void;
-    onAddPin: (
-        dayId: string,
-        pin: BoardPinDraft,
-        image: BoardImageDraft | null
-    ) => void;
+    onAddPin: (dayId: string, pin: BoardPinDraft, image: BoardImageDraft | null) => void;
     onUpdatePin: (pin: BoardPinDraft) => void;
     onMovePin: (pinId: string, dayId: string, time: string) => void;
     onRemovePin: (pinId: string) => void;
     onAddActivityImage: (image: BoardImageDraft) => void;
     onAssignActivityImage: (imageId: string, pinId: string | null) => void;
     onSetActivityCover: (pinId: string, imageId: number | null) => void;
-    onReorderActivityImage: (
-        pinId: string,
-        imageId: string,
-        direction: -1 | 1
-    ) => void;
+    onReorderActivityImage: (pinId: string, imageId: string, direction: -1 | 1) => void;
     confirmedPhotoPins: Set<string>;
     onConfirmPhotoPin: (pinId: string) => void;
 };
@@ -43,19 +30,14 @@ type Props = {
 function timeFromDrop(event: React.DragEvent<HTMLElement>): string {
     const bounds = event.currentTarget.getBoundingClientRect();
     const offset = event.clientY - bounds.top + event.currentTarget.scrollTop;
-    const ratio = Math.min(
-        1,
-        Math.max(0, offset / event.currentTarget.scrollHeight)
-    );
+    const ratio = Math.min(1, Math.max(0, offset / event.currentTarget.scrollHeight));
     const totalMinutes = Math.round((6 * 60 + ratio * 17 * 60) / 30) * 30;
     const hours = Math.min(23, Math.floor(totalMinutes / 60));
     return `${String(hours).padStart(2, "0")}:${String(totalMinutes % 60).padStart(2, "0")}`;
 }
 
 function scrollBehavior(): ScrollBehavior {
-    return window.matchMedia("(prefers-reduced-motion: reduce)").matches
-        ? "auto"
-        : "smooth";
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
 }
 
 function DayPhaseIcon({ phase }: { phase: "sunrise" | "day" | "night" }) {
@@ -117,46 +99,30 @@ function DayColumn({
         day.pins.map((pin) => {
             const photos = images
                 .filter((image) => image.pinId === pin.id)
-                .sort(
-                    (first, second) =>
-                        (first.activityOrder ?? first.order) -
-                        (second.activityOrder ?? second.order)
-                );
+                .sort((first, second) => (first.activityOrder ?? first.order) - (second.activityOrder ?? second.order));
             const cover =
                 pin.coverImageId === null
-                    ? (photos.find((image) => image.source === "unsplash") ??
-                      null)
-                    : (photos.find(
-                          (image) => image.uploadedImageId === pin.coverImageId
-                      ) ?? photos[0]);
+                    ? (photos.find((image) => image.source === "unsplash") ?? null)
+                    : (photos.find((image) => image.uploadedImageId === pin.coverImageId) ?? photos[0]);
             return [pin.id, cover] as const;
         })
     );
     return (
-        <article
-            className="w-[21rem] shrink-0 snap-start sm:w-[24rem]"
-            aria-labelledby={`day-${day.id}`}
-        >
+        <article className="w-[21rem] shrink-0 snap-start sm:w-[24rem]" aria-labelledby={`day-${day.id}`}>
             <div className="flex min-h-20 items-end justify-between gap-4">
                 <div>
                     <span
                         className="mb-3 block h-1 w-11"
                         style={{
-                            backgroundColor:
-                                dayColors[dayIndex % dayColors.length]
+                            backgroundColor: dayColors[dayIndex % dayColors.length]
                         }}
                     />
-                    <h3
-                        id={`day-${day.id}`}
-                        className="font-display text-30 font-bold"
-                    >
+                    <h3 id={`day-${day.id}`} className="font-display text-30 font-bold">
                         DAY {day.dayNumber}
                     </h3>
                 </div>
                 <div className="text-right">
-                    <time className="text-12 text-graphite block">
-                        {day.date ?? "date open"}
-                    </time>
+                    <time className="text-12 text-graphite block">{day.date ?? "date open"}</time>
                     {canRemoveDay ? (
                         <button
                             type="button"
@@ -169,10 +135,7 @@ function DayColumn({
                 </div>
             </div>
             <div className="relative mt-5 pl-12">
-                <div
-                    aria-hidden="true"
-                    className="border-foreground/35 absolute top-0 bottom-0 left-4 border-l-2"
-                >
+                <div aria-hidden="true" className="border-foreground/35 absolute top-0 bottom-0 left-4 border-l-2">
                     <span className="bg-background text-graphite absolute top-[7%] -left-2.5 grid size-5 place-items-center">
                         <DayPhaseIcon phase="sunrise" />
                     </span>
@@ -217,10 +180,8 @@ function DayColumn({
                     onDragOver={(event) => event.preventDefault()}
                     onDrop={(event) => {
                         event.preventDefault();
-                        const pinId =
-                            event.dataTransfer.getData("text/roamboard-pin");
-                        if (pinId)
-                            onMovePin(pinId, day.id, timeFromDrop(event));
+                        const pinId = event.dataTransfer.getData("text/roamboard-pin");
+                        if (pinId) onMovePin(pinId, day.id, timeFromDrop(event));
                     }}
                 >
                     <li aria-hidden="true" className="h-8" />
@@ -232,10 +193,7 @@ function DayColumn({
                                 draggable
                                 onDragStart={(event) => {
                                     event.dataTransfer.effectAllowed = "move";
-                                    event.dataTransfer.setData(
-                                        "text/roamboard-pin",
-                                        pin.id
-                                    );
+                                    event.dataTransfer.setData("text/roamboard-pin", pin.id);
                                 }}
                                 className="mb-3 snap-start"
                             >
@@ -248,50 +206,30 @@ function DayColumn({
                                         {pin.time}
                                     </time>
                                     {image ? (
-                                        <img
-                                            src={image.thumbnailUrl}
-                                            alt=""
-                                            className="w-20 shrink-0 object-cover"
-                                        />
+                                        <img src={image.thumbnailUrl} alt="" className="w-20 shrink-0 object-cover" />
                                     ) : (
                                         <span className="bg-faint text-graphite grid w-16 shrink-0 place-items-center">
-                                            <PinCategoryIcon
-                                                category={pin.category}
-                                                className="size-6"
-                                            />
+                                            <PinCategoryIcon category={pin.category} className="size-6" />
                                         </span>
                                     )}
                                     <span className="min-w-0 flex-1 px-4 py-3">
-                                        <strong className="text-13 block truncate font-medium">
-                                            {pin.title}
-                                        </strong>
+                                        <strong className="text-13 block truncate font-medium">{pin.title}</strong>
                                         <span className="text-10 text-graphite mt-1 block truncate">
-                                            {pin.location?.address ||
-                                                pin.description ||
-                                                "Manual activity"}
+                                            {pin.location?.address || pin.description || "Manual activity"}
                                         </span>
                                         <span className="text-9 tracking-label text-stone mt-2 inline-flex items-center gap-1 uppercase">
-                                            <PinCategoryIcon
-                                                category={pin.category}
-                                                className="size-3"
-                                            />
+                                            <PinCategoryIcon category={pin.category} className="size-3" />
                                             {pin.category}
                                         </span>
                                     </span>
-                                    <span
-                                        aria-hidden="true"
-                                        className="text-20 text-stone self-center pr-3"
-                                    >
+                                    <span aria-hidden="true" className="text-20 text-stone self-center pr-3">
                                         ›
                                     </span>
                                 </button>
-                                {pin.source === "photo" &&
-                                !confirmedPhotoPins.has(pin.id) ? (
+                                {pin.source === "photo" && !confirmedPhotoPins.has(pin.id) ? (
                                     <button
                                         type="button"
-                                        onClick={() =>
-                                            onConfirmPhotoPin(pin.id)
-                                        }
+                                        onClick={() => onConfirmPhotoPin(pin.id)}
                                         className="border-foreground text-10 text-foreground mt-1 border-b"
                                     >
                                         confirm photo location
@@ -302,8 +240,7 @@ function DayColumn({
                     })}
                     {day.pins.length === 0 ? (
                         <li className="border-line text-12 text-stone grid h-[28rem] place-items-center border border-dashed px-8 text-center">
-                            No pins yet. Add an activity or drop one here from
-                            another day.
+                            No pins yet. Add an activity or drop one here from another day.
                         </li>
                     ) : null}
                     <li aria-hidden="true" className="h-24" />
@@ -342,10 +279,7 @@ export default function DayPlanner({
     const [editingPinId, setEditingPinId] = useState<string | null>(null);
     const [removingDayId, setRemovingDayId] = useState<string | null>(null);
     const dialogDay = days.find((day) => day.id === dialogDayId) ?? null;
-    const editingPin =
-        days
-            .flatMap((day) => day.pins)
-            .find((pin) => pin.id === editingPinId) ?? null;
+    const editingPin = days.flatMap((day) => day.pins).find((pin) => pin.id === editingPinId) ?? null;
     const removingDay = days.find((day) => day.id === removingDayId) ?? null;
 
     function requestRemoveDay(day: BoardDayDraft) {
@@ -422,9 +356,8 @@ export default function DayPlanner({
                 </button>
             </div>
             <p className="text-12 text-graphite mt-2">
-                Drag a pin vertically to change its time, or drop it into
-                another day. Day lists scroll independently and times snap to
-                30-minute intervals.
+                Drag a pin vertically to change its time, or drop it into another day. Day lists scroll independently
+                and times snap to 30-minute intervals.
             </p>
             {dialogDay ? (
                 <AddPinDialog
@@ -439,11 +372,7 @@ export default function DayPlanner({
                 <PinEditorDialog
                     pin={editingPin}
                     images={images}
-                    remainingUploads={
-                        10 -
-                        images.filter((image) => image.source === "upload")
-                            .length
-                    }
+                    remainingUploads={10 - images.filter((image) => image.source === "upload").length}
                     onClose={() => setEditingPinId(null)}
                     onSave={onUpdatePin}
                     onDelete={() => {

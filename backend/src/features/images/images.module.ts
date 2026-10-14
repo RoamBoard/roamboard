@@ -24,6 +24,8 @@ export function createImagesModule(
     const service = createImagesService(repository, provider, boards);
     return {
         router: createImagesRouter(createImagesController(service), attachUser),
-        service, repository, provider
+        service,
+        repository,
+        provider
     };
 }

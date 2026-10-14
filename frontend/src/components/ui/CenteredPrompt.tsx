@@ -4,11 +4,7 @@ type Props = {
     name?: string;
 };
 
-export default function CenteredPrompt({
-    placeholder,
-    label,
-    name = "destination"
-}: Props) {
+export default function CenteredPrompt({ placeholder, label, name = "destination" }: Props) {
     return (
         <div className="grid place-items-center text-center">
             <input

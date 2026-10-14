@@ -1,12 +1,6 @@
 "use client";
 
-import {
-    useEffect,
-    useId,
-    useRef,
-    type MouseEvent,
-    type ReactNode
-} from "react";
+import { useEffect, useId, useRef, type MouseEvent, type ReactNode } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import BoardIcon from "@/components/features/boards/BoardIcon";
 

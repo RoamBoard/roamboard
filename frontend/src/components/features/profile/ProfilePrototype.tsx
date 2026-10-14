@@ -7,10 +7,7 @@ import type { FormEvent } from "react";
 import VisitedWorldMap from "@/components/features/profile/VisitedWorldMap";
 import CountryCombobox from "@/components/ui/CountryCombobox";
 import { findCountry, type Country } from "@/lib/countries";
-import {
-    searchBoardDestinations,
-    type MapboxSearchResult
-} from "@/lib/providers";
+import { searchBoardDestinations, type MapboxSearchResult } from "@/lib/providers";
 import {
     createBoard,
     deleteProfilePicture,
@@ -59,16 +56,10 @@ export default function ProfilePrototype() {
     const [status, setStatus] = useState("Loading the seeded database user…");
     const [busy, setBusy] = useState(false);
     const [countryQuery, setCountryQuery] = useState("");
-    const [selectedCountry, setSelectedCountry] = useState<Country | null>(
-        null
-    );
+    const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
     const [cityQuery, setCityQuery] = useState("");
-    const [destinationResults, setDestinationResults] = useState<
-        MapboxSearchResult[]
-    >([]);
-    const [selectedDestinations, setSelectedDestinations] = useState<
-        SelectedDestination[]
-    >([]);
+    const [destinationResults, setDestinationResults] = useState<MapboxSearchResult[]>([]);
+    const [selectedDestinations, setSelectedDestinations] = useState<SelectedDestination[]>([]);
     const [destinationStatus, setDestinationStatus] = useState("");
     const [destinationLoading, setDestinationLoading] = useState(false);
 
@@ -93,18 +84,11 @@ export default function ProfilePrototype() {
                 setStatus("Loaded from the API.");
             })
             .catch((caught: unknown) =>
-                setStatus(
-                    caught instanceof Error
-                        ? caught.message
-                        : "The profile could not be loaded."
-                )
+                setStatus(caught instanceof Error ? caught.message : "The profile could not be loaded.")
             );
     }, []);
 
-    async function run(
-        action: () => Promise<unknown>,
-        success: string
-    ): Promise<boolean> {
+    async function run(action: () => Promise<unknown>, success: string): Promise<boolean> {
         setBusy(true);
         setStatus("Saving…");
         try {
@@ -113,9 +97,7 @@ export default function ProfilePrototype() {
             setStatus(success);
             return true;
         } catch (caught) {
-            setStatus(
-                caught instanceof Error ? caught.message : "The request failed."
-            );
+            setStatus(caught instanceof Error ? caught.message : "The request failed.");
             return false;
         } finally {
             setBusy(false);
@@ -126,25 +108,16 @@ export default function ProfilePrototype() {
         const country = selectedCountry ?? findCountry(countryQuery);
         const city = cityQuery.trim();
         if (!country || !city) {
-            setDestinationStatus(
-                !country
-                    ? "Choose an existing country from the suggestions."
-                    : "Enter a city."
-            );
+            setDestinationStatus(!country ? "Choose an existing country from the suggestions." : "Enter a city.");
             setDestinationResults([]);
             return;
         }
         setDestinationLoading(true);
         setDestinationStatus("Checking the city and country…");
         try {
-            const results = (
-                await searchBoardDestinations(country.code, city)
-            ).filter(
+            const results = (await searchBoardDestinations(country.code, city)).filter(
                 (result) =>
-                    result.placeType === "place" &&
-                    result.country &&
-                    result.countryCode === country.code &&
-                    result.city
+                    result.placeType === "place" && result.country && result.countryCode === country.code && result.city
             );
             setDestinationResults(results);
             setDestinationStatus(
@@ -154,11 +127,7 @@ export default function ProfilePrototype() {
             );
         } catch (caught) {
             setDestinationResults([]);
-            setDestinationStatus(
-                caught instanceof Error
-                    ? caught.message
-                    : "The destination could not be checked."
-            );
+            setDestinationStatus(caught instanceof Error ? caught.message : "The destination could not be checked.");
         } finally {
             setDestinationLoading(false);
         }
@@ -166,11 +135,7 @@ export default function ProfilePrototype() {
 
     function addDestination(result: MapboxSearchResult) {
         if (!result.country || !result.countryCode || !result.city) return;
-        if (
-            selectedDestinations.some(
-                (destination) => destination.providerId === result.id
-            )
-        ) {
+        if (selectedDestinations.some((destination) => destination.providerId === result.id)) {
             setDestinationStatus("That city is already on this Board.");
             return;
         }
@@ -212,9 +177,7 @@ export default function ProfilePrototype() {
 
     async function savePicture(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        const url = String(
-            new FormData(event.currentTarget).get("pictureUrl") ?? ""
-        );
+        const url = String(new FormData(event.currentTarget).get("pictureUrl") ?? "");
         await run(() => setProfilePicture(url), "Profile picture saved.");
     }
 
@@ -223,9 +186,7 @@ export default function ProfilePrototype() {
         const form = event.currentTarget;
         const data = new FormData(form);
         if (!selectedDestinations.length) {
-            setDestinationStatus(
-                "Add at least one verified city before creating the Board."
-            );
+            setDestinationStatus("Add at least one verified city before creating the Board.");
             return;
         }
         const saved = await run(
@@ -233,21 +194,13 @@ export default function ProfilePrototype() {
                 createBoard({
                     title: String(data.get("title") ?? ""),
                     isCompleted: data.get("isCompleted") === "on",
-                    destinations: selectedDestinations.map(
-                        ({
-                            country,
-                            countryCode,
-                            city,
-                            latitude,
-                            longitude
-                        }) => ({
-                            country,
-                            countryCode,
-                            city,
-                            latitude,
-                            longitude
-                        })
-                    )
+                    destinations: selectedDestinations.map(({ country, countryCode, city, latitude, longitude }) => ({
+                        country,
+                        countryCode,
+                        city,
+                        latitude,
+                        longitude
+                    }))
                 }),
             "Board created; stats and map data refreshed."
         );
@@ -261,9 +214,7 @@ export default function ProfilePrototype() {
     if (!profile)
         return (
             <section className="w-full max-w-5xl px-6 py-14 sm:px-10 lg:px-20">
-                <h1 className="font-display text-48 font-bold">
-                    Profile API prototype
-                </h1>
+                <h1 className="font-display text-48 font-bold">Profile API prototype</h1>
                 <p className="mt-5" role="status">
                     {status}
                 </p>
@@ -275,19 +226,12 @@ export default function ProfilePrototype() {
             <p className="text-10 tracking-label text-graphite font-bold uppercase">
                 Developer lab · PostgreSQL-backed with Docker
             </p>
-            <h1 className="font-display text-48 mt-5 leading-none font-bold">
-                Profile API prototype
-            </h1>
+            <h1 className="font-display text-48 mt-5 leading-none font-bold">Profile API prototype</h1>
             <p className="text-15 text-graphite mt-5 max-w-3xl leading-7">
-                Changes here target the seeded{" "}
-                <strong>@{profile.username}</strong> user. The username is
-                intentionally read-only. With the Docker API running, refreshes
-                and API restarts preserve these changes.
+                Changes here target the seeded <strong>@{profile.username}</strong> user. The username is intentionally
+                read-only. With the Docker API running, refreshes and API restarts preserve these changes.
             </p>
-            <p
-                className="border-foreground text-14 mt-5 border-l-2 pl-3"
-                role="status"
-            >
+            <p className="border-foreground text-14 mt-5 border-l-2 pl-3" role="status">
                 {status}
             </p>
 
@@ -296,43 +240,24 @@ export default function ProfilePrototype() {
                     {Object.entries(stats).map(([label, value]) => (
                         <div className="bg-background p-4" key={label}>
                             <dt className="text-11 text-graphite">
-                                {label.replace(
-                                    /[A-Z]/g,
-                                    (letter) => ` ${letter.toLowerCase()}`
-                                )}
+                                {label.replace(/[A-Z]/g, (letter) => ` ${letter.toLowerCase()}`)}
                             </dt>
-                            <dd className="font-display text-30 mt-2 font-bold">
-                                {value}
-                            </dd>
+                            <dd className="font-display text-30 mt-2 font-bold">{value}</dd>
                         </div>
                     ))}
                 </dl>
             ) : null}
 
             <div className="mt-12 grid gap-12 lg:grid-cols-2">
-                <form
-                    onSubmit={(event) => void saveProfile(event)}
-                    className="space-y-5"
-                >
-                    <h2 className="font-display text-28 font-bold">
-                        Editable profile
-                    </h2>
+                <form onSubmit={(event) => void saveProfile(event)} className="space-y-5">
+                    <h2 className="font-display text-28 font-bold">Editable profile</h2>
                     <label className="text-12 text-graphite block">
                         Username
-                        <input
-                            className={inputClass}
-                            value={profile.username}
-                            disabled
-                        />
+                        <input className={inputClass} value={profile.username} disabled />
                     </label>
                     <label className="text-12 text-graphite block">
                         Display name
-                        <input
-                            name="displayName"
-                            className={inputClass}
-                            defaultValue={profile.displayName}
-                            required
-                        />
+                        <input name="displayName" className={inputClass} defaultValue={profile.displayName} required />
                     </label>
                     <label className="text-12 text-graphite block">
                         Description
@@ -345,19 +270,11 @@ export default function ProfilePrototype() {
                     </label>
                     <label className="text-12 text-graphite block">
                         Location
-                        <input
-                            name="location"
-                            className={inputClass}
-                            defaultValue={profile.location ?? ""}
-                        />
+                        <input name="location" className={inputClass} defaultValue={profile.location ?? ""} />
                     </label>
                     <label className="text-12 text-graphite block">
                         Interests, separated by commas
-                        <input
-                            name="interests"
-                            className={inputClass}
-                            defaultValue={profile.interests.join(", ")}
-                        />
+                        <input name="interests" className={inputClass} defaultValue={profile.interests.join(", ")} />
                     </label>
                     <button
                         disabled={busy}
@@ -368,9 +285,7 @@ export default function ProfilePrototype() {
                 </form>
 
                 <div>
-                    <h2 className="font-display text-28 font-bold">
-                        Profile picture
-                    </h2>
+                    <h2 className="font-display text-28 font-bold">Profile picture</h2>
                     {profile.profilePicture ? (
                         <div className="mt-5">
                             <img
@@ -382,25 +297,15 @@ export default function ProfilePrototype() {
                                 type="button"
                                 className="text-13 mt-3 block underline"
                                 disabled={busy}
-                                onClick={() =>
-                                    void run(
-                                        deleteProfilePicture,
-                                        "Profile picture removed."
-                                    )
-                                }
+                                onClick={() => void run(deleteProfilePicture, "Profile picture removed.")}
                             >
                                 Delete picture
                             </button>
                         </div>
                     ) : (
-                        <p className="text-14 text-graphite mt-4">
-                            No profile picture is saved.
-                        </p>
+                        <p className="text-14 text-graphite mt-4">No profile picture is saved.</p>
                     )}
-                    <form
-                        className="mt-6"
-                        onSubmit={(event) => void savePicture(event)}
-                    >
+                    <form className="mt-6" onSubmit={(event) => void savePicture(event)}>
                         <label className="text-12 text-graphite block">
                             Image URL
                             <input
@@ -421,16 +326,10 @@ export default function ProfilePrototype() {
                 </div>
             </div>
 
-            <form
-                onSubmit={(event) => void addBoard(event)}
-                className="border-line mt-16 border-t pt-10"
-            >
-                <h2 className="font-display text-28 font-bold">
-                    Create a test Board
-                </h2>
+            <form onSubmit={(event) => void addBoard(event)} className="border-line mt-16 border-t pt-10">
+                <h2 className="font-display text-28 font-bold">Create a test Board</h2>
                 <p className="text-14 text-graphite mt-2">
-                    Every Board needs at least one verified city. Add as many
-                    cities and countries as the trip covers.
+                    Every Board needs at least one verified city. Add as many cities and countries as the trip covers.
                 </p>
                 <div className="mt-5 grid gap-5 sm:grid-cols-2">
                     <label className="text-12 text-graphite">
@@ -468,11 +367,7 @@ export default function ProfilePrototype() {
                 <button
                     type="button"
                     className="border-foreground text-14 mt-5 border px-5 py-3 disabled:opacity-50"
-                    disabled={
-                        destinationLoading ||
-                        !findCountry(countryQuery) ||
-                        !cityQuery.trim()
-                    }
+                    disabled={destinationLoading || !findCountry(countryQuery) || !cityQuery.trim()}
                     onClick={() => void findDestination()}
                 >
                     {destinationLoading ? "Checking…" : "Find city"}
@@ -493,12 +388,9 @@ export default function ProfilePrototype() {
                                     <strong className="text-14 block">
                                         {result.city}, {result.country}
                                     </strong>
+                                    <span className="text-12 text-graphite mt-1 block">{result.address}</span>
                                     <span className="text-12 text-graphite mt-1 block">
-                                        {result.address}
-                                    </span>
-                                    <span className="text-12 text-graphite mt-1 block">
-                                        {result.countryCode} ·{" "}
-                                        {result.latitude.toFixed(4)},{" "}
+                                        {result.countryCode} · {result.latitude.toFixed(4)},{" "}
                                         {result.longitude.toFixed(4)}
                                     </span>
                                 </span>
@@ -529,12 +421,10 @@ export default function ProfilePrototype() {
                                     </span>
                                     <span>
                                         <strong className="text-14 block">
-                                            {destination.city},{" "}
-                                            {destination.country}
+                                            {destination.city}, {destination.country}
                                         </strong>
                                         <span className="text-12 text-graphite mt-1 block">
-                                            {destination.countryCode} ·{" "}
-                                            {destination.latitude.toFixed(4)},{" "}
+                                            {destination.countryCode} · {destination.latitude.toFixed(4)},{" "}
                                             {destination.longitude.toFixed(4)}
                                         </span>
                                     </span>
@@ -543,11 +433,7 @@ export default function ProfilePrototype() {
                                         className="text-12 ml-auto underline"
                                         onClick={() =>
                                             setSelectedDestinations((current) =>
-                                                current.filter(
-                                                    (item) =>
-                                                        item.providerId !==
-                                                        destination.providerId
-                                                )
+                                                current.filter((item) => item.providerId !== destination.providerId)
                                             )
                                         }
                                     >
@@ -578,13 +464,7 @@ export default function ProfilePrototype() {
     );
 }
 
-function BoardList({
-    title,
-    boards
-}: {
-    title: string;
-    boards: ProfileBoard[];
-}) {
+function BoardList({ title, boards }: { title: string; boards: ProfileBoard[] }) {
     return (
         <section>
             <h2 className="font-display text-28 font-bold">{title}</h2>
@@ -593,16 +473,10 @@ function BoardList({
                     {boards.map((board) => (
                         <li className="border-line border p-4" key={board.id}>
                             <strong>{board.title}</strong>
-                            <span className="text-11 text-graphite ml-2 uppercase">
-                                {board.visibility}
-                            </span>
+                            <span className="text-11 text-graphite ml-2 uppercase">{board.visibility}</span>
                             <p className="text-12 text-graphite mt-1">
                                 {board.destinations
-                                    .map(
-                                        (destination) =>
-                                            destination.city ??
-                                            destination.country
-                                    )
+                                    .map((destination) => destination.city ?? destination.country)
                                     .join(", ") || "No destination"}
                             </p>
                         </li>

@@ -5,8 +5,7 @@ import AppShell from "@/components/layout/AppShell";
 
 export const metadata: Metadata = {
     title: "Create a new Board | Roamboard",
-    description:
-        "Build and preview a travel Board from photos, places, and activities."
+    description: "Build and preview a travel Board from photos, places, and activities."
 };
 
 export default function NewBoardPage() {

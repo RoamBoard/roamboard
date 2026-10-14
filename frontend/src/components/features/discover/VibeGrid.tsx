@@ -28,8 +28,7 @@ export default function VibeGrid() {
                                 rel="noreferrer"
                                 className="underline underline-offset-4"
                             >
-                                {tag.name}: {tag.gridImage.photographer} /{" "}
-                                {tag.gridImage.provider}
+                                {tag.name}: {tag.gridImage.photographer} / {tag.gridImage.provider}
                             </a>
                         </li>
                     ))}

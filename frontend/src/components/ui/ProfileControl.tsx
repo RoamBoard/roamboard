@@ -25,8 +25,7 @@ export default function ProfileControl({ user = null }: ProfileControlProps) {
     const [scrolled, setScrolled] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
     const reducedMotion = useReducedMotion();
-    const displayUser =
-        user ?? (sessionUser ? { name: sessionUser.displayName } : null);
+    const displayUser = user ?? (sessionUser ? { name: sessionUser.displayName } : null);
 
     useEffect(() => {
         function handleScroll() {
@@ -53,8 +52,7 @@ export default function ProfileControl({ user = null }: ProfileControlProps) {
                 if (state.active) setSessionUser(currentUser);
             })
             .catch(() => {
-                if (state.active)
-                    setLogoutError("Account status is unavailable.");
+                if (state.active) setLogoutError("Account status is unavailable.");
             })
             .finally(() => {
                 if (state.active) setLoaded(true);
@@ -72,9 +70,7 @@ export default function ProfileControl({ user = null }: ProfileControlProps) {
             setSessionUser(null);
             router.replace("/login");
         } catch (cause) {
-            setLogoutError(
-                cause instanceof Error ? cause.message : "Could not sign out."
-            );
+            setLogoutError(cause instanceof Error ? cause.message : "Could not sign out.");
         } finally {
             setSigningOut(false);
         }
@@ -92,25 +88,15 @@ export default function ProfileControl({ user = null }: ProfileControlProps) {
             transition={{ duration: reducedMotion ? 0 : 0.2 }}
             className="fixed top-4 right-4 z-30 h-24 w-32"
         >
-            <div
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-0"
-            >
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0">
                 <span className="bg-decorative-line absolute top-[18%] right-[9%] left-0 h-0.5" />
                 <span className="bg-decorative-line absolute top-0 right-[17%] h-[39%] w-0.5" />
                 <span className="bg-decorative-line absolute top-[25%] bottom-0 left-[32%] w-0.5" />
                 <span className="bg-decorative-line absolute top-[84%] right-0 left-[16%] h-0.5" />
             </div>
-            <DropdownMenu
-                modal={false}
-                open={menuOpen}
-                onOpenChange={setMenuOpen}
-            >
+            <DropdownMenu modal={false} open={menuOpen} onOpenChange={setMenuOpen}>
                 <DropdownMenuTrigger asChild>
-                    <button
-                        type="button"
-                        className={`${controlClasses} cursor-pointer truncate`}
-                    >
+                    <button type="button" className={`${controlClasses} cursor-pointer truncate`}>
                         {displayUser ? (
                             displayUser.name
                         ) : (
@@ -136,10 +122,7 @@ export default function ProfileControl({ user = null }: ProfileControlProps) {
                             <DropdownMenuItem asChild>
                                 <Link href="/profile">My profile</Link>
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                                asChild
-                                disabled={Boolean(user) || signingOut}
-                            >
+                            <DropdownMenuItem asChild disabled={Boolean(user) || signingOut}>
                                 <button
                                     type="button"
                                     disabled={Boolean(user) || signingOut}

@@ -29,17 +29,10 @@ export default function CloudinaryPanel({ configured }: Props) {
         setError("");
         setMessage("");
         try {
-            const uploaded = await Promise.all(
-                files.map((file) => uploadCloudinaryProvider(file))
-            );
+            const uploaded = await Promise.all(files.map((file) => uploadCloudinaryProvider(file)));
             setAssets((current) => [
                 ...uploaded,
-                ...current.filter(
-                    (item) =>
-                        !uploaded.some(
-                            (next) => next.publicId === item.publicId
-                        )
-                )
+                ...current.filter((item) => !uploaded.some((next) => next.publicId === item.publicId))
             ]);
             setSelected(uploaded[0] ?? null);
             setDeliveryUrl("");
@@ -47,11 +40,7 @@ export default function CloudinaryPanel({ configured }: Props) {
                 `${uploaded.length} image${uploaded.length === 1 ? "" : "s"} uploaded. Select an image to inspect its Cloudinary metadata and delivery options.`
             );
         } catch (caught) {
-            setError(
-                caught instanceof Error
-                    ? caught.message
-                    : "Cloudinary upload failed."
-            );
+            setError(caught instanceof Error ? caught.message : "Cloudinary upload failed.");
         } finally {
             setLoading(false);
             event.target.value = "";
@@ -68,17 +57,9 @@ export default function CloudinaryPanel({ configured }: Props) {
             const result = await loadCloudinaryProviderMetadata(asset.publicId);
             const enriched = { ...asset, metadata: result.metadata };
             setSelected(enriched);
-            setAssets((current) =>
-                current.map((item) =>
-                    item.publicId === asset.publicId ? enriched : item
-                )
-            );
+            setAssets((current) => current.map((item) => (item.publicId === asset.publicId ? enriched : item)));
         } catch (caught) {
-            setError(
-                caught instanceof Error
-                    ? caught.message
-                    : "Could not extract image metadata."
-            );
+            setError(caught instanceof Error ? caught.message : "Could not extract image metadata.");
         } finally {
             setLoadingMetadata(false);
         }
@@ -100,11 +81,7 @@ export default function CloudinaryPanel({ configured }: Props) {
             );
             if (loaded[0]) await inspect(loaded[0]);
         } catch (caught) {
-            setError(
-                caught instanceof Error
-                    ? caught.message
-                    : "Could not load Cloudinary assets."
-            );
+            setError(caught instanceof Error ? caught.message : "Could not load Cloudinary assets.");
         } finally {
             setLoading(false);
         }
@@ -114,31 +91,19 @@ export default function CloudinaryPanel({ configured }: Props) {
         if (!selected) return;
         setError("");
         try {
-            const result = await buildCloudinaryDelivery(
-                selected.publicId,
-                "1200",
-                "675",
-                "fill"
-            );
+            const result = await buildCloudinaryDelivery(selected.publicId, "1200", "675", "fill");
             setDeliveryUrl(result.url);
         } catch (caught) {
-            setError(
-                caught instanceof Error
-                    ? caught.message
-                    : "Could not build the delivery URL."
-            );
+            setError(caught instanceof Error ? caught.message : "Could not build the delivery URL.");
         }
     }
 
     if (!configured) {
         return (
             <div className="border-line mt-8 border p-6">
-                <h2 className="font-display text-24 text-foreground font-bold">
-                    Cloudinary
-                </h2>
+                <h2 className="font-display text-24 text-foreground font-bold">Cloudinary</h2>
                 <p className="text-14 text-graphite mt-5 leading-6">
-                    Add Cloudinary cloud name, API key, and API secret to upload
-                    images and inspect their metadata.
+                    Add Cloudinary cloud name, API key, and API secret to upload images and inspect their metadata.
                 </p>
             </div>
         );
@@ -147,18 +112,12 @@ export default function CloudinaryPanel({ configured }: Props) {
     return (
         <div className="border-line mt-8 border p-6">
             <div className="flex flex-wrap items-baseline justify-between gap-3">
-                <h2 className="font-display text-24 text-foreground font-bold">
-                    Upload and inspect images
-                </h2>
-                <span className="text-10 tracking-label text-graphite font-bold uppercase">
-                    configured
-                </span>
+                <h2 className="font-display text-24 text-foreground font-bold">Upload and inspect images</h2>
+                <span className="text-10 tracking-label text-graphite font-bold uppercase">configured</span>
             </div>
             <p className="text-14 text-graphite mt-3 max-w-2xl leading-6">
-                Upload JPG, PNG, WebP, HEIC, or another image type supported by
-                Cloudinary. The backend keeps the key private, uploads the
-                original, reads metadata, and can hand GPS coordinates to
-                Mapbox.
+                Upload JPG, PNG, WebP, HEIC, or another image type supported by Cloudinary. The backend keeps the key
+                private, uploads the original, reads metadata, and can hand GPS coordinates to Mapbox.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
                 <label className="border-foreground bg-foreground text-14 text-background cursor-pointer border px-5 py-3">
@@ -202,22 +161,15 @@ export default function CloudinaryPanel({ configured }: Props) {
                                 : "border-line border p-2"
                         }
                     >
-                        <button
-                            type="button"
-                            className="block w-full text-left"
-                            onClick={() => void inspect(asset)}
-                        >
+                        <button type="button" className="block w-full text-left" onClick={() => void inspect(asset)}>
                             <img
                                 className="aspect-video w-full object-cover"
                                 src={asset.thumbnailUrl}
                                 alt={`Cloudinary asset ${asset.publicId.split("/").at(-1) ?? "image"}`}
                             />
                             <figcaption className="text-12 text-graphite mt-3 leading-5">
-                                <strong className="text-foreground block">
-                                    {asset.publicId.split("/").at(-1)}
-                                </strong>
-                                {asset.width} × {asset.height} ·{" "}
-                                {asset.format.toUpperCase()} ·{" "}
+                                <strong className="text-foreground block">{asset.publicId.split("/").at(-1)}</strong>
+                                {asset.width} × {asset.height} · {asset.format.toUpperCase()} ·{" "}
                                 {(asset.bytes / 1024).toFixed(0)} KB
                             </figcaption>
                         </button>
@@ -226,39 +178,21 @@ export default function CloudinaryPanel({ configured }: Props) {
             </div>
 
             {selected ? (
-                <section
-                    className="border-line mt-10 border-t pt-6"
-                    aria-labelledby="cloudinary-metadata-heading"
-                >
-                    <h3
-                        id="cloudinary-metadata-heading"
-                        className="font-display text-22 text-foreground font-bold"
-                    >
+                <section className="border-line mt-10 border-t pt-6" aria-labelledby="cloudinary-metadata-heading">
+                    <h3 id="cloudinary-metadata-heading" className="font-display text-22 text-foreground font-bold">
                         Extracted metadata
                     </h3>
                     {loadingMetadata ? (
                         <p className="text-14 text-graphite mt-4">
-                            Reading EXIF, XMP, and GPS metadata from
-                            Cloudinary...
+                            Reading EXIF, XMP, and GPS metadata from Cloudinary...
                         </p>
                     ) : null}
                     {!loadingMetadata && selected.metadata ? (
                         <>
                             <div className="text-14 text-graphite mt-4 grid gap-3 sm:grid-cols-2">
-                                <p>
-                                    Captured:{" "}
-                                    {selected.metadata.capturedAt ??
-                                        "Not embedded"}
-                                </p>
-                                <p>
-                                    Camera:{" "}
-                                    {selected.metadata.camera ?? "Not embedded"}
-                                </p>
-                                <p>
-                                    Orientation:{" "}
-                                    {selected.metadata.orientation ??
-                                        "Not embedded"}
-                                </p>
+                                <p>Captured: {selected.metadata.capturedAt ?? "Not embedded"}</p>
+                                <p>Camera: {selected.metadata.camera ?? "Not embedded"}</p>
+                                <p>Orientation: {selected.metadata.orientation ?? "Not embedded"}</p>
                                 <p>
                                     GPS:{" "}
                                     {selected.metadata.hasGps
@@ -268,24 +202,16 @@ export default function CloudinaryPanel({ configured }: Props) {
                             </div>
                             <details className="border-line text-12 text-graphite mt-5 border p-4">
                                 <summary className="text-foreground cursor-pointer font-bold">
-                                    Raw embedded metadata (
-                                    {Object.keys(selected.metadata.raw).length}{" "}
-                                    fields)
+                                    Raw embedded metadata ({Object.keys(selected.metadata.raw).length} fields)
                                 </summary>
                                 <pre className="mt-4 max-h-80 overflow-auto break-words whitespace-pre-wrap">
-                                    {JSON.stringify(
-                                        selected.metadata.raw,
-                                        null,
-                                        2
-                                    )}
+                                    {JSON.stringify(selected.metadata.raw, null, 2)}
                                 </pre>
                             </details>
                         </>
                     ) : null}
                     {!loadingMetadata && !selected.metadata ? (
-                        <p className="text-14 text-graphite mt-4">
-                            Select an image to ask Cloudinary for metadata.
-                        </p>
+                        <p className="text-14 text-graphite mt-4">Select an image to ask Cloudinary for metadata.</p>
                     ) : null}
                     {selected.metadata?.hasGps ? (
                         <a

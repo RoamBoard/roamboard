@@ -12,10 +12,7 @@ export default function WelcomeScreen({ username }: Props) {
         <main className="font-body bg-background text-foreground relative h-dvh min-h-128 w-full overflow-hidden">
             <h1 className="sr-only">Welcome back, {username}</h1>
 
-            <div
-                className="pointer-events-none absolute inset-0"
-                aria-hidden="true"
-            >
+            <div className="pointer-events-none absolute inset-0" aria-hidden="true">
                 <span className="bg-faint absolute inset-y-0 left-[2.25%] w-px" />
                 <span className="bg-faint absolute inset-y-0 right-[2.25%] w-px" />
                 <span className="bg-faint absolute inset-x-0 top-[3.5%] h-px" />

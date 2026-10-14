@@ -3,24 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowUpRight, MapPin, Layers } from "lucide-react";
-import {
-    Command,
-    CommandInput,
-    CommandList,
-    CommandEmpty,
-    CommandGroup,
-    CommandItem
-} from "@/components/ui/command";
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
 import TagIcon from "@/components/ui/TagIcon";
 import { boardTags, boardTagHref } from "@/data/board-tags";
-import {
-    discoverCollections,
-    discoverCollectionHref
-} from "@/data/discover-collections";
-import {
-    discoverDestinations,
-    discoverDestinationHref
-} from "@/data/discover-destinations";
+import { discoverCollections, discoverCollectionHref } from "@/data/discover-collections";
+import { discoverDestinations, discoverDestinationHref } from "@/data/discover-destinations";
 
 function normalizeSearch(text: string) {
     return text
@@ -39,25 +26,17 @@ export default function DiscoverSearch() {
         router.push(href);
     }
     return (
-        <section
-            aria-label="Search Discover"
-            className="mt-12 max-w-5xl md:mt-16"
-        >
+        <section aria-label="Search Discover" className="mt-12 max-w-5xl md:mt-16">
             <Command
                 label="Find a vibe, collection, or destination"
                 filter={(value, search, keywords = []) => {
-                    const content = normalizeSearch(
-                        [value, ...keywords].join(" ")
-                    );
+                    const content = normalizeSearch([value, ...keywords].join(" "));
                     const words = normalizeSearch(search).trim().split(/\s+/);
-                    return words.every((word) => content.includes(word))
-                        ? 1
-                        : 0;
+                    return words.every((word) => content.includes(word)) ? 1 : 0;
                 }}
                 onFocusCapture={() => setOpen(true)}
                 onBlurCapture={(event) => {
-                    if (!event.currentTarget.contains(event.relatedTarget))
-                        setOpen(false);
+                    if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
                 }}
                 onKeyDown={(event) => {
                     if (!open && event.key === "Enter") {
@@ -68,8 +47,7 @@ export default function DiscoverSearch() {
                         event.preventDefault();
                         setOpen(false);
                     }
-                    if (event.key === "ArrowDown" || event.key === "ArrowUp")
-                        setOpen(true);
+                    if (event.key === "ArrowDown" || event.key === "ArrowUp") setOpen(true);
                 }}
             >
                 <CommandInput
@@ -84,30 +62,18 @@ export default function DiscoverSearch() {
                     aria-expanded={open}
                 />
                 <CommandList hidden={!open} className="border-line border-b">
-                    <CommandEmpty>
-                        No matching categories or destinations. Try another
-                        name.
-                    </CommandEmpty>
+                    <CommandEmpty>No matching categories or destinations. Try another name.</CommandEmpty>
                     <CommandGroup heading="Collections">
                         {discoverCollections.map((collection) => (
                             <CommandItem
                                 key={collection.id}
                                 value={`collection:${collection.id}`}
-                                keywords={[
-                                    collection.title,
-                                    collection.description
-                                ]}
-                                onSelect={() =>
-                                    navigate(discoverCollectionHref(collection))
-                                }
+                                keywords={[collection.title, collection.description]}
+                                onSelect={() => navigate(discoverCollectionHref(collection))}
                             >
                                 <Layers size={16} aria-hidden="true" />
                                 <span>{collection.title}</span>
-                                <ArrowUpRight
-                                    className="ml-auto"
-                                    size={14}
-                                    aria-hidden="true"
-                                />
+                                <ArrowUpRight className="ml-auto" size={14} aria-hidden="true" />
                             </CommandItem>
                         ))}
                     </CommandGroup>
@@ -116,23 +82,12 @@ export default function DiscoverSearch() {
                             <CommandItem
                                 key={destination.countryCode}
                                 value={`destination:${destination.countryCode}`}
-                                keywords={[
-                                    destination.name,
-                                    destination.description
-                                ]}
-                                onSelect={() =>
-                                    navigate(
-                                        discoverDestinationHref(destination)
-                                    )
-                                }
+                                keywords={[destination.name, destination.description]}
+                                onSelect={() => navigate(discoverDestinationHref(destination))}
                             >
                                 <MapPin size={16} aria-hidden="true" />
                                 <span>{destination.name}</span>
-                                <ArrowUpRight
-                                    className="ml-auto"
-                                    size={14}
-                                    aria-hidden="true"
-                                />
+                                <ArrowUpRight className="ml-auto" size={14} aria-hidden="true" />
                             </CommandItem>
                         ))}
                     </CommandGroup>
@@ -146,29 +101,18 @@ export default function DiscoverSearch() {
                             >
                                 <TagIcon tag={tag} size={16} />
                                 <span>{tag.name}</span>
-                                <ArrowUpRight
-                                    className="ml-auto"
-                                    size={14}
-                                    aria-hidden="true"
-                                />
+                                <ArrowUpRight className="ml-auto" size={14} aria-hidden="true" />
                             </CommandItem>
                         ))}
                     </CommandGroup>
                 </CommandList>
             </Command>
-            <p
-                id="discover-search-note"
-                className="text-muted-foreground text-12 mt-4"
-            >
-                Explore vibes, collections, and destinations. Public Board
-                search is coming soon.
+            <p id="discover-search-note" className="text-muted-foreground text-12 mt-4">
+                Explore vibes, collections, and destinations. Public Board search is coming soon.
             </p>
-            <p
-                id="discover-preview-note"
-                className="text-muted-foreground text-12 mt-3"
-            >
-                Board counts and editorial selections are sample content.
-                Opening and saving Boards are not connected yet.
+            <p id="discover-preview-note" className="text-muted-foreground text-12 mt-3">
+                Board counts and editorial selections are sample content. Opening and saving Boards are not connected
+                yet.
             </p>
         </section>
     );

@@ -1,7 +1,5 @@
 export function sessionCookieName(): string {
-    return process.env.NODE_ENV === "production"
-        ? "__Host-roamboard_session"
-        : "roamboard_session";
+    return process.env.NODE_ENV === "production" ? "__Host-roamboard_session" : "roamboard_session";
 }
 
 export function readSessionCookie(header: string | undefined): string | null {

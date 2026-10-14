@@ -1,8 +1,6 @@
 import type { ReactNode } from "react";
 import Sidebar from "@/components/layout/Sidebar";
-import ProfileControl, {
-    type ProfileControlProps
-} from "@/components/ui/ProfileControl";
+import ProfileControl, { type ProfileControlProps } from "@/components/ui/ProfileControl";
 
 type Props = {
     children: ReactNode;
@@ -11,12 +9,7 @@ type Props = {
     discover?: { collapsed: boolean };
 };
 
-export default function AppShell({
-    children,
-    activeHref,
-    profile = {},
-    discover
-}: Props) {
+export default function AppShell({ children, activeHref, profile = {}, discover }: Props) {
     return (
         <div
             className={
@@ -26,13 +19,7 @@ export default function AppShell({
             }
         >
             <Sidebar activeHref={activeHref} discover={discover} />
-            <main
-                className={
-                    discover
-                        ? "grid min-h-0 min-w-0"
-                        : "grid min-h-0 min-w-0 overflow-y-auto"
-                }
-            >
+            <main className={discover ? "grid min-h-0 min-w-0" : "grid min-h-0 min-w-0 overflow-y-auto"}>
                 {children}
             </main>
             <ProfileControl {...profile} />
