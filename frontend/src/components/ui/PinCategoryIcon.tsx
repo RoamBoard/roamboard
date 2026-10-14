@@ -111,10 +111,7 @@ const paths: Record<PinCategory, React.ReactNode> = {
     )
 };
 
-export default function PinCategoryIcon({
-    category,
-    className = "size-5"
-}: Props) {
+export default function PinCategoryIcon({ category, className = "size-5" }: Props) {
     return (
         <svg
             aria-hidden="true"

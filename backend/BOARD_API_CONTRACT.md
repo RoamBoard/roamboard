@@ -12,14 +12,14 @@ This version excludes the separate Vibe and Highlights controls. Vibes are simpl
 
 ## Access and lifecycle
 
-| Resource/action                     | Anonymous   | Owner                | Board editor                 | Board viewer, friend, or other signed-in user |
-| ----------------------------------- | ----------- | -------------------- | ---------------------------- | --------------------------------------------- |
-| Create Board or upload a photo      | No          | Yes, for own content | No creator access            | No                                            |
-| Read a draft or its photos          | No          | Yes                  | No                           | No                                            |
-| Replace draft content or publish it | No          | Yes                  | No                           | No                                            |
-| Read a published Board              | Public only | Yes                  | Yes                          | According to Board visibility                 |
+| Resource/action                     | Anonymous   | Owner                | Board editor                   | Board viewer, friend, or other signed-in user |
+| ----------------------------------- | ----------- | -------------------- | ------------------------------ | --------------------------------------------- |
+| Create Board or upload a photo      | No          | Yes, for own content | No creator access              | No                                            |
+| Read a draft or its photos          | No          | Yes                  | No                             | No                                            |
+| Replace draft content or publish it | No          | Yes                  | No                             | No                                            |
+| Read a published Board              | Public only | Yes                  | Yes                            | According to Board visibility                 |
 | Change published content            | No          | Yes                  | Yes, with unchanged visibility | No                                            |
-| Change visibility or delete Board   | No          | Yes                  | No                           | No                                            |
+| Change visibility or delete Board   | No          | Yes                  | No                             | No                                            |
 
 `visibility` is `collaborators | friends | public`, defaulting to `collaborators`. The current creator's `private` option maps to `collaborators`: invited members can read a published Board, and with no members it is effectively owner-only. `friends` additionally permits accepted friends of the owner; `public` permits anonymous reads. **Draft status overrides visibility:** only the owner can read a draft, even if its selected visibility is `public`.
 
@@ -261,6 +261,7 @@ The creator must show upload, save, load, validation, and authorization failures
 ## Open points for review
 
 All initial review items have been resolved and agreed:
+
 1. Proposed nested full-document request/response shape is accepted and implemented in both frontend and backend.
 2. The 40 travel tag seed and 19 activity categories are seeded in the database and integrated with the creator UI.
 

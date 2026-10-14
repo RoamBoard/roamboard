@@ -6,6 +6,7 @@ export const mockOwnerId = "mock-user-1";
 
 // Image URLs use existing local SVG placeholders. "upload" simulates the
 // source of a future user photo; no upload has taken place.
+// The published viewer also uses public boards from this list.
 export const mockBoards: Board[] = [
     // A new Board can have no destination, dates, cover, or content yet.
     {
@@ -30,9 +31,7 @@ export const mockBoards: Board[] = [
         visibility: "public",
         isCompleted: false,
         tags: ["foodie", "hiking"],
-        destinations: [
-            { country: "Japan", countryCode: "JP", cities: ["Tokyo"] }
-        ],
+        destinations: [{ country: "Japan", countryCode: "JP", cities: ["Tokyo"] }],
         startDate: "2026-11-14",
         endDate: "2026-11-15",
         durationDays: 2,
@@ -61,8 +60,7 @@ export const mockBoards: Board[] = [
                     city: "Tokyo",
                     // Simulated selection only. This placeholder is not a real Google place ID.
                     googlePlaceId: "mock-google-place-senso-ji",
-                    googleMapsUrl:
-                        "https://www.google.com/maps/search/?api=1&query=35.7148%2C139.7967"
+                    googleMapsUrl: "https://www.google.com/maps/search/?api=1&query=35.7148%2C139.7967"
                 },
                 date: "2026-11-14",
                 time: "10:00",
@@ -109,9 +107,7 @@ export const mockBoards: Board[] = [
         visibility: "friends",
         isCompleted: true,
         tags: ["foodie", "hiking", "photography"],
-        destinations: [
-            { country: "Denmark", countryCode: "DK", cities: ["Copenhagen"] }
-        ],
+        destinations: [{ country: "Denmark", countryCode: "DK", cities: ["Copenhagen"] }],
         startDate: "2026-08-22",
         endDate: "2026-08-22",
         durationDays: 1,
@@ -128,8 +124,7 @@ export const mockBoards: Board[] = [
                 id: "mock-item-copenhagen-harbour",
                 type: "activity",
                 title: "Morning at Nyhavn",
-                description:
-                    "We walked along the harbour and took photos of the boats.",
+                description: "We walked along the harbour and took photos of the boats.",
                 location: {
                     id: "mock-location-nyhavn",
                     source: "manual",
@@ -175,8 +170,7 @@ export const mockBoards: Board[] = [
         id: "mock-board-europe",
         ownerId: mockOwnerId,
         title: "Two weeks by train",
-        description:
-            "Start in France, continue through Switzerland, then visit Italy.",
+        description: "Start in France, continue through Switzerland, then visit Italy.",
         visibility: "private",
         isCompleted: false,
         tags: ["nature", "culture"],

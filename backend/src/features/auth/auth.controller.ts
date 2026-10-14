@@ -28,9 +28,7 @@ export function createAuthController(service: AuthService): AuthController {
             ...cookieOptions(),
             maxAge: SESSION_MAX_AGE_MS
         });
-        response
-            .status(200)
-            .json({ data: { user: result.user, isNew: result.isNew } });
+        response.status(200).json({ data: { user: result.user, isNew: result.isNew } });
     };
 
     const me: RequestHandler = async (request, response) => {

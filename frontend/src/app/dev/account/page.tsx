@@ -8,10 +8,7 @@ export const metadata: Metadata = {
 
 export default function AccountPreviewPage() {
     return (
-        <AppShell
-            activeHref="/dev/account"
-            profile={{ user: { name: "Preview user" } }}
-        >
+        <AppShell activeHref="/dev/account" profile={{ user: { name: "Preview user" } }}>
             <div className="grid place-items-center px-16 text-center">
                 <p>Account Page</p>
             </div>

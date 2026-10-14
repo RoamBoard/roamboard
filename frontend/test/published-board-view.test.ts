@@ -4,9 +4,7 @@ import test from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import PublishedBoardView, {
-    ImageDetailDialog
-} from "../src/components/features/boards/PublishedBoardView";
+import PublishedBoardView, { ImageDetailDialog } from "../src/components/features/boards/PublishedBoardView";
 import type { BoardDocument } from "../src/lib/board-creator-api";
 
 test("published board view renders all activities without 5-pin truncation and includes pin notes and location", () => {
@@ -167,10 +165,7 @@ test("published board view renders all activities without 5-pin truncation and i
     assert.match(markup, /Kamogawa Riverside/);
 
     // Verifies pin notes / descriptions are displayed
-    assert.match(
-        markup,
-        /Wake up early to walk through thousand torii gates\./
-    );
+    assert.match(markup, /Wake up early to walk through thousand torii gates\./);
     assert.match(markup, /Historic wooden temple overlooking the city\./);
     assert.match(markup, /Sixth activity of the day\./);
     assert.match(markup, /Seventh activity of the day\./);
@@ -183,14 +178,8 @@ test("published board view renders all activities without 5-pin truncation and i
     // Verifies cover and image thumbnails are interactive buttons to view in detail
     assert.match(markup, /alt="Cover of Kyoto Highlights"/);
     assert.match(markup, /thumbs\/fushimi\.jpg/);
-    assert.match(
-        markup,
-        /aria-label="View cover image of Kyoto Highlights in detail"/
-    );
-    assert.match(
-        markup,
-        /aria-label="View photo for Fushimi Inari Taisha in detail"/
-    );
+    assert.match(markup, /aria-label="View cover image of Kyoto Highlights in detail"/);
+    assert.match(markup, /aria-label="View photo for Fushimi Inari Taisha in detail"/);
 });
 
 test("image detail dialog renders accessible modal with photo, title, and attribution", () => {

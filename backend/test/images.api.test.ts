@@ -10,8 +10,13 @@ import type { AuthRepository, GoogleVerifier } from "../src/features/auth/auth.t
 import type { BoardAccess, BoardRepository } from "../src/features/boards/boards.types.js";
 import { createCloudinaryProvider } from "../src/features/images/images.cloudinary.js";
 import { createImagesService } from "../src/features/images/images.service.js";
-import type { ImageProvider, ImagesRepository, ProviderAsset,
-    UploadedImage, UploadIntent } from "../src/features/images/images.types.js";
+import type {
+    ImageProvider,
+    ImagesRepository,
+    ProviderAsset,
+    UploadedImage,
+    UploadIntent
+} from "../src/features/images/images.types.js";
 
 const origin = "http://localhost:3000";
 const ownerCookie = "roamboard_session=owner-token";
@@ -24,16 +29,28 @@ function fakeAuth(): { repository: AuthRepository; googleVerifier: GoogleVerifie
     ]);
     return {
         repository: {
-            async findUserById() { return null; },
-            async createUser() { return null; },
-            async createSession() { /* not used */ },
+            async findUserById() {
+                return null;
+            },
+            async createUser() {
+                return null;
+            },
+            async createSession() {
+                /* not used */
+            },
             async findUserBySession(hash) {
                 const userId = tokens.get(hash);
                 return userId ? { userId, username: userId, displayName: userId } : null;
             },
-            async deleteSession() { /* not used */ }
+            async deleteSession() {
+                /* not used */
+            }
         },
-        googleVerifier: { async verify() { throw new Error("not used"); } }
+        googleVerifier: {
+            async verify() {
+                throw new Error("not used");
+            }
+        }
     };
 }
 
@@ -47,34 +64,60 @@ function setup() {
     let opened = 0;
     const provider: ImageProvider = {
         authorizeUpload(storageKey) {
-            return { uploadUrl: "https://api.cloudinary.test/image/upload",
-                method: "POST", headers: {}, formFields: { public_id: storageKey } };
+            return {
+                uploadUrl: "https://api.cloudinary.test/image/upload",
+                method: "POST",
+                headers: {},
+                formFields: { public_id: storageKey }
+            };
         },
         async inspect(storageKey): Promise<ProviderAsset | null> {
-            return ready ? { storageKey, format: "jpg", byteSize: 3000,
-                createdAt: new Date(), capturedAt: new Date("2026-05-01T10:00:00Z"),
-                latitude: 35.68, longitude: 139.76 } : null;
+            return ready
+                ? {
+                      storageKey,
+                      format: "jpg",
+                      byteSize: 3000,
+                      createdAt: new Date(),
+                      capturedAt: new Date("2026-05-01T10:00:00Z"),
+                      latitude: 35.68,
+                      longitude: 139.76
+                  }
+                : null;
         },
         async openVariant() {
             opened += 1;
             return { stream: Readable.from(Buffer.from("jpeg-data")), contentType: "image/jpeg" };
         },
-        async destroy(storageKey) { deleted.push(storageKey); }
+        async destroy(storageKey) {
+            deleted.push(storageKey);
+        }
     };
     const imagesRepository: ImagesRepository = {
-        async createIntent(intent) { intents.set(intent.uploadId, intent); },
-        async findIntent(uploadId) { return intents.get(uploadId) ?? null; },
+        async createIntent(intent) {
+            intents.set(intent.uploadId, intent);
+        },
+        async findIntent(uploadId) {
+            return intents.get(uploadId) ?? null;
+        },
         async completeIntent(intent, asset) {
             const existing = intents.get(intent.uploadId)!;
             if (existing.imageId !== null) return existing.imageId;
             const imageId = 12;
-            images.set(imageId, { imageId, storageKey: asset.storageKey,
-                uploaderUserId: intent.userId, boardId: null, capturedAt: asset.capturedAt,
-                latitude: asset.latitude, longitude: asset.longitude });
+            images.set(imageId, {
+                imageId,
+                storageKey: asset.storageKey,
+                uploaderUserId: intent.userId,
+                boardId: null,
+                capturedAt: asset.capturedAt,
+                latitude: asset.latitude,
+                longitude: asset.longitude
+            });
             intents.set(intent.uploadId, { ...existing, imageId });
             return imageId;
         },
-        async findImage(imageId) { return images.get(imageId) ?? null; },
+        async findImage(imageId) {
+            return images.get(imageId) ?? null;
+        },
         async listCleanupCandidates() {
             return [{ imageId: 12, storageKey: images.get(12)!.storageKey, uploadId: null }];
         },
@@ -83,69 +126,140 @@ function setup() {
             await removeAsset();
             return images.delete(imageId);
         },
-        async cleanupIntent() { return false; }
+        async cleanupIntent() {
+            return false;
+        }
     };
     const boardRepository: BoardRepository = {
-        async listTags() { return []; },
-        async listCategories() { return []; },
-        async getAccess(boardId) {
-            return boardId === 1 ? { boardId, ownerUserId: "owner", status: boardStatus,
-                visibility: boardVisibility, revision: 1, memberRole: null, isFriend: false } : null;
+        async listTags() {
+            return [];
         },
-        async getBoard() { return null; },
-        async listDrafts() { return { items: [], hasMore: false }; },
-        async listPublished() { return { items: [], hasMore: false }; },
-        async saveBoard() { throw new Error("not used"); },
-        async deleteBoard() { return false; }
+        async listCategories() {
+            return [];
+        },
+        async getAccess(boardId) {
+            return boardId === 1
+                ? {
+                      boardId,
+                      ownerUserId: "owner",
+                      status: boardStatus,
+                      visibility: boardVisibility,
+                      revision: 1,
+                      memberRole: null,
+                      isFriend: false
+                  }
+                : null;
+        },
+        async getBoard() {
+            return null;
+        },
+        async listDrafts() {
+            return { items: [], hasMore: false };
+        },
+        async listPublished() {
+            return { items: [], hasMore: false };
+        },
+        async saveBoard() {
+            throw new Error("not used");
+        },
+        async deleteBoard() {
+            return false;
+        }
     };
     return {
         app: createApp({ ...fakeAuth(), boardRepository, imagesRepository, imageProvider: provider }),
-        images, deleted, imagesRepository, boardRepository, provider,
-        setReady(value: boolean) { ready = value; },
-        setBoard(status: BoardAccess["status"], visibility: BoardAccess["visibility"]) {
-            boardStatus = status; boardVisibility = visibility;
+        images,
+        deleted,
+        imagesRepository,
+        boardRepository,
+        provider,
+        setReady(value: boolean) {
+            ready = value;
         },
-        getOpened() { return opened; }
+        setBoard(status: BoardAccess["status"], visibility: BoardAccess["visibility"]) {
+            boardStatus = status;
+            boardVisibility = visibility;
+        },
+        getOpened() {
+            return opened;
+        }
     };
 }
 
 test("photo upload intent, completion, idempotence, ownership and streaming access", async () => {
     const fake = setup();
     const api = request(fake.app);
-    assert.equal((await api.post("/api/v1/images/upload-intents").set("Origin", origin)
-        .send({ fileName: "a.jpg", contentType: "image/jpeg", sizeBytes: 3000 })).status, 401);
-    assert.equal((await api.post("/api/v1/images/upload-intents").set("Cookie", ownerCookie)
-        .set("Origin", "https://evil.example")
-        .send({ fileName: "a.jpg", contentType: "image/jpeg", sizeBytes: 3000 })).status, 403);
-    const oversized = await api.post("/api/v1/images/upload-intents")
-        .set("Cookie", ownerCookie).set("Origin", origin)
+    assert.equal(
+        (
+            await api
+                .post("/api/v1/images/upload-intents")
+                .set("Origin", origin)
+                .send({ fileName: "a.jpg", contentType: "image/jpeg", sizeBytes: 3000 })
+        ).status,
+        401
+    );
+    assert.equal(
+        (
+            await api
+                .post("/api/v1/images/upload-intents")
+                .set("Cookie", ownerCookie)
+                .set("Origin", "https://evil.example")
+                .send({ fileName: "a.jpg", contentType: "image/jpeg", sizeBytes: 3000 })
+        ).status,
+        403
+    );
+    const oversized = await api
+        .post("/api/v1/images/upload-intents")
+        .set("Cookie", ownerCookie)
+        .set("Origin", origin)
         .send({ fileName: "big.heic", contentType: "image/heic", sizeBytes: 10_000_001 });
     assert.equal(oversized.status, 413);
     assert.equal(oversized.body.error.code, "IMAGE_TOO_LARGE");
-    assert.equal((await api.post("/api/v1/images/upload-intents")
-        .set("Cookie", ownerCookie).set("Origin", origin)
-        .send({ fileName: "a.svg", contentType: "image/svg+xml", sizeBytes: 3000 })).status, 400);
+    assert.equal(
+        (
+            await api
+                .post("/api/v1/images/upload-intents")
+                .set("Cookie", ownerCookie)
+                .set("Origin", origin)
+                .send({ fileName: "a.svg", contentType: "image/svg+xml", sizeBytes: 3000 })
+        ).status,
+        400
+    );
 
-    const intent = await api.post("/api/v1/images/upload-intents")
-        .set("Cookie", ownerCookie).set("Origin", origin)
+    const intent = await api
+        .post("/api/v1/images/upload-intents")
+        .set("Cookie", ownerCookie)
+        .set("Origin", origin)
         .send({ fileName: "a.heic", contentType: "image/heic", sizeBytes: 3000 });
     assert.equal(intent.status, 200);
     assert.match(intent.body.data.uploadId, /^[0-9a-f-]{36}$/);
     assert.match(intent.body.data.formFields.public_id, /^roamboard\//);
     const uploadId = intent.body.data.uploadId as string;
-    assert.equal((await api.post("/api/v1/images/complete")
-        .set("Cookie", otherCookie).set("Origin", origin).send({ uploadId })).status, 404);
-    assert.equal((await api.post("/api/v1/images/complete")
-        .set("Cookie", ownerCookie).set("Origin", origin).send({ uploadId })).status, 409);
+    assert.equal(
+        (await api.post("/api/v1/images/complete").set("Cookie", otherCookie).set("Origin", origin).send({ uploadId }))
+            .status,
+        404
+    );
+    assert.equal(
+        (await api.post("/api/v1/images/complete").set("Cookie", ownerCookie).set("Origin", origin).send({ uploadId }))
+            .status,
+        409
+    );
     fake.setReady(true);
-    const completed = await api.post("/api/v1/images/complete")
-        .set("Cookie", ownerCookie).set("Origin", origin).send({ uploadId });
+    const completed = await api
+        .post("/api/v1/images/complete")
+        .set("Cookie", ownerCookie)
+        .set("Origin", origin)
+        .send({ uploadId });
     assert.equal(completed.status, 201);
     assert.equal(completed.body.data.imageId, 12);
     assert.equal(completed.body.data.latitude, 35.68);
     assert.equal(completed.body.data.url, "/api/v1/images/12/content?variant=display");
-    assert.equal((await api.post("/api/v1/images/complete")
-        .set("Cookie", ownerCookie).set("Origin", origin).send({ uploadId })).body.data.imageId, 12);
+    assert.equal(
+        (await api.post("/api/v1/images/complete").set("Cookie", ownerCookie).set("Origin", origin).send({ uploadId }))
+            .body.data.imageId,
+        12
+    );
 
     assert.equal((await api.get("/api/v1/images/12/content")).status, 404);
     assert.equal((await api.get("/api/v1/images/12/content").set("Cookie", otherCookie)).status, 404);
@@ -156,8 +270,7 @@ test("photo upload intent, completion, idempotence, ownership and streaming acce
     assert.equal(ownerImage.headers["cross-origin-resource-policy"], "cross-origin");
     assert.equal((ownerImage.body as Buffer).toString(), "jpeg-data");
     assert.equal(fake.getOpened(), 1);
-    assert.equal((await api.get("/api/v1/images/12/content?variant=original")
-        .set("Cookie", ownerCookie)).status, 400);
+    assert.equal((await api.get("/api/v1/images/12/content?variant=original").set("Cookie", ownerCookie)).status, 400);
 
     fake.images.get(12)!.boardId = 1;
     assert.equal((await api.get("/api/v1/images/12/content")).status, 404);
@@ -168,12 +281,16 @@ test("photo upload intent, completion, idempotence, ownership and streaming acce
 
 test("cleanup removes only unlinked images", async () => {
     const fake = setup();
-    const intent = await request(fake.app).post("/api/v1/images/upload-intents")
-        .set("Cookie", ownerCookie).set("Origin", origin)
+    const intent = await request(fake.app)
+        .post("/api/v1/images/upload-intents")
+        .set("Cookie", ownerCookie)
+        .set("Origin", origin)
         .send({ fileName: "a.jpg", contentType: "image/jpeg", sizeBytes: 3000 });
     fake.setReady(true);
-    await request(fake.app).post("/api/v1/images/complete")
-        .set("Cookie", ownerCookie).set("Origin", origin)
+    await request(fake.app)
+        .post("/api/v1/images/complete")
+        .set("Cookie", ownerCookie)
+        .set("Origin", origin)
         .send({ uploadId: intent.body.data.uploadId });
     const service = createImagesService(fake.imagesRepository, fake.provider, fake.boardRepository);
     fake.images.get(12)!.boardId = 1;

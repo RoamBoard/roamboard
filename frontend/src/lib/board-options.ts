@@ -122,29 +122,9 @@ export function categoryFromLocationType(type: string): PinCategory {
     const category = pinCategories.find((item) => item.value === type);
     if (category) return category.value;
     if (type === "place") return "city";
-    if (
-        [
-            "locality",
-            "neighborhood",
-            "suburb",
-            "quarter",
-            "district",
-            "region",
-            "country"
-        ].includes(type)
-    )
+    if (["locality", "neighborhood", "suburb", "quarter", "district", "region", "country"].includes(type))
         return "neighborhood";
-    if (
-        [
-            "postcode",
-            "street",
-            "building",
-            "block",
-            "address",
-            "secondary_address"
-        ].includes(type)
-    )
-        return "address";
+    if (["postcode", "street", "building", "block", "address", "secondary_address"].includes(type)) return "address";
     return "other";
 }
 

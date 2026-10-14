@@ -3,10 +3,7 @@ import cors from "cors";
 import helmet from "helmet";
 
 import { checkDatabase } from "./db.js";
-import {
-    createAuthModule,
-    type AuthModuleOptions
-} from "./features/auth/auth.module.js";
+import { createAuthModule, type AuthModuleOptions } from "./features/auth/auth.module.js";
 import { createBoardsModule } from "./features/boards/boards.module.js";
 import type { BoardRepository } from "./features/boards/boards.types.js";
 import { createImagesModule } from "./features/images/images.module.js";
@@ -49,8 +46,7 @@ export function createApp(options: AppOptions = {}): Express {
     const auth = createAuthModule(options);
     const attachUser = attachSessionUser(auth.service);
     const boards = createBoardsModule(attachUser, options.boardRepository);
-    const images = createImagesModule(attachUser, boards.repository,
-        options.imagesRepository, options.imageProvider);
+    const images = createImagesModule(attachUser, boards.repository, options.imagesRepository, options.imageProvider);
     app.use("/api/v1/auth", auth.router);
     app.use("/api/v1", boards.router);
     app.use("/api/v1", images.router);

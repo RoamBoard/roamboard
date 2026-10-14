@@ -13,6 +13,7 @@
     --line: #d2d2d2; /* slate */
     --faint: #e7e7e7; /* porcelain */
     --decorative-line: #bdbdbd; /* stone */
+    --board-highlight: #acffd1;
 }
 
 .dark {
@@ -23,16 +24,15 @@
     --line: #383838;
     --faint: #2a2a2a;
     --decorative-line: #383838;
+    --board-highlight: #264f39;
 }
 
 /* Roamboard brand tokens (Tailwind v4). */
 /* Taken from Figma board */
 @theme inline {
     /* Typefaces: variables are registered in layout.tsx */
-    --font-display:
-        var(--font-cabinet), ui-sans-serif, system-ui, sans-serif; /* Cabinet Grotesk (primary) */
-    --font-body:
-        var(--font-satoshi), ui-sans-serif, system-ui, sans-serif; /* Satoshi (secondary) */
+    --font-display: var(--font-cabinet), ui-sans-serif, system-ui, sans-serif; /* Cabinet Grotesk (primary) */
+    --font-body: var(--font-satoshi), ui-sans-serif, system-ui, sans-serif; /* Satoshi (secondary) */
 
     /* Semantic colours (flip in dark mode) */
     --color-background: var(--background);
@@ -41,6 +41,7 @@
     --color-line: var(--line);
     --color-faint: var(--faint);
     --color-decorative-line: var(--decorative-line);
+    --color-board-highlight: var(--board-highlight);
 
     /* Colour palette */
     --color-obsidian: #161616;

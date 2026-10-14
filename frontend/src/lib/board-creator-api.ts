@@ -1,9 +1,4 @@
-import type {
-    BoardCreatorPayload,
-    BoardDayDraft,
-    BoardImageDraft,
-    BoardPinDraft
-} from "@/types/board-creator";
+import type { BoardCreatorPayload, BoardDayDraft, BoardImageDraft, BoardPinDraft } from "@/types/board-creator";
 
 const apiOrigin = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
@@ -22,23 +17,17 @@ async function requestEnvelope<T>(
             ...init.headers
         }
     }).catch(() => {
-        throw new Error(
-            `The Board API is unavailable at ${apiOrigin}. Start the backend and try again.`
-        );
+        throw new Error(`The Board API is unavailable at ${apiOrigin}. Start the backend and try again.`);
     });
     if (!response.headers.get("content-type")?.includes("application/json")) {
-        throw new Error(
-            `The Board API returned ${response.status} instead of JSON. Check the API URL (${apiOrigin}).`
-        );
+        throw new Error(`The Board API returned ${response.status} instead of JSON. Check the API URL (${apiOrigin}).`);
     }
     const body = (await response.json()) as {
         data?: T;
         meta?: { hasMore?: boolean };
     } & ApiError;
     if (!response.ok || body.data === undefined) {
-        throw new Error(
-            body.error?.message ?? `Board request failed (${response.status}).`
-        );
+        throw new Error(body.error?.message ?? `Board request failed (${response.status}).`);
     }
     return { data: body.data, meta: body.meta };
 }
@@ -108,10 +97,7 @@ export type BoardDocument = Omit<BoardWriteRequest, "days"> & {
         Omit<BoardWriteRequest["days"][number], "dayId" | "activities"> & {
             dayId: number;
             activities: Array<
-                Omit<
-                    BoardWriteRequest["days"][number]["activities"][number],
-                    "activityId"
-                > & { activityId: number }
+                Omit<BoardWriteRequest["days"][number]["activities"][number], "activityId"> & { activityId: number }
             >;
         }
     >;
@@ -131,41 +117,30 @@ export type PublishedSummary = DraftSummary & {
     visibility: BoardWriteRequest["visibility"];
 };
 
-export const listBoardTags = () =>
-    request<Array<{ tagId: number; name: string }>>("/api/v1/tags");
+export const listBoardTags = () => request<Array<{ tagId: number; name: string }>>("/api/v1/tags");
 export async function listBoardDrafts(page = 1): Promise<{
     items: DraftSummary[];
     hasMore: boolean;
 }> {
-    const response = await requestEnvelope<DraftSummary[]>(
-        `/api/v1/boards?scope=drafts&page=${page}`
-    );
+    const response = await requestEnvelope<DraftSummary[]>(`/api/v1/boards?scope=drafts&page=${page}`);
     return { items: response.data, hasMore: response.meta?.hasMore ?? false };
 }
 export async function listPublishedBoards(page = 1): Promise<{
     items: PublishedSummary[];
     hasMore: boolean;
 }> {
-    const response = await requestEnvelope<PublishedSummary[]>(
-        `/api/v1/boards?scope=published&page=${page}`
-    );
+    const response = await requestEnvelope<PublishedSummary[]>(`/api/v1/boards?scope=published&page=${page}`);
     return {
         items: response.data.map((item) => ({
             ...item,
-            coverImageUrl: item.coverImageUrl
-                ? new URL(item.coverImageUrl, apiOrigin).toString()
-                : null
+            coverImageUrl: item.coverImageUrl ? new URL(item.coverImageUrl, apiOrigin).toString() : null
         })),
         hasMore: response.meta?.hasMore ?? false
     };
 }
-export const loadBoardDocument = (boardId: number) =>
-    request<BoardDocument>(`/api/v1/boards/${boardId}`);
+export const loadBoardDocument = (boardId: number) => request<BoardDocument>(`/api/v1/boards/${boardId}`);
 
-export function saveBoardDocument(
-    input: BoardWriteRequest,
-    board?: BoardDocument | null
-): Promise<BoardDocument> {
+export function saveBoardDocument(input: BoardWriteRequest, board?: BoardDocument | null): Promise<BoardDocument> {
     return board
         ? request<BoardDocument>(`/api/v1/boards/${board.boardId}`, {
               method: "PUT",
@@ -182,11 +157,8 @@ export function toBoardWrite(
     tags: Array<{ tagId: number; name: string }>,
     confirmedPhotoPins: Set<string>
 ): BoardWriteRequest {
-    const tagIds = draft.tags.map(
-        (name) => tags.find((tag) => tag.name === name)?.tagId
-    );
-    if (tagIds.some((id) => id === undefined))
-        throw new Error("Select tags from the allowed list.");
+    const tagIds = draft.tags.map((name) => tags.find((tag) => tag.name === name)?.tagId);
+    if (tagIds.some((id) => id === undefined)) throw new Error("Select tags from the allowed list.");
     const uploaded = draft.images.filter((image) => image.source === "upload");
     if (uploaded.some((image) => image.uploadedImageId === undefined)) {
         throw new Error("An image has not finished uploading. Try again.");
@@ -207,18 +179,11 @@ export function toBoardWrite(
                 const pinImages = uploaded
                     .filter((image) => image.pinId === pin.id)
                     .sort(
-                        (first, second) =>
-                            (first.activityOrder ?? first.order) -
-                            (second.activityOrder ?? second.order)
+                        (first, second) => (first.activityOrder ?? first.order) - (second.activityOrder ?? second.order)
                     );
-                const external = draft.images.find(
-                    (image) =>
-                        image.pinId === pin.id && image.source === "unsplash"
-                );
+                const external = draft.images.find((image) => image.pinId === pin.id && image.source === "unsplash");
                 return {
-                    ...(pin.serverActivityId
-                        ? { activityId: pin.serverActivityId }
-                        : {}),
+                    ...(pin.serverActivityId ? { activityId: pin.serverActivityId } : {}),
                     position,
                     title: pin.title,
                     activityTime: pin.time || null,
@@ -236,22 +201,13 @@ export function toBoardWrite(
                               externalPlaceId: pin.location.mapboxId
                           }
                         : null,
-                    locationConfirmed:
-                        pin.source === "photo"
-                            ? confirmedPhotoPins.has(pin.id)
-                            : pin.location !== null,
-                    uploadedImageIds: pinImages.map(
-                        (image) => image.uploadedImageId!
-                    ),
+                    locationConfirmed: pin.source === "photo" ? confirmedPhotoPins.has(pin.id) : pin.location !== null,
+                    uploadedImageIds: pinImages.map((image) => image.uploadedImageId!),
                     coverImageId:
                         pin.coverImageId === undefined
                             ? (pinImages[0]?.uploadedImageId ?? null)
                             : pin.coverImageId !== null &&
-                                pinImages.some(
-                                    (image) =>
-                                        image.uploadedImageId ===
-                                        pin.coverImageId
-                                )
+                                pinImages.some((image) => image.uploadedImageId === pin.coverImageId)
                               ? pin.coverImageId
                               : null,
                     externalImage: external
@@ -285,8 +241,7 @@ export function fromBoardDocument(board: BoardDocument): {
         pins: day.activities.map((activity) => {
             const id = crypto.randomUUID();
             pinIds.set(activity.activityId, id);
-            if (activity.source === "photo" && activity.locationConfirmed)
-                confirmedPhotoPins.add(id);
+            if (activity.source === "photo" && activity.locationConfirmed) confirmedPhotoPins.add(id);
             return {
                 id,
                 serverActivityId: activity.activityId,
@@ -368,8 +323,7 @@ export function fromBoardDocument(board: BoardDocument): {
 function contentType(file: File): string {
     if (file.type) return file.type;
     const extension = file.name.split(".").pop()?.toLowerCase();
-    if (extension === "heic" || extension === "heif")
-        return `image/${extension}`;
+    if (extension === "heic" || extension === "heif") return `image/${extension}`;
     throw new Error("Choose a JPEG, PNG, WebP, HEIC, or HEIF image.");
 }
 
@@ -395,17 +349,13 @@ export async function uploadBoardImage(file: File): Promise<{
         })
     });
     const form = new FormData();
-    for (const [key, value] of Object.entries(intent.formFields))
-        form.append(key, value);
+    for (const [key, value] of Object.entries(intent.formFields)) form.append(key, value);
     form.append("file", file, file.name);
     const upload = await fetch(intent.uploadUrl, {
         method: intent.method,
         body: form
     });
-    if (!upload.ok)
-        throw new Error(
-            `Image storage rejected the upload (${upload.status}).`
-        );
+    if (!upload.ok) throw new Error(`Image storage rejected the upload (${upload.status}).`);
     const image = await request<{
         imageId: number;
         url: string;
@@ -440,29 +390,20 @@ export function mergeServerIds(
             sentDay.pins.forEach((sentPin, pinIndex) => {
                 const serverAct = serverDay.activities[pinIndex];
                 if (serverAct) {
-                    serverActivityIdByLocalPinId.set(
-                        sentPin.id,
-                        serverAct.activityId
-                    );
-                    serverCoverImageByLocalPinId.set(
-                        sentPin.id,
-                        serverAct.coverImageId
-                    );
+                    serverActivityIdByLocalPinId.set(sentPin.id, serverAct.activityId);
+                    serverCoverImageByLocalPinId.set(sentPin.id, serverAct.coverImageId);
                 }
             });
         }
     });
 
     return currentDays.map((day) => {
-        const serverDayId =
-            serverDayIdByLocalDayId.get(day.id) ?? day.serverDayId;
+        const serverDayId = serverDayIdByLocalDayId.get(day.id) ?? day.serverDayId;
         return {
             ...day,
             serverDayId,
             pins: day.pins.map((pin) => {
-                const serverActivityId =
-                    serverActivityIdByLocalPinId.get(pin.id) ??
-                    pin.serverActivityId;
+                const serverActivityId = serverActivityIdByLocalPinId.get(pin.id) ?? pin.serverActivityId;
                 const coverImageId = serverCoverImageByLocalPinId.has(pin.id)
                     ? (serverCoverImageByLocalPinId.get(pin.id) ?? null)
                     : pin.coverImageId;
@@ -476,23 +417,15 @@ export function mergeServerIds(
     });
 }
 
-export function mergeServerImages(
-    currentImages: BoardImageDraft[],
-    savedBoard: BoardDocument
-): BoardImageDraft[] {
-    const serverImageById = new Map(
-        savedBoard.images.map((img) => [img.imageId, img])
-    );
+export function mergeServerImages(currentImages: BoardImageDraft[], savedBoard: BoardDocument): BoardImageDraft[] {
+    const serverImageById = new Map(savedBoard.images.map((img) => [img.imageId, img]));
     return currentImages.map((img) => {
         if (img.uploadedImageId && serverImageById.has(img.uploadedImageId)) {
             const serverImg = serverImageById.get(img.uploadedImageId)!;
             return {
                 ...img,
                 url: new URL(serverImg.url, apiOrigin).toString(),
-                thumbnailUrl: new URL(
-                    serverImg.thumbnailUrl,
-                    apiOrigin
-                ).toString(),
+                thumbnailUrl: new URL(serverImg.thumbnailUrl, apiOrigin).toString(),
                 order: serverImg.position
             };
         }

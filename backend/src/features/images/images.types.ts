@@ -42,8 +42,10 @@ export interface ImageProvider {
         formFields: Record<string, string>;
     };
     inspect(storageKey: string): Promise<ProviderAsset | null>;
-    openVariant(storageKey: string, variant: "display" | "thumbnail"):
-        Promise<{ stream: Readable; contentType: string }>;
+    openVariant(
+        storageKey: string,
+        variant: "display" | "thumbnail"
+    ): Promise<{ stream: Readable; contentType: string }>;
     destroy(storageKey: string): Promise<void>;
 }
 
@@ -52,21 +54,41 @@ export interface ImagesRepository {
     findIntent(uploadId: string): Promise<UploadIntent | null>;
     completeIntent(intent: UploadIntent, asset: ProviderAsset): Promise<number>;
     findImage(imageId: number): Promise<UploadedImage | null>;
-    listCleanupCandidates(before: Date, limit: number): Promise<Array<{ imageId: number | null; storageKey: string; uploadId: string | null }>>;
+    listCleanupCandidates(
+        before: Date,
+        limit: number
+    ): Promise<Array<{ imageId: number | null; storageKey: string; uploadId: string | null }>>;
     cleanupImage(imageId: number, removeAsset: () => Promise<void>): Promise<boolean>;
     cleanupIntent(uploadId: string, removeAsset: () => Promise<void>): Promise<boolean>;
 }
 
 export interface ImagesService {
-    createIntent(userId: string, input: UploadIntentWrite): Promise<{
-        uploadId: string; uploadUrl: string; method: "POST";
-        headers: Record<string, string>; formFields: Record<string, string>; expiresAt: string;
+    createIntent(
+        userId: string,
+        input: UploadIntentWrite
+    ): Promise<{
+        uploadId: string;
+        uploadUrl: string;
+        method: "POST";
+        headers: Record<string, string>;
+        formFields: Record<string, string>;
+        expiresAt: string;
     }>;
-    complete(userId: string, uploadId: string): Promise<{
-        imageId: number; url: string; thumbnailUrl: string; capturedAt: string | null;
-        latitude: number | null; longitude: number | null;
+    complete(
+        userId: string,
+        uploadId: string
+    ): Promise<{
+        imageId: number;
+        url: string;
+        thumbnailUrl: string;
+        capturedAt: string | null;
+        latitude: number | null;
+        longitude: number | null;
     }>;
-    openImage(imageId: number, variant: "display" | "thumbnail", userId: string | null):
-        Promise<{ stream: Readable; contentType: string }>;
+    openImage(
+        imageId: number,
+        variant: "display" | "thumbnail",
+        userId: string | null
+    ): Promise<{ stream: Readable; contentType: string }>;
     cleanupUnused(): Promise<{ removed: number }>;
 }

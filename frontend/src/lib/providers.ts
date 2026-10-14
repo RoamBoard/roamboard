@@ -90,8 +90,7 @@ export type CloudinaryAsset = {
     metadata?: PhotoMetadata;
 };
 
-const apiOrigin =
-    process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001";
+const apiOrigin = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const response = await fetch(`${apiOrigin}${path}`, init);
@@ -99,13 +98,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
         data?: T;
         error?: { message?: string };
     };
-    if (!response.ok || body.data === undefined)
-        throw new Error(body.error?.message ?? "The provider request failed.");
+    if (!response.ok || body.data === undefined) throw new Error(body.error?.message ?? "The provider request failed.");
     return body.data;
 }
 
-export const loadProviderConfig = () =>
-    request<ProviderConfig>("/api/v1/providers/config");
+export const loadProviderConfig = () => request<ProviderConfig>("/api/v1/providers/config");
 
 export const loadMapboxMapSession = () =>
     request<{ publicToken: string }>("/api/v1/providers/mapbox/map-session", {
@@ -113,14 +110,10 @@ export const loadMapboxMapSession = () =>
     });
 
 export const searchMapboxProvider = (query: string) =>
-    request<MapboxSearchResult[]>(
-        `/api/v1/providers/mapbox/search?q=${encodeURIComponent(query)}`
-    );
+    request<MapboxSearchResult[]>(`/api/v1/providers/mapbox/search?q=${encodeURIComponent(query)}`);
 
 export const searchBoardLocationProvider = (query: string) =>
-    request<MapboxSearchResult[]>(
-        `/api/v1/providers/locations/search?q=${encodeURIComponent(query)}`
-    );
+    request<MapboxSearchResult[]>(`/api/v1/providers/locations/search?q=${encodeURIComponent(query)}`);
 export const searchBoardMapboxProvider = searchBoardLocationProvider;
 
 export const searchBoardDestinations = (countryCode: string, city: string) => {
@@ -129,9 +122,7 @@ export const searchBoardDestinations = (countryCode: string, city: string) => {
         city,
         limit: "5"
     });
-    return request<MapboxSearchResult[]>(
-        `/api/v1/providers/locations/destinations?${params.toString()}`
-    );
+    return request<MapboxSearchResult[]>(`/api/v1/providers/locations/destinations?${params.toString()}`);
 };
 
 export const reverseMapboxProvider = (latitude: string, longitude: string) =>
@@ -139,10 +130,7 @@ export const reverseMapboxProvider = (latitude: string, longitude: string) =>
         `/api/v1/providers/mapbox/reverse?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}`
     );
 
-export const reverseBoardLocationProvider = (
-    latitude: string,
-    longitude: string
-) =>
+export const reverseBoardLocationProvider = (latitude: string, longitude: string) =>
     request<MapboxLocation>(
         `/api/v1/providers/locations/reverse?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}`
     );
@@ -165,81 +153,54 @@ export const routeMapboxProvider = (
     });
 
 export const searchUnsplashProvider = (query: string) =>
-    request<ProviderPhoto[]>(
-        `/api/v1/providers/unsplash/search?q=${encodeURIComponent(query)}`
-    );
+    request<ProviderPhoto[]>(`/api/v1/providers/unsplash/search?q=${encodeURIComponent(query)}`);
 
 export const searchGooglePlacesProvider = (query: string) =>
-    request<ProviderPlace[]>(
-        `/api/v1/providers/google-places/search?q=${encodeURIComponent(query)}`
-    );
+    request<ProviderPlace[]>(`/api/v1/providers/google-places/search?q=${encodeURIComponent(query)}`);
 
 export const loadGooglePlaceDetails = (placeId: string) =>
-    request<GooglePlaceDetails>(
-        `/api/v1/providers/google-places/${encodeURIComponent(placeId)}`
-    );
+    request<GooglePlaceDetails>(`/api/v1/providers/google-places/${encodeURIComponent(placeId)}`);
 
 export const loadSavedGooglePlaces = () =>
-    request<SavedGooglePlaceReference[]>(
-        "/api/v1/providers/google-places/saved"
-    );
+    request<SavedGooglePlaceReference[]>("/api/v1/providers/google-places/saved");
 
 export const saveGooglePlace = (placeId: string) =>
-    request<SavedGooglePlaceReference>(
-        "/api/v1/providers/google-places/saved",
-        {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ placeId })
-        }
-    );
+    request<SavedGooglePlaceReference>("/api/v1/providers/google-places/saved", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ placeId })
+    });
 
 export async function deleteSavedGooglePlace(placeId: string): Promise<void> {
-    const response = await fetch(
-        `${apiOrigin}/api/v1/providers/google-places/saved/${encodeURIComponent(placeId)}`,
-        { method: "DELETE" }
-    );
+    const response = await fetch(`${apiOrigin}/api/v1/providers/google-places/saved/${encodeURIComponent(placeId)}`, {
+        method: "DELETE"
+    });
     if (!response.ok) {
         const body = (await response.json()) as {
             error?: { message?: string };
         };
-        throw new Error(
-            body.error?.message ??
-                "The saved Google Place ID could not be deleted."
-        );
+        throw new Error(body.error?.message ?? "The saved Google Place ID could not be deleted.");
     }
 }
 
-export const buildCloudinaryDelivery = (
-    publicId: string,
-    width: string,
-    height: string,
-    crop: string
-) =>
+export const buildCloudinaryDelivery = (publicId: string, width: string, height: string, crop: string) =>
     request<{ url: string }>(
         `/api/v1/providers/cloudinary/delivery?publicId=${encodeURIComponent(publicId)}&width=${encodeURIComponent(width)}&height=${encodeURIComponent(height)}&crop=${encodeURIComponent(crop)}`
     );
 
-export async function uploadCloudinaryProvider(
-    file: File
-): Promise<CloudinaryAsset> {
+export async function uploadCloudinaryProvider(file: File): Promise<CloudinaryAsset> {
     const form = new FormData();
     form.append("file", file, file.name);
-    const response = await fetch(
-        `${apiOrigin}/api/v1/providers/cloudinary/upload`,
-        { method: "POST", body: form }
-    );
+    const response = await fetch(`${apiOrigin}/api/v1/providers/cloudinary/upload`, { method: "POST", body: form });
     const body = (await response.json()) as {
         data?: CloudinaryAsset;
         error?: { message?: string };
     };
-    if (!response.ok || !body.data)
-        throw new Error(body.error?.message ?? "Cloudinary upload failed.");
+    if (!response.ok || !body.data) throw new Error(body.error?.message ?? "Cloudinary upload failed.");
     return body.data;
 }
 
-export const loadCloudinaryProviderAssets = () =>
-    request<CloudinaryAsset[]>("/api/v1/providers/cloudinary/assets");
+export const loadCloudinaryProviderAssets = () => request<CloudinaryAsset[]>("/api/v1/providers/cloudinary/assets");
 
 export const loadCloudinaryProviderMetadata = (publicId: string) =>
     request<{ publicId: string; metadata: PhotoMetadata }>(

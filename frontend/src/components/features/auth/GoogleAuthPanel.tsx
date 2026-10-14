@@ -23,9 +23,7 @@ export default function GoogleAuthPanel({ mode }: Props) {
     async function handleCredential(response: GoogleCredentialResponse) {
         if (signingIn.current) return;
         if (!response.credential) {
-            setError(
-                "Google did not return a sign-in credential. Please try again."
-            );
+            setError("Google did not return a sign-in credential. Please try again.");
             return;
         }
 
@@ -52,9 +50,7 @@ export default function GoogleAuthPanel({ mode }: Props) {
 
     function renderGoogleButton() {
         if (!clientId || !buttonRef.current || !window.google) {
-            setError(
-                "Google sign-in is not configured. Please try again later."
-            );
+            setError("Google sign-in is not configured. Please try again later.");
             return;
         }
 
@@ -78,10 +74,7 @@ export default function GoogleAuthPanel({ mode }: Props) {
     }
 
     return (
-        <section
-            aria-labelledby="auth-title"
-            className="text-foreground mx-auto w-full max-w-sm"
-        >
+        <section aria-labelledby="auth-title" className="text-foreground mx-auto w-full max-w-sm">
             <h1 id="auth-title" className="font-display text-36">
                 {isSignup ? "Create account" : "Log in"}
             </h1>
@@ -96,18 +89,10 @@ export default function GoogleAuthPanel({ mode }: Props) {
                     src="https://accounts.google.com/gsi/client"
                     strategy="afterInteractive"
                     onReady={renderGoogleButton}
-                    onError={() =>
-                        setError(
-                            "Google sign-in could not load. Please refresh."
-                        )
-                    }
+                    onError={() => setError("Google sign-in could not load. Please refresh.")}
                 />
             ) : null}
-            <div
-                ref={buttonRef}
-                className="w-full"
-                aria-label="Sign in with Google"
-            />
+            <div ref={buttonRef} className="w-full" aria-label="Sign in with Google" />
             {status ? (
                 <p role="status" className="text-muted-foreground text-14 mt-4">
                     {status}

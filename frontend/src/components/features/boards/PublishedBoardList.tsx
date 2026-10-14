@@ -4,10 +4,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import {
-    listPublishedBoards,
-    type PublishedSummary
-} from "@/lib/board-creator-api";
+import { listPublishedBoards, type PublishedSummary } from "@/lib/board-creator-api";
 
 export default function PublishedBoardList() {
     const [boards, setBoards] = useState<PublishedSummary[] | null>(null);
@@ -23,11 +20,7 @@ export default function PublishedBoardList() {
                 setHasMore(result.hasMore);
             })
             .catch((caught: unknown) =>
-                setError(
-                    caught instanceof Error
-                        ? caught.message
-                        : "Boards could not be loaded."
-                )
+                setError(caught instanceof Error ? caught.message : "Boards could not be loaded.")
             );
     }, []);
 
@@ -41,11 +34,7 @@ export default function PublishedBoardList() {
             setPage(nextPage);
             setHasMore(result.hasMore);
         } catch (caught) {
-            setError(
-                caught instanceof Error
-                    ? caught.message
-                    : "More Boards could not be loaded."
-            );
+            setError(caught instanceof Error ? caught.message : "More Boards could not be loaded.");
         } finally {
             setLoadingMore(false);
         }
@@ -53,15 +42,9 @@ export default function PublishedBoardList() {
 
     return (
         <article className="text-foreground mx-auto min-h-[70dvh] max-w-6xl px-5 py-16 sm:px-10">
-            <p className="text-10 tracking-label text-stone font-bold uppercase">
-                Your journeys
-            </p>
-            <h1 className="font-display text-48 sm:text-72 mt-3 leading-none font-bold">
-                MY BOARDS
-            </h1>
-            <p className="text-14 text-graphite mt-4">
-                Your published Boards, newest first.
-            </p>
+            <p className="text-10 tracking-label text-stone font-bold uppercase">Your journeys</p>
+            <h1 className="font-display text-48 sm:text-72 mt-3 leading-none font-bold">MY BOARDS</h1>
+            <p className="text-14 text-graphite mt-4">Your published Boards, newest first.</p>
             {error ? (
                 <p className="text-14 mt-8" role="alert">
                     {error}
@@ -114,9 +97,7 @@ export default function PublishedBoardList() {
                                     <span className="text-11 text-graphite mt-2 block uppercase">
                                         {board.visibility}
                                     </span>
-                                    <span className="text-12 mt-5 block underline">
-                                        View Board →
-                                    </span>
+                                    <span className="text-12 mt-5 block underline">View Board →</span>
                                 </div>
                             </Link>
                             <Link

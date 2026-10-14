@@ -5,9 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import BoardCreationPreview from "@/components/features/boards/BoardCreationPreview";
 import BoardDiscoveryDetails from "@/components/features/boards/BoardDiscoveryDetails";
-import BoardImageIntake, {
-    type UploadedBoardImage
-} from "@/components/features/boards/BoardImageIntake";
+import BoardImageIntake, { type UploadedBoardImage } from "@/components/features/boards/BoardImageIntake";
 import CreatorSectionIntro from "@/components/features/boards/CreatorSectionIntro";
 import DayPlanner from "@/components/features/boards/DayPlanner";
 import {
@@ -35,34 +33,17 @@ function newDay(dayNumber: number, date: string | null = null): BoardDayDraft {
 
 function normalizePinOrder(pins: BoardPinDraft[]): BoardPinDraft[] {
     return [...pins]
-        .sort(
-            (first, second) =>
-                first.time.localeCompare(second.time) ||
-                first.order - second.order
-        )
+        .sort((first, second) => first.time.localeCompare(second.time) || first.order - second.order)
         .map((pin, order) => ({ ...pin, order }));
 }
 
-function addPhotoSuggestions(
-    current: BoardDayDraft[],
-    uploads: UploadedBoardImage[]
-): BoardDayDraft[] {
+function addPhotoSuggestions(current: BoardDayDraft[], uploads: UploadedBoardImage[]): BoardDayDraft[] {
     return uploads.reduce((days, upload) => {
         if (!upload.suggestedPin) return days;
         const suggestedPin = upload.suggestedPin;
-        const matchingIndex = upload.suggestedDate
-            ? days.findIndex((day) => day.date === upload.suggestedDate)
-            : 0;
-        const reusableFirstDay =
-            days.length === 1 &&
-            days[0]?.pins.length === 0 &&
-            days[0].date === null;
-        const targetIndex =
-            matchingIndex >= 0
-                ? matchingIndex
-                : reusableFirstDay
-                  ? 0
-                  : days.length;
+        const matchingIndex = upload.suggestedDate ? days.findIndex((day) => day.date === upload.suggestedDate) : 0;
+        const reusableFirstDay = days.length === 1 && days[0]?.pins.length === 0 && days[0].date === null;
+        const targetIndex = matchingIndex >= 0 ? matchingIndex : reusableFirstDay ? 0 : days.length;
         if (targetIndex === days.length) {
             return [
                 ...days,
@@ -77,10 +58,7 @@ function addPhotoSuggestions(
                 ? {
                       ...day,
                       date: day.date ?? upload.suggestedDate,
-                      pins: normalizePinOrder([
-                          ...day.pins,
-                          { ...suggestedPin, order: day.pins.length }
-                      ])
+                      pins: normalizePinOrder([...day.pins, { ...suggestedPin, order: day.pins.length }])
                   }
                 : day
         );
@@ -105,30 +83,18 @@ export default function BoardCreator({
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [images, setImages] = useState<BoardImageDraft[]>([]);
-    const [selectedCoverImageId, setSelectedCoverImageId] = useState<
-        number | null
-    >(null);
+    const [selectedCoverImageId, setSelectedCoverImageId] = useState<number | null>(null);
     const [days, setDays] = useState<BoardDayDraft[]>(() => [newDay(1)]);
     const [tags, setTags] = useState<string[]>([]);
-    const [allowedTags, setAllowedTags] = useState<
-        Array<{ tagId: number; name: string }>
-    >([]);
-    const [visibility, setVisibility] = useState<
-        BoardCreatorPayload["visibility"]
-    >(() =>
-        initialBoardId !== undefined
-            ? "collaborators"
-            : getDefaultBoardCreatorVisibility()
+    const [allowedTags, setAllowedTags] = useState<Array<{ tagId: number; name: string }>>([]);
+    const [visibility, setVisibility] = useState<BoardCreatorPayload["visibility"]>(() =>
+        initialBoardId !== undefined ? "collaborators" : getDefaultBoardCreatorVisibility()
     );
-    const [confirmedPhotoPins, setConfirmedPhotoPins] = useState<Set<string>>(
-        () => new Set()
-    );
+    const [confirmedPhotoPins, setConfirmedPhotoPins] = useState<Set<string>>(() => new Set());
     const [saving, setSaving] = useState<BoardStatus | null>(null);
     const [uploading, setUploading] = useState(false);
     const pendingUploadRef = useRef<Promise<unknown> | null>(null);
-    const [draftLoading, setDraftLoading] = useState(
-        initialBoardId !== undefined
-    );
+    const [draftLoading, setDraftLoading] = useState(initialBoardId !== undefined);
     const [error, setError] = useState("");
     const [message, setMessage] = useState("");
     const [savedBoard, setSavedBoard] = useState<BoardDocument | null>(null);
@@ -137,11 +103,7 @@ export default function BoardCreator({
         void listBoardTags()
             .then(setAllowedTags)
             .catch((caught: unknown) =>
-                setError(
-                    caught instanceof Error
-                        ? caught.message
-                        : "Tags could not be loaded."
-                )
+                setError(caught instanceof Error ? caught.message : "Tags could not be loaded.")
             );
     }, []);
 
@@ -149,10 +111,8 @@ export default function BoardCreator({
         if (initialBoardId === undefined) return;
         void loadBoardDocument(initialBoardId)
             .then((board) => {
-                if (board.status !== expectedStatus)
-                    throw new Error(`This Board is not ${expectedStatus}.`);
-                if (!board.permissions.canEditContent)
-                    throw new Error("You cannot edit this Board.");
+                if (board.status !== expectedStatus) throw new Error(`This Board is not ${expectedStatus}.`);
+                if (!board.permissions.canEditContent) throw new Error("You cannot edit this Board.");
                 const restored = fromBoardDocument(board);
                 setSavedBoard(board);
                 setTitle(board.title);
@@ -165,19 +125,13 @@ export default function BoardCreator({
                 setConfirmedPhotoPins(restored.confirmedPhotoPins);
             })
             .catch((caught: unknown) =>
-                setError(
-                    caught instanceof Error
-                        ? caught.message
-                        : "Board could not be loaded."
-                )
+                setError(caught instanceof Error ? caught.message : "Board could not be loaded.")
             )
             .finally(() => setDraftLoading(false));
     }, [initialBoardId, expectedStatus]);
 
     const uploadedImages = images.filter((image) => image.source === "upload");
-    const coverImageId = uploadedImages.some(
-        (image) => image.uploadedImageId === selectedCoverImageId
-    )
+    const coverImageId = uploadedImages.some((image) => image.uploadedImageId === selectedCoverImageId)
         ? selectedCoverImageId
         : (uploadedImages[0]?.uploadedImageId ?? null);
 
@@ -221,49 +175,31 @@ export default function BoardCreator({
     function removeImage(imageId: string) {
         const image = images.find((item) => item.id === imageId);
         setImages((current) =>
-            current
-                .filter((item) => item.id !== imageId)
-                .map((item, order) => ({ ...item, order }))
+            current.filter((item) => item.id !== imageId).map((item, order) => ({ ...item, order }))
         );
         if (image?.uploadedImageId)
             setDays((current) =>
                 current.map((day) => ({
                     ...day,
                     pins: day.pins.map((pin) =>
-                        pin.coverImageId === image.uploadedImageId
-                            ? { ...pin, coverImageId: null }
-                            : pin
+                        pin.coverImageId === image.uploadedImageId ? { ...pin, coverImageId: null } : pin
                     )
                 }))
             );
     }
 
-    function addPin(
-        dayId: string,
-        pin: BoardPinDraft,
-        image: BoardImageDraft | null
-    ) {
+    function addPin(dayId: string, pin: BoardPinDraft, image: BoardImageDraft | null) {
         setDays((current) =>
-            current.map((day) =>
-                day.id === dayId
-                    ? { ...day, pins: normalizePinOrder([...day.pins, pin]) }
-                    : day
-            )
+            current.map((day) => (day.id === dayId ? { ...day, pins: normalizePinOrder([...day.pins, pin]) } : day))
         );
-        if (image)
-            setImages((current) => [
-                ...current,
-                { ...image, order: current.length }
-            ]);
+        if (image) setImages((current) => [...current, { ...image, order: current.length }]);
     }
 
     function updatePin(pin: BoardPinDraft) {
         setDays((current) =>
             current.map((day) => ({
                 ...day,
-                pins: normalizePinOrder(
-                    day.pins.map((item) => (item.id === pin.id ? pin : item))
-                )
+                pins: normalizePinOrder(day.pins.map((item) => (item.id === pin.id ? pin : item)))
             }))
         );
     }
@@ -272,32 +208,21 @@ export default function BoardCreator({
         setDays((current) =>
             current.map((day) => ({
                 ...day,
-                pins: normalizePinOrder(
-                    day.pins.filter((pin) => pin.id !== pinId)
-                )
+                pins: normalizePinOrder(day.pins.filter((pin) => pin.id !== pinId))
             }))
         );
         setImages((current) =>
             current.map((image) =>
-                image.pinId === pinId
-                    ? { ...image, pinId: null, activityOrder: undefined }
-                    : image
+                image.pinId === pinId ? { ...image, pinId: null, activityOrder: undefined } : image
             )
         );
-        setConfirmedPhotoPins(
-            (current) => new Set([...current].filter((item) => item !== pinId))
-        );
+        setConfirmedPhotoPins((current) => new Set([...current].filter((item) => item !== pinId)));
     }
 
     function removeDay(dayId: string) {
-        const removedPinIds = new Set(
-            days.find((day) => day.id === dayId)?.pins.map((pin) => pin.id) ??
-                []
-        );
+        const removedPinIds = new Set(days.find((day) => day.id === dayId)?.pins.map((pin) => pin.id) ?? []);
         setDays((current) =>
-            current
-                .filter((day) => day.id !== dayId)
-                .map((day, index) => ({ ...day, dayNumber: index + 1 }))
+            current.filter((day) => day.id !== dayId).map((day, index) => ({ ...day, dayNumber: index + 1 }))
         );
         setImages((current) =>
             current.map((image) =>
@@ -306,12 +231,7 @@ export default function BoardCreator({
                     : image
             )
         );
-        setConfirmedPhotoPins(
-            (current) =>
-                new Set(
-                    [...current].filter((pinId) => !removedPinIds.has(pinId))
-                )
-        );
+        setConfirmedPhotoPins((current) => new Set([...current].filter((pinId) => !removedPinIds.has(pinId))));
     }
 
     function addActivityImage(image: BoardImageDraft) {
@@ -319,27 +239,21 @@ export default function BoardCreator({
             ...current,
             {
                 ...image,
-                order: current.filter((item) => item.source === "upload")
-                    .length,
-                activityOrder: current.filter(
-                    (item) => item.pinId === image.pinId
-                ).length
+                order: current.filter((item) => item.source === "upload").length,
+                activityOrder: current.filter((item) => item.pinId === image.pinId).length
             }
         ]);
     }
 
     function assignActivityImage(imageId: string, pinId: string | null) {
         setImages((current) => {
-            const nextPosition = current.filter(
-                (item) => item.pinId === pinId
-            ).length;
+            const nextPosition = current.filter((item) => item.pinId === pinId).length;
             return current.map((image) =>
                 image.id === imageId
                     ? {
                           ...image,
                           pinId,
-                          activityOrder:
-                              pinId === null ? undefined : nextPosition
+                          activityOrder: pinId === null ? undefined : nextPosition
                       }
                     : image
             );
@@ -350,62 +264,37 @@ export default function BoardCreator({
         setDays((current) =>
             current.map((day) => ({
                 ...day,
-                pins: day.pins.map((pin) =>
-                    pin.id === pinId ? { ...pin, coverImageId: imageId } : pin
-                )
+                pins: day.pins.map((pin) => (pin.id === pinId ? { ...pin, coverImageId: imageId } : pin))
             }))
         );
     }
 
-    function reorderActivityImage(
-        pinId: string,
-        imageId: string,
-        direction: -1 | 1
-    ) {
+    function reorderActivityImage(pinId: string, imageId: string, direction: -1 | 1) {
         setImages((current) => {
             const activityImages = current
-                .filter(
-                    (image) =>
-                        image.pinId === pinId && image.source === "upload"
-                )
-                .sort(
-                    (first, second) =>
-                        (first.activityOrder ?? first.order) -
-                        (second.activityOrder ?? second.order)
-                );
-            const index = activityImages.findIndex(
-                (image) => image.id === imageId
-            );
+                .filter((image) => image.pinId === pinId && image.source === "upload")
+                .sort((first, second) => (first.activityOrder ?? first.order) - (second.activityOrder ?? second.order));
+            const index = activityImages.findIndex((image) => image.id === imageId);
             const other = activityImages[index + direction];
             if (index < 0 || !other) return current;
             activityImages[index + direction] = activityImages[index]!;
             activityImages[index] = other;
-            const positions = new Map(
-                activityImages.map((image, order) => [image.id, order])
-            );
+            const positions = new Map(activityImages.map((image, order) => [image.id, order]));
             return current.map((image) =>
-                positions.has(image.id)
-                    ? { ...image, activityOrder: positions.get(image.id) }
-                    : image
+                positions.has(image.id) ? { ...image, activityOrder: positions.get(image.id) } : image
             );
         });
     }
 
     function movePin(pinId: string, dayId: string, time: string) {
-        const pin = days
-            .flatMap((day) => day.pins)
-            .find((item) => item.id === pinId);
+        const pin = days.flatMap((day) => day.pins).find((item) => item.id === pinId);
         if (!pin) return;
         setDays((current) =>
             current.map((day) => {
                 const withoutPin = day.pins.filter((item) => item.id !== pinId);
                 return {
                     ...day,
-                    pins: normalizePinOrder(
-                        day.id === dayId
-                            ? [...withoutPin, { ...pin, time }]
-                            : withoutPin
-                    )
+                    pins: normalizePinOrder(day.id === dayId ? [...withoutPin, { ...pin, time }] : withoutPin)
                 };
             })
         );
@@ -414,23 +303,12 @@ export default function BoardCreator({
     async function save(status: BoardStatus) {
         const unconfirmedPhotoPin = days
             .flatMap((day) => day.pins)
-            .find(
-                (pin) =>
-                    pin.source === "photo" && !confirmedPhotoPins.has(pin.id)
-            );
+            .find((pin) => pin.source === "photo" && !confirmedPhotoPins.has(pin.id));
         if (status === "published" && unconfirmedPhotoPin) {
-            setError(
-                `Confirm the photo location for “${unconfirmedPhotoPin.title}” before publishing.`
-            );
+            setError(`Confirm the photo location for “${unconfirmedPhotoPin.title}” before publishing.`);
             setMessage("");
-            const behavior = window.matchMedia(
-                "(prefers-reduced-motion: reduce)"
-            ).matches
-                ? "auto"
-                : "smooth";
-            document
-                .getElementById("day-plan")
-                ?.scrollIntoView({ behavior, block: "start" });
+            const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+            document.getElementById("day-plan")?.scrollIntoView({ behavior, block: "start" });
             return;
         }
         if (pendingUploadRef.current) {
@@ -452,11 +330,7 @@ export default function BoardCreator({
                 days,
                 images
             };
-            const write = toBoardWrite(
-                currentPayload,
-                allowedTags,
-                confirmedPhotoPins
-            );
+            const write = toBoardWrite(currentPayload, allowedTags, confirmedPhotoPins);
             const sentDays = days;
             const expectedRevision = savedBoard ? savedBoard.revision + 1 : 1;
             const board = await saveBoardDocument(write, savedBoard);
@@ -476,11 +350,7 @@ export default function BoardCreator({
                       : `“${board.title}” is published and ready to share.`
             );
         } catch (caught) {
-            setError(
-                caught instanceof Error
-                    ? caught.message
-                    : "The Board could not be saved."
-            );
+            setError(caught instanceof Error ? caught.message : "The Board could not be saved.");
         } finally {
             setSaving(null);
         }
@@ -493,13 +363,10 @@ export default function BoardCreator({
                     SMART CREATE
                 </h1>
                 <p className="text-12 text-graphite mx-auto mt-4 max-w-xl leading-5">
-                    Drop in your photos and we’ll turn metadata into editable
-                    beginnings for a Board. Review every suggestion before
-                    anything is published.
+                    Drop in your photos and we’ll turn metadata into editable beginnings for a Board. Review every
+                    suggestion before anything is published.
                 </p>
-                <p className="text-10 text-stone mt-6">
-                    Powered by Roamboard Intelligence Engine
-                </p>
+                <p className="text-10 text-stone mt-6">Powered by Roamboard Intelligence Engine</p>
             </header>
 
             <div className="px-4 sm:px-8 lg:px-16">
@@ -508,9 +375,7 @@ export default function BoardCreator({
                     className="m-0 min-w-0 border-0 p-0 disabled:pointer-events-none disabled:opacity-80"
                 >
                     <BoardImageIntake
-                        images={images.filter(
-                            (image) => image.source === "upload"
-                        )}
+                        images={images.filter((image) => image.source === "upload")}
                         coverImageId={coverImageId}
                         disabled={saving !== null}
                         onUploadingChange={setUploading}
@@ -523,10 +388,7 @@ export default function BoardCreator({
                     />
 
                     <div className="mx-auto mt-8 max-w-4xl text-center">
-                        <label
-                            htmlFor="board-title"
-                            className="text-10 tracking-label text-stone uppercase"
-                        >
+                        <label htmlFor="board-title" className="text-10 tracking-label text-stone uppercase">
                             Board creator
                         </label>
                         <input
@@ -539,26 +401,17 @@ export default function BoardCreator({
                     </div>
 
                     {message ? (
-                        <p
-                            className="border-foreground text-13 mx-auto mt-7 max-w-3xl border-l-2 pl-4"
-                            role="status"
-                        >
+                        <p className="border-foreground text-13 mx-auto mt-7 max-w-3xl border-l-2 pl-4" role="status">
                             {message}
                         </p>
                     ) : null}
                     {draftLoading ? (
-                        <p
-                            className="text-13 mx-auto mt-7 max-w-3xl"
-                            role="status"
-                        >
+                        <p className="text-13 mx-auto mt-7 max-w-3xl" role="status">
                             Loading Board...
                         </p>
                     ) : null}
                     {error ? (
-                        <p
-                            className="border-foreground text-13 mx-auto mt-7 max-w-3xl border-l-2 pl-4"
-                            role="alert"
-                        >
+                        <p className="border-foreground text-13 mx-auto mt-7 max-w-3xl border-l-2 pl-4" role="alert">
                             {error}
                         </p>
                     ) : null}
@@ -576,9 +429,7 @@ export default function BoardCreator({
                             Description
                             <textarea
                                 value={description}
-                                onChange={(event) =>
-                                    setDescription(event.target.value)
-                                }
+                                onChange={(event) => setDescription(event.target.value)}
                                 placeholder="type here..."
                                 rows={7}
                                 className="border-line font-body text-14 placeholder:text-stone focus:border-foreground mt-3 w-full resize-y border-0 border-b bg-transparent py-3 leading-6 font-normal outline-none"
@@ -600,12 +451,7 @@ export default function BoardCreator({
                                 disabled={saving !== null}
                                 days={days}
                                 images={images}
-                                onAddDay={() =>
-                                    setDays((current) => [
-                                        ...current,
-                                        newDay(current.length + 1)
-                                    ])
-                                }
+                                onAddDay={() => setDays((current) => [...current, newDay(current.length + 1)])}
                                 onRemoveDay={removeDay}
                                 onAddPin={addPin}
                                 onUpdatePin={updatePin}
@@ -617,10 +463,7 @@ export default function BoardCreator({
                                 onReorderActivityImage={reorderActivityImage}
                                 confirmedPhotoPins={confirmedPhotoPins}
                                 onConfirmPhotoPin={(pinId) =>
-                                    setConfirmedPhotoPins(
-                                        (current) =>
-                                            new Set([...current, pinId])
-                                    )
+                                    setConfirmedPhotoPins((current) => new Set([...current, pinId]))
                                 }
                             />
                         </div>
@@ -639,9 +482,7 @@ export default function BoardCreator({
                             tags={tags}
                             allowedTags={allowedTags.map((tag) => tag.name)}
                             visibility={visibility}
-                            canChangeVisibility={
-                                savedBoard?.permissions.canManageBoard ?? true
-                            }
+                            canChangeVisibility={savedBoard?.permissions.canManageBoard ?? true}
                             onTagsChange={setTags}
                             onVisibilityChange={setVisibility}
                         />
@@ -667,13 +508,10 @@ export default function BoardCreator({
                         description="Save it for yourself, or share it if you feel like it."
                     />
                     <div>
-                        <h2 className="font-display text-36 font-bold">
-                            Ready when you are.
-                        </h2>
+                        <h2 className="font-display text-36 font-bold">Ready when you are.</h2>
                         <p className="text-14 text-graphite mt-3 max-w-xl leading-6">
-                            Drafts can stay incomplete. Publishing requires a
-                            title and at least one pin with a confirmed
-                            location.
+                            Drafts can stay incomplete. Publishing requires a title and at least one pin with a
+                            confirmed location.
                         </p>
                         <div className="mt-7 flex flex-wrap gap-3">
                             {expectedStatus !== "published" ? (
@@ -683,16 +521,13 @@ export default function BoardCreator({
                                         draftLoading ||
                                         saving !== null ||
                                         uploading ||
-                                        (initialBoardId !== undefined &&
-                                            !savedBoard) ||
+                                        (initialBoardId !== undefined && !savedBoard) ||
                                         savedBoard?.status === "published"
                                     }
                                     onClick={() => void save("draft")}
                                     className="border-foreground text-14 border px-6 py-4 disabled:opacity-40"
                                 >
-                                    {saving === "draft"
-                                        ? "Saving draft..."
-                                        : "Save as draft"}
+                                    {saving === "draft" ? "Saving draft..." : "Save as draft"}
                                 </button>
                             ) : null}
                             <button
@@ -701,10 +536,8 @@ export default function BoardCreator({
                                     draftLoading ||
                                     saving !== null ||
                                     uploading ||
-                                    (initialBoardId !== undefined &&
-                                        !savedBoard) ||
-                                    (savedBoard?.status === "published" &&
-                                        expectedStatus !== "published")
+                                    (initialBoardId !== undefined && !savedBoard) ||
+                                    (savedBoard?.status === "published" && expectedStatus !== "published")
                                 }
                                 onClick={() => void save("published")}
                                 className="border-foreground bg-foreground text-14 text-background border px-6 py-4 disabled:opacity-40"

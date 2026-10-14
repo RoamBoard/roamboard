@@ -17,19 +17,13 @@ export interface GoogleVerifier {
 export interface AuthRepository {
     findUserById(userId: string): Promise<AppUser | null>;
     createUser(user: AppUser): Promise<AppUser | null>;
-    createSession(
-        tokenHash: string,
-        userId: string,
-        expiresAt: Date
-    ): Promise<void>;
+    createSession(tokenHash: string, userId: string, expiresAt: Date): Promise<void>;
     findUserBySession(tokenHash: string): Promise<AppUser | null>;
     deleteSession(tokenHash: string): Promise<void>;
 }
 
 export interface AuthService {
-    signIn(
-        idToken: string
-    ): Promise<{
+    signIn(idToken: string): Promise<{
         user: AppUser;
         isNew: boolean;
         sessionToken: string;

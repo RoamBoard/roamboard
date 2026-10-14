@@ -3,25 +3,15 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Pause, Play } from "lucide-react";
-import {
-    useEffect,
-    useRef,
-    useState,
-    useSyncExternalStore,
-    type CSSProperties
-} from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { Marquee } from "@/components/ui/marquee";
 import TagIcon from "@/components/ui/TagIcon";
 import { boardTagHref, type BoardTag } from "@/data/board-tags";
 
 function subscribeToColumns(update: () => void) {
-    const queries = [
-        window.matchMedia("(min-width: 768px)"),
-        window.matchMedia("(min-width: 1024px)")
-    ];
+    const queries = [window.matchMedia("(min-width: 768px)"), window.matchMedia("(min-width: 1024px)")];
     queries.forEach((query) => query.addEventListener("change", update));
-    return () =>
-        queries.forEach((query) => query.removeEventListener("change", update));
+    return () => queries.forEach((query) => query.removeEventListener("change", update));
 }
 
 function getColumns() {
@@ -32,13 +22,7 @@ function getColumns() {
           : 2;
 }
 
-function VibeCard({
-    tag,
-    moving = false
-}: {
-    tag: BoardTag;
-    moving?: boolean;
-}) {
+function VibeCard({ tag, moving = false }: { tag: BoardTag; moving?: boolean }) {
     const link = useRef<HTMLAnchorElement>(null);
     const [visible, setVisible] = useState(false);
 
@@ -80,25 +64,13 @@ function VibeCard({
             <h3 className="relative z-10 p-3 text-[clamp(1rem,2.3vw,2.75rem)] leading-none font-medium tracking-tight md:p-5">
                 {tag.name}
             </h3>
-            <TagIcon
-                tag={tag}
-                size={96}
-                className="absolute -right-3 bottom-3 z-10 size-20 opacity-90 md:size-28"
-            />
+            <TagIcon tag={tag} size={96} className="absolute -right-3 bottom-3 z-10 size-20 opacity-90 md:size-28" />
         </Link>
     );
 }
 
-export default function VibeMarqueeGallery({
-    tags
-}: {
-    tags: readonly BoardTag[];
-}) {
-    const columns = useSyncExternalStore(
-        subscribeToColumns,
-        getColumns,
-        () => 2
-    );
+export default function VibeMarqueeGallery({ tags }: { tags: readonly BoardTag[] }) {
+    const columns = useSyncExternalStore(subscribeToColumns, getColumns, () => 2);
     const [paused, setPaused] = useState(false);
     const [showAll, setShowAll] = useState(false);
     const controlClass =
@@ -118,11 +90,7 @@ export default function VibeMarqueeGallery({
                             onClick={() => setPaused(!paused)}
                             className={`${controlClass} motion-reduce:hidden`}
                         >
-                            {paused ? (
-                                <Play size={16} aria-hidden="true" />
-                            ) : (
-                                <Pause size={16} aria-hidden="true" />
-                            )}
+                            {paused ? <Play size={16} aria-hidden="true" /> : <Pause size={16} aria-hidden="true" />}
                             {paused ? "Resume gallery" : "Pause gallery"}
                         </button>
                     )}
@@ -143,9 +111,7 @@ export default function VibeMarqueeGallery({
                         aria-label="Animated vibe gallery"
                     >
                         {Array.from({ length: columns }, (_, column) => {
-                            const columnTags = tags.filter(
-                                (_, index) => index % columns === column
-                            );
+                            const columnTags = tags.filter((_, index) => index % columns === column);
                             return (
                                 <Marquee
                                     key={`${columns}-${column}`}
@@ -162,11 +128,7 @@ export default function VibeMarqueeGallery({
                                     }
                                 >
                                     {columnTags.map((tag) => (
-                                        <VibeCard
-                                            key={tag.id}
-                                            tag={tag}
-                                            moving
-                                        />
+                                        <VibeCard key={tag.id} tag={tag} moving />
                                     ))}
                                 </Marquee>
                             );

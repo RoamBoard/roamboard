@@ -21,13 +21,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function CollectionPage({ params }: Props) {
     const collection = getDiscoverCollection((await params).slug);
     if (!collection) notFound();
-    const { boards, available } = await getDiscoverBoardsByTags(
-        collection.tagIds
-    );
-    const discoverHref =
-        collection.moodRow === undefined
-            ? "/discover#discover-feed"
-            : "/discover#discover-moods";
+    const { boards, available } = await getDiscoverBoardsByTags(collection.tagIds);
+    const discoverHref = collection.moodRow === undefined ? "/discover#discover-feed" : "/discover#discover-moods";
 
     return (
         <AppShell activeHref="/discover" discover={{ collapsed: true }}>
@@ -41,15 +36,11 @@ export default async function CollectionPage({ params }: Props) {
                 </Link>
                 <header className="border-line mt-6 grid gap-6 border-b pb-8 md:grid-cols-2 md:items-center">
                     <div>
-                        <p className="text-muted-foreground text-12 mb-4">
-                            CURATED COLLECTION
-                        </p>
+                        <p className="text-muted-foreground text-12 mb-4">CURATED COLLECTION</p>
                         <h1 className="font-display text-[clamp(2rem,6vw,5rem)] leading-none font-bold tracking-tight">
                             {collection.title}
                         </h1>
-                        <p className="text-20 mt-4 max-w-2xl">
-                            {collection.description}
-                        </p>
+                        <p className="text-20 mt-4 max-w-2xl">{collection.description}</p>
                     </div>
                     <div className="bg-faint relative aspect-[4/3] overflow-hidden">
                         <DiscoverPhoto
@@ -70,17 +61,9 @@ export default async function CollectionPage({ params }: Props) {
                         ))}
                     </section>
                 ) : (
-                    <section
-                        aria-labelledby="collection-empty-title"
-                        className="border-line mt-8 border p-6 md:p-8"
-                    >
-                        <h2
-                            id="collection-empty-title"
-                            className="font-display text-24"
-                        >
-                            {available
-                                ? "No Boards in this collection yet."
-                                : "Collection Boards are coming soon."}
+                    <section aria-labelledby="collection-empty-title" className="border-line mt-8 border p-6 md:p-8">
+                        <h2 id="collection-empty-title" className="font-display text-24">
+                            {available ? "No Boards in this collection yet." : "Collection Boards are coming soon."}
                         </h2>
                         <p className="text-14 mt-3 max-w-xl">
                             {available

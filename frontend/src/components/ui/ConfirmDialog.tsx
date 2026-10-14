@@ -11,13 +11,7 @@ type Props = {
     onConfirm: () => void;
 };
 
-export default function ConfirmDialog({
-    title,
-    description,
-    confirmLabel,
-    onCancel,
-    onConfirm
-}: Props) {
+export default function ConfirmDialog({ title, description, confirmLabel, onCancel, onConfirm }: Props) {
     const dialogRef = useRef<HTMLDivElement>(null);
     useDialogFocus(dialogRef, onCancel);
 
@@ -38,24 +32,14 @@ export default function ConfirmDialog({
                 aria-describedby="confirm-description"
                 className="bg-background w-full max-w-md p-7 shadow-2xl outline-none"
             >
-                <h2
-                    id="confirm-title"
-                    className="font-display text-30 font-bold"
-                >
+                <h2 id="confirm-title" className="font-display text-30 font-bold">
                     {title}
                 </h2>
-                <p
-                    id="confirm-description"
-                    className="text-14 text-muted-foreground mt-3 leading-6"
-                >
+                <p id="confirm-description" className="text-14 text-muted-foreground mt-3 leading-6">
                     {description}
                 </p>
                 <div className="mt-7 flex justify-end gap-3">
-                    <button
-                        type="button"
-                        onClick={onCancel}
-                        className="border-line text-13 border px-5 py-3"
-                    >
+                    <button type="button" onClick={onCancel} className="border-line text-13 border px-5 py-3">
                         Cancel
                     </button>
                     <button

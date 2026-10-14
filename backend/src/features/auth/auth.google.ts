@@ -25,28 +25,18 @@ export function createGoogleVerifier(): GoogleVerifier {
 
                 return {
                     sub: payload.sub,
-                    givenName:
-                        payload.given_name ??
-                        payload.name?.split(" ")[0] ??
-                        "Traveler",
+                    givenName: payload.given_name ?? payload.name?.split(" ")[0] ?? "Traveler",
                     familyName: payload.family_name ?? ""
                 };
             } catch (error) {
-                if (
-                    error instanceof Error &&
-                    error.message.includes("Failed to retrieve verification certificates")
-                ) {
+                if (error instanceof Error && error.message.includes("Failed to retrieve verification certificates")) {
                     throw new AppError(
                         503,
                         "Google verification is temporarily unavailable",
                         "GOOGLE_VERIFICATION_UNAVAILABLE"
                     );
                 }
-                throw new AppError(
-                    401,
-                    "Invalid Google credential",
-                    "INVALID_GOOGLE_CREDENTIAL"
-                );
+                throw new AppError(401, "Invalid Google credential", "INVALID_GOOGLE_CREDENTIAL");
             }
         }
     };

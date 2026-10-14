@@ -31,19 +31,12 @@ function formatLocationType(type: string): string {
         region: "Region",
         street: "Street"
     };
-    return (
-        labels[type] ??
-        type
-            .replaceAll("_", " ")
-            .replace(/^./, (letter) => letter.toUpperCase())
-    );
+    return labels[type] ?? type.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
 }
 
 export default function MapboxPanel({ configured, initialPoint }: Props) {
     const [token, setToken] = useState<string>();
-    const sessionRequestRef = useRef<Promise<{ publicToken: string }> | null>(
-        null
-    );
+    const sessionRequestRef = useRef<Promise<{ publicToken: string }> | null>(null);
     const photoLocationRequestRef = useRef<string | null>(null);
     const [places, setPlaces] = useState<MapboxSearchResult[]>([]);
     const [saved, setSaved] = useState<MapPoint[]>([]);
@@ -62,20 +55,12 @@ export default function MapboxPanel({ configured, initialPoint }: Props) {
         void request
             .then((session) => setToken(session.publicToken))
             .catch((caught: unknown) => {
-                setError(
-                    caught instanceof Error
-                        ? caught.message
-                        : "The Mapbox map quota is unavailable."
-                );
+                setError(caught instanceof Error ? caught.message : "The Mapbox map quota is unavailable.");
             });
     }, [configured]);
 
     const addPoint = useCallback((point: MapPoint) => {
-        setSaved((current) =>
-            current.some((item) => item.id === point.id)
-                ? current
-                : [...current, point]
-        );
+        setSaved((current) => (current.some((item) => item.id === point.id) ? current : [...current, point]));
         setRoute(null);
     }, []);
 
@@ -85,10 +70,7 @@ export default function MapboxPanel({ configured, initialPoint }: Props) {
         if (photoLocationRequestRef.current === requestKey) return;
         photoLocationRequestRef.current = requestKey;
         setReverseError("");
-        void reverseMapboxProvider(
-            String(initialPoint.latitude),
-            String(initialPoint.longitude)
-        )
+        void reverseMapboxProvider(String(initialPoint.latitude), String(initialPoint.longitude))
             .then((result) =>
                 addPoint({
                     id: result.id,
@@ -109,9 +91,7 @@ export default function MapboxPanel({ configured, initialPoint }: Props) {
                     longitude: initialPoint.longitude
                 });
                 setReverseError(
-                    caught instanceof Error
-                        ? caught.message
-                        : "The photo location could not be resolved to an address."
+                    caught instanceof Error ? caught.message : "The photo location could not be resolved to an address."
                 );
             });
     }, [addPoint, configured, initialPoint]);
@@ -131,11 +111,7 @@ export default function MapboxPanel({ configured, initialPoint }: Props) {
                     })
                 )
                 .catch((caught: unknown) =>
-                    setReverseError(
-                        caught instanceof Error
-                            ? caught.message
-                            : "Could not resolve that map location."
-                    )
+                    setReverseError(caught instanceof Error ? caught.message : "Could not resolve that map location.")
                 );
         },
         [addPoint]
@@ -150,11 +126,7 @@ export default function MapboxPanel({ configured, initialPoint }: Props) {
             setPlaces(await searchMapboxProvider(search.trim()));
         } catch (caught) {
             setPlaces([]);
-            setError(
-                caught instanceof Error
-                    ? caught.message
-                    : "Mapbox search failed."
-            );
+            setError(caught instanceof Error ? caught.message : "Mapbox search failed.");
         } finally {
             setLoading(false);
         }
@@ -166,11 +138,7 @@ export default function MapboxPanel({ configured, initialPoint }: Props) {
         try {
             setRoute(await routeMapboxProvider(saved, profile));
         } catch (caught) {
-            setError(
-                caught instanceof Error
-                    ? caught.message
-                    : "Mapbox routing failed."
-            );
+            setError(caught instanceof Error ? caught.message : "Mapbox routing failed.");
         } finally {
             setRouteLoading(false);
         }
@@ -179,12 +147,9 @@ export default function MapboxPanel({ configured, initialPoint }: Props) {
     if (!configured)
         return (
             <div className="border-line mt-8 border p-6">
-                <h2 className="font-display text-24 text-foreground font-bold">
-                    Mapbox
-                </h2>
+                <h2 className="font-display text-24 text-foreground font-bold">Mapbox</h2>
                 <p className="text-14 text-graphite mt-5 leading-6">
-                    Add a valid public `pk.` Mapbox token to enable the
-                    interactive map.
+                    Add a valid public `pk.` Mapbox token to enable the interactive map.
                 </p>
             </div>
         );
@@ -192,34 +157,22 @@ export default function MapboxPanel({ configured, initialPoint }: Props) {
     if (!token)
         return (
             <div className="border-line mt-8 border p-6">
-                <h2 className="font-display text-24 text-foreground font-bold">
-                    Mapbox
-                </h2>
-                <p className="text-14 text-graphite mt-5 leading-6">
-                    {error || "Checking the hard map-load quota..."}
-                </p>
+                <h2 className="font-display text-24 text-foreground font-bold">Mapbox</h2>
+                <p className="text-14 text-graphite mt-5 leading-6">{error || "Checking the hard map-load quota..."}</p>
             </div>
         );
 
     return (
         <div className="border-line mt-8 border p-6">
             <div className="flex flex-wrap items-baseline justify-between gap-3">
-                <h2 className="font-display text-24 text-foreground font-bold">
-                    Interactive Mapbox map
-                </h2>
-                <span className="text-10 tracking-label text-graphite font-bold uppercase">
-                    configured
-                </span>
+                <h2 className="font-display text-24 text-foreground font-bold">Interactive Mapbox map</h2>
+                <span className="text-10 tracking-label text-graphite font-bold uppercase">configured</span>
             </div>
             <p className="text-14 text-graphite mt-3 leading-6">
-                Search for an address, neighborhood, city, or region. Save
-                results as numbered pinpoints, click the map to add a location,
-                then route between two or more saved stops.
+                Search for an address, neighborhood, city, or region. Save results as numbered pinpoints, click the map
+                to add a location, then route between two or more saved stops.
             </p>
-            <form
-                className="mt-6 flex flex-wrap items-end gap-4"
-                onSubmit={(event) => void submitSearch(event)}
-            >
+            <form className="mt-6 flex flex-wrap items-end gap-4" onSubmit={(event) => void submitSearch(event)}>
                 <label className="text-12 text-graphite min-w-56 flex-1">
                     Location search
                     <input
@@ -260,19 +213,14 @@ export default function MapboxPanel({ configured, initialPoint }: Props) {
                         <div className="flex items-start justify-between gap-3">
                             <div>
                                 <div className="flex flex-wrap items-center gap-2">
-                                    <h3 className="font-display text-20 text-foreground font-bold">
-                                        {place.name}
-                                    </h3>
+                                    <h3 className="font-display text-20 text-foreground font-bold">{place.name}</h3>
                                     <span className="border-line text-10 tracking-label text-graphite border px-2 py-1 font-bold uppercase">
                                         {formatLocationType(place.placeType)}
                                     </span>
                                 </div>
-                                <p className="text-14 text-graphite mt-2">
-                                    {place.address}
-                                </p>
+                                <p className="text-14 text-graphite mt-2">{place.address}</p>
                                 <p className="text-12 text-graphite mt-3">
-                                    {place.latitude.toFixed(5)},{" "}
-                                    {place.longitude.toFixed(5)}
+                                    {place.latitude.toFixed(5)}, {place.longitude.toFixed(5)}
                                 </p>
                             </div>
                             <button
@@ -298,18 +246,14 @@ export default function MapboxPanel({ configured, initialPoint }: Props) {
                 <div className="flex flex-wrap items-end gap-4">
                     <div>
                         <p className="text-12 text-graphite">Saved stops</p>
-                        <p className="font-display text-24 text-foreground mt-2">
-                            {saved.length}
-                        </p>
+                        <p className="font-display text-24 text-foreground mt-2">{saved.length}</p>
                     </div>
                     <label className="text-12 text-graphite">
                         Route mode
                         <select
                             className="border-line text-14 text-foreground mt-2 block border-b bg-transparent py-2 outline-none"
                             value={profile}
-                            onChange={(event) =>
-                                setProfile(event.target.value as RouteProfile)
-                            }
+                            onChange={(event) => setProfile(event.target.value as RouteProfile)}
                         >
                             <option value="walking">Walking</option>
                             <option value="cycling">Cycling</option>
@@ -328,21 +272,14 @@ export default function MapboxPanel({ configured, initialPoint }: Props) {
                 {saved.length > 0 ? (
                     <ol className="text-14 text-foreground mt-5 grid gap-3 sm:grid-cols-2">
                         {saved.map((point, index) => (
-                            <li
-                                key={point.id}
-                                className="flex items-start gap-3"
-                            >
+                            <li key={point.id} className="flex items-start gap-3">
                                 <span className="bg-foreground text-12 text-background mt-0.5 grid size-6 shrink-0 place-items-center rounded-full">
                                     {index + 1}
                                 </span>
                                 <span className="min-w-0">
-                                    <span className="block font-bold">
-                                        {point.label}
-                                    </span>
+                                    <span className="block font-bold">{point.label}</span>
                                     {point.detail ? (
-                                        <span className="text-12 text-graphite mt-1 block">
-                                            {point.detail}
-                                        </span>
+                                        <span className="text-12 text-graphite mt-1 block">{point.detail}</span>
                                     ) : null}
                                     {point.type ? (
                                         <span className="border-line text-10 tracking-label text-graphite mt-2 inline-block border px-2 py-1 font-bold uppercase">
@@ -354,11 +291,7 @@ export default function MapboxPanel({ configured, initialPoint }: Props) {
                                     type="button"
                                     className="text-12 text-graphite ml-auto shrink-0 underline"
                                     onClick={() => {
-                                        setSaved((current) =>
-                                            current.filter(
-                                                (item) => item.id !== point.id
-                                            )
-                                        );
+                                        setSaved((current) => current.filter((item) => item.id !== point.id));
                                         setRoute(null);
                                     }}
                                 >
@@ -369,14 +302,12 @@ export default function MapboxPanel({ configured, initialPoint }: Props) {
                     </ol>
                 ) : (
                     <p className="text-14 text-graphite mt-5">
-                        Save a search result or click the map to place your
-                        first pinpoint.
+                        Save a search result or click the map to place your first pinpoint.
                     </p>
                 )}
                 {route ? (
                     <p className="text-14 text-foreground mt-5">
-                        {route.profile} route: {route.distanceKm} km · about{" "}
-                        {route.durationMinutes} minutes.
+                        {route.profile} route: {route.distanceKm} km · about {route.durationMinutes} minutes.
                     </p>
                 ) : null}
             </div>

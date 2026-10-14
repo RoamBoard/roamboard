@@ -14,23 +14,16 @@ type Props = {
 export default function YesPleaseButton({ href }: Props) {
     const [flashing, setFlashing] = useState(false);
     // A ref instead of `let`: the project only allows const.
-    const offTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
-        undefined
-    );
+    const offTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
     // Design 2.3: the background switches to black at intervals.
     useEffect(() => {
-        const reduceMotion = window.matchMedia(
-            "(prefers-reduced-motion: reduce)"
-        ).matches;
+        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
         if (reduceMotion) return;
 
         const interval = setInterval(() => {
             setFlashing(true);
-            offTimer.current = setTimeout(
-                () => setFlashing(false),
-                FLASH_FOR_MS
-            );
+            offTimer.current = setTimeout(() => setFlashing(false), FLASH_FOR_MS);
         }, FLASH_EVERY_MS);
 
         return () => {
@@ -49,9 +42,7 @@ export default function YesPleaseButton({ href }: Props) {
                 // Design 2.4: hover / keyboard focus = black background + arrow
                 "hover:bg-foreground hover:text-background",
                 "focus-visible:bg-foreground focus-visible:text-background focus-visible:outline-none",
-                flashing
-                    ? "bg-foreground text-background"
-                    : "text-foreground bg-transparent"
+                flashing ? "bg-foreground text-background" : "text-foreground bg-transparent"
             ].join(" ")}
         >
             yes please.

@@ -35,10 +35,11 @@ export function createAuthRepository(): AuthRepository {
             return result.rows[0] ? toUser(result.rows[0]) : null;
         },
         async createSession(tokenHash, userId, expiresAt) {
-            await getPool().query(
-                "INSERT INTO auth_session (token_hash, user_id, expires_at) VALUES ($1, $2, $3)",
-                [tokenHash, userId, expiresAt]
-            );
+            await getPool().query("INSERT INTO auth_session (token_hash, user_id, expires_at) VALUES ($1, $2, $3)", [
+                tokenHash,
+                userId,
+                expiresAt
+            ]);
         },
         async findUserBySession(tokenHash) {
             const result = await getPool().query<UserRow>(
@@ -51,10 +52,7 @@ export function createAuthRepository(): AuthRepository {
             return result.rows[0] ? toUser(result.rows[0]) : null;
         },
         async deleteSession(tokenHash) {
-            await getPool().query(
-                "DELETE FROM auth_session WHERE token_hash = $1",
-                [tokenHash]
-            );
+            await getPool().query("DELETE FROM auth_session WHERE token_hash = $1", [tokenHash]);
         }
     };
 }

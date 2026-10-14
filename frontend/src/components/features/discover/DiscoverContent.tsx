@@ -5,22 +5,11 @@ import DiscoverMoodMarquees from "./DiscoverMoodMarquees";
 import { Marquee } from "@/components/ui/marquee";
 import type { CSSProperties } from "react";
 import Link from "next/link";
-import {
-    discoverDestinations,
-    discoverDestinationHref
-} from "@/data/discover-destinations";
-import {
-    discoverBentoCollections,
-    discoverCollectionHref
-} from "@/data/discover-collections";
-import {
-    discoverPhotos,
-    journeyColumns,
-    previewBoards
-} from "@/data/discover-preview";
+import { discoverDestinations, discoverDestinationHref } from "@/data/discover-destinations";
+import { discoverBentoCollections, discoverCollectionHref } from "@/data/discover-collections";
+import { discoverPhotos, journeyColumns, previewBoards } from "@/data/discover-preview";
 
-const heading =
-    "font-display text-[clamp(1.8rem,3.8vw,4rem)] leading-none font-bold tracking-tight";
+const heading = "font-display text-[clamp(1.8rem,3.8vw,4rem)] leading-none font-bold tracking-tight";
 
 export function DiscoverHero() {
     return (
@@ -35,18 +24,11 @@ export function DiscoverHero() {
                 >
                     DISCOVER
                 </h1>
-                <p className="mt-4 text-[clamp(1rem,2vw,2rem)]">
-                    The world is at your fingertips.
-                </p>
+                <p className="mt-4 text-[clamp(1rem,2vw,2rem)]">The world is at your fingertips.</p>
             </header>
             <div className="mt-8 grid flex-1 grid-cols-1 gap-7 md:grid-cols-[1.55fr_1fr] md:gap-10 lg:min-h-0">
                 <div className="relative min-h-64 overflow-hidden rounded-r-[50%] md:min-h-96 lg:min-h-0 lg:rounded-tr-[100%] lg:rounded-br-none">
-                    <DiscoverPhoto
-                        photo={discoverPhotos.kyoto}
-                        eager
-                        width={1600}
-                        position="53% center"
-                    />
+                    <DiscoverPhoto photo={discoverPhotos.kyoto} eager width={1600} position="53% center" />
                 </div>
                 <div className="flex max-w-80 flex-col justify-end pb-7 md:pb-12 lg:pb-10">
                     <p className="text-[clamp(1.25rem,2.3vw,2rem)] leading-tight">
@@ -61,10 +43,9 @@ export function DiscoverHero() {
                         </h2>
                     </div>
                     <p className="text-14 leading-relaxed">
-                        Handpicked by the Roamboard Editorial Team through a mix
-                        of traveler activity, emerging trends, seasonal timing,
-                        and what’s looking especially good right now — all in
-                        search of the most unforgettable trip for you.
+                        Handpicked by the Roamboard Editorial Team through a mix of traveler activity, emerging trends,
+                        seasonal timing, and what’s looking especially good right now — all in search of the most
+                        unforgettable trip for you.
                     </p>
                     <a
                         href="#discover-feed"
@@ -81,13 +62,9 @@ export function DiscoverHero() {
     );
 }
 
-export function DiscoverJourney({
-    mobilePanel
-}: { mobilePanel?: number } = {}) {
+export function DiscoverJourney({ mobilePanel }: { mobilePanel?: number } = {}) {
     const columns =
-        mobilePanel === undefined
-            ? journeyColumns
-            : journeyColumns.slice(mobilePanel * 2, mobilePanel * 2 + 2);
+        mobilePanel === undefined ? journeyColumns : journeyColumns.slice(mobilePanel * 2, mobilePanel * 2 + 2);
     return (
         <section
             aria-label="A world of travel inspiration"
@@ -117,11 +94,7 @@ export function DiscoverJourney({
                                 key={`${index}-${photoIndex}`}
                                 className="relative aspect-[2/3] shrink-0 overflow-hidden"
                             >
-                                <DiscoverPhoto
-                                    photo={photo}
-                                    width={800}
-                                    eager
-                                />
+                                <DiscoverPhoto photo={photo} width={800} eager />
                             </div>
                         ))}
                     </Marquee>
@@ -142,8 +115,7 @@ function FeaturedBoards() {
                 className="font-display self-center text-[clamp(2.5rem,5.5vw,6rem)] leading-[.95] font-bold tracking-tight lg:col-start-1 lg:row-start-1 lg:text-right"
             >
                 THIS
-                <br className="hidden lg:block" /> WEEK’S{" "}
-                <span className="lg:sr-only">FEATURED BOARDS</span>
+                <br className="hidden lg:block" /> WEEK’S <span className="lg:sr-only">FEATURED BOARDS</span>
             </h2>
             {previewBoards.map((board, index) => (
                 <article
@@ -158,9 +130,7 @@ function FeaturedBoards() {
                             {board.title}
                         </h3>
                         <p className="text-12 mt-3">by {board.author}</p>
-                        <p className="text-12 mt-5 leading-relaxed">
-                            {board.description}
-                        </p>
+                        <p className="text-12 mt-5 leading-relaxed">{board.description}</p>
                         <ul className="text-12 mt-4 leading-relaxed">
                             {board.highlights.map((item) => (
                                 <li key={item}>{item}</li>
@@ -211,9 +181,7 @@ export function DiscoverFeed() {
                                     <DiscoverPhoto
                                         photo={collection.coverImage}
                                         width={collection.large ? 1100 : 800}
-                                        position={
-                                            collection.coverPosition ?? "center"
-                                        }
+                                        position={collection.coverPosition ?? "center"}
                                     />
                                 </div>
                                 <div
@@ -225,11 +193,7 @@ export function DiscoverFeed() {
                                         aria-label={collection.title}
                                         className={`font-body leading-none font-bold ${collection.large ? "text-48 lg:text-60" : "text-[clamp(1.1rem,2.1vw,2.25rem)]"}`}
                                     >
-                                        {(
-                                            collection.lines ?? [
-                                                collection.title
-                                            ]
-                                        ).map((line) => (
+                                        {(collection.lines ?? [collection.title]).map((line) => (
                                             <span key={line} className="block">
                                                 {line}
                                             </span>
@@ -244,10 +208,7 @@ export function DiscoverFeed() {
                     </div>
                 </section>
                 <DiscoverSearch />
-                <section
-                    aria-labelledby="trending-title"
-                    className="mt-20 md:mt-24"
-                >
+                <section aria-labelledby="trending-title" className="mt-20 md:mt-24">
                     <h2 id="trending-title" className={heading}>
                         TRENDING DESTINATIONS
                     </h2>
@@ -260,10 +221,7 @@ export function DiscoverFeed() {
                                 className={`group focus-visible:outline-foreground relative min-h-56 cursor-pointer overflow-hidden text-white focus-visible:outline-2 focus-visible:outline-offset-4 md:min-h-0 ${destination.layout}`}
                             >
                                 <div className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-[1.03] group-focus-visible:scale-[1.03] motion-reduce:transform-none motion-reduce:transition-none">
-                                    <DiscoverPhoto
-                                        photo={destination.coverImage}
-                                        width={900}
-                                    />
+                                    <DiscoverPhoto photo={destination.coverImage} width={900} />
                                 </div>
                                 <div
                                     aria-hidden="true"
@@ -274,10 +232,7 @@ export function DiscoverFeed() {
                                 </h3>
                                 <p className="text-10 absolute right-3 bottom-3">
                                     {destination.previewBoardCount} boards
-                                    <span className="sr-only">
-                                        {" "}
-                                        (sample count)
-                                    </span>
+                                    <span className="sr-only"> (sample count)</span>
                                 </p>
                             </Link>
                         ))}
@@ -294,10 +249,7 @@ export function DiscoverFeed() {
             >
                 <header className="border-t border-white/25 pt-6 text-right">
                     <p className="text-14">Introducing</p>
-                    <h2
-                        id="roamflow-title"
-                        className="font-display text-48 leading-none font-bold"
-                    >
+                    <h2 id="roamflow-title" className="font-display text-48 leading-none font-bold">
                         RoamFlow
                     </h2>
                 </header>
@@ -307,10 +259,7 @@ export function DiscoverFeed() {
                             key={index}
                             className={`relative aspect-[4/5] overflow-hidden border border-white/25 ${index % 2 === 0 ? "mt-16" : ""}`}
                         >
-                            <DiscoverPhoto
-                                photo={discoverPhotos.hiddenGems}
-                                width={700}
-                            />
+                            <DiscoverPhoto photo={discoverPhotos.hiddenGems} width={700} />
                             <div className="absolute inset-0 bg-gradient-to-b from-black via-black/80 to-transparent" />
                             <div className="relative p-4">
                                 <h3 className="text-[clamp(1rem,2vw,2rem)] leading-none font-bold">
@@ -324,8 +273,7 @@ export function DiscoverFeed() {
                     ))}
                 </div>
                 <p className="text-12 mt-6 text-white/70">
-                    RoamFlow concept preview · imagery and stories are
-                    placeholders.
+                    RoamFlow concept preview · imagery and stories are placeholders.
                 </p>
             </section>
             <footer className="border-line border-t px-5 py-10 md:px-10">
@@ -334,9 +282,8 @@ export function DiscoverFeed() {
                         Photo credits & sources
                     </summary>
                     <p className="mt-3 max-w-2xl">
-                        Photography from Unsplash. The first seven source links
-                        were supplied as image URLs; their photographer credits
-                        still need to be resolved before API integration.
+                        Photography from Unsplash. The first seven source links were supplied as image URLs; their
+                        photographer credits still need to be resolved before API integration.
                     </p>
                     <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                         {Object.entries(discoverPhotos).map(([key, photo]) => (

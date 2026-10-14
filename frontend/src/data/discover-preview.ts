@@ -8,20 +8,12 @@ export type DiscoverPhoto = {
     photographerUrl?: string;
 };
 
-function photo(
-    image: string,
-    alt: string,
-    page?: string,
-    photographer?: string,
-    username?: string
-): DiscoverPhoto {
+function photo(image: string, alt: string, page?: string, photographer?: string, username?: string): DiscoverPhoto {
     const src = `https://images.unsplash.com/photo-${image}?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D`;
     return {
         src,
         alt,
-        sourceUrl: page
-            ? `https://unsplash.com/photos/${page}?utm_source=roamboard&utm_medium=referral`
-            : src,
+        sourceUrl: page ? `https://unsplash.com/photos/${page}?utm_source=roamboard&utm_medium=referral` : src,
         photographer,
         photographerUrl: username
             ? `https://unsplash.com/@${username}?utm_source=roamboard&utm_medium=referral`
@@ -30,34 +22,13 @@ function photo(
 }
 
 export const discoverPhotos = {
-    kyoto: photo(
-        "1578469645742-46cae010e5d4",
-        "Kiyomizu-dera pagoda above the trees and rooftops of Kyoto"
-    ),
-    aurora: photo(
-        "1517411032315-54ef2cb783bb",
-        "Green northern lights above a quiet shoreline"
-    ),
-    surf: photo(
-        "1612025344470-df9818c785a4",
-        "Surfers waiting in a blue sea at dusk"
-    ),
-    goldenSurf: photo(
-        "1789014538596-16dc5e095fef",
-        "A surfer riding golden waves in the evening light"
-    ),
-    sunsetFriends: photo(
-        "1598842582612-ea95bca731f9",
-        "Friends silhouetted against an orange sunset"
-    ),
-    cave: photo(
-        "1464809142576-df63ca4ed7f0",
-        "Sunlight entering a moss-covered cave"
-    ),
-    woodlandFriends: photo(
-        "1597056161974-458b172dac56",
-        "Friends beside a forest overlooking the sunset"
-    ),
+    kyoto: photo("1578469645742-46cae010e5d4", "Kiyomizu-dera pagoda above the trees and rooftops of Kyoto"),
+    aurora: photo("1517411032315-54ef2cb783bb", "Green northern lights above a quiet shoreline"),
+    surf: photo("1612025344470-df9818c785a4", "Surfers waiting in a blue sea at dusk"),
+    goldenSurf: photo("1789014538596-16dc5e095fef", "A surfer riding golden waves in the evening light"),
+    sunsetFriends: photo("1598842582612-ea95bca731f9", "Friends silhouetted against an orange sunset"),
+    cave: photo("1464809142576-df63ca4ed7f0", "Sunlight entering a moss-covered cave"),
+    woodlandFriends: photo("1597056161974-458b172dac56", "Friends beside a forest overlooking the sunset"),
     summit: photo(
         "1551740994-7af69385a217",
         "A traveller on a rocky summit beneath the evening sky",
@@ -235,11 +206,7 @@ export const journeyColumns = [
     { offset: -8, photos: [discoverPhotos.aurora, discoverPhotos.goldenSurf] },
     {
         offset: -35,
-        photos: [
-            discoverPhotos.surf,
-            discoverPhotos.sunsetFriends,
-            discoverPhotos.cave
-        ]
+        photos: [discoverPhotos.surf, discoverPhotos.sunsetFriends, discoverPhotos.cave]
     },
     {
         offset: -3,
@@ -247,20 +214,12 @@ export const journeyColumns = [
     },
     {
         offset: -23,
-        photos: [
-            discoverPhotos.fog,
-            discoverPhotos.beachFriends,
-            discoverPhotos.beachFriends
-        ]
+        photos: [discoverPhotos.fog, discoverPhotos.beachFriends, discoverPhotos.beachFriends]
     },
     { offset: -9, photos: [discoverPhotos.oceanSunset, discoverPhotos.stars] },
     {
         offset: -27,
-        photos: [
-            discoverPhotos.couple,
-            discoverPhotos.desert,
-            discoverPhotos.fireworks
-        ]
+        photos: [discoverPhotos.couple, discoverPhotos.desert, discoverPhotos.fireworks]
     }
 ];
 
@@ -278,13 +237,7 @@ export const previewBoards = [
     },
     {
         id: "preview-odda",
-        tags: [
-            "nature",
-            "mountains",
-            "winter-escapes",
-            "slow-mornings",
-            "by-the-water"
-        ],
+        tags: ["nature", "mountains", "winter-escapes", "slow-mornings", "by-the-water"],
         title: "Odda Season",
         author: "Natalie Foster",
         code: "NOR",
@@ -295,13 +248,7 @@ export const previewBoards = [
     },
     {
         id: "preview-buenos-aires",
-        tags: [
-            "city-life",
-            "foodie",
-            "cafe-hopping",
-            "nightlife",
-            "architecture"
-        ],
+        tags: ["city-life", "foodie", "cafe-hopping", "nightlife", "architecture"],
         title: "Buenos Días Buenos Aires",
         author: "Valentina Paz",
         code: "ARG",
