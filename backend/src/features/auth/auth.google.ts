@@ -9,8 +9,8 @@ export function createGoogleVerifier(): GoogleVerifier {
     return {
         async verify(idToken) {
             const audience = process.env.GOOGLE_CLIENT_ID;
-            if (!audience) {
-                throw new Error("GOOGLE_CLIENT_ID is not configured");
+            if (!audience || audience.startsWith("your-")) {
+                throw new AppError(503, "Google sign-in is not configured", "GOOGLE_AUTH_UNAVAILABLE");
             }
 
             try {

@@ -4,6 +4,10 @@ This deploys PostgreSQL in Docker on one Azure Linux VM. Each developer keeps ru
 `npm run dev` in `backend/` and connects to the same database through SSH. Express
 deployment is a separate, later step; this setup alone does not complete the hosted-server requirement.
 
+The team database is now deployed according to the maintainer. Teammates should start
+with [the backend quick start](../README.md#team-quick-start-local-backend-shared-azure-database),
+not recreate the VM or initialize another database. The sections below are the maintainer's runbook.
+
 ## 1. Create the VM
 
 In the Azure portal, create an Ubuntu 24.04 LTS VM with SSH key authentication.
@@ -84,6 +88,7 @@ All teammates use the same database host through their own tunnels.
 
 ```powershell
 cd backend
+npm run check:setup
 npm run dev
 Invoke-RestMethod http://localhost:3001/health/db
 ```

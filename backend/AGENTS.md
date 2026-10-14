@@ -8,6 +8,7 @@ These instructions apply to `backend/`. Use `../layered-backend-demo1/` as the r
 - PostgreSQL schema lives in ordered files under `db/migrations/`; `001_initial.sql` is the baseline and `002_auth_session.sql` adds sessions. Treat migrations as the database source of truth. Do not treat the demo's in-memory Todo model or the frontend's mock data as persistent Roamboard behavior.
 - Check the relevant schema, `../frontend/REQUIREMENTS.md`, and `../frontend/src/types/` before defining a feature's contract. Preserve the product decisions already represented in the schema; ask about genuinely unresolved behavior instead of silently substituting the demo's choices.
 - Keep `backend/.env` and credentials out of Git. Document new variables in `.env.example` and `README.md` without real secrets.
+- Team development uses a shared PostgreSQL container on Azure through SSH tunnels; the backend still runs locally. See `README.md` for onboarding and `deploy/README.md` for maintenance. Do not recreate the shared database or rerun applied migrations when onboarding. `npm run check:setup` checks auth configuration and database access without changing data. Backend `GOOGLE_CLIENT_ID` must match frontend `NEXT_PUBLIC_GOOGLE_CLIENT_ID`.
 
 ## Formatting
 

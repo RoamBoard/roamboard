@@ -3,7 +3,91 @@
 The API uses PostgreSQL through `pg`. `/health` checks Express; `/health/db`
 checks that PostgreSQL accepts a query. The latter does not verify migrations.
 
-## Local setup
+## Team quick start: local backend, shared Azure database
+
+The Azure PostgreSQL container is already deployed. Teammates do not need to install
+PostgreSQL or run Docker locally. Use Node.js 24 and ask the database maintainer for
+the VM hostname, your SSH username/access, the application database password, and the
+team's Google web client ID. Never share private SSH keys or the database admin password.
+
+From the repository root, install dependencies once:
+
+```powershell
+pnpm.cmd install --frozen-lockfile
+npm.cmd --prefix backend ci
+```
+
+Copy `backend/.env.example` to `backend/.env` only if `.env` does not already exist.
+Keep existing credentials when updating it. Set these values:
+
+```dotenv
+DATABASE_URL=postgresql://roamboard_user:YOUR_URL_ENCODED_APP_PASSWORD@127.0.0.1:15432/roamboard_dev
+CLIENT_ORIGIN=http://localhost:3000
+GOOGLE_CLIENT_ID=THE_TEAM_GOOGLE_WEB_CLIENT_ID.apps.googleusercontent.com
+```
+
+The database name and role above match our Docker setup. URL-encode punctuation in the
+password. `POSTGRES_ADMIN_PASSWORD` and `ROAMBOARD_DB_PASSWORD` are used to initialize
+Docker on the VM; local backends only need `DATABASE_URL`. No extra `.env` file is needed.
+
+In terminal 1, open your connection to Azure and keep it running:
+
+```powershell
+ssh -N -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -L 127.0.0.1:15432:127.0.0.1:5432 YOUR_SSH_USER@YOUR_VM_IP
+```
+
+If your SSH key is not a default key, add `-i PATH_TO_YOUR_PRIVATE_KEY` to the command.
+The maintainer must authorize your public key and allow your public IP in Azure's SSH
+network rule. Do not open port 5432 publicly.
+
+In terminal 2:
+
+```powershell
+cd backend
+npm.cmd run check:setup
+npm.cmd run dev
+```
+
+`check:setup` checks database connectivity, the authentication tables/permissions, and
+Google configuration without changing data or printing credentials. If a frontend
+`.env.local` exists, it also checks that its Google client ID matches the backend.
+This checks configuration, not a complete Google login or every application migration.
+
+In another terminal, verify the running API:
+
+```powershell
+Invoke-RestMethod http://localhost:3001/health
+Invoke-RestMethod http://localhost:3001/health/db
+```
+
+Start the frontend using [its setup instructions](../frontend/README.md). Its
+`NEXT_PUBLIC_API_URL` stays `http://localhost:3001`, and its
+`NEXT_PUBLIC_GOOGLE_CLIENT_ID` must exactly match backend `GOOGLE_CLIENT_ID`. Google
+must authorize the frontend JavaScript origin `http://localhost:3000`. Restart each
+dev server after changing its environment file. Use `localhost` consistently in the browser.
+
+To inspect or edit the shared database, keep the tunnel open and connect pgAdmin or
+DBeaver to `127.0.0.1`, port `15432`, database `roamboard_dev`, user `roamboard_user`,
+with the raw application password. Database SSL is disabled on this loopback connection;
+SSH encrypts traffic to Azure. Everyone sees committed changes. Do not rerun migrations
+or recreate the shared database as part of onboarding.
+
+### Login troubleshooting
+
+- A healthy Docker container means PostgreSQL is running; it does not prove your local
+  backend can connect, that migrations exist, or that Google is configured.
+- `GOOGLE_AUTH_UNAVAILABLE` (503): fill backend `GOOGLE_CLIENT_ID` with the same web
+  client ID as the frontend, then restart the backend. Replacing `.env` with database-only
+  settings removes Google configuration and breaks login.
+- `INVALID_GOOGLE_CREDENTIAL` (401): check matching client IDs and try signing in again.
+- Database check failure: reopen the tunnel and run `npm.cmd run check:setup`. Check the
+  database password and ask the maintainer to inspect migrations/permissions if necessary.
+- A generic 500 means an unexpected backend failure; inspect the backend and run the
+  setup check. Do not share ID tokens, cookies, connection URLs, or private keys in logs.
+
+See [the deployment guide](deploy/README.md) for VM administration, migrations and backups.
+
+## Alternative: independent local PostgreSQL setup
 
 For a shared PostgreSQL database in Docker on Azure while running the backend locally,
 follow [the shared database deployment guide](deploy/README.md). The existing

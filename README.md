@@ -1,5 +1,19 @@
 # roamboard
 
+## Run the project with the team's Azure database
+
+Follow [the backend team quick start](backend/README.md#team-quick-start-local-backend-shared-azure-database)
+to install dependencies, configure the existing `backend/.env`, open your SSH tunnel,
+and run `npm.cmd run check:setup` followed by `npm.cmd run dev` from `backend/`.
+The database runs in Docker on Azure; teammates run Express locally and share its data.
+Ask the maintainer for SSH access and application credentials before starting.
+
+Then follow [the frontend instructions](frontend/README.md#local-development). Both
+applications must use the same Google web client ID. Keep the tunnel and both dev servers
+running. Do not create another database or reapply shared migrations when joining the team.
+
+## Checks before a PR
+
 From the repository root, install the shared formatting dependencies with `pnpm install`.
 Install application dependencies with `pnpm --dir frontend install` and `npm --prefix backend ci`.
 Before opening a PR, run:
