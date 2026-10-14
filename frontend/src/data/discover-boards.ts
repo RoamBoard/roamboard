@@ -1,8 +1,4 @@
-import {
-    filterBoardsByTag,
-    filterBoardsByTags,
-    type BoardTagId
-} from "./board-tags";
+import { filterBoardsByTag, filterBoardsByTags, type BoardTagId } from "./board-tags";
 import { previewBoards } from "./discover-preview";
 import { mockBoards } from "./mock-boards";
 import type { BoardDestination } from "@/types/board";
@@ -33,15 +29,14 @@ export async function getDiscoverBoardsByTags(tagIds: readonly BoardTagId[]) {
     return { ...result, boards: filterBoardsByTags(result.boards, tagIds) };
 }
 
-export function filterBoardsByDestination<
-    T extends { destinations?: readonly BoardDestination[] }
->(boards: readonly T[], countryCode: string): T[] {
+export function filterBoardsByDestination<T extends { destinations?: readonly BoardDestination[] }>(
+    boards: readonly T[],
+    countryCode: string
+): T[] {
     const code = countryCode.toUpperCase();
     if (!/^[A-Z]{2}$/.test(code)) return [];
     return boards.filter((board) =>
-        board.destinations?.some(
-            (destination) => destination.countryCode.toUpperCase() === code
-        )
+        board.destinations?.some((destination) => destination.countryCode.toUpperCase() === code)
     );
 }
 

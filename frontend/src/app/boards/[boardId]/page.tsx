@@ -27,9 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const data = await getPublishedBoard(boardId);
 
     return {
-        title: data
-            ? `${data.board.title} | Roamboard`
-            : "Board not found | Roamboard",
+        title: data ? `${data.board.title} | Roamboard` : "Board not found | Roamboard",
         description: data?.board.description,
         robots: { index: false, follow: false }
     };

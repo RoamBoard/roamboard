@@ -1,18 +1,11 @@
 import type { Router } from "express";
 
-import {
-    createAuthController,
-    type AuthController
-} from "./auth.controller.js";
+import { createAuthController, type AuthController } from "./auth.controller.js";
 import { createGoogleVerifier } from "./auth.google.js";
 import { createAuthRepository } from "./auth.repository.js";
 import { createAuthRouter } from "./auth.routes.js";
 import { createAuthService } from "./auth.service.js";
-import type {
-    AuthRepository,
-    AuthService,
-    GoogleVerifier
-} from "./auth.types.js";
+import type { AuthRepository, AuthService, GoogleVerifier } from "./auth.types.js";
 
 export interface AuthModule {
     router: Router;

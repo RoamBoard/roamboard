@@ -58,8 +58,7 @@ export const discoverCollections: readonly DiscoverCollection[] = [
         slug: "slow-mornings",
         title: "Slow Mornings",
         lines: ["SLOW", "MORNINGS"],
-        description:
-            "Fresh pastries, neighborhood cafés, and taking the long way into the day.",
+        description: "Fresh pastries, neighborhood cafés, and taking the long way into the day.",
         coverImage: discoverPhotos.mornings,
         coverPosition: "center 65%",
         tagIds: ["slow-mornings", "cafe-hopping"],
@@ -80,8 +79,7 @@ export const discoverCollections: readonly DiscoverCollection[] = [
         slug: "food-and-more-food",
         title: "Food, and More Food",
         lines: ["FOOD, AND", "MORE FOOD"],
-        description:
-            "Local favorites, late dinners, and always room for dessert.",
+        description: "Local favorites, late dinners, and always room for dessert.",
         coverImage: discoverPhotos.food,
         tagIds: ["foodie", "street-food", "wine-and-dine"],
         layout: "md:col-span-3"
@@ -91,8 +89,7 @@ export const discoverCollections: readonly DiscoverCollection[] = [
         slug: "somewhere-quiet",
         title: "Somewhere Quiet",
         lines: ["SOMEWHERE", "QUIET"],
-        description:
-            "Hidden corners, empty paths, and somewhere the noise doesn’t follow.",
+        description: "Hidden corners, empty paths, and somewhere the noise doesn’t follow.",
         coverImage: discoverPhotos.quiet,
         tagIds: ["hidden-gems", "off-the-grid", "relax"],
         layout: "md:col-span-3"
@@ -204,27 +201,19 @@ export const discoverCollections: readonly DiscoverCollection[] = [
     )
 ];
 
-export const discoverBentoCollections = discoverCollections.filter(
-    (collection) => collection.moodRow === undefined
-);
+export const discoverBentoCollections = discoverCollections.filter((collection) => collection.moodRow === undefined);
 export const discoverMoodRows = Array.from({ length: 5 }, (_, row) =>
     discoverCollections.filter((collection) => collection.moodRow === row)
 );
 
 if (
-    new Set(discoverCollections.map((collection) => collection.slug)).size !==
-        discoverCollections.length ||
-    new Set(discoverCollections.map((collection) => collection.id)).size !==
-        discoverCollections.length ||
+    new Set(discoverCollections.map((collection) => collection.slug)).size !== discoverCollections.length ||
+    new Set(discoverCollections.map((collection) => collection.id)).size !== discoverCollections.length ||
     discoverCollections.some(
-        (collection) =>
-            !collection.tagIds.length ||
-            collection.tagIds.some((id) => !isBoardTagId(id))
+        (collection) => !collection.tagIds.length || collection.tagIds.some((id) => !isBoardTagId(id))
     )
 ) {
-    throw new Error(
-        "Collections must have unique IDs/slugs and valid catalog tag IDs."
-    );
+    throw new Error("Collections must have unique IDs/slugs and valid catalog tag IDs.");
 }
 
 export function getDiscoverCollection(slug: string) {

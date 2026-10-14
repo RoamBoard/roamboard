@@ -34,22 +34,12 @@ export default function BoardDiscoveryDetails({
             />
 
             <fieldset>
-                <legend className="font-display text-20 font-bold">
-                    Visibility
-                </legend>
+                <legend className="font-display text-20 font-bold">Visibility</legend>
                 <div className="mt-4 grid gap-3 sm:grid-cols-3">
                     {(
                         [
-                            [
-                                "collaborators",
-                                "Collaborators",
-                                "Visible to you and invited Board members"
-                            ],
-                            [
-                                "friends",
-                                "Friends",
-                                "Visible to you and your friends"
-                            ],
+                            ["collaborators", "Collaborators", "Visible to you and invited Board members"],
+                            ["friends", "Friends", "Visible to you and your friends"],
                             ["public", "Public", "Discoverable by everyone"]
                         ] as const
                     ).map(([value, label, description]) => (
@@ -66,19 +56,13 @@ export default function BoardDiscoveryDetails({
                                 onChange={() => onVisibilityChange(value)}
                                 className="sr-only"
                             />
-                            <strong className="text-13 block font-medium">
-                                {label}
-                            </strong>
-                            <span className="text-10 text-graphite mt-1 block">
-                                {description}
-                            </span>
+                            <strong className="text-13 block font-medium">{label}</strong>
+                            <span className="text-10 text-graphite mt-1 block">{description}</span>
                         </label>
                     ))}
                 </div>
                 {!canChangeVisibility ? (
-                    <p className="text-12 text-graphite mt-3">
-                        Only the Board owner can change visibility.
-                    </p>
+                    <p className="text-12 text-graphite mt-3">Only the Board owner can change visibility.</p>
                 ) : null}
             </fieldset>
         </div>

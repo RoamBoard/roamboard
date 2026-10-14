@@ -78,8 +78,7 @@ export type BoardImageItem = {
 };
 
 // A board's item list can mix activities with other kinds of content.
-export type BoardItem =
-    BoardActivity | BoardLocationItem | BoardTextItem | BoardImageItem;
+export type BoardItem = BoardActivity | BoardLocationItem | BoardTextItem | BoardImageItem;
 
 export type Board = {
     id: string;

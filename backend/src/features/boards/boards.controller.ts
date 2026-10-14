@@ -43,11 +43,14 @@ export function createBoardsController(service: BoardsService): BoardController 
         },
         listOwned: async (_request, response) => {
             const { scope, page, limit } = response.locals.query as {
-                scope: "drafts" | "published"; page: number; limit: number;
+                scope: "drafts" | "published";
+                page: number;
+                limit: number;
             };
-            const result = scope === "drafts"
-                ? await service.listDrafts(userId(response.locals), page, limit)
-                : await service.listPublished(userId(response.locals), page, limit);
+            const result =
+                scope === "drafts"
+                    ? await service.listDrafts(userId(response.locals), page, limit)
+                    : await service.listPublished(userId(response.locals), page, limit);
             response.json({ data: result.items, meta: { page, limit, hasMore: result.hasMore } });
         },
         delete: async (_request, response) => {

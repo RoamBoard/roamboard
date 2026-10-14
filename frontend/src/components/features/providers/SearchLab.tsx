@@ -23,11 +23,7 @@ export default function SearchLab() {
             void suggestIndex(trimmed, controller.signal)
                 .then(setSuggestions)
                 .catch((caught: unknown) => {
-                    if (!(
-                        caught instanceof DOMException &&
-                        caught.name === "AbortError"
-                    ))
-                        setSuggestions([]);
+                    if (!(caught instanceof DOMException && caught.name === "AbortError")) setSuggestions([]);
                 });
         }, 300);
         return () => {
@@ -45,11 +41,7 @@ export default function SearchLab() {
             setResult(await searchIndex(query.trim(), filters));
             setSuggestions([]);
         } catch (caught) {
-            setError(
-                caught instanceof Error
-                    ? caught.message
-                    : "Elasticsearch search failed."
-            );
+            setError(caught instanceof Error ? caught.message : "Elasticsearch search failed.");
         } finally {
             setLoading(false);
         }
@@ -58,17 +50,12 @@ export default function SearchLab() {
     return (
         <div className="border-line mt-8 border p-6">
             <div className="flex flex-wrap items-baseline justify-between gap-3">
-                <h2 className="font-display text-24 text-foreground font-bold">
-                    Elasticsearch discovery index
-                </h2>
-                <span className="text-10 tracking-label text-graphite font-bold uppercase">
-                    fuzzy + autocomplete
-                </span>
+                <h2 className="font-display text-24 text-foreground font-bold">Elasticsearch discovery index</h2>
+                <span className="text-10 tracking-label text-graphite font-bold uppercase">fuzzy + autocomplete</span>
             </div>
             <p className="text-14 text-graphite mt-3 max-w-2xl leading-6">
-                Try misspellings such as “stokholm”. Suggestions use
-                search-as-you-type; results use fuzzy matching, field boosts,
-                public visibility, filters, and popularity scoring.
+                Try misspellings such as “stokholm”. Suggestions use search-as-you-type; results use fuzzy matching,
+                field boosts, public visibility, filters, and popularity scoring.
             </p>
             <form className="mt-6" onSubmit={(event) => void submit(event)}>
                 <label className="text-12 text-graphite">
@@ -163,9 +150,8 @@ export default function SearchLab() {
                 </div>
             </form>
             <p className="text-12 text-graphite mt-5">
-                Reindex the demo safely from the API container with{" "}
-                <code>npm run search:reindex:container</code>. The HTTP reindex
-                route stays protected in Docker.
+                Reindex the demo safely from the API container with <code>npm run search:reindex:container</code>. The
+                HTTP reindex route stays protected in Docker.
             </p>
             {error ? (
                 <p className="text-14 mt-5" role="alert">
@@ -179,24 +165,16 @@ export default function SearchLab() {
                     </p>
                     <div className="mt-4 grid gap-3">
                         {result.hits.map((hit) => (
-                            <article
-                                key={hit.document.id}
-                                className="border-line border p-4"
-                            >
+                            <article key={hit.document.id} className="border-line border p-4">
                                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                                     <h3 className="font-display text-20 text-foreground font-bold">
                                         {hit.document.title}
                                     </h3>
-                                    <span className="text-12 text-graphite">
-                                        score {hit.score.toFixed(2)}
-                                    </span>
+                                    <span className="text-12 text-graphite">score {hit.score.toFixed(2)}</span>
                                 </div>
-                                <p className="text-14 text-graphite mt-2 leading-6">
-                                    {hit.document.description}
-                                </p>
+                                <p className="text-14 text-graphite mt-2 leading-6">{hit.document.description}</p>
                                 <p className="text-12 text-graphite mt-3">
-                                    {hit.document.city}, {hit.document.country}{" "}
-                                    · {hit.document.categories.join(" · ")}
+                                    {hit.document.city}, {hit.document.country} · {hit.document.categories.join(" · ")}
                                 </p>
                             </article>
                         ))}

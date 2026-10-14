@@ -17,18 +17,13 @@ export type ProfileControlProps = {
     floating?: boolean;
 };
 
-export default function ProfileControl({
-    user = null,
-    compact = false,
-    floating = false
-}: ProfileControlProps) {
+export default function ProfileControl({ user = null, compact = false, floating = false }: ProfileControlProps) {
     const router = useRouter();
     const [sessionUser, setSessionUser] = useState<AuthUser | null>(null);
     const [loaded, setLoaded] = useState(Boolean(user));
     const [signingOut, setSigningOut] = useState(false);
     const [logoutError, setLogoutError] = useState("");
-    const displayUser =
-        user ?? (sessionUser ? { name: sessionUser.displayName } : null);
+    const displayUser = user ?? (sessionUser ? { name: sessionUser.displayName } : null);
 
     useEffect(() => {
         if (user) return;
@@ -38,8 +33,7 @@ export default function ProfileControl({
                 if (state.active) setSessionUser(currentUser);
             })
             .catch(() => {
-                if (state.active)
-                    setLogoutError("Account status is unavailable.");
+                if (state.active) setLogoutError("Account status is unavailable.");
             })
             .finally(() => {
                 if (state.active) setLoaded(true);
@@ -57,9 +51,7 @@ export default function ProfileControl({
             setSessionUser(null);
             router.replace("/login");
         } catch (cause) {
-            setLogoutError(
-                cause instanceof Error ? cause.message : "Could not sign out."
-            );
+            setLogoutError(cause instanceof Error ? cause.message : "Could not sign out.");
         } finally {
             setSigningOut(false);
         }
@@ -80,10 +72,7 @@ export default function ProfileControl({
                       : "absolute top-0 right-[1.3%] z-10 h-[8.75rem] w-[8.25rem] sm:h-[24%] sm:w-[14.5%]"
             }
         >
-            <div
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-0"
-            >
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0">
                 <span className="bg-decorative-line absolute top-[18%] right-[9%] left-0 h-0.5" />
                 <span className="bg-decorative-line absolute top-0 right-[17%] h-[39%] w-0.5" />
                 <span className="bg-decorative-line absolute top-[25%] bottom-0 left-[32%] w-0.5" />
@@ -92,10 +81,7 @@ export default function ProfileControl({
             {displayUser ? (
                 <DropdownMenu modal={false}>
                     <DropdownMenuTrigger asChild>
-                        <button
-                            type="button"
-                            className={`${controlClasses} cursor-pointer truncate`}
-                        >
+                        <button type="button" className={`${controlClasses} cursor-pointer truncate`}>
                             {displayUser.name}
                         </button>
                     </DropdownMenuTrigger>
@@ -109,10 +95,7 @@ export default function ProfileControl({
                         <DropdownMenuItem asChild>
                             <Link href="/profile">My profile</Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                            asChild
-                            disabled={Boolean(user) || signingOut}
-                        >
+                        <DropdownMenuItem asChild disabled={Boolean(user) || signingOut}>
                             <button
                                 type="button"
                                 disabled={Boolean(user) || signingOut}

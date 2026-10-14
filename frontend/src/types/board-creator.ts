@@ -1,11 +1,4 @@
-export const dayColors = [
-    "#d4664b",
-    "#376b78",
-    "#8b6f47",
-    "#80648a",
-    "#4f7557",
-    "#b07639"
-] as const;
+export const dayColors = ["#d4664b", "#376b78", "#8b6f47", "#80648a", "#4f7557", "#b07639"] as const;
 
 export type BoardStatus = "draft" | "published";
 

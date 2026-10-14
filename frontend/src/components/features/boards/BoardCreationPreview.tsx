@@ -8,18 +8,12 @@ type Props = {
 
 export default function BoardCreationPreview({ board }: Props) {
     const pins = board.days.flatMap((day) => day.pins);
-    const uploadedImages = board.images.filter(
-        (image) => image.source === "upload"
-    );
-    const cover = uploadedImages.find(
-        (image) => image.uploadedImageId === board.coverImageId
-    );
+    const uploadedImages = board.images.filter((image) => image.source === "upload");
+    const cover = uploadedImages.find((image) => image.uploadedImageId === board.coverImageId);
     return (
         <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr]">
             <div>
-                <p className="text-10 tracking-label text-graphite font-bold uppercase">
-                    Board cover
-                </p>
+                <p className="text-10 tracking-label text-graphite font-bold uppercase">Board cover</p>
                 <div className="mt-4 max-w-sm">
                     {cover ? (
                         <img
@@ -35,15 +29,10 @@ export default function BoardCreationPreview({ board }: Props) {
                 </div>
             </div>
 
-            <article
-                className="border-line border-l pl-8"
-                aria-label="Board preview"
-            >
+            <article className="border-line border-l pl-8" aria-label="Board preview">
                 <div className="flex flex-wrap items-start justify-between gap-5">
                     <div>
-                        <p className="text-10 tracking-label text-stone uppercase">
-                            Board preview
-                        </p>
+                        <p className="text-10 tracking-label text-stone uppercase">Board preview</p>
                         <h3 className="font-display text-48 mt-3 max-w-md leading-[0.9] font-bold">
                             {board.title || "Untitled Board"}
                         </h3>
@@ -53,8 +42,7 @@ export default function BoardCreationPreview({ board }: Props) {
                     </span>
                 </div>
                 <p className="text-14 text-graphite mt-6 max-w-xl leading-6">
-                    {board.description ||
-                        "Your Board description will appear here."}
+                    {board.description || "Your Board description will appear here."}
                 </p>
                 <div className="text-12 text-graphite mt-7 flex flex-wrap gap-5">
                     <span>
@@ -78,31 +66,21 @@ export default function BoardCreationPreview({ board }: Props) {
                                 borderColor: dayColors[index % dayColors.length]
                             }}
                         >
-                            <h4 className="font-display text-20 font-bold">
-                                Day {day.dayNumber}
-                            </h4>
+                            <h4 className="font-display text-20 font-bold">Day {day.dayNumber}</h4>
                             <ol className="text-12 text-graphite mt-3 grid gap-2">
                                 {day.pins.slice(0, 5).map((pin) => (
                                     <li key={pin.id}>
-                                        <time>{pin.time}</time> ·{" "}
-                                        <span className="text-foreground">
-                                            {pin.title}
-                                        </span>
+                                        <time>{pin.time}</time> · <span className="text-foreground">{pin.title}</span>
                                         <div
                                             className="mt-2 flex flex-wrap gap-1"
                                             aria-label={`Images for ${pin.title}`}
                                         >
                                             {board.images
-                                                .filter(
-                                                    (image) =>
-                                                        image.pinId === pin.id
-                                                )
+                                                .filter((image) => image.pinId === pin.id)
                                                 .sort(
                                                     (first, second) =>
-                                                        (first.activityOrder ??
-                                                            first.order) -
-                                                        (second.activityOrder ??
-                                                            second.order)
+                                                        (first.activityOrder ?? first.order) -
+                                                        (second.activityOrder ?? second.order)
                                                 )
                                                 .map((image) => (
                                                     <img
@@ -115,21 +93,15 @@ export default function BoardCreationPreview({ board }: Props) {
                                         </div>
                                     </li>
                                 ))}
-                                {day.pins.length === 0 ? (
-                                    <li>No pins yet</li>
-                                ) : null}
+                                {day.pins.length === 0 ? <li>No pins yet</li> : null}
                             </ol>
                         </section>
                     ))}
                 </div>
                 <dl className="border-line mt-9 grid gap-6 border-t pt-6">
                     <div>
-                        <dt className="text-10 tracking-label text-stone uppercase">
-                            Tags
-                        </dt>
-                        <dd className="text-12 text-graphite mt-2">
-                            {board.tags.join(" · ") || "None"}
-                        </dd>
+                        <dt className="text-10 tracking-label text-stone uppercase">Tags</dt>
+                        <dd className="text-12 text-graphite mt-2">{board.tags.join(" · ") || "None"}</dd>
                     </div>
                 </dl>
             </article>

@@ -13,26 +13,14 @@ function photo(name: string, alt: string): BoardImage {
 
 // Reuse these photo objects across the sample board.
 const photos = {
-    cover: photo(
-        "cover",
-        "Stone steps leading to a shrine through green trees"
-    ),
-    street: photo(
-        "night-street",
-        "A Tokyo street filled with people and neon signs"
-    ),
+    cover: photo("cover", "Stone steps leading to a shrine through green trees"),
+    street: photo("night-street", "A Tokyo street filled with people and neon signs"),
     ramen: photo("ramen", "A bowl of ramen with noodles and toppings"),
     // This fictional author fills the profile section at the bottom of the page.
     author: photo("author", "A portrait outdoors among the trees"),
-    temple: photo(
-        "temple",
-        "People exploring the grounds of Senso-ji in Asakusa"
-    ),
+    temple: photo("temple", "People exploring the grounds of Senso-ji in Asakusa"),
     cafe: photo("cafe", "A Tokyo cafe with wooden tables and warm light"),
-    neighbourhood: photo(
-        "neighbourhood",
-        "A cyclist passing a Tokyo coffee shop"
-    )
+    neighbourhood: photo("neighbourhood", "A cyclist passing a Tokyo coffee shop")
 };
 
 // These descriptions, locations, and author statistics are fictional sample
@@ -214,9 +202,7 @@ export const mockPublishedBoard: PublishedBoardData = {
         isCompleted: false,
         // The viewer shows up to three tags from this list.
         tags: ["Nature", "Romantic", "Hidden Gems"],
-        destinations: [
-            { country: "Japan", countryCode: "JP", cities: ["Tokyo"] }
-        ],
+        destinations: [{ country: "Japan", countryCode: "JP", cities: ["Tokyo"] }],
         durationDays: 2,
         // Custom headings are matched to day numbers, starting at 1.
         dayTitles: {

@@ -3,10 +3,7 @@ import { useEffect, useRef, type RefObject } from "react";
 const focusableSelector =
     'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-export function useDialogFocus<T extends HTMLElement>(
-    containerRef: RefObject<T | null>,
-    onClose?: () => void
-) {
+export function useDialogFocus<T extends HTMLElement>(containerRef: RefObject<T | null>, onClose?: () => void) {
     const onCloseRef = useRef(onClose);
     useEffect(() => {
         onCloseRef.current = onClose;
@@ -17,13 +14,8 @@ export function useDialogFocus<T extends HTMLElement>(
 
         const focusInitial = () => {
             if (!containerRef.current) return;
-            const focusables = Array.from(
-                containerRef.current.querySelectorAll<HTMLElement>(
-                    focusableSelector
-                )
-            ).filter(
-                (el) =>
-                    el.offsetParent !== null || el.getClientRects().length > 0
+            const focusables = Array.from(containerRef.current.querySelectorAll<HTMLElement>(focusableSelector)).filter(
+                (el) => el.offsetParent !== null || el.getClientRects().length > 0
             );
 
             if (focusables.length > 0) {
@@ -45,14 +37,8 @@ export function useDialogFocus<T extends HTMLElement>(
 
             if (event.key === "Tab" && containerRef.current) {
                 const focusables = Array.from(
-                    containerRef.current.querySelectorAll<HTMLElement>(
-                        focusableSelector
-                    )
-                ).filter(
-                    (el) =>
-                        el.offsetParent !== null ||
-                        el.getClientRects().length > 0
-                );
+                    containerRef.current.querySelectorAll<HTMLElement>(focusableSelector)
+                ).filter((el) => el.offsetParent !== null || el.getClientRects().length > 0);
 
                 if (focusables.length === 0) {
                     event.preventDefault();
@@ -63,18 +49,12 @@ export function useDialogFocus<T extends HTMLElement>(
                 const last = focusables[focusables.length - 1];
 
                 if (event.shiftKey) {
-                    if (
-                        document.activeElement === first ||
-                        !containerRef.current.contains(document.activeElement)
-                    ) {
+                    if (document.activeElement === first || !containerRef.current.contains(document.activeElement)) {
                         event.preventDefault();
                         last.focus();
                     }
                 } else {
-                    if (
-                        document.activeElement === last ||
-                        !containerRef.current.contains(document.activeElement)
-                    ) {
+                    if (document.activeElement === last || !containerRef.current.contains(document.activeElement)) {
                         event.preventDefault();
                         first.focus();
                     }

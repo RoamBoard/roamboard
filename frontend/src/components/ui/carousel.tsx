@@ -2,17 +2,8 @@
 
 // Adapted from shadcn/ui's Carousel (MIT, SHADCN-LICENSE.txt).
 // Native buttons and Roamboard tokens replace the registry's Button dependency.
-import {
-    createContext,
-    useContext,
-    useCallback,
-    useEffect,
-    useState,
-    type ComponentProps
-} from "react";
-import useEmblaCarousel, {
-    type UseEmblaCarouselType
-} from "embla-carousel-react";
+import { createContext, useContext, useCallback, useEffect, useState, type ComponentProps } from "react";
+import useEmblaCarousel, { type UseEmblaCarouselType } from "embla-carousel-react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useReducedMotion } from "motion/react";
 
@@ -50,14 +41,8 @@ export function Carousel({
         setCanScrollPrev(current.canScrollPrev());
         setCanScrollNext(current.canScrollNext());
     }, []);
-    const scrollPrev = useCallback(
-        () => api?.scrollPrev(Boolean(reducedMotion)),
-        [api, reducedMotion]
-    );
-    const scrollNext = useCallback(
-        () => api?.scrollNext(Boolean(reducedMotion)),
-        [api, reducedMotion]
-    );
+    const scrollPrev = useCallback(() => api?.scrollPrev(Boolean(reducedMotion)), [api, reducedMotion]);
+    const scrollNext = useCallback(() => api?.scrollNext(Boolean(reducedMotion)), [api, reducedMotion]);
     useEffect(() => {
         if (!api) return;
         const frame = requestAnimationFrame(() => {
@@ -85,11 +70,7 @@ export function Carousel({
                 aria-roledescription="carousel"
                 className={`relative ${className}`}
                 onKeyDownCapture={(event) => {
-                    if (
-                        event.target instanceof HTMLElement &&
-                        event.target.matches("input, textarea, select")
-                    )
-                        return;
+                    if (event.target instanceof HTMLElement && event.target.matches("input, textarea, select")) return;
                     if (event.key === "ArrowLeft") {
                         event.preventDefault();
                         scrollPrev();
@@ -107,10 +88,7 @@ export function Carousel({
     );
 }
 
-export function CarouselContent({
-    className = "",
-    ...props
-}: ComponentProps<"div">) {
+export function CarouselContent({ className = "", ...props }: ComponentProps<"div">) {
     const { carouselRef } = useCarousel();
     return (
         <div ref={carouselRef} className="overflow-hidden">
@@ -119,10 +97,7 @@ export function CarouselContent({
     );
 }
 
-export function CarouselItem({
-    className = "",
-    ...props
-}: ComponentProps<"div">) {
+export function CarouselItem({ className = "", ...props }: ComponentProps<"div">) {
     return (
         <div
             role="group"
@@ -135,10 +110,7 @@ export function CarouselItem({
 
 const controlClass =
     "border-line bg-background inline-flex size-11 items-center justify-center rounded-full border transition-colors hover:bg-faint focus-visible:outline-2 focus-visible:outline-offset-4 disabled:cursor-default disabled:opacity-30 motion-reduce:transition-none";
-export function CarouselPrevious({
-    className = "",
-    ...props
-}: ComponentProps<"button">) {
+export function CarouselPrevious({ className = "", ...props }: ComponentProps<"button">) {
     const { scrollPrev, canScrollPrev } = useCarousel();
     return (
         <button
@@ -153,10 +125,7 @@ export function CarouselPrevious({
         </button>
     );
 }
-export function CarouselNext({
-    className = "",
-    ...props
-}: ComponentProps<"button">) {
+export function CarouselNext({ className = "", ...props }: ComponentProps<"button">) {
     const { scrollNext, canScrollNext } = useCarousel();
     return (
         <button

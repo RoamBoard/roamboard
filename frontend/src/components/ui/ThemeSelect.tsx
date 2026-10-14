@@ -40,11 +40,7 @@ export default function ThemeSelect({ side = "bottom" }: Props) {
             onOpenChange={(open) => {
                 // Read the current theme when opening, including after page navigation.
                 if (open) {
-                    setSelectedTheme(
-                        document.documentElement.classList.contains("dark")
-                            ? "dark"
-                            : "light"
-                    );
+                    setSelectedTheme(document.documentElement.classList.contains("dark") ? "dark" : "light");
                 }
             }}
         >
@@ -72,10 +68,7 @@ export default function ThemeSelect({ side = "bottom" }: Props) {
                 collisionPadding={8}
             >
                 {/* Radio options allow only one theme to be selected at a time. */}
-                <DropdownMenuRadioGroup
-                    value={selectedTheme}
-                    onValueChange={selectTheme}
-                >
+                <DropdownMenuRadioGroup value={selectedTheme} onValueChange={selectTheme}>
                     <DropdownMenuRadioItem value="light">
                         <span
                             aria-hidden="true"

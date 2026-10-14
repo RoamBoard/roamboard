@@ -6,9 +6,7 @@ import { createCloudinaryProvider } from "../features/images/images.cloudinary.j
 import { createImagesRepository } from "../features/images/images.repository.js";
 import { createImagesService } from "../features/images/images.service.js";
 
-const service = createImagesService(
-    createImagesRepository(), createCloudinaryProvider(), createBoardsRepository()
-);
+const service = createImagesService(createImagesRepository(), createCloudinaryProvider(), createBoardsRepository());
 
 try {
     let total = 0;

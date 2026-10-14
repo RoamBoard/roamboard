@@ -31,7 +31,7 @@ export function createImagesController(service: ImagesService): ImagesController
                 "Cache-Control": "private, no-store",
                 "Cross-Origin-Resource-Policy": "cross-origin",
                 "X-Content-Type-Options": "nosniff",
-                "Vary": "Cookie"
+                Vary: "Cookie"
             });
             stream.on("error", next);
             stream.pipe(response);

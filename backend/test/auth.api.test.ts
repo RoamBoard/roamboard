@@ -4,11 +4,7 @@ import test from "node:test";
 import request from "supertest";
 
 import { createApp } from "../src/app.js";
-import type {
-    AppUser,
-    AuthRepository,
-    GoogleVerifier
-} from "../src/features/auth/auth.types.js";
+import type { AppUser, AuthRepository, GoogleVerifier } from "../src/features/auth/auth.types.js";
 import { AppError } from "../src/shared/app-error.js";
 
 const origin = "http://localhost:3000";
@@ -26,12 +22,7 @@ function fakeDependencies(): {
                 return users.get(id) ?? null;
             },
             async createUser(user) {
-                if (
-                    users.has(user.userId) ||
-                    [...users.values()].some(
-                        (value) => value.username === user.username
-                    )
-                )
+                if (users.has(user.userId) || [...users.values()].some((value) => value.username === user.username))
                     return null;
                 users.set(user.userId, user);
                 return user;
@@ -41,9 +32,7 @@ function fakeDependencies(): {
             },
             async findUserBySession(hash) {
                 const session = sessions.get(hash);
-                return session && session.expiresAt > new Date()
-                    ? (users.get(session.userId) ?? null)
-                    : null;
+                return session && session.expiresAt > new Date() ? (users.get(session.userId) ?? null) : null;
             },
             async deleteSession(hash) {
                 sessions.delete(hash);
@@ -52,11 +41,7 @@ function fakeDependencies(): {
         googleVerifier: {
             async verify(credential) {
                 if (credential !== "valid-google-token") {
-                    throw new AppError(
-                        401,
-                        "Invalid Google credential",
-                        "INVALID_GOOGLE_CREDENTIAL"
-                    );
+                    throw new AppError(401, "Invalid Google credential", "INVALID_GOOGLE_CREDENTIAL");
                 }
                 return {
                     sub: "google-sub-123",
@@ -94,35 +79,21 @@ test("Google sign-in creates a user and a revocable HTTP-only session cookie", a
         .set("Origin", origin)
         .send({ credential: "valid-google-token" });
     assert.equal(secondSignIn.body.data.isNew, false);
-    assert.equal(
-        secondSignIn.body.data.user.username,
-        signIn.body.data.user.username
-    );
+    assert.equal(secondSignIn.body.data.user.username, signIn.body.data.user.username);
 
-    const signOut = await request(app)
-        .post("/api/v1/auth/logout")
-        .set("Origin", origin)
-        .set("Cookie", cookie);
+    const signOut = await request(app).post("/api/v1/auth/logout").set("Origin", origin).set("Cookie", cookie);
     assert.equal(signOut.status, 204);
-    const afterSignOut = await request(app)
-        .get("/api/v1/auth/me")
-        .set("Cookie", cookie);
+    const afterSignOut = await request(app).get("/api/v1/auth/me").set("Cookie", cookie);
     assert.equal(afterSignOut.status, 401);
 });
 
 test("rejects invalid Google credentials, invalid bodies, and foreign origins", async () => {
     const app = createApp(fakeDependencies());
-    const invalid = await request(app)
-        .post("/api/v1/auth/google")
-        .set("Origin", origin)
-        .send({ credential: "bad" });
+    const invalid = await request(app).post("/api/v1/auth/google").set("Origin", origin).send({ credential: "bad" });
     assert.equal(invalid.status, 401);
     assert.equal(invalid.headers["set-cookie"], undefined);
 
-    const invalidBody = await request(app)
-        .post("/api/v1/auth/google")
-        .set("Origin", origin)
-        .send({ credential: "" });
+    const invalidBody = await request(app).post("/api/v1/auth/google").set("Origin", origin).send({ credential: "" });
     assert.equal(invalidBody.status, 400);
 
     const foreignOrigin = await request(app)

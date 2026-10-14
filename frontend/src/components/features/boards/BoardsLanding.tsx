@@ -6,10 +6,7 @@ import ScrollCue from "@/components/ui/ScrollCue";
 export default function BoardsLanding() {
     return (
         <article className="bg-background text-foreground relative min-h-[100rem] w-full min-w-0 overflow-hidden sm:min-h-[112rem]">
-            <section
-                className="flex flex-col items-center px-5 text-center sm:px-10"
-                aria-labelledby="boards-heading"
-            >
+            <section className="flex flex-col items-center px-5 text-center sm:px-10" aria-labelledby="boards-heading">
                 <div
                     role="img"
                     aria-label="Stylized rock formations at sunset"
@@ -33,11 +30,7 @@ export default function BoardsLanding() {
                     </span>
                 </Link>
 
-                <ScrollCue
-                    targetId="board-paths"
-                    label="Scroll to Board creation options"
-                    className="mt-5"
-                />
+                <ScrollCue targetId="board-paths" label="Scroll to Board creation options" className="mt-5" />
 
                 <div className="text-10 text-stone pointer-events-none absolute top-[27%] right-4 left-4 hidden items-center justify-between lg:flex">
                     <span>the world is your canvas</span>
@@ -45,41 +38,21 @@ export default function BoardsLanding() {
                 </div>
             </section>
 
-            <section
-                id="board-paths"
-                aria-labelledby="board-paths-heading"
-                className="scroll-mt-8 px-5 text-center"
-            >
+            <section id="board-paths" aria-labelledby="board-paths-heading" className="scroll-mt-8 px-5 text-center">
                 <h2 id="board-paths-heading" className="sr-only">
                     Choose how to create a Board
                 </h2>
 
                 <ol className="flex flex-col items-center">
                     <li>
-                        <BoardPathOption
-                            href="/boards/new"
-                            title="new board"
-                            description="build your journey"
-                        />
+                        <BoardPathOption href="/boards/new" title="new board" description="build your journey" />
                     </li>
-                    <li
-                        aria-label="Remix saved Board, coming later"
-                        className="flex flex-col items-center"
-                    >
-                        <span
-                            aria-hidden="true"
-                            className="bg-line h-16 w-px sm:h-20"
-                        />
-                        <BoardPathOption
-                            title="remix saved board"
-                            description="inspired by others, made your own"
-                        />
+                    <li aria-label="Remix saved Board, coming later" className="flex flex-col items-center">
+                        <span aria-hidden="true" className="bg-line h-16 w-px sm:h-20" />
+                        <BoardPathOption title="remix saved board" description="inspired by others, made your own" />
                     </li>
                     <li className="flex flex-col items-center">
-                        <span
-                            aria-hidden="true"
-                            className="bg-line h-16 w-px sm:h-20"
-                        />
+                        <span aria-hidden="true" className="bg-line h-16 w-px sm:h-20" />
                         <BoardPathOption
                             href="/boards/drafts"
                             title="edit draft"
@@ -88,14 +61,9 @@ export default function BoardsLanding() {
                     </li>
                 </ol>
 
-                <div
-                    aria-hidden="true"
-                    className="bg-line mx-auto h-44 w-px sm:h-52"
-                />
+                <div aria-hidden="true" className="bg-line mx-auto h-44 w-px sm:h-52" />
 
-                <p className="font-body text-16 text-line sm:text-20 font-bold">
-                    need more inspiration?
-                </p>
+                <p className="font-body text-16 text-line sm:text-20 font-bold">need more inspiration?</p>
                 <p className="font-display text-48 sm:text-72 lg:text-96 mt-6 max-w-full leading-none font-bold tracking-tight">
                     DISCOVER
                 </p>

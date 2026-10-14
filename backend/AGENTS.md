@@ -9,6 +9,12 @@ These instructions apply to `backend/`. Use `../layered-backend-demo1/` as the r
 - Check the relevant schema, `../frontend/REQUIREMENTS.md`, and `../frontend/src/types/` before defining a feature's contract. Preserve the product decisions already represented in the schema; ask about genuinely unresolved behavior instead of silently substituting the demo's choices.
 - Keep `backend/.env` and credentials out of Git. Document new variables in `.env.example` and `README.md` without real secrets.
 
+## Formatting
+
+Use the repository root [`../.prettierrc`](../.prettierrc) for all supported backend files, including `.ts`. Use four spaces, no tabs, double quotes in JavaScript and TypeScript, no trailing commas, and LF line endings with a final newline. The configured print width is 120 to keep longer imports, type declarations, and function signatures together where Prettier allows. Do not add a backend-specific Prettier configuration. SQL migrations are excluded from Prettier; preserve their existing formatting.
+
+Run `pnpm format:apps` and `pnpm format:apps:check` from the repository root before handoff, or format only edited paths with `pnpm exec prettier --write <paths>` before running the scoped check. These root formatting commands are separate from the backend's npm application checks. Respect the root `.prettierignore`, including its SQL exclusion.
+
 ## Architecture: follow the demo's layers
 
 For each feature, follow the flow:
