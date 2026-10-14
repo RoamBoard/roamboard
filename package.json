@@ -4,6 +4,8 @@
     "description": "",
     "main": "index.js",
     "scripts": {
+        "lint": "pnpm --dir frontend lint && pnpm --dir backend lint",
+        "lint:fix": "pnpm --dir frontend lint:fix && pnpm --dir backend lint:fix",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
         "format:apps": "prettier --write frontend backend",

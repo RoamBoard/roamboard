@@ -89,52 +89,52 @@ The separate Elasticsearch integration test can also be enabled with `RUN_ELASTI
 
 ## Routes
 
-| Method | Path | Purpose |
-| --- | --- | --- |
-| `GET` | `/health` | API process health |
-| `GET` | `/health/elasticsearch` | Elasticsearch connectivity |
-| `GET` | `/api/v1/providers/mapbox/board-destinations` | Validate a city and country and return persistable canonical destination data |
-| `GET` | `/api/v1/todos` | List todos, optionally filtered by `completed` |
-| `GET` | `/api/v1/todos/:todoId` | Read a todo |
-| `POST` | `/api/v1/todos` | Create a todo |
-| `PATCH` | `/api/v1/todos/:todoId` | Update a todo |
-| `DELETE` | `/api/v1/todos/:todoId` | Delete a todo |
-| `GET` | `/api/v1/search` | Fuzzy public travel search with filters and pagination |
-| `GET` | `/api/v1/search/suggestions` | Title suggestions |
-| `GET` | `/api/v1/destinations/search?q=...` | Search destinations through the server-side Mapbox adapter |
-| `GET` | `/api/v1/destinations/context?...` | Load weather, Wikipedia, and optional imagery for a selected destination |
-| `GET` | `/api/v1/providers/config` | Report which developer provider keys are configured, without revealing values |
-| `POST` | `/api/v1/providers/mapbox/map-session` | Reserve one map load and return the public browser token when quota remains |
-| `GET` | `/api/v1/providers/mapbox/search?q=...` | Mapbox search prototype |
-| `GET` | `/api/v1/providers/mapbox/board-search?q=...` | Geoapify search for a saved pin (legacy alias) |
-| `GET` | `/api/v1/providers/mapbox/reverse?...` | Reverse-geocode coordinates into an area label, concise location detail, and geographic type |
-| `GET` | `/api/v1/providers/mapbox/board-reverse?...` | Permanent reverse geocoding for a pin that may be persisted |
-| `POST` | `/api/v1/providers/mapbox/directions` | Route between 2-10 saved coordinates using walking, cycling, or driving |
-| `GET` | `/api/v1/providers/unsplash/search?q=...` | Unsplash image search prototype |
-| `GET` | `/api/v1/providers/google-places/search?q=...` | Google Places text-search prototype |
-| `POST` | `/api/v1/providers/google-places/saved` | Persist a stable Google Place ID reference |
-| `GET` | `/api/v1/providers/google-places/saved` | List saved Google Place ID references |
-| `DELETE` | `/api/v1/providers/google-places/saved/:placeId` | Remove a saved Google Place ID reference |
-| `GET` | `/api/v1/providers/google-places/:placeId` | Fetch live Essentials data and a Google Maps link for a Place ID |
-| `GET` | `/api/v1/providers/cloudinary/delivery?...` | Cloudinary responsive delivery URL prototype |
-| `POST` | `/api/v1/providers/cloudinary/upload` | Upload an image up to 15 MB, including HEIC/HEIF files reported with a generic browser MIME type |
-| `GET` | `/api/v1/providers/cloudinary/assets` | Load lightweight summaries of Roamboard-tagged Cloudinary uploads |
-| `GET` | `/api/v1/providers/cloudinary/metadata?...` | Read and normalize capture, camera, orientation, EXIF/XMP, and degree-minute-second GPS metadata from one original asset |
-| `GET` | `/api/v1/quotas` | Inspect local hard-limit usage, remaining units, reset times, and durable-storage status |
-| `POST` | `/api/v1/users` | Create a prototype user with an immutable username |
-| `GET` | `/api/v1/users/me` | Read the selected user's profile |
-| `PATCH` | `/api/v1/users/me` | Change display name, description, location, interests, or extensible settings |
-| `PUT` / `DELETE` | `/api/v1/users/me/profile-picture` | Set or clear profile-picture metadata |
-| `GET` | `/api/v1/users/me/stats` | Count completed-trip countries, owned Boards, friends, saved places, and saved Boards |
-| `GET` | `/api/v1/users/me/boards` | List the selected user's Boards |
-| `POST` | `/api/v1/users/me/boards` | Create a prototype Board with destinations |
-| `GET` | `/api/v1/users/me/recent-boards` | List recently opened, still-accessible Boards |
-| `GET` | `/api/v1/users/me/map-destinations` | Return planned and completed Board destinations for a world map |
-| `GET` | `/api/v1/boards?page=1&limit=20` | Paginated accessible Boards: owned drafts/private Boards and published public/friend Boards; response meta contains page, limit, hasMore |
-| `DELETE` | `/api/v1/boards/:boardId` | Owner-only deletion, cascading days, pins, image references, visits, saved references, and durable search source; Cloudinary assets are retained |
-| `GET` | `/api/v1/boards/:boardId` | Read an accessible Board and record a visit |
-| `POST` | `/api/v1/boards` | Save a detailed draft or published Board with days, pins, image references, tags, vibes, highlights, and visibility |
-| `PUT` / `DELETE` | `/api/v1/users/me/saved-boards/:boardId` | Save or unsave an accessible Board |
+| Method           | Path                                             | Purpose                                                                                                                                          |
+| ---------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GET`            | `/health`                                        | API process health                                                                                                                               |
+| `GET`            | `/health/elasticsearch`                          | Elasticsearch connectivity                                                                                                                       |
+| `GET`            | `/api/v1/providers/mapbox/board-destinations`    | Validate a city and country and return persistable canonical destination data                                                                    |
+| `GET`            | `/api/v1/todos`                                  | List todos, optionally filtered by `completed`                                                                                                   |
+| `GET`            | `/api/v1/todos/:todoId`                          | Read a todo                                                                                                                                      |
+| `POST`           | `/api/v1/todos`                                  | Create a todo                                                                                                                                    |
+| `PATCH`          | `/api/v1/todos/:todoId`                          | Update a todo                                                                                                                                    |
+| `DELETE`         | `/api/v1/todos/:todoId`                          | Delete a todo                                                                                                                                    |
+| `GET`            | `/api/v1/search`                                 | Fuzzy public travel search with filters and pagination                                                                                           |
+| `GET`            | `/api/v1/search/suggestions`                     | Title suggestions                                                                                                                                |
+| `GET`            | `/api/v1/destinations/search?q=...`              | Search destinations through the server-side Mapbox adapter                                                                                       |
+| `GET`            | `/api/v1/destinations/context?...`               | Load weather, Wikipedia, and optional imagery for a selected destination                                                                         |
+| `GET`            | `/api/v1/providers/config`                       | Report which developer provider keys are configured, without revealing values                                                                    |
+| `POST`           | `/api/v1/providers/mapbox/map-session`           | Reserve one map load and return the public browser token when quota remains                                                                      |
+| `GET`            | `/api/v1/providers/mapbox/search?q=...`          | Mapbox search prototype                                                                                                                          |
+| `GET`            | `/api/v1/providers/mapbox/board-search?q=...`    | Geoapify search for a saved pin (legacy alias)                                                                                                   |
+| `GET`            | `/api/v1/providers/mapbox/reverse?...`           | Reverse-geocode coordinates into an area label, concise location detail, and geographic type                                                     |
+| `GET`            | `/api/v1/providers/mapbox/board-reverse?...`     | Permanent reverse geocoding for a pin that may be persisted                                                                                      |
+| `POST`           | `/api/v1/providers/mapbox/directions`            | Route between 2-10 saved coordinates using walking, cycling, or driving                                                                          |
+| `GET`            | `/api/v1/providers/unsplash/search?q=...`        | Unsplash image search prototype                                                                                                                  |
+| `GET`            | `/api/v1/providers/google-places/search?q=...`   | Google Places text-search prototype                                                                                                              |
+| `POST`           | `/api/v1/providers/google-places/saved`          | Persist a stable Google Place ID reference                                                                                                       |
+| `GET`            | `/api/v1/providers/google-places/saved`          | List saved Google Place ID references                                                                                                            |
+| `DELETE`         | `/api/v1/providers/google-places/saved/:placeId` | Remove a saved Google Place ID reference                                                                                                         |
+| `GET`            | `/api/v1/providers/google-places/:placeId`       | Fetch live Essentials data and a Google Maps link for a Place ID                                                                                 |
+| `GET`            | `/api/v1/providers/cloudinary/delivery?...`      | Cloudinary responsive delivery URL prototype                                                                                                     |
+| `POST`           | `/api/v1/providers/cloudinary/upload`            | Upload an image up to 15 MB, including HEIC/HEIF files reported with a generic browser MIME type                                                 |
+| `GET`            | `/api/v1/providers/cloudinary/assets`            | Load lightweight summaries of Roamboard-tagged Cloudinary uploads                                                                                |
+| `GET`            | `/api/v1/providers/cloudinary/metadata?...`      | Read and normalize capture, camera, orientation, EXIF/XMP, and degree-minute-second GPS metadata from one original asset                         |
+| `GET`            | `/api/v1/quotas`                                 | Inspect local hard-limit usage, remaining units, reset times, and durable-storage status                                                         |
+| `POST`           | `/api/v1/users`                                  | Create a prototype user with an immutable username                                                                                               |
+| `GET`            | `/api/v1/users/me`                               | Read the selected user's profile                                                                                                                 |
+| `PATCH`          | `/api/v1/users/me`                               | Change display name, description, location, interests, or extensible settings                                                                    |
+| `PUT` / `DELETE` | `/api/v1/users/me/profile-picture`               | Set or clear profile-picture metadata                                                                                                            |
+| `GET`            | `/api/v1/users/me/stats`                         | Count completed-trip countries, owned Boards, friends, saved places, and saved Boards                                                            |
+| `GET`            | `/api/v1/users/me/boards`                        | List the selected user's Boards                                                                                                                  |
+| `POST`           | `/api/v1/users/me/boards`                        | Create a prototype Board with destinations                                                                                                       |
+| `GET`            | `/api/v1/users/me/recent-boards`                 | List recently opened, still-accessible Boards                                                                                                    |
+| `GET`            | `/api/v1/users/me/map-destinations`              | Return planned and completed Board destinations for a world map                                                                                  |
+| `GET`            | `/api/v1/boards?page=1&limit=20`                 | Paginated accessible Boards: owned drafts/private Boards and published public/friend Boards; response meta contains page, limit, hasMore         |
+| `DELETE`         | `/api/v1/boards/:boardId`                        | Owner-only deletion, cascading days, pins, image references, visits, saved references, and durable search source; Cloudinary assets are retained |
+| `GET`            | `/api/v1/boards/:boardId`                        | Read an accessible Board and record a visit                                                                                                      |
+| `POST`           | `/api/v1/boards`                                 | Save a detailed draft or published Board with days, pins, image references, tags, vibes, highlights, and visibility                              |
+| `PUT` / `DELETE` | `/api/v1/users/me/saved-boards/:boardId`         | Save or unsave an accessible Board                                                                                                               |
 
 Deletion removes the PostgreSQL search source in the same transaction as the Board. Live Elasticsearch removal is attempted immediately; if Elasticsearch is unavailable, startup/manual reindexing reconciles stale entries. Drafts are readable only by their owner, regardless of their visibility selection.
 

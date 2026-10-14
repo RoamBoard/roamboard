@@ -9,9 +9,7 @@ export function validate(schema) {
         });
 
         if (!result.success) {
-            return next(
-                new AppError(400, "Invalid request", result.error.flatten())
-            );
+            return next(new AppError(400, "Invalid request", result.error.flatten()));
         }
 
         req.validated = result.data;

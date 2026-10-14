@@ -12,9 +12,7 @@ export function validate<T>(schema: ZodType<T>): RequestHandler {
         });
 
         if (!result.success) {
-            return next(
-                new AppError(400, "Invalid request", result.error.flatten())
-            );
+            return next(new AppError(400, "Invalid request", result.error.flatten()));
         }
 
         req.validated = result.data;

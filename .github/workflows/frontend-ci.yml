@@ -1,61 +1,64 @@
 name: Frontend CI
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-  workflow_dispatch:
+    push:
+        branches: [main]
+    pull_request:
+    workflow_dispatch:
 
 permissions:
-  contents: read
+    contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
 
 jobs:
-  frontend-checks:
-    name: Frontend Lint, Typecheck & Build
-    runs-on: ubuntu-latest
+    frontend-checks:
+        name: Frontend Lint, Typecheck & Build
+        runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: frontend
+        defaults:
+            run:
+                working-directory: frontend
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v7
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: 12.5.1
-          run_install: false
+            - name: Install pnpm
+              uses: pnpm/action-setup@v6
+              with:
+                  version: 12.5.1
+                  run_install: false
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
+            - name: Set up Node.js
+              uses: actions/setup-node@v7
+              with:
+                  node-version: 24
+                  cache: pnpm
+                  cache-dependency-path: frontend/pnpm-lock.yaml
 
-      - name: Cache Next.js build output
-        uses: actions/cache@v6
-        with:
-          path: frontend/.next/cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('frontend/pnpm-lock.yaml') }}-${{ hashFiles('frontend/**/*.js', 'frontend/**/*.jsx', 'frontend/**/*.ts', 'frontend/**/*.tsx') }}
-          restore-keys: |
-            ${{ runner.os }}-nextjs-${{ hashFiles('frontend/pnpm-lock.yaml') }}-
+            - name: Cache Next.js build output
+              uses: actions/cache@v6
+              with:
+                  path: frontend/.next/cache
+                  key: ${{ runner.os }}-nextjs-${{ hashFiles('frontend/pnpm-lock.yaml') }}-${{ hashFiles('frontend/**/*.js', 'frontend/**/*.jsx', 'frontend/**/*.ts', 'frontend/**/*.tsx') }}
+                  restore-keys: |
+                      ${{ runner.os }}-nextjs-${{ hashFiles('frontend/pnpm-lock.yaml') }}-
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+            - name: Install shared lint and formatting dependencies
+              working-directory: .
+              run: pnpm install --frozen-lockfile
 
-      - name: Run ESLint
-        run: pnpm lint
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
 
-      - name: Type-check
-        run: pnpm exec tsc --noEmit
+            - name: Run ESLint
+              run: pnpm lint
 
-      - name: Build Next.js application
-        run: pnpm build
+            - name: Type-check
+              run: pnpm exec tsc --noEmit
+
+            - name: Build Next.js application
+              run: pnpm build

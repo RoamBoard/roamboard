@@ -69,7 +69,7 @@ export default function Sidebar({ activeHref, discover }: Props) {
     }
 
     return (
-        <aside className="bg-background relative z-10 min-h-dvh">
+        <aside className="relative z-10 min-h-dvh">
             <header className="absolute top-[3%] left-1/2 -translate-x-1/2">
                 <Link
                     href="/home"

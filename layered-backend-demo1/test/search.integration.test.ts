@@ -10,37 +10,34 @@ import { createSearchSourceRepository } from "../src/features/search/search.repo
 const runIntegration = process.env.RUN_ELASTICSEARCH_INTEGRATION === "1";
 
 test("reindexes and searches the seeded travel records", { skip: !runIntegration }, async () => {
-  const client = createSearchClient();
-  const service = createSearchService(
-    client,
-    createSearchSourceRepository(sampleSearchDocuments),
-  );
+    const client = createSearchClient();
+    const service = createSearchService(client, createSearchSourceRepository(sampleSearchDocuments));
 
-  await client.indices.delete({ index: SEARCH_INDEX }).catch(() => undefined);
-  assert.equal(await service.reindex(), sampleSearchDocuments.length);
+    await client.indices.delete({ index: SEARCH_INDEX }).catch(() => undefined);
+    assert.equal(await service.reindex(), sampleSearchDocuments.length);
 
-  const typoResult = await service.search({
-    query: "stokholm",
-    page: 1,
-    limit: 10,
-  });
-  assert.ok(typoResult.hits.some((hit) => hit.document.title === "Stockholm"));
+    const typoResult = await service.search({
+        query: "stokholm",
+        page: 1,
+        limit: 10
+    });
+    assert.ok(typoResult.hits.some((hit) => hit.document.title === "Stockholm"));
 
-  const suggestions = await service.suggestions("sto", 5);
-  assert.ok(suggestions.includes("Stockholm"));
+    const suggestions = await service.suggestions("sto", 5);
+    assert.ok(suggestions.includes("Stockholm"));
 
-  const filtered = await service.search({
-    query: "stockholm",
-    entityType: "place",
-    country: "sweden",
-    category: "culture",
-    page: 1,
-    limit: 10,
-  });
-  assert.deepEqual(
-    filtered.hits.map((hit) => hit.document.id),
-    ["place-vasa-museum"],
-  );
+    const filtered = await service.search({
+        query: "stockholm",
+        entityType: "place",
+        country: "sweden",
+        category: "culture",
+        page: 1,
+        limit: 10
+    });
+    assert.deepEqual(
+        filtered.hits.map((hit) => hit.document.id),
+        ["place-vasa-museum"]
+    );
 
-  await client.close();
+    await client.close();
 });

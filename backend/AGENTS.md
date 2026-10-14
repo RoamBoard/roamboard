@@ -13,9 +13,11 @@ These instructions apply to `backend/`. Use `../layered-backend-demo1/` as the r
 
 Use the repository root [`../.prettierrc`](../.prettierrc) for all supported backend files, including `.ts`. Use four spaces, no tabs, double quotes in JavaScript and TypeScript, no trailing commas, and LF line endings with a final newline. The configured print width is 120 to keep longer imports, type declarations, and function signatures together where Prettier allows. Do not add a backend-specific Prettier configuration. SQL migrations are excluded from Prettier; preserve their existing formatting.
 
-Run `pnpm format:apps` and `pnpm format:apps:check` from the repository root before handoff, or format only edited paths with `pnpm exec prettier --write <paths>` before running the scoped check. These root formatting commands are separate from the backend's npm application checks. Respect the root `.prettierignore`, including its SQL exclusion.
+Every agent must run `pnpm.cmd format` and `pnpm.cmd format:check` from the repository root after final edits and before handoff or PR preparation. On Linux/macOS, use `pnpm format` and `pnpm format:check`. Use the root-installed Prettier; do not install another copy in backend. These repository-wide formatting commands are separate from ESLint and the backend's npm application checks, which remain required for application changes. Respect the root `.prettierignore`, including its SQL exclusion, and review the formatting diff.
 
 ## Architecture: follow the demo's layers
+
+Both applications share code rules through `../eslint.shared.mjs`. Use strict equality, no `var` or console calls, and `const` wherever a binding is not reassigned. Backend state may use `let` when reassignment is necessary. Every agent must also run `pnpm.cmd lint` from the repository root before handoff or PR preparation. ESLint warnings fail the check; root dependencies must be installed for the shared Prettier compatibility config.
 
 For each feature, follow the flow:
 

@@ -36,10 +36,9 @@ export const updateTodoSchema = z.object({
             completed: z.boolean().optional()
         })
         .strict()
-        .refine(
-            (body) => body.title !== undefined || body.completed !== undefined,
-            { message: "At least one field must be provided" }
-        )
+        .refine((body) => body.title !== undefined || body.completed !== undefined, {
+            message: "At least one field must be provided"
+        })
 });
 
 export const deleteTodoSchema = z.object({

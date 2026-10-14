@@ -17,10 +17,7 @@ export function createTodoController(service) {
     }
 
     async function update(req, res) {
-        const todo = await service.updateTodo(
-            req.validated.params.todoId,
-            req.validated.body
-        );
+        const todo = await service.updateTodo(req.validated.params.todoId, req.validated.body);
         res.json({ data: todo });
     }
 

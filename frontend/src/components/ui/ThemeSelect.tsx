@@ -21,9 +21,7 @@ type Props = {
 
 export default function ThemeSelect({ side = "bottom", className }: Props) {
     // This state marks the selected option. The component manages opening and focus.
-    const [selectedTheme, setSelectedTheme] = useState(() =>
-        typeof document !== "undefined" && document.documentElement.classList.contains("dark") ? "dark" : "light"
-    );
+    const [selectedTheme, setSelectedTheme] = useState("light");
 
     const selectTheme = (theme: string) => {
         if (theme !== "light" && theme !== "dark") return;
@@ -38,25 +36,6 @@ export default function ThemeSelect({ side = "bottom", className }: Props) {
             // Switching still works for this visit without storage.
         }
     };
-
-    const options = (
-        <DropdownMenuRadioGroup value={selectedTheme} onValueChange={selectTheme}>
-            <DropdownMenuRadioItem value="light">
-                <span
-                    aria-hidden="true"
-                    className="size-4 shrink-0 bg-current mask-[url('/icons/sun.svg')] mask-contain mask-center mask-no-repeat"
-                />
-                light
-            </DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="dark">
-                <span
-                    aria-hidden="true"
-                    className="size-4 shrink-0 bg-current mask-[url('/icons/moon.svg')] mask-contain mask-center mask-no-repeat"
-                />
-                dark
-            </DropdownMenuRadioItem>
-        </DropdownMenuRadioGroup>
-    );
 
     return (
         <DropdownMenu
@@ -94,7 +73,23 @@ export default function ThemeSelect({ side = "bottom", className }: Props) {
                 sideOffset={8}
                 collisionPadding={8}
             >
-                {options}
+                {/* Radio options allow only one theme to be selected at a time. */}
+                <DropdownMenuRadioGroup value={selectedTheme} onValueChange={selectTheme}>
+                    <DropdownMenuRadioItem value="light">
+                        <span
+                            aria-hidden="true"
+                            className="size-4 shrink-0 bg-current mask-[url('/icons/sun.svg')] mask-contain mask-center mask-no-repeat"
+                        />
+                        light
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="dark">
+                        <span
+                            aria-hidden="true"
+                            className="size-4 shrink-0 bg-current mask-[url('/icons/moon.svg')] mask-contain mask-center mask-no-repeat"
+                        />
+                        dark
+                    </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
             </DropdownMenuContent>
         </DropdownMenu>
     );

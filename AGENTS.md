@@ -9,6 +9,22 @@ When instructions differ from architectural design, notify team and ask for appr
 
 Use the root [`.prettierrc`](.prettierrc) as the single source of truth for frontend and backend formatting. Do not add nested Prettier configurations or override its rules manually. This includes TypeScript, TSX, JavaScript, JSON, CSS, and Markdown. The configured print width is 120 to keep longer imports, type declarations, and function signatures together where Prettier allows. SQL files are excluded from Prettier; preserve their existing formatting.
 
-From the repository root, run `pnpm format:apps` and `pnpm format:apps:check` before handing off changes in `frontend/` or `backend/`. For a smaller change, format the edited files with `pnpm exec prettier --write <paths>`, then run `pnpm format:apps:check`. Respect `.prettierignore` and keep generated output, lockfiles, and SQL files out of formatting changes.
+Prettier is installed in the root `package.json` and must be run from the repository root. Do not install separate copies in frontend or backend. Every agent must run the following after its final edits, before handing off work or preparing a PR:
 
-[Formatting CI](.github/workflows/format-ci.yml) runs `pnpm format:apps:check` on pushes and pull requests to `main`.
+```powershell
+pnpm.cmd format
+pnpm.cmd format:check
+pnpm.cmd lint
+```
+
+On Linux/macOS, use `pnpm format` and `pnpm format:check`. These commands cover every supported folder, respecting `.prettierignore`; keep generated output, lockfiles, and SQL files excluded. Review the formatting diff and report any failed checks. If formatting changes unrelated files, keep that cleanup separate from feature changes when preparing commits.
+
+Prettier formats code and checks formatting; it does not replace ESLint, TypeScript checks, tests, or builds. Run the applicable frontend/backend checks required by their instructions as well.
+
+[Formatting CI](.github/workflows/format-ci.yml) runs `pnpm format:check` on all pull requests and pushes to `main`. Frontend and backend CI also run ESLint on all pull requests; warnings fail the lint check.
+
+## Linting
+
+ESLint remains installed in each application. Both configurations import common rules and Prettier compatibility from [`eslint.shared.mjs`](eslint.shared.mjs). Keep shared rules there and framework-specific rules in the application's config. Shared rules require strict equality, prohibit `var` and console calls, and prefer `const` when a variable is never reassigned. The frontend additionally retains its const-only requirement; the backend permits `let` for reassigned state.
+
+Every agent must run `pnpm.cmd lint` from the root after final edits and before handoff or PR preparation (`pnpm lint` on Linux/macOS). `pnpm.cmd lint:fix` applies available ESLint fixes to both applications; review them, run Prettier afterward, and rerun lint. Do not disable rules merely to pass checks. Install root dependencies as well as application dependencies because the shared config uses root-installed `eslint-config-prettier`.
