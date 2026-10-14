@@ -69,7 +69,7 @@ role passwords; use SQL role management and update the corresponding credentials
 In a separate PowerShell terminal on each laptop, open an SSH tunnel:
 
 ```powershell
-ssh -i <local-path-to-your-key> -N -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -L 127.0.0.1:15432:127.0.0.1:5432 YOUR_SSH_USER@YOUR_VM_IP
+ssh -i <local-path-to-your-key> -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -L 127.0.0.1:15432:127.0.0.1:5432 YOUR_SSH_USER@YOUR_VM_IP
 ```
 
 Keep this terminal open while developing. Port 15432 avoids a clash with a local Postgres
