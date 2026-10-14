@@ -1,14 +1,9 @@
 import type { RequestHandler } from "express";
 
 import { AppError } from "../../shared/app-error.js";
+import { readSessionCookie, sessionCookieName } from "../../shared/session-cookie.js";
 import { SESSION_MAX_AGE_MS } from "./auth.service.js";
 import type { AuthService } from "./auth.types.js";
-
-function cookieName(): string {
-    return process.env.NODE_ENV === "production"
-        ? "__Host-roamboard_session"
-        : "roamboard_session";
-}
 
 function cookieOptions() {
     return {
@@ -17,15 +12,6 @@ function cookieOptions() {
         sameSite: "lax" as const,
         path: "/"
     };
-}
-
-function readSessionCookie(header: string | undefined): string | null {
-    const name = `${cookieName()}=`;
-    const entry = header
-        ?.split(";")
-        .map((part) => part.trim())
-        .find((part) => part.startsWith(name));
-    return entry ? entry.slice(name.length) : null;
 }
 
 export interface AuthController {
@@ -38,7 +24,7 @@ export function createAuthController(service: AuthService): AuthController {
     const signIn: RequestHandler = async (request, response) => {
         const { credential } = request.body as { credential: string };
         const result = await service.signIn(credential);
-        response.cookie(cookieName(), result.sessionToken, {
+        response.cookie(sessionCookieName(), result.sessionToken, {
             ...cookieOptions(),
             maxAge: SESSION_MAX_AGE_MS
         });
@@ -57,7 +43,7 @@ export function createAuthController(service: AuthService): AuthController {
     const signOut: RequestHandler = async (request, response) => {
         const token = readSessionCookie(request.headers.cookie);
         if (token) await service.signOut(token);
-        response.clearCookie(cookieName(), cookieOptions());
+        response.clearCookie(sessionCookieName(), cookieOptions());
         response.status(204).send();
     };
 

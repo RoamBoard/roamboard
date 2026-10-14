@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import "mapbox-gl/dist/mapbox-gl.css";
 import WelcomeTransitionProvider from "@/components/features/welcome/WelcomeTransitionProvider";
 import "./globals.css";
 
@@ -52,6 +53,16 @@ export default function RootLayout({
             >
                 <WelcomeTransitionProvider>
                     {children}
+                    <footer className="text-12 text-graphite px-6 py-3">
+                        Location data:{" "}
+                        <a href="https://www.geoapify.com/">
+                            Powered by Geoapify
+                        </a>{" "}
+                        &middot;{" "}
+                        <a href="https://www.openstreetmap.org/copyright">
+                            &copy; OpenStreetMap contributors
+                        </a>
+                    </footer>
                 </WelcomeTransitionProvider>
             </body>
         </html>
