@@ -16,3 +16,11 @@ export function getPool(): Pool {
 export async function checkDatabase(): Promise<void> {
     await getPool().query("SELECT 1");
 }
+
+export async function closeDatabase(): Promise<void> {
+    if (pool) {
+        const current = pool;
+        pool = undefined;
+        await current.end();
+    }
+}

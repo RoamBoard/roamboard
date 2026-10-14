@@ -106,7 +106,7 @@ CREATE TABLE board (
  cover_image_id INT
 );
 
-ALTER TABLE board 
+ALTER TABLE board
     ADD CONSTRAINT PK_board PRIMARY KEY (board_id);
 
 
@@ -222,5 +222,3 @@ ALTER TABLE activity_image ADD CONSTRAINT FK_activity_image_1 FOREIGN KEY (activ
 
 ALTER TABLE saved_activities ADD CONSTRAINT FK_saved_activities_0 FOREIGN KEY (user_id) REFERENCES app_user (user_id);
 ALTER TABLE saved_activities ADD CONSTRAINT FK_saved_activities_1 FOREIGN KEY (activity_id) REFERENCES activity (activity_id) ON DELETE CASCADE;
-
-

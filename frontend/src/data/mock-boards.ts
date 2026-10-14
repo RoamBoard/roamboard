@@ -30,7 +30,7 @@ export const mockBoards: Board[] = [
         description: "Two days for food, walks, and time to explore Asakusa.",
         visibility: "public",
         isCompleted: false,
-        tags: ["food", "walking"],
+        tags: ["foodie", "hiking"],
         destinations: [
             { country: "Japan", countryCode: "JP", cities: ["Tokyo"] }
         ],
@@ -109,7 +109,7 @@ export const mockBoards: Board[] = [
         description: "A day of walking by the water and stopping for coffee.",
         visibility: "friends",
         isCompleted: true,
-        tags: ["food", "walking", "photography"],
+        tags: ["foodie", "hiking", "photography"],
         destinations: [
             { country: "Denmark", countryCode: "DK", cities: ["Copenhagen"] }
         ],
@@ -180,7 +180,7 @@ export const mockBoards: Board[] = [
             "Start in France, continue through Switzerland, then visit Italy.",
         visibility: "private",
         isCompleted: false,
-        tags: ["outdoors", "museums"],
+        tags: ["nature", "culture"],
         destinations: [
             { country: "France", countryCode: "FR", cities: ["Paris", "Lyon"] },
             { country: "Switzerland", countryCode: "CH", cities: ["Zurich"] },

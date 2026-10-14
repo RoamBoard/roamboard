@@ -1,0 +1,774 @@
+{
+    "catalogVersion": "1.1.0",
+    "catalogName": "Roamboard Tags",
+    "description": "Shared source of truth for Create Board tag selection, Roam by Vibe grid, and /discover/vibes/:id pages.",
+    "assetNotes": {
+        "icons": "All icons are from Lucide and use one consistent outline style. SVG URLs are pinned to lucide-static 1.55.0. For a React app, preferably render the corresponding named component from lucide-react instead of loading SVGs from a CDN.",
+        "images": "Grid photo references now use individual Unsplash photo pages. gridImage.url uses the Unsplash photo download redirect; consider downloading/optimizing assets locally for production reliability. Verify rendering of redirects in Next.js and use local cached images if necessary. Some tags intentionally share photography.",
+        "gridRendering": "Render image and tag label as separate layers; apply CSS gradient/overlay, aspect ratio and object-fit: cover in the UI. Never bake text into cover images.",
+        "matching": "Match boards to tags by the stable id field (not by display name). Keep ids unchanged after users begin saving boards.",
+        "license": "Check source licenses before redistribution. Unsplash: https://unsplash.com/license ; Lucide: https://lucide.dev/license"
+    },
+    "tags": [
+        {
+            "id": "adventure",
+            "name": "Adventure",
+            "description": "For the days that take you somewhere unexpected.",
+            "icon": {
+                "library": "lucide",
+                "name": "Mountain",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/mountain.svg",
+                "sourceUrl": "https://lucide.dev/icons/mountain"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/1fXeZpfVw8A/download?force=true&w=1200",
+                "alt": "Spectacular alpine road leading to snow-capped mountains",
+                "sourceUrl": "https://unsplash.com/photos/1fXeZpfVw8A",
+                "photographer": "Ahmet Yüksek",
+                "provider": "Unsplash",
+                "photoId": "1fXeZpfVw8A"
+            }
+        },
+        {
+            "id": "relax",
+            "name": "Relax",
+            "description": "An invitation to slow down and stay a little longer.",
+            "icon": {
+                "library": "lucide",
+                "name": "Flower2",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/flower-2.svg",
+                "sourceUrl": "https://lucide.dev/icons/flower-2"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/nPBdPEpL1Ts/download?force=true&w=1200",
+                "alt": "Palm trees beside turquoise tropical water",
+                "sourceUrl": "https://unsplash.com/photos/nPBdPEpL1Ts",
+                "photographer": "Michelangelo Azzariti",
+                "provider": "Unsplash",
+                "photoId": "nPBdPEpL1Ts"
+            }
+        },
+        {
+            "id": "culture",
+            "name": "Culture",
+            "description": "Traditions, places and stories worth discovering.",
+            "icon": {
+                "library": "lucide",
+                "name": "Landmark",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/landmark.svg",
+                "sourceUrl": "https://lucide.dev/icons/landmark"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/PdSbBEN0zW4/download?force=true&w=1200",
+                "alt": "Traditional Japanese temple in Kyoto",
+                "sourceUrl": "https://unsplash.com/photos/PdSbBEN0zW4",
+                "photographer": "Joris Beugels",
+                "provider": "Unsplash",
+                "photoId": "PdSbBEN0zW4"
+            }
+        },
+        {
+            "id": "foodie",
+            "name": "Foodie",
+            "description": "Follow the flavors and find a new favorite.",
+            "icon": {
+                "library": "lucide",
+                "name": "UtensilsCrossed",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/utensils-crossed.svg",
+                "sourceUrl": "https://lucide.dev/icons/utensils-crossed"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/ddZYOtZUnBk/download?force=true&w=1200",
+                "alt": "Freshly prepared pasta served on a white plate",
+                "sourceUrl": "https://unsplash.com/photos/ddZYOtZUnBk",
+                "photographer": "Eaters Collective",
+                "provider": "Unsplash",
+                "photoId": "ddZYOtZUnBk"
+            }
+        },
+        {
+            "id": "nature",
+            "name": "Nature",
+            "description": "A little closer to the world beyond the city.",
+            "icon": {
+                "library": "lucide",
+                "name": "Trees",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/trees.svg",
+                "sourceUrl": "https://lucide.dev/icons/trees"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/xXkBBnxgshQ/download?force=true&w=1200",
+                "alt": "Clear alpine lake framed by forest and rocky cliffs",
+                "sourceUrl": "https://unsplash.com/photos/xXkBBnxgshQ",
+                "photographer": "Erik Fabian",
+                "provider": "Unsplash",
+                "photoId": "xXkBBnxgshQ"
+            }
+        },
+        {
+            "id": "romantic",
+            "name": "Romantic",
+            "description": "Beautiful places, even better shared.",
+            "icon": {
+                "library": "lucide",
+                "name": "Heart",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/heart.svg",
+                "sourceUrl": "https://lucide.dev/icons/heart"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/g86airJZ4Gs/download?force=true&w=1200",
+                "alt": "Two warm coffee mugs shared across a table",
+                "sourceUrl": "https://unsplash.com/photos/g86airJZ4Gs",
+                "photographer": "Priscilla Du Preez",
+                "provider": "Unsplash",
+                "photoId": "g86airJZ4Gs"
+            }
+        },
+        {
+            "id": "budget",
+            "name": "Budget",
+            "description": "Memorable journeys without the splurge.",
+            "icon": {
+                "library": "lucide",
+                "name": "Wallet",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/wallet.svg",
+                "sourceUrl": "https://lucide.dev/icons/wallet"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/s3dnyKSC6UA/download?force=true&w=1200",
+                "alt": "Open coastal highway with cars under dramatic clouds",
+                "sourceUrl": "https://unsplash.com/photos/s3dnyKSC6UA",
+                "photographer": "Zoshua Colah",
+                "provider": "Unsplash",
+                "photoId": "s3dnyKSC6UA"
+            }
+        },
+        {
+            "id": "hidden-gems",
+            "name": "Hidden Gems",
+            "description": "The places you almost do not want to tell anyone about.",
+            "icon": {
+                "library": "lucide",
+                "name": "Gem",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/gem.svg",
+                "sourceUrl": "https://lucide.dev/icons/gem"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/I_XRy-z8m8k/download?force=true&w=1200",
+                "alt": "Secluded mountain lake and forest",
+                "sourceUrl": "https://unsplash.com/photos/I_XRy-z8m8k",
+                "photographer": "Rafael Peier",
+                "provider": "Unsplash",
+                "photoId": "I_XRy-z8m8k"
+            }
+        },
+        {
+            "id": "city-life",
+            "name": "City Life",
+            "description": "For getting pleasantly lost in the middle of it all.",
+            "icon": {
+                "library": "lucide",
+                "name": "Building2",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/building-2.svg",
+                "sourceUrl": "https://lucide.dev/icons/building-2"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/4Y_f_LvAu3U/download?force=true&w=1200",
+                "alt": "City skyline glowing at golden hour",
+                "sourceUrl": "https://unsplash.com/photos/4Y_f_LvAu3U",
+                "photographer": "Jeff Brown",
+                "provider": "Unsplash",
+                "photoId": "4Y_f_LvAu3U"
+            }
+        },
+        {
+            "id": "slow-mornings",
+            "name": "Slow Mornings",
+            "description": "No rush, just a good beginning to the day.",
+            "icon": {
+                "library": "lucide",
+                "name": "Sunrise",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/sunrise.svg",
+                "sourceUrl": "https://lucide.dev/icons/sunrise"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/lLlcEFXeF28/download?force=true&w=1200",
+                "alt": "Breakfast pastry and coffee on a tabletop",
+                "sourceUrl": "https://unsplash.com/photos/lLlcEFXeF28",
+                "photographer": "Jonathan Chng",
+                "provider": "Unsplash",
+                "photoId": "lLlcEFXeF28"
+            }
+        },
+        {
+            "id": "nightlife",
+            "name": "Nightlife",
+            "description": "When the best plans begin after dark.",
+            "icon": {
+                "library": "lucide",
+                "name": "MoonStar",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/moon-star.svg",
+                "sourceUrl": "https://lucide.dev/icons/moon-star"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/7z_TmCWC5C0/download?force=true&w=1200",
+                "alt": "Neon-lit Hong Kong street at night",
+                "sourceUrl": "https://unsplash.com/photos/7z_TmCWC5C0",
+                "photographer": "Chi Hung Wong",
+                "provider": "Unsplash",
+                "photoId": "7z_TmCWC5C0"
+            }
+        },
+        {
+            "id": "by-the-water",
+            "name": "By the Water",
+            "description": "Lakeside afternoons, salty air and open horizons.",
+            "icon": {
+                "library": "lucide",
+                "name": "Waves",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/waves.svg",
+                "sourceUrl": "https://lucide.dev/icons/waves"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/BCyLllh0L1A/download?force=true&w=1200",
+                "alt": "Small boats on the shore of an alpine lake",
+                "sourceUrl": "https://unsplash.com/photos/BCyLllh0L1A",
+                "photographer": "Hans-Joachim Kaiser",
+                "provider": "Unsplash",
+                "photoId": "BCyLllh0L1A"
+            }
+        },
+        {
+            "id": "hiking",
+            "name": "Hiking",
+            "description": "The long way around is sometimes the best way.",
+            "icon": {
+                "library": "lucide",
+                "name": "Footprints",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/footprints.svg",
+                "sourceUrl": "https://lucide.dev/icons/footprints"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/Cg9oyiQ29dE/download?force=true&w=1200",
+                "alt": "Hikers crossing a misty mountain ridge",
+                "sourceUrl": "https://unsplash.com/photos/Cg9oyiQ29dE",
+                "photographer": "Tim Oun",
+                "provider": "Unsplash",
+                "photoId": "Cg9oyiQ29dE"
+            }
+        },
+        {
+            "id": "mountains",
+            "name": "Mountains",
+            "description": "Higher ground and views worth the climb.",
+            "icon": {
+                "library": "lucide",
+                "name": "MountainSnow",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/mountain-snow.svg",
+                "sourceUrl": "https://lucide.dev/icons/mountain-snow"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/qptqseaThDM/download?force=true&w=1200",
+                "alt": "Expansive cloud-covered mountain peaks",
+                "sourceUrl": "https://unsplash.com/photos/qptqseaThDM",
+                "photographer": "Kyle Loftus",
+                "provider": "Unsplash",
+                "photoId": "qptqseaThDM"
+            }
+        },
+        {
+            "id": "beach-days",
+            "name": "Beach Days",
+            "description": "Warm sand, clear water and nothing on the clock.",
+            "icon": {
+                "library": "lucide",
+                "name": "Umbrella",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/umbrella.svg",
+                "sourceUrl": "https://lucide.dev/icons/umbrella"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/xCP0tbQBPXU/download?force=true&w=1200",
+                "alt": "Blue tropical ocean rolling onto a sandy shore",
+                "sourceUrl": "https://unsplash.com/photos/xCP0tbQBPXU",
+                "photographer": "Unsplash contributor",
+                "provider": "Unsplash",
+                "photoId": "xCP0tbQBPXU"
+            }
+        },
+        {
+            "id": "island-hopping",
+            "name": "Island Hopping",
+            "description": "One stretch of blue water after another.",
+            "icon": {
+                "library": "lucide",
+                "name": "Ship",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/ship.svg",
+                "sourceUrl": "https://lucide.dev/icons/ship"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/qy6sTSqbcP0/download?force=true&w=1200",
+                "alt": "Boats in a secluded island harbor",
+                "sourceUrl": "https://unsplash.com/photos/qy6sTSqbcP0",
+                "photographer": "Tim Oun",
+                "provider": "Unsplash",
+                "photoId": "qy6sTSqbcP0"
+            }
+        },
+        {
+            "id": "road-trips",
+            "name": "Road Trips",
+            "description": "The journey is part of the destination.",
+            "icon": {
+                "library": "lucide",
+                "name": "CarFront",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/car-front.svg",
+                "sourceUrl": "https://lucide.dev/icons/car-front"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/Wy1v96cp0mg/download?force=true&w=1200",
+                "alt": "A winding road through a green mountain forest",
+                "sourceUrl": "https://unsplash.com/photos/Wy1v96cp0mg",
+                "photographer": "jason hu",
+                "provider": "Unsplash",
+                "photoId": "Wy1v96cp0mg"
+            }
+        },
+        {
+            "id": "weekend-escapes",
+            "name": "Weekend Escapes",
+            "description": "A couple of days somewhere completely different.",
+            "icon": {
+                "library": "lucide",
+                "name": "House",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/house.svg",
+                "sourceUrl": "https://lucide.dev/icons/house"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/piG9Ye_oHrI/download?force=true&w=1200",
+                "alt": "Quiet lakeside cabin beneath misty mountains",
+                "sourceUrl": "https://unsplash.com/photos/piG9Ye_oHrI",
+                "photographer": "Unsplash contributor",
+                "provider": "Unsplash",
+                "photoId": "piG9Ye_oHrI"
+            }
+        },
+        {
+            "id": "solo-travel",
+            "name": "Solo Travel",
+            "description": "Your own pace, your own stories.",
+            "icon": {
+                "library": "lucide",
+                "name": "UserRound",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/user-round.svg",
+                "sourceUrl": "https://lucide.dev/icons/user-round"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/VetFkenqOlw/download?force=true&w=1200",
+                "alt": "Single traveler exploring a quiet street after dark",
+                "sourceUrl": "https://unsplash.com/photos/VetFkenqOlw",
+                "photographer": "Jezael Melgoza",
+                "provider": "Unsplash",
+                "photoId": "VetFkenqOlw"
+            }
+        },
+        {
+            "id": "friends-trip",
+            "name": "Friends Trip",
+            "description": "Places become stories when you share them.",
+            "icon": {
+                "library": "lucide",
+                "name": "UsersRound",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/users-round.svg",
+                "sourceUrl": "https://lucide.dev/icons/users-round"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/t35c4P2A20s/download?force=true&w=1200",
+                "alt": "Friends spending sunset at the beach",
+                "sourceUrl": "https://unsplash.com/photos/t35c4P2A20s",
+                "photographer": "Arka Dutta",
+                "provider": "Unsplash",
+                "photoId": "t35c4P2A20s"
+            }
+        },
+        {
+            "id": "family-friendly",
+            "name": "Family Friendly",
+            "description": "Thoughtful adventures for every generation.",
+            "icon": {
+                "library": "lucide",
+                "name": "Users",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/users.svg",
+                "sourceUrl": "https://lucide.dev/icons/users"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/nM7FedNjFKM/download?force=true&w=1200",
+                "alt": "People enjoying a sunny day by the water",
+                "sourceUrl": "https://unsplash.com/photos/nM7FedNjFKM",
+                "photographer": "Rohan Gangopadhyay",
+                "provider": "Unsplash",
+                "photoId": "nM7FedNjFKM"
+            }
+        },
+        {
+            "id": "wellness",
+            "name": "Wellness",
+            "description": "Space to reconnect with yourself.",
+            "icon": {
+                "library": "lucide",
+                "name": "Leaf",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/leaf.svg",
+                "sourceUrl": "https://lucide.dev/icons/leaf"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/COuz8XUXDc8/download?force=true&w=1200",
+                "alt": "Quiet tropical shore with palm trees and clear sea",
+                "sourceUrl": "https://unsplash.com/photos/COuz8XUXDc8",
+                "photographer": "Hugh Whyte",
+                "provider": "Unsplash",
+                "photoId": "COuz8XUXDc8"
+            }
+        },
+        {
+            "id": "luxury",
+            "name": "Luxury",
+            "description": "For the moments worth making extra special.",
+            "icon": {
+                "library": "lucide",
+                "name": "Crown",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/crown.svg",
+                "sourceUrl": "https://lucide.dev/icons/crown"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/7Gd07IjiO7s/download?force=true&w=1200",
+                "alt": "Infinity pool at a luxurious tropical resort at sunset",
+                "sourceUrl": "https://unsplash.com/photos/7Gd07IjiO7s",
+                "photographer": "Aalo Lens",
+                "provider": "Unsplash",
+                "photoId": "7Gd07IjiO7s"
+            }
+        },
+        {
+            "id": "art-and-design",
+            "name": "Art & Design",
+            "description": "Fresh perspectives in unexpected places.",
+            "icon": {
+                "library": "lucide",
+                "name": "Palette",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/palette.svg",
+                "sourceUrl": "https://lucide.dev/icons/palette"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/7gruYeIsDD0/download?force=true&w=1200",
+                "alt": "Minimalist art gallery with paintings and displays",
+                "sourceUrl": "https://unsplash.com/photos/7gruYeIsDD0",
+                "photographer": "Cansu Sarp",
+                "provider": "Unsplash",
+                "photoId": "7gruYeIsDD0"
+            }
+        },
+        {
+            "id": "architecture",
+            "name": "Architecture",
+            "description": "Buildings that tell stories of their own.",
+            "icon": {
+                "library": "lucide",
+                "name": "Columns3",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/columns-3.svg",
+                "sourceUrl": "https://lucide.dev/icons/columns-3"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/Txl-GLHnKYg/download?force=true&w=1200",
+                "alt": "Modern and historic architectural facades in a city",
+                "sourceUrl": "https://unsplash.com/photos/Txl-GLHnKYg",
+                "photographer": "Alex Lvrs",
+                "provider": "Unsplash",
+                "photoId": "Txl-GLHnKYg"
+            }
+        },
+        {
+            "id": "history",
+            "name": "History",
+            "description": "Look a little closer at the places that came before.",
+            "icon": {
+                "library": "lucide",
+                "name": "Hourglass",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/hourglass.svg",
+                "sourceUrl": "https://lucide.dev/icons/hourglass"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/TfZHT-lTbL4/download?force=true&w=1200",
+                "alt": "Ancient Roman columns and ruins",
+                "sourceUrl": "https://unsplash.com/photos/TfZHT-lTbL4",
+                "photographer": "Ludovic Delot",
+                "provider": "Unsplash",
+                "photoId": "TfZHT-lTbL4"
+            }
+        },
+        {
+            "id": "local-life",
+            "name": "Local Life",
+            "description": "A glimpse of the everyday, far from home.",
+            "icon": {
+                "library": "lucide",
+                "name": "Store",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/store.svg",
+                "sourceUrl": "https://lucide.dev/icons/store"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/BO3UsWmpBoQ/download?force=true&w=1200",
+                "alt": "Busy illuminated market street after dark",
+                "sourceUrl": "https://unsplash.com/photos/BO3UsWmpBoQ",
+                "photographer": "Mateusz Prowans",
+                "provider": "Unsplash",
+                "photoId": "BO3UsWmpBoQ"
+            }
+        },
+        {
+            "id": "markets",
+            "name": "Markets",
+            "description": "Find your way through the colors, sounds and stalls.",
+            "icon": {
+                "library": "lucide",
+                "name": "ShoppingBasket",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/shopping-basket.svg",
+                "sourceUrl": "https://lucide.dev/icons/shopping-basket"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/881CTPcaGXg/download?force=true&w=1200",
+                "alt": "Crowded Asian street market",
+                "sourceUrl": "https://unsplash.com/photos/881CTPcaGXg",
+                "photographer": "Sergio Kian",
+                "provider": "Unsplash",
+                "photoId": "881CTPcaGXg"
+            }
+        },
+        {
+            "id": "cafe-hopping",
+            "name": "Café Hopping",
+            "description": "Coffee breaks that become the whole afternoon.",
+            "icon": {
+                "library": "lucide",
+                "name": "Coffee",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/coffee.svg",
+                "sourceUrl": "https://lucide.dev/icons/coffee"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/JLPoB3Gahcc/download?force=true&w=1200",
+                "alt": "Fresh coffee served on a café table",
+                "sourceUrl": "https://unsplash.com/photos/JLPoB3Gahcc",
+                "photographer": "Nathan Dumlao",
+                "provider": "Unsplash",
+                "photoId": "JLPoB3Gahcc"
+            }
+        },
+        {
+            "id": "wine-and-dine",
+            "name": "Wine & Dine",
+            "description": "Slow dinners and glasses worth raising.",
+            "icon": {
+                "library": "lucide",
+                "name": "Wine",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/wine.svg",
+                "sourceUrl": "https://lucide.dev/icons/wine"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/nTMHlJ7CgLo/download?force=true&w=1200",
+                "alt": "Candlelit table set for an elegant dinner",
+                "sourceUrl": "https://unsplash.com/photos/nTMHlJ7CgLo",
+                "photographer": "Siednji Leon",
+                "provider": "Unsplash",
+                "photoId": "nTMHlJ7CgLo"
+            }
+        },
+        {
+            "id": "street-food",
+            "name": "Street Food",
+            "description": "The best flavors are sometimes around the corner.",
+            "icon": {
+                "library": "lucide",
+                "name": "CookingPot",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/cooking-pot.svg",
+                "sourceUrl": "https://lucide.dev/icons/cooking-pot"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/LA9O_rB_-Xg/download?force=true&w=1200",
+                "alt": "Street food chef preparing Japanese takoyaki",
+                "sourceUrl": "https://unsplash.com/photos/LA9O_rB_-Xg",
+                "photographer": "Perry Merrity II",
+                "provider": "Unsplash",
+                "photoId": "LA9O_rB_-Xg"
+            }
+        },
+        {
+            "id": "festivals",
+            "name": "Festivals",
+            "description": "Find a reason to celebrate somewhere new.",
+            "icon": {
+                "library": "lucide",
+                "name": "PartyPopper",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/party-popper.svg",
+                "sourceUrl": "https://lucide.dev/icons/party-popper"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/WIIsxb2J6lY/download?force=true&w=1200",
+                "alt": "Illuminated paper lantern at a festival",
+                "sourceUrl": "https://unsplash.com/photos/WIIsxb2J6lY",
+                "photographer": "Jessica Kantak Bailey",
+                "provider": "Unsplash",
+                "photoId": "WIIsxb2J6lY"
+            }
+        },
+        {
+            "id": "wildlife",
+            "name": "Wildlife",
+            "description": "Unforgettable encounters in the natural world.",
+            "icon": {
+                "library": "lucide",
+                "name": "PawPrint",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/paw-print.svg",
+                "sourceUrl": "https://lucide.dev/icons/paw-print"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/tjrSyOPax4s/download?force=true&w=1200",
+                "alt": "Elephant crossing a dirt road in Kruger National Park",
+                "sourceUrl": "https://unsplash.com/photos/tjrSyOPax4s",
+                "photographer": "Mario Scheibl",
+                "provider": "Unsplash",
+                "photoId": "tjrSyOPax4s"
+            }
+        },
+        {
+            "id": "camping",
+            "name": "Camping",
+            "description": "After sunset, the outdoors feels like home.",
+            "icon": {
+                "library": "lucide",
+                "name": "Tent",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/tent.svg",
+                "sourceUrl": "https://lucide.dev/icons/tent"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/XvgtPNWCQcw/download?force=true&w=1200",
+                "alt": "Tent glowing under the stars at night",
+                "sourceUrl": "https://unsplash.com/photos/XvgtPNWCQcw",
+                "photographer": "Pablo García Saldaña",
+                "provider": "Unsplash",
+                "photoId": "XvgtPNWCQcw"
+            }
+        },
+        {
+            "id": "winter-escapes",
+            "name": "Winter Escapes",
+            "description": "Frosty days with warm places to return to.",
+            "icon": {
+                "library": "lucide",
+                "name": "Snowflake",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/snowflake.svg",
+                "sourceUrl": "https://lucide.dev/icons/snowflake"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/CUA2U4eT-Ys/download?force=true&w=1200",
+                "alt": "Warm-lit cabin nestled in a snowy forest",
+                "sourceUrl": "https://unsplash.com/photos/CUA2U4eT-Ys",
+                "photographer": "Greta Falk",
+                "provider": "Unsplash",
+                "photoId": "CUA2U4eT-Ys"
+            }
+        },
+        {
+            "id": "summer-days",
+            "name": "Summer Days",
+            "description": "Long evenings and little reasons to stay outside.",
+            "icon": {
+                "library": "lucide",
+                "name": "Sun",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/sun.svg",
+                "sourceUrl": "https://lucide.dev/icons/sun"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/0lG-wadk7pw/download?force=true&w=1200",
+                "alt": "Rows of beach parasols on a sunny Italian shore",
+                "sourceUrl": "https://unsplash.com/photos/0lG-wadk7pw",
+                "photographer": "Chloe Frost-Smith",
+                "provider": "Unsplash",
+                "photoId": "0lG-wadk7pw"
+            }
+        },
+        {
+            "id": "off-the-grid",
+            "name": "Off the Grid",
+            "description": "Far from the noise, close to everything else.",
+            "icon": {
+                "library": "lucide",
+                "name": "WifiOff",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/wifi-off.svg",
+                "sourceUrl": "https://lucide.dev/icons/wifi-off"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/wxqzNzzvNEU/download?force=true&w=1200",
+                "alt": "Remote cabin tucked away in a winter forest",
+                "sourceUrl": "https://unsplash.com/photos/wxqzNzzvNEU",
+                "photographer": "Natalie Su",
+                "provider": "Unsplash",
+                "photoId": "wxqzNzzvNEU"
+            }
+        },
+        {
+            "id": "photography",
+            "name": "Photography",
+            "description": "For seeing every place in a different light.",
+            "icon": {
+                "library": "lucide",
+                "name": "Camera",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/camera.svg",
+                "sourceUrl": "https://lucide.dev/icons/camera"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/FVHNmbXYhYs/download?force=true&w=1200",
+                "alt": "Photographer adjusting tripod by the coast at sunset",
+                "sourceUrl": "https://unsplash.com/photos/FVHNmbXYhYs",
+                "photographer": "Garrett Patz",
+                "provider": "Unsplash",
+                "photoId": "FVHNmbXYhYs"
+            }
+        },
+        {
+            "id": "sunsets",
+            "name": "Sunsets",
+            "description": "Go where the last light looks a little better.",
+            "icon": {
+                "library": "lucide",
+                "name": "Sunset",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/sunset.svg",
+                "sourceUrl": "https://lucide.dev/icons/sunset"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/P6etxyQ41uI/download?force=true&w=1200",
+                "alt": "Ocean and coastal cliffs glowing at golden hour",
+                "sourceUrl": "https://unsplash.com/photos/P6etxyQ41uI",
+                "photographer": "Neil Soni",
+                "provider": "Unsplash",
+                "photoId": "P6etxyQ41uI"
+            }
+        },
+        {
+            "id": "scenic-routes",
+            "name": "Scenic Routes",
+            "description": "Beautiful detours, winding roads and the long way home.",
+            "icon": {
+                "library": "lucide",
+                "name": "Route",
+                "svgUrl": "https://cdn.jsdelivr.net/npm/lucide-static@1.55.0/icons/route.svg",
+                "sourceUrl": "https://lucide.dev/icons/route"
+            },
+            "gridImage": {
+                "url": "https://unsplash.com/photos/OofG_09hRmA/download?force=true&w=1200",
+                "alt": "Winding mountain road through green rolling hills",
+                "sourceUrl": "https://unsplash.com/photos/OofG_09hRmA",
+                "photographer": "Robert Nagy",
+                "provider": "Unsplash",
+                "photoId": "OofG_09hRmA"
+            }
+        }
+    ]
+}

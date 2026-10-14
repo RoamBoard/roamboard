@@ -1,3 +1,5 @@
+import type { BoardTagId } from "@/data/board-tags";
+
 // Import via import type { Board } from "@/types/board";
 // Frontend data model until a backend contract is agreed.
 export type BoardVisibility = "private" | "friends" | "public";
@@ -88,8 +90,8 @@ export type Board = {
     visibility: BoardVisibility;
     // Tracks the owner's completed trip. New Boards and copies should start false.
     isCompleted: boolean;
-    // Tag names for now. Their icons will come from the tag database later.
-    tags: string[];
+    // Stable IDs from shared/roamboard-tags.json, never display names.
+    tags: BoardTagId[];
     // An empty array allows a Board without a chosen destination.
     destinations: BoardDestination[];
     // Calendar dates in YYYY-MM-DD format.
