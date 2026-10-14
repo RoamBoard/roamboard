@@ -60,6 +60,7 @@ export default function LanguageEditor({ languages, onChangeLanguages, maxLangua
             <div className="mt-4 flex max-w-sm gap-2">
                 <input
                     type="text"
+                    aria-label="Add language"
                     value={newLanguage}
                     disabled={languages.length >= maxLanguages}
                     onChange={(e) => setNewLanguage(e.target.value)}

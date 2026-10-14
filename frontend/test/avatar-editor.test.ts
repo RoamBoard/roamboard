@@ -36,6 +36,16 @@ test("validateAvatarUrl rejects incomplete strings and unsupported hosts", () =>
     const unsupported = validateAvatarUrl("https://example.com/profile.jpg");
     assert.equal(unsupported.isValid, false);
     assert.match(unsupported.error ?? "", /Host not supported/);
+
+    // Insecure HTTP rejected
+    const httpUrl = validateAvatarUrl("http://images.unsplash.com/photo-1769786186317-272d062fcf93");
+    assert.equal(httpUrl.isValid, false);
+    assert.match(httpUrl.error ?? "", /https:\/\//);
+
+    // Protocol-relative URLs rejected
+    const protocolRelative = validateAvatarUrl("//images.unsplash.com/photo.jpg");
+    assert.equal(protocolRelative.isValid, false);
+    assert.match(protocolRelative.error ?? "", /Protocol-relative/);
 });
 
 test("ProfileAvatarEditor renders fallback safely without crashing when avatarUrl is unfinished text", () => {

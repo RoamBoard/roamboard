@@ -128,7 +128,9 @@ export default function SettingsSaveBar({
                 >
                     ✓
                 </span>
-                <span className="text-12 text-foreground font-medium whitespace-nowrap">Changes saved</span>
+                <span className="text-12 text-foreground font-medium whitespace-nowrap">
+                    Changes saved locally (demo)
+                </span>
 
                 {canUndo && onUndo && (
                     <button

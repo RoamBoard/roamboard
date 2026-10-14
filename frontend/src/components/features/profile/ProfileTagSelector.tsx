@@ -95,6 +95,7 @@ export default function ProfileTagSelector({ selectedTagIds, onChange, maxTags =
                 <div className="relative max-w-sm">
                     <input
                         type="text"
+                        aria-label="Filter travel tags"
                         value={searchQuery}
                         disabled={isMaxReached}
                         onChange={(e) => setSearchQuery(e.target.value)}

@@ -32,16 +32,23 @@ export function validateAvatarUrl(url: string): {
         return { isValid: true, normalizedUrl: "" };
     }
 
+    if (trimmed.startsWith("//")) {
+        return {
+            isValid: false,
+            error: "Protocol-relative URLs are not supported. Use https://."
+        };
+    }
+
     if (trimmed.startsWith("/")) {
         return { isValid: true, normalizedUrl: trimmed };
     }
 
     try {
         const parsed = new URL(trimmed);
-        if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+        if (parsed.protocol !== "https:") {
             return {
                 isValid: false,
-                error: "URL must begin with http:// or https://"
+                error: "URL must begin with https://"
             };
         }
 

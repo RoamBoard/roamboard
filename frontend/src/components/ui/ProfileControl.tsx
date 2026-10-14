@@ -102,8 +102,10 @@ export default function ProfileControl({
         setSigningOut(true);
         setLogoutError("");
         try {
-            if (sessionUser) {
+            try {
                 await signOut();
+            } catch {
+                // Proceed if backend session is already invalidated
             }
             setSessionUser(null);
             setMockAuthState(false);
@@ -118,9 +120,9 @@ export default function ProfileControl({
     // Real account controls tied to backend session; demo user enabled through explicit user prop or demo login
     const isLoggedIn = Boolean(user || sessionUser || mockIsLoggedIn);
 
-    const displayName = user?.name || sessionUser?.displayName || userName || profile.name || "Rowan";
-    const displayAvatar = user?.avatarUrl || avatarUrl || profile.avatarUrl;
-    const rawHandle = user?.handle || handle || profile.handle;
+    const displayName = user?.name || sessionUser?.displayName || profile.name || userName || "Rowan";
+    const displayAvatar = user?.avatarUrl || profile.avatarUrl || avatarUrl;
+    const rawHandle = user?.handle || profile.handle || handle;
     const displayHandle = rawHandle ? (rawHandle.startsWith("@") ? rawHandle : `@${rawHandle}`) : null;
     const resolvedProfileHref = href ?? profileHref;
 

@@ -89,29 +89,28 @@ export default function SettingsContent() {
         () => initialSettings.defaultBoardVisibility
     );
 
-    // Load saved values afterward and initialize form through the same path
+    // Load saved values on mount and initialize form with restored store
     const isFormInitializedRef = useRef(false);
 
     useEffect(() => {
-        restoreMockStore();
-    }, []);
-
-    useEffect(() => {
         if (!isFormInitializedRef.current) {
-            setName(profileSnapshot.name);
-            setHandle(profileSnapshot.handle);
-            setHeadline(profileSnapshot.headline);
-            setBio(profileSnapshot.bio);
-            setLocation(profileSnapshot.location);
-            setOccupation(profileSnapshot.occupation ?? profileSnapshot.details?.occupation ?? "");
-            setAvatarUrl(profileSnapshot.avatarUrl);
-            setSelectedTier(profileSnapshot.tier || calculateTravelerTier(profileSnapshot.mapStats).name);
-            setLanguages(profileSnapshot.details?.languages ?? []);
-            setTags(profileSnapshot.details?.tags ?? profileSnapshot.details?.interests ?? []);
-            setDefaultBoardVisibility(settingsSnapshot.defaultBoardVisibility);
+            restoreMockStore();
+            const restoredProfile = getMockProfile();
+            const restoredSettings = getMockSettings();
+            setName(restoredProfile.name);
+            setHandle(restoredProfile.handle);
+            setHeadline(restoredProfile.headline);
+            setBio(restoredProfile.bio);
+            setLocation(restoredProfile.location);
+            setOccupation(restoredProfile.occupation ?? restoredProfile.details?.occupation ?? "");
+            setAvatarUrl(restoredProfile.avatarUrl);
+            setSelectedTier(restoredProfile.tier || calculateTravelerTier(restoredProfile.mapStats).name);
+            setLanguages(restoredProfile.details?.languages ?? []);
+            setTags(restoredProfile.details?.tags ?? restoredProfile.details?.interests ?? []);
+            setDefaultBoardVisibility(restoredSettings.defaultBoardVisibility);
             isFormInitializedRef.current = true;
         }
-    }, [profileSnapshot, settingsSnapshot]);
+    }, []);
 
     // UI Feedback state
     const [lastSavedSnapshot, setLastSavedSnapshot] = useState<ProfileSnapshotState | null>(null);
@@ -321,12 +320,20 @@ export default function SettingsContent() {
             <header className="mb-8">
                 <div className="flex flex-wrap items-end justify-between gap-4">
                     <div>
-                        <span className="text-10 tracking-label text-muted-foreground font-bold uppercase">
-                            ACCOUNT &amp; PROFILE
-                        </span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-10 tracking-label text-muted-foreground font-bold uppercase">
+                                ACCOUNT &amp; PROFILE
+                            </span>
+                            <span className="border-line bg-faint text-10 tracking-label text-muted-foreground font-body rounded-[2px] border px-2 py-0.5 font-bold uppercase">
+                                Local Demo
+                            </span>
+                        </div>
                         <h1 className="font-display text-48 sm:text-60 text-foreground mt-1 font-bold tracking-tight uppercase">
                             SETTINGS
                         </h1>
+                        <p className="text-12 text-muted-foreground mt-1 font-medium">
+                            Profile and preference edits are simulated locally in your browser for this demo.
+                        </p>
                     </div>
 
                     <Link

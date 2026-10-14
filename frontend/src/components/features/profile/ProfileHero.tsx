@@ -123,7 +123,7 @@ export default function ProfileHero({ profile }: Props) {
                         <p className="text-13 text-muted-foreground mt-3 max-w-xl leading-relaxed">
                             {profile.bio}{" "}
                             <span
-                                className="text-muted-foreground/30 pointer-events-none animate-pulse font-normal select-none"
+                                className="text-muted-foreground/30 pointer-events-none animate-pulse font-normal select-none motion-reduce:animate-none"
                                 aria-hidden="true"
                             >
                                 |

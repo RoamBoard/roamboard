@@ -17,14 +17,8 @@ export default function SocialPage() {
             }}
         >
             <div className="relative h-full w-full overflow-hidden">
-                {/* Vertical divider line separating sidebar and content */}
-                <div
-                    aria-hidden="true"
-                    className="bg-line pointer-events-none absolute inset-y-0 left-[9rem] w-px sm:left-[10rem] lg:left-[11rem]"
-                />
-
                 {/* Content scroll container */}
-                <div className="h-full w-full overflow-y-auto pt-10 pr-8 pl-[11.5rem] sm:pr-16 sm:pl-[12.5rem] lg:pr-24 lg:pl-[14rem]">
+                <div className="h-full w-full overflow-y-auto px-4 pt-6 pb-20 sm:px-8 sm:pt-8 md:px-12 md:pt-10 lg:px-16">
                     <div className="mx-auto w-full max-w-4xl pb-20">
                         <header className="mb-8">
                             <span className="text-10 tracking-label text-muted-foreground font-bold uppercase">
