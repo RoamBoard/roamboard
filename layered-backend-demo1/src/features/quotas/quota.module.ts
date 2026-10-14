@@ -5,6 +5,6 @@ import { createQuotaService } from "./quota.service.js";
 import type { QuotaRepository } from "./quota.types.js";
 
 export function createQuotaModule(repository: QuotaRepository = createMemoryQuotaRepository()) {
-  const service = createQuotaService(repository, createQuotaPolicies());
-  return { router: createQuotaRouter(service), service };
+    const service = createQuotaService(repository, createQuotaPolicies());
+    return { router: createQuotaRouter(service), service };
 }

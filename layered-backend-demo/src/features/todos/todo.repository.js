@@ -9,10 +9,7 @@ export function createTodoRepository() {
 
     async function findAll({ completed } = {}) {
         const results = Array.from(todos.values());
-        const filtered =
-            completed === undefined
-                ? results
-                : results.filter((todo) => todo.completed === completed);
+        const filtered = completed === undefined ? results : results.filter((todo) => todo.completed === completed);
 
         return filtered.map(copyTodo);
     }

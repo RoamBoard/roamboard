@@ -1,10 +1,7 @@
 import type { Router } from "express"; // ts
 
 // ts
-import {
-    createTodoController,
-    type TodoController
-} from "./todo.controller.js";
+import { createTodoController, type TodoController } from "./todo.controller.js";
 
 import { createTodoRepository } from "./todo.repository.js";
 import { createTodoRouter } from "./todo.routes.js";
@@ -24,9 +21,7 @@ interface CreateTodoModuleOptions {
     repository?: TodoRepository;
 }
 
-export function createTodoModule({
-    repository = createTodoRepository()
-}: CreateTodoModuleOptions = {}): TodoModule {
+export function createTodoModule({ repository = createTodoRepository() }: CreateTodoModuleOptions = {}): TodoModule {
     const service = createTodoService(repository);
     const controller = createTodoController(service);
     const router = createTodoRouter(controller);

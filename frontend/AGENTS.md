@@ -55,7 +55,7 @@ Show useful validation errors and action failures. Display loading or progress f
 
 ## Code organization and readability
 
-Prettier is the source of truth for formatting. Use the repository's root [`.prettierrc`](../.prettierrc): indent with four spaces and never tabs, use double quotes in JavaScript and TypeScript, do not use trailing commas, and use LF line endings with a final newline. Use the configured print width of 120 to keep longer lines together where Prettier allows. Do not add a nested Prettier configuration. After editing supported files, run `pnpm format:apps` and `pnpm format:apps:check` from the repository root. For smaller changes, format edited paths with `pnpm exec prettier --write <paths>`, then run `pnpm format:apps:check`. Respect the root `.prettierignore` and exclude generated output, lockfiles, and SQL files; preserve existing SQL formatting.
+Prettier is the source of truth for formatting. Use the repository's root [`.prettierrc`](../.prettierrc): indent with four spaces and never tabs, use double quotes in JavaScript and TypeScript, do not use trailing commas, and use LF line endings with a final newline. Use the configured print width of 120 to keep longer lines together where Prettier allows. Do not add a nested Prettier configuration. Every agent must run `pnpm.cmd format` and `pnpm.cmd format:check` from the repository root after final edits and before handoff or PR preparation. On Linux/macOS, use `pnpm format` and `pnpm format:check`. Use the root-installed Prettier; do not install another copy in frontend. Prettier does not replace the required ESLint, TypeScript, test, or build checks. Review the formatting diff. Respect the root `.prettierignore` and exclude generated output, lockfiles, and SQL files; preserve existing SQL formatting.
 
 Follow the existing structure:
 
@@ -71,7 +71,7 @@ Follow the existing structure:
 - Keep state local unless multiple components need it. Do not introduce shared state tools for a single component.
 - Keep Server Components as the default. Add `"use client"` at the component boundary that needs browser APIs or interactive state.
 - Keep TypeScript strict settings and use the existing `@/` alias for imports from `src/`. Fix type errors without disabling checks.
-- Follow the ESLint configuration: declare variables with `const`, never `let` or `var`, and do not use `console` calls. A comment mentions `debug`, but no logging library is configured in the frontend manifest; do not assume one is available.
+- Follow the ESLint configuration: declare variables with `const`, never `let` or `var`, use strict equality, and do not use `console` calls. Common code rules and Prettier compatibility live in `../eslint.shared.mjs`; keep Next.js and frontend-only rules in `eslint.config.mjs`. Every agent must also run `pnpm.cmd lint` from the repository root before handoff or PR preparation. Warnings fail the lint check. Install root dependencies as well as frontend dependencies. No logging library is configured in the frontend manifest; do not assume one is available.
 - Add comments when they explain a non-obvious decision. Avoid comments that repeat the code.
 - Keep UI behavior and copy consistent with the backend's API states: loading, empty, validation, unauthorized, forbidden, not-found, conflict, and unexpected-error states should be represented intentionally where they apply.
 

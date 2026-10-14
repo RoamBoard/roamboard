@@ -10,23 +10,23 @@ import { createSearchSourceRepository } from "./search.repository.js";
 import type { SearchSourceRepository } from "./search.types.js";
 
 interface CreateSearchModuleOptions {
-  client?: Client;
-  sourceRepository?: SearchSourceRepository;
+    client?: Client;
+    sourceRepository?: SearchSourceRepository;
 }
 
 export interface SearchModule {
-  router: Router;
-  controller: SearchController;
-  service: SearchService;
+    router: Router;
+    controller: SearchController;
+    service: SearchService;
 }
 
 export function createSearchModule({
-  client = createSearchClient(),
-  sourceRepository = createSearchSourceRepository(sampleSearchDocuments),
+    client = createSearchClient(),
+    sourceRepository = createSearchSourceRepository(sampleSearchDocuments)
 }: CreateSearchModuleOptions = {}): SearchModule {
-  const service = createSearchService(client, sourceRepository);
-  const controller = createSearchController(service);
-  const router = createSearchRouter(controller);
+    const service = createSearchService(client, sourceRepository);
+    const controller = createSearchController(service);
+    const router = createSearchRouter(controller);
 
-  return { router, controller, service };
+    return { router, controller, service };
 }

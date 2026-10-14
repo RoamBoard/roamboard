@@ -7,9 +7,7 @@ import { createApp } from "../src/app.js";
 test("creates, reads, updates, filters, and deletes a todo", async () => {
     const app = createApp();
 
-    const createResponse = await request(app)
-        .post("/api/v1/todos")
-        .send({ title: "Learn layered architecture" });
+    const createResponse = await request(app).post("/api/v1/todos").send({ title: "Learn layered architecture" });
 
     assert.equal(createResponse.status, 201);
     assert.equal(createResponse.body.data.title, "Learn layered architecture");
@@ -21,9 +19,7 @@ test("creates, reads, updates, filters, and deletes a todo", async () => {
     assert.equal(getResponse.status, 200);
     assert.equal(getResponse.body.data.id, todoId);
 
-    const updateResponse = await request(app)
-        .patch(`/api/v1/todos/${todoId}`)
-        .send({ completed: true });
+    const updateResponse = await request(app).patch(`/api/v1/todos/${todoId}`).send({ completed: true });
     assert.equal(updateResponse.status, 200);
     assert.equal(updateResponse.body.data.completed, true);
 
@@ -41,9 +37,7 @@ test("creates, reads, updates, filters, and deletes a todo", async () => {
 test("rejects invalid request bodies", async () => {
     const app = createApp();
 
-    const response = await request(app)
-        .post("/api/v1/todos")
-        .send({ title: "" });
+    const response = await request(app).post("/api/v1/todos").send({ title: "" });
 
     assert.equal(response.status, 400);
     assert.equal(response.body.error.message, "Invalid request");

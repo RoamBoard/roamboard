@@ -4,7 +4,10 @@ import { createMemoryGooglePlaceReferenceRepository } from "./provider.google-pl
 import type { GooglePlaceReferenceRepository } from "./provider.types.js";
 import type { QuotaService } from "../quotas/quota.service.js";
 
-export function createProviderModule(quota: QuotaService, googlePlaceReferences: GooglePlaceReferenceRepository = createMemoryGooglePlaceReferenceRepository()) {
-  const service = createProviderService(quota, googlePlaceReferences);
-  return { router: createProviderRouter(service), service };
+export function createProviderModule(
+    quota: QuotaService,
+    googlePlaceReferences: GooglePlaceReferenceRepository = createMemoryGooglePlaceReferenceRepository()
+) {
+    const service = createProviderService(quota, googlePlaceReferences);
+    return { router: createProviderRouter(service), service };
 }

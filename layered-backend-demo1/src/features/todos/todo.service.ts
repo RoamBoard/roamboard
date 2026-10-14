@@ -1,12 +1,5 @@
 import { AppError } from "../../shared/app-error.js";
-import type {
-    CreateTodoInput,
-    Todo,
-    TodoFilters,
-    TodoRepository,
-    TodoService,
-    UpdateTodoInput
-} from "./todo.types.js";
+import type { CreateTodoInput, Todo, TodoFilters, TodoRepository, TodoService, UpdateTodoInput } from "./todo.types.js";
 
 export function createTodoService(repository: TodoRepository): TodoService {
     async function listTodos(filters?: TodoFilters): Promise<Todo[]> {
@@ -30,10 +23,7 @@ export function createTodoService(repository: TodoRepository): TodoService {
         });
     }
 
-    async function updateTodo(
-        id: string,
-        changes: UpdateTodoInput
-    ): Promise<Todo> {
+    async function updateTodo(id: string, changes: UpdateTodoInput): Promise<Todo> {
         const todo = await repository.update(id, changes);
 
         if (!todo) {

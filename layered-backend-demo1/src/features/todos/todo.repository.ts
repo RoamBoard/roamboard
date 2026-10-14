@@ -1,12 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import type {
-    CreateTodoRecord,
-    Todo,
-    TodoFilters,
-    TodoRepository,
-    UpdateTodoInput
-} from "./todo.types.js";
+import type { CreateTodoRecord, Todo, TodoFilters, TodoRepository, UpdateTodoInput } from "./todo.types.js";
 
 function copyTodo(todo: Todo | null | undefined): Todo | null {
     return todo ? { ...todo } : null;
@@ -17,10 +11,7 @@ export function createTodoRepository(): TodoRepository {
 
     async function findAll({ completed }: TodoFilters = {}): Promise<Todo[]> {
         const results = Array.from(todos.values());
-        const filtered =
-            completed === undefined
-                ? results
-                : results.filter((todo) => todo.completed === completed);
+        const filtered = completed === undefined ? results : results.filter((todo) => todo.completed === completed);
 
         return filtered.map((todo) => ({ ...todo }));
     }
@@ -29,10 +20,7 @@ export function createTodoRepository(): TodoRepository {
         return copyTodo(todos.get(id));
     }
 
-    async function create({
-        title,
-        completed
-    }: CreateTodoRecord): Promise<Todo> {
+    async function create({ title, completed }: CreateTodoRecord): Promise<Todo> {
         const now = new Date().toISOString();
         const todo: Todo = {
             id: randomUUID(),
@@ -46,10 +34,7 @@ export function createTodoRepository(): TodoRepository {
         return { ...todo };
     }
 
-    async function update(
-        id: string,
-        changes: UpdateTodoInput
-    ): Promise<Todo | null> {
+    async function update(id: string, changes: UpdateTodoInput): Promise<Todo | null> {
         const current = todos.get(id);
 
         if (!current) {

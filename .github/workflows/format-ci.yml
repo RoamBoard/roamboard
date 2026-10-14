@@ -4,7 +4,6 @@ on:
     push:
         branches: [main]
     pull_request:
-        branches: [main]
     workflow_dispatch:
 
 permissions:
@@ -34,5 +33,5 @@ jobs:
             - name: Install root formatting dependencies
               run: pnpm install --frozen-lockfile
 
-            - name: Check frontend and backend formatting
-              run: pnpm format:apps:check
+            - name: Check repository formatting
+              run: pnpm format:check

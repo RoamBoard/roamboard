@@ -6,9 +6,9 @@ import { destinationContextSchema, destinationSearchSchema } from "./destination
 import type { DestinationService } from "./destination.service.js";
 
 export function createDestinationRouter(service: DestinationService): Router {
-  const router = Router();
-  const controller = createDestinationController(service);
-  router.get("/search", validate(destinationSearchSchema), controller.search);
-  router.get("/context", validate(destinationContextSchema), controller.context);
-  return router;
+    const router = Router();
+    const controller = createDestinationController(service);
+    router.get("/search", validate(destinationSearchSchema), controller.search);
+    router.get("/context", validate(destinationContextSchema), controller.context);
+    return router;
 }
