@@ -1,17 +1,26 @@
 import type { Metadata } from "next";
 import AppShell from "@/components/layout/AppShell";
+import ProfilePageContent from "@/components/features/profile/ProfilePageContent";
+import { mockRowanProfile } from "@/data/mock-social";
 
 export const metadata: Metadata = {
-    title: "Profile | Roamboard"
+    title: "Profile | Roamboard",
+    description: "Traveler profile, shared boards, and visited places map on Roamboard."
 };
 
 export default function ProfilePage() {
     return (
-        <AppShell activeHref="/profile">
-            <div className="grid place-items-center text-center">
-                <div>
-                    <h1 className="font-display text-24">Profile</h1>
-                    <p className="font-body text-14 text-muted-foreground mt-2">This page is a placeholder.</p>
+        <AppShell
+            activeHref="/profile"
+            profile={{
+                profileHref: "/profile",
+                settingsHref: "/settings"
+            }}
+        >
+            <div className="relative h-full w-full overflow-hidden">
+                {/* Profile content scroll container */}
+                <div className="h-full w-full overflow-y-auto px-4 pt-6 pb-20 sm:px-8 sm:pt-8 md:px-12 md:pt-10 lg:px-16">
+                    <ProfilePageContent profile={mockRowanProfile} />
                 </div>
             </div>
         </AppShell>

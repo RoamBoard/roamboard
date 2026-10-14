@@ -70,11 +70,22 @@ function DropdownMenuRadioItem({
     );
 }
 
+function DropdownMenuSeparator({ className, ...props }: ComponentProps<typeof DropdownMenuPrimitive.Separator>) {
+    return (
+        <DropdownMenuPrimitive.Separator
+            data-slot="dropdown-menu-separator"
+            className={`bg-line -mx-1 my-1 h-px ${className ?? ""}`}
+            {...props}
+        />
+    );
+}
+
 export {
     DropdownMenu,
     DropdownMenuTrigger,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuRadioGroup,
-    DropdownMenuRadioItem
+    DropdownMenuRadioItem,
+    DropdownMenuSeparator
 };

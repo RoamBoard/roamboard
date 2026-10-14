@@ -95,6 +95,31 @@
     }
 }
 
+@keyframes toast-progress {
+    from {
+        transform: scaleX(1);
+    }
+    to {
+        transform: scaleX(0);
+    }
+}
+
+.animate-toast-progress {
+    transform-origin: left;
+    animation: toast-progress 6s linear forwards;
+}
+
+.group:hover .animate-toast-progress {
+    animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .animate-toast-progress {
+        animation: none;
+        display: none;
+    }
+}
+
 body {
     background: var(--background);
     color: var(--foreground);

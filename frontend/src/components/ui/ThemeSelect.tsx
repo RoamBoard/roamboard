@@ -1,6 +1,7 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
+import { updateMockSettings } from "@/data/mock-social";
 import {
     DropdownMenu,
     DropdownMenuTrigger,
@@ -15,9 +16,10 @@ import {
 type Props = {
     // Bottom-of-page controls open upward so the menu stays on screen.
     side?: "top" | "bottom";
+    className?: string;
 };
 
-export default function ThemeSelect({ side = "bottom" }: Props) {
+export default function ThemeSelect({ side = "bottom", className }: Props) {
     // This state marks the selected option. The component manages opening and focus.
     const [selectedTheme, setSelectedTheme] = useState("light");
 
@@ -27,6 +29,7 @@ export default function ThemeSelect({ side = "bottom" }: Props) {
         // The root class changes the whole site's colors. layout.tsx restores it on load.
         document.documentElement.classList.toggle("dark", theme === "dark");
         setSelectedTheme(theme);
+        updateMockSettings({ theme });
         try {
             localStorage.setItem("roamboard-theme", theme);
         } catch {
@@ -49,7 +52,10 @@ export default function ThemeSelect({ side = "bottom" }: Props) {
                 <button
                     type="button"
                     aria-label="Color theme"
-                    className="font-body text-12 text-muted-foreground hover:text-foreground focus-visible:text-foreground inline-flex min-h-9 cursor-pointer items-center gap-2 border-0 bg-transparent py-2 pr-1 underline-offset-2 outline-none hover:underline focus-visible:underline focus-visible:decoration-2 focus-visible:underline-offset-4"
+                    className={
+                        className ??
+                        "font-body text-12 text-muted-foreground hover:text-foreground focus-visible:text-foreground inline-flex min-h-9 cursor-pointer items-center gap-2 border-0 bg-transparent py-2 pr-1 underline-offset-2 outline-none hover:underline focus-visible:underline focus-visible:decoration-2 focus-visible:underline-offset-4"
+                    }
                 >
                     <span
                         aria-hidden="true"
