@@ -62,9 +62,11 @@ export default function CollageBoardCard({ board, href, bookmarked, onBookmark }
                         </span>
                     ))}
                 </p>
-                <p className="text-card-subtle absolute top-[89.545cqw] right-[2.291cqw] text-[2.273cqw] leading-[1.02] font-bold">
-                    Saved by {new Intl.NumberFormat("en-US").format(board.savedCount)} travelers
-                </p>
+                {board.savedCount !== undefined && (
+                    <p className="text-card-subtle absolute top-[89.545cqw] right-[2.291cqw] text-[2.273cqw] leading-[1.02] font-bold">
+                        Saved by {new Intl.NumberFormat("en-US").format(board.savedCount)} travelers
+                    </p>
+                )}
                 {board.images.slice(0, 6).map((image, index) => (
                     <div key={`${index}-${image.src}`} className={`absolute ${photoSlots[index]}`}>
                         <BoardCardPhoto image={image} sizes="(max-width: 440px) 15vw, 64px" className="h-full w-full" />

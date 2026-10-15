@@ -76,7 +76,7 @@ export function BoardCardPhoto({
                     alt={image.alt}
                     fill
                     sizes={sizes}
-                    unoptimized={image.src.startsWith("/images/board-cards/")}
+                    unoptimized={!image.src.startsWith("https://images.unsplash.com/")}
                     className="object-cover"
                     style={{ objectPosition: image.position ?? "center" }}
                 />
