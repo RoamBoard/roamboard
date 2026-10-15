@@ -165,7 +165,9 @@ export default function ProfileControl({
                             animate={{ height: "auto", opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
                             transition={{ duration: reducedMotion ? 0 : 0.2 }}
-                            className="overflow-hidden"
+                            role="region"
+                            aria-label="Account options"
+                            className="max-h-[min(40dvh,max(3rem,calc(100dvh-12rem)))] overflow-y-auto overscroll-contain"
                         >
                             <div className="font-body text-12 flex flex-col items-start gap-1 py-2 pr-3 pl-12">
                                 {isLoggedIn && (

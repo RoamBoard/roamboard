@@ -1,83 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { Search, X } from "lucide-react";
-import { mockBoardCollections } from "@/data/my-board-collections";
-import { listPublishedBoards, loadBoardDocument } from "@/lib/board-creator-api";
-import { filterGalleryBoards, toGalleryBoard, type GalleryBoard } from "@/lib/my-boards";
+import { filterGalleryBoards } from "@/lib/my-boards";
+import { createMyBoardsStore, type MyBoardsState, type MyBoardsStore } from "@/lib/my-boards-store";
 import SpatialGallery from "./SpatialGallery";
 import BoardCollections from "./BoardCollections";
 import BoardLibrary from "./BoardLibrary";
 
-const samples = mockBoardCollections.created;
-
-async function readCollection(page: number) {
-    const result = await listPublishedBoards(page);
-    const boards = await Promise.all(
-        result.items.map(async (summary) => toGalleryBoard(summary, await loadBoardDocument(summary.boardId)))
-    );
-    return { boards, hasMore: result.hasMore };
+export default function MyBoardsExperience() {
+    const [store] = useState(createMyBoardsStore);
+    const state = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
+    useEffect(() => {
+        void store.load();
+        return store.cancel;
+    }, [store]);
+    return <MyBoardsContent state={state} actions={store} />;
 }
 
-export default function MyBoardsExperience() {
-    const [collection, setCollection] = useState<GalleryBoard[]>([]);
-    const [query, setQuery] = useState("");
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
-    const [preview, setPreview] = useState(false);
-    const [page, setPage] = useState(1);
-    const [hasMore, setHasMore] = useState(false);
-    const [loadingMore, setLoadingMore] = useState(false);
-    const [reload, setReload] = useState(0);
-
-    useEffect(() => {
-        const state = { active: true };
-        void readCollection(1)
-            .then((result) => {
-                if (!state.active) return;
-                setCollection(result.boards);
-                setHasMore(result.hasMore);
-                setPage(1);
-                setPreview(false);
-                setError("");
-            })
-            .catch((caught: unknown) => {
-                if (!state.active) return;
-                setCollection(samples);
-                setPreview(true);
-                setHasMore(false);
-                setError(caught instanceof Error ? caught.message : "Your Boards could not be loaded.");
-            })
-            .finally(() => {
-                if (state.active) setLoading(false);
-            });
-        return () => {
-            state.active = false;
-        };
-    }, [reload]);
-
-    async function loadMore() {
-        if (loadingMore) return;
-        setLoadingMore(true);
-        try {
-            const result = await readCollection(page + 1);
-            setCollection((current) => [
-                ...current,
-                ...result.boards.filter(
-                    (board) => !current.some((existing) => existing.collage.id === board.collage.id)
-                )
-            ]);
-            setPage(page + 1);
-            setHasMore(result.hasMore);
-            setError("");
-        } catch (caught) {
-            setError(caught instanceof Error ? caught.message : "More Boards could not be loaded.");
-        } finally {
-            setLoadingMore(false);
-        }
-    }
-
+export function MyBoardsContent({ state, actions }: { state: MyBoardsState; actions: MyBoardsStore }) {
+    const { collection, query, loading, error, preview, hasMore, loadingMore, failed, retryingFailed } = state;
     const matches = filterGalleryBoards(collection, query);
     return (
         <article className="font-body min-w-0 pb-24">
@@ -103,14 +46,14 @@ export default function MyBoardsExperience() {
                         id="board-search"
                         type="search"
                         value={query}
-                        onChange={(event) => setQuery(event.target.value)}
+                        onChange={(event) => actions.setQuery(event.target.value)}
                         placeholder="search for a board..."
                         className="text-14 placeholder:text-muted-foreground md:text-20 w-full min-w-0 bg-transparent px-4 py-5 text-center outline-none [&::-webkit-search-cancel-button]:appearance-none"
                     />
                     <button
                         aria-label="Clear Board search"
                         disabled={!query}
-                        onClick={() => setQuery("")}
+                        onClick={() => actions.setQuery("")}
                         className="mr-1 grid size-11 shrink-0 cursor-pointer place-items-center focus-visible:outline-1 disabled:invisible"
                     >
                         <X size={16} strokeWidth={1.3} />
@@ -127,13 +70,7 @@ export default function MyBoardsExperience() {
                             Sign in
                         </Link>{" "}
                         or{" "}
-                        <button
-                            onClick={() => {
-                                setLoading(true);
-                                setReload((value) => value + 1);
-                            }}
-                            className="cursor-pointer underline underline-offset-4"
-                        >
+                        <button onClick={actions.load} className="cursor-pointer underline underline-offset-4">
                             try again
                         </button>
                         .
@@ -155,6 +92,21 @@ export default function MyBoardsExperience() {
                     </details>
                 )}
             </div>
+            {!loading && failed.length > 0 && (
+                <div role="status" className="text-12 text-foreground/65 mx-auto mt-6 max-w-xl px-5 text-center">
+                    <p>
+                        {failed.length} {failed.length === 1 ? "Board couldn’t" : "Boards couldn’t"} be loaded.
+                    </p>
+                    <button
+                        type="button"
+                        onClick={actions.retryFailed}
+                        disabled={retryingFailed || loadingMore}
+                        className="mt-2 cursor-pointer py-2 underline underline-offset-4 disabled:opacity-50"
+                    >
+                        {retryingFailed ? "Retrying unavailable Boards…" : "Retry unavailable Boards"}
+                    </button>
+                </div>
+            )}
             {!loading && matches.length > 0 && (
                 <>
                     <SpatialGallery boards={matches.slice(0, 5)} />
@@ -169,28 +121,34 @@ export default function MyBoardsExperience() {
                         boards={matches}
                         hasMore={!preview && hasMore}
                         loadingMore={loadingMore}
-                        onLoadMore={loadMore}
+                        onLoadMore={actions.loadMore}
                     />
                 </>
             )}
             {!loading && matches.length === 0 && (
                 <section className="mx-auto max-w-lg px-5 py-28 text-center">
                     <h2 className="font-display text-30 font-medium">
-                        {query.trim() ? "No created Boards found." : "Your next journey starts here."}
+                        {query.trim()
+                            ? "No created Boards found."
+                            : failed.length
+                              ? "Your Boards couldn’t be displayed."
+                              : "Your next journey starts here."}
                     </h2>
                     <p className="text-14 text-muted-foreground mt-4">
                         {query.trim()
                             ? "Try a Board title, destination or country."
-                            : "Create a Board and make room for a new memory."}
+                            : failed.length
+                              ? "Retry the unavailable Boards above. Your collection has not been replaced with samples."
+                              : "Create a Board and make room for a new memory."}
                     </p>
                     {query.trim() ? (
                         <button
-                            onClick={() => setQuery("")}
+                            onClick={() => actions.setQuery("")}
                             className="text-14 mt-6 cursor-pointer py-3 underline underline-offset-4"
                         >
                             clear search ↗
                         </button>
-                    ) : (
+                    ) : failed.length ? null : (
                         <Link href="/create" className="text-14 mt-6 inline-block py-3 underline underline-offset-4">
                             create a Board ↗
                         </Link>
@@ -201,7 +159,7 @@ export default function MyBoardsExperience() {
                 <div className="mt-10 text-center">
                     <button
                         disabled={loadingMore}
-                        onClick={() => void loadMore()}
+                        onClick={actions.loadMore}
                         className="text-12 cursor-pointer px-5 py-3 underline underline-offset-4 disabled:opacity-50"
                     >
                         {loadingMore ? "Loading…" : "load more Boards ↓"}

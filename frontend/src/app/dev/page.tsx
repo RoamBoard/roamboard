@@ -30,7 +30,7 @@ const routes = [
     {
         href: "/boards",
         title: "Boards",
-        description: "Placeholder for the upcoming Boards page."
+        description: "Search and browse your published Boards, with sample saved and archive collections."
     },
     {
         href: "/boards/new",

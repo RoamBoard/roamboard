@@ -91,7 +91,7 @@ function SidebarNavigation({ activeHref, expanded, onNavigate }: NavigationProps
     return (
         <nav
             aria-label="Main navigation"
-            className={`flex min-h-0 flex-1 flex-col [@media(max-height:650px)]:overflow-y-auto ${expanded ? "px-4" : "px-2.5 md:px-[18px]"}`}
+            className={`flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain ${expanded ? "px-4" : "px-2.5 md:px-[18px]"}`}
         >
             <ul className="mb-6 flex w-full shrink-0 flex-col gap-2 pt-8 [@media(max-height:650px)]:pt-0">
                 {navigation.map(renderLink)}
@@ -216,13 +216,13 @@ export default function Sidebar({ activeHref, profile = {} }: { activeHref: stri
                         setSidebarExpanded(false);
                     }
                 }}
-                className={`bg-background text-foreground border-line fixed inset-y-0 left-0 z-40 flex ${accountOpen ? "w-56" : "w-16"} flex-col border-r pt-[env(safe-area-inset-top)] pb-[max(1.5rem,env(safe-area-inset-bottom))] md:w-[var(--sidebar-width)] ${expanded ? "shadow-[16px_0_40px_-24px_rgb(0_0_0/0.25)]" : ""}`}
+                className={`bg-background text-foreground border-line fixed inset-y-0 left-0 z-40 flex overflow-y-auto ${accountOpen ? "w-56" : "w-16"} flex-col border-r pt-[env(safe-area-inset-top)] pb-[max(1.5rem,env(safe-area-inset-bottom))] md:w-[var(--sidebar-width)] [@media(max-height:400px)]:pb-2 ${expanded ? "shadow-[16px_0_40px_-24px_rgb(0_0_0/0.25)]" : ""}`}
             >
-                <header className="relative h-[clamp(11rem,25dvh,15rem)] shrink-0 [@media(max-height:650px)]:h-20">
+                <header className="relative h-[clamp(11rem,25dvh,15rem)] shrink-0 [@media(max-height:400px)]:h-12 [@media(max-height:650px)]:h-20">
                     <Link
                         href="/home"
                         aria-label="Roamboard home"
-                        className="font-display text-24 md:text-30 absolute top-7 left-[20px] leading-none font-bold tracking-tight focus-visible:outline-2 focus-visible:outline-offset-4 md:left-[25px]"
+                        className="font-display text-24 md:text-30 absolute top-7 left-[20px] leading-none font-bold tracking-tight focus-visible:outline-2 focus-visible:outline-offset-4 md:left-[25px] [@media(max-height:400px)]:top-3"
                     >
                         <span className="[writing-mode:vertical-rl] [@media(max-height:650px)]:hidden">ROAMBOARD</span>
                         <span className="hidden [@media(max-height:650px)]:inline" aria-hidden="true">
@@ -230,7 +230,7 @@ export default function Sidebar({ activeHref, profile = {} }: { activeHref: stri
                         </span>
                     </Link>
                 </header>
-                <div id={panelId} className="flex min-h-0 flex-1 flex-col">
+                <div id={panelId} className="flex min-h-11 flex-1 flex-col">
                     <SidebarNavigation activeHref={selectedHref} expanded={expanded} />
                 </div>
                 <div className="mx-2.5 mt-2 shrink-0 md:mx-4">

@@ -37,7 +37,7 @@ test("mock auth defaults to signed out and updates via setMockAuthState", () => 
     setMockAuthState(false);
 });
 
-test("ProfileControl renders user preview menu when user prop is provided", () => {
+test("ProfileControl renders an account trigger when a user is provided", () => {
     const html = renderToStaticMarkup(
         createElement(
             RouterWrapper,
@@ -48,11 +48,11 @@ test("ProfileControl renders user preview menu when user prop is provided", () =
         )
     );
 
-    assert.ok(html.includes("User profile menu"));
+    assert.ok(html.includes("Account menu"));
     assert.ok(html.includes("my profile"));
 });
 
-test("ProfileControl renders login link and theme select when signed out", () => {
+test("ProfileControl keeps the account menu closed when signed out", () => {
     setMockAuthState(false);
     const html = renderToStaticMarkup(
         createElement(
@@ -64,13 +64,15 @@ test("ProfileControl renders login link and theme select when signed out", () =>
         )
     );
 
-    assert.ok(html.toLowerCase().includes("log in"));
-    assert.ok(html.includes('href="/login"'));
-    assert.ok(html.includes("Color theme"));
+    assert.ok(html.includes("Account menu"));
+    assert.ok(html.includes('aria-expanded="false"'));
+    assert.ok(!html.includes("Color theme"));
 });
 
 test("Sidebar renders navigation links and does not render theme select", () => {
-    const html = renderToStaticMarkup(createElement(Sidebar, { activeHref: "/home" }));
+    const html = renderToStaticMarkup(
+        createElement(RouterWrapper, null, createElement(Sidebar, { activeHref: "/home" }))
+    );
     assert.ok(html.includes("ROAMBOARD"));
     assert.ok(html.includes('href="/home"'));
     assert.ok(html.includes('href="/discover"'));
