@@ -23,7 +23,7 @@ export type CollageBoardCardData = BoardCardSummary & {
     description: string;
     themes: readonly string[];
     highlights: readonly string[];
-    savedCount: number;
+    savedCount?: number;
     // Editorial text measure in the 440px reference composition.
     descriptionWidth?: number;
 };

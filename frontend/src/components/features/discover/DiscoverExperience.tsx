@@ -121,7 +121,7 @@ export default function DiscoverExperience({ hero, journey, mobileJourney, child
                 Skip to discovery
             </a>
             <div
-                className="w-full min-w-0 pl-20 [--panel-width:calc(100vw-5rem)] md:pl-32 md:[--panel-width:calc(100vw-8rem)]"
+                className="w-full min-w-0 pl-16 [--panel-width:calc(100vw-4rem)] md:pl-20 md:[--panel-width:calc(100vw-5rem)]"
                 onClickCapture={handleAnchor}
             >
                 <div

@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
-import BoardsLanding from "@/components/features/boards/BoardsLanding";
+import MyBoardsExperience from "@/components/features/boards/MyBoardsExperience";
 import AppShell from "@/components/layout/AppShell";
 
 export const metadata: Metadata = {
-    title: "Create a Board | Roamboard",
-    description: "Start a new Roamboard travel Board."
+    title: "Boards | Roamboard",
+    description: "Revisit and explore your travel Boards."
 };
 
 export default function BoardsPage() {
     return (
         <AppShell activeHref="/boards">
-            <BoardsLanding />
+            <MyBoardsExperience />
         </AppShell>
     );
 }

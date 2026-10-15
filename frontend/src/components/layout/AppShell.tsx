@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Sidebar from "@/components/layout/Sidebar";
-import ProfileControl, { type ProfileControlProps } from "@/components/ui/ProfileControl";
+import { type ProfileControlProps } from "@/components/ui/ProfileControl";
 
 type Props = {
     children: ReactNode;
@@ -15,14 +15,14 @@ export default function AppShell({ children, activeHref, profile = {}, discover 
             className={
                 discover
                     ? "bg-background text-foreground relative min-h-dvh w-full"
-                    : "bg-background text-foreground relative grid h-dvh w-full grid-cols-[5rem_minmax(0,1fr)] overflow-hidden sm:grid-cols-[6rem_minmax(0,1fr)]"
+                    : "bg-background text-foreground relative grid h-dvh w-full grid-cols-[4rem_minmax(0,1fr)] overflow-hidden md:grid-cols-[5rem_minmax(0,1fr)]"
             }
         >
-            <Sidebar activeHref={activeHref} discover={discover} />
+            <Sidebar activeHref={activeHref} profile={profile} />
+            {!discover && <div aria-hidden="true" />}
             <main className={discover ? "grid min-h-0 min-w-0" : "grid min-h-0 min-w-0 overflow-y-auto"}>
                 {children}
             </main>
-            <ProfileControl {...profile} compact={discover?.collapsed} floating={Boolean(discover)} />
         </div>
     );
 }
