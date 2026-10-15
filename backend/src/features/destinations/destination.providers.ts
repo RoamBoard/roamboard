@@ -1,4 +1,6 @@
 import { toCountryCode } from "../../shared/countries.js";
+import { observeProviderResponse } from "../quotas/quota.feedback.js";
+import type { QuotaObserver } from "../quotas/quota.types.js";
 import type {
     DestinationArticle,
     DestinationImage,
@@ -36,7 +38,12 @@ async function readJson(response: Response): Promise<unknown> {
     return body ? (JSON.parse(body) as unknown) : {};
 }
 
-async function requestMapbox(options: MapboxSearchOptions, limit: number, token: string): Promise<DestinationResult[]> {
+async function requestMapbox(
+    options: MapboxSearchOptions,
+    limit: number,
+    token: string,
+    observe?: QuotaObserver
+): Promise<DestinationResult[]> {
     const url = new URL(
         options.poi
             ? "https://api.mapbox.com/search/searchbox/v1/forward"
@@ -48,6 +55,7 @@ async function requestMapbox(options: MapboxSearchOptions, limit: number, token:
     if (!options.poi) url.searchParams.set("autocomplete", "false");
     url.searchParams.set("access_token", token);
     const response = await fetch(url, { signal: AbortSignal.timeout(8_000) });
+    await observeProviderResponse(response, observe);
     if (!response.ok) throw new Error(`Mapbox returned ${response.status}`);
     const body = objectValue(await readJson(response));
     const features = Array.isArray(body.features) ? body.features : [];
@@ -85,15 +93,29 @@ async function requestMapbox(options: MapboxSearchOptions, limit: number, token:
     });
 }
 
-export function searchMapbox(query: string, limit: number, token: string): Promise<DestinationResult[]> {
-    return requestMapbox({ query, poi: false }, limit, token);
+export function searchMapbox(
+    query: string,
+    limit: number,
+    token: string,
+    observe?: QuotaObserver
+): Promise<DestinationResult[]> {
+    return requestMapbox({ query, poi: false }, limit, token, observe);
 }
 
-export function searchMapboxPlaces(query: string, limit: number, token: string): Promise<DestinationResult[]> {
-    return requestMapbox({ query, poi: true }, limit, token);
+export function searchMapboxPlaces(
+    query: string,
+    limit: number,
+    token: string,
+    observe?: QuotaObserver
+): Promise<DestinationResult[]> {
+    return requestMapbox({ query, poi: true }, limit, token, observe);
 }
 
-export async function fetchWeather(latitude: number, longitude: number): Promise<DestinationWeather> {
+export async function fetchWeather(
+    latitude: number,
+    longitude: number,
+    observe?: QuotaObserver
+): Promise<DestinationWeather> {
     const url = new URL("https://api.open-meteo.com/v1/forecast");
     url.searchParams.set("latitude", String(latitude));
     url.searchParams.set("longitude", String(longitude));
@@ -101,6 +123,7 @@ export async function fetchWeather(latitude: number, longitude: number): Promise
     url.searchParams.set("timezone", "auto");
     url.searchParams.set("forecast_days", "5");
     const response = await fetch(url, { signal: AbortSignal.timeout(8_000) });
+    await observeProviderResponse(response, observe);
     if (!response.ok) throw new Error(`Open-Meteo returned ${response.status}`);
     const body = objectValue(await readJson(response));
     const daily = objectValue(body.daily);
@@ -119,7 +142,7 @@ export async function fetchWeather(latitude: number, longitude: number): Promise
     };
 }
 
-export async function fetchWikipedia(query: string): Promise<DestinationArticle | undefined> {
+export async function fetchWikipedia(query: string, observe?: QuotaObserver): Promise<DestinationArticle | undefined> {
     const url = new URL("https://en.wikipedia.org/w/api.php");
     url.searchParams.set("action", "query");
     url.searchParams.set("generator", "search");
@@ -134,9 +157,10 @@ export async function fetchWikipedia(query: string): Promise<DestinationArticle 
     url.searchParams.set("format", "json");
     url.searchParams.set("formatversion", "2");
     const response = await fetch(url, {
-        headers: { "Api-User-Agent": "Roamboard/1.0 (student travel project)" },
+        headers: { "User-Agent": "Roamboard/1.0 (https://github.com/RoamBoard/roamboard; student travel project)" },
         signal: AbortSignal.timeout(8_000)
     });
+    await observeProviderResponse(response, observe);
     if (!response.ok) throw new Error(`Wikipedia returned ${response.status}`);
     const body = objectValue(await readJson(response));
     const pageValues = objectValue(body.query).pages;
@@ -154,7 +178,11 @@ export async function fetchWikipedia(query: string): Promise<DestinationArticle 
         : undefined;
 }
 
-export async function fetchUnsplash(query: string, accessKey: string): Promise<DestinationImage | undefined> {
+export async function fetchUnsplash(
+    query: string,
+    accessKey: string,
+    observe?: QuotaObserver
+): Promise<DestinationImage | undefined> {
     const url = new URL("https://api.unsplash.com/search/photos");
     url.searchParams.set("query", `${query} travel`);
     url.searchParams.set("orientation", "landscape");
@@ -163,6 +191,7 @@ export async function fetchUnsplash(query: string, accessKey: string): Promise<D
         headers: { Authorization: `Client-ID ${accessKey}`, "Accept-Version": "v1" },
         signal: AbortSignal.timeout(8_000)
     });
+    await observeProviderResponse(response, observe);
     if (!response.ok) throw new Error(`Unsplash returned ${response.status}`);
     const body = objectValue(await readJson(response));
     const photo = objectValue(Array.isArray(body.results) ? body.results[0] : undefined);

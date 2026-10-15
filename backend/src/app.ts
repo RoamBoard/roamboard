@@ -38,7 +38,8 @@ export function createApp(options: AppOptions = {}): Express {
     app.use(
         cors({
             origin: process.env.CLIENT_ORIGIN ?? "http://localhost:3000",
-            credentials: true
+            credentials: true,
+            exposedHeaders: ["Retry-After"]
         })
     );
     app.use(express.json({ limit: "100kb" }));

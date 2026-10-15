@@ -102,55 +102,57 @@ export function createProviderService(
         mapboxSearch: async (query, limit) => {
             const token = required(env.MAPBOX_ACCESS_TOKEN, "Mapbox");
             return callProvider("Mapbox", () =>
-                quota.run("mapbox.search_box", () => searchMapboxPlaces(query, limit, token))
+                quota.run("mapbox.search_box", (observe) => searchMapboxPlaces(query, limit, token, observe))
             );
         },
         mapboxBoardSearch: async (query, limit) => {
             const key = required(env.GEOAPIFY_API_KEY, "Geoapify saved-location search");
             return callProvider("Geoapify", () =>
-                quota.run("geoapify.geocoding", () => searchGeoapify(query, limit, key))
+                quota.run("geoapify.geocoding", (observe) => searchGeoapify(query, limit, key, undefined, observe))
             );
         },
         mapboxDestinationSearch: async (country, city, limit) => {
             const key = required(env.GEOAPIFY_API_KEY, "Geoapify saved-location search");
             return callProvider("Geoapify", () =>
-                quota.run("geoapify.geocoding", () => searchGeoapify(city, limit, key, country))
+                quota.run("geoapify.geocoding", (observe) => searchGeoapify(city, limit, key, country, observe))
             );
         },
         mapboxReverse: async (latitude, longitude) => {
             const token = required(env.MAPBOX_ACCESS_TOKEN, "Mapbox");
             return callProvider("Mapbox", () =>
-                quota.run("mapbox.geocoding", () => reverseMapbox(latitude, longitude, token))
+                quota.run("mapbox.geocoding", (observe) => reverseMapbox(latitude, longitude, token, false, observe))
             );
         },
         mapboxBoardReverse: async (latitude, longitude) => {
             const key = required(env.GEOAPIFY_API_KEY, "Geoapify saved-location search");
             return callProvider("Geoapify", () =>
-                quota.run("geoapify.geocoding", () => reverseGeoapify(latitude, longitude, key))
+                quota.run("geoapify.geocoding", (observe) => reverseGeoapify(latitude, longitude, key, observe))
             );
         },
         mapboxRoute: async (points, profile) => {
             const token = required(env.MAPBOX_ACCESS_TOKEN, "Mapbox");
             return callProvider("Mapbox", () =>
-                quota.run("mapbox.directions", () => routeMapbox(points, profile, token))
+                quota.run("mapbox.directions", (observe) => routeMapbox(points, profile, token, observe))
             );
         },
         unsplashSearch: async (query, limit) => {
             const key = required(env.UNSPLASH_ACCESS_KEY, "Unsplash");
             return callProvider("Unsplash", () =>
-                quota.run("unsplash.requests", () => searchUnsplash(query, key, limit))
+                quota.run("unsplash.requests", (observe) => searchUnsplash(query, key, limit, observe))
             );
         },
         googlePlacesSearch: async (query, limit) => {
             const key = required(env.GOOGLE_PLACES_API_KEY, "Google Places");
             return callProvider("Google Places", () =>
-                quota.run("google.places_text_search_pro", () => searchGooglePlaces(query, key, limit))
+                quota.run("google.places_text_search_pro", (observe) => searchGooglePlaces(query, key, limit, observe))
             );
         },
         googlePlaceDetails: async (placeId) => {
             const key = required(env.GOOGLE_PLACES_API_KEY, "Google Places");
             return callProvider("Google Places", () =>
-                quota.run("google.place_details_essentials", () => fetchGooglePlaceDetails(placeId, key))
+                quota.run("google.place_details_essentials", (observe) =>
+                    fetchGooglePlaceDetails(placeId, key, observe)
+                )
             );
         },
         saveGooglePlace: (userId, placeId) => googlePlaceReferences.save(userId, placeId),
@@ -175,14 +177,16 @@ export function createProviderService(
         cloudinaryUpload: (file) => callProvider("Cloudinary", () => uploadCloudinaryImage(file)),
         cloudinaryAssets: () => {
             requireCloudinary();
-            return callProvider("Cloudinary", () => quota.run("cloudinary.admin", loadCloudinaryAssets));
+            return callProvider("Cloudinary", () =>
+                quota.run("cloudinary.admin", (observe) => loadCloudinaryAssets(observe))
+            );
         },
         cloudinaryMetadata: (publicId) => {
             if (!publicId.startsWith("roamboard/provider-lab/") || publicId.includes(".."))
                 throw new AppError(404, "Lab image not found", "NOT_FOUND");
             requireCloudinary();
             return callProvider("Cloudinary", () =>
-                quota.run("cloudinary.admin", () => loadCloudinaryMetadata(publicId))
+                quota.run("cloudinary.admin", (observe) => loadCloudinaryMetadata(publicId, observe))
             );
         }
     };

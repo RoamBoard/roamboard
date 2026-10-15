@@ -6,7 +6,14 @@ export function createQuotaPolicies(): QuotaPolicy[] {
         id,
         provider: id.split(".")[0]!,
         operation: id,
-        windows: limits.map(([period, limit]) => ({ period, limit, timeZone }))
+        windows: limits.map(([period, limit]) => ({
+            period,
+            limit,
+            timeZone,
+            // Verified billing months use their calendar boundary. Other limits
+            // cover any trailing interval instead of assuming a provider timezone.
+            rolling: !id.startsWith("google.") && !(id.startsWith("mapbox.") && period === "month")
+        }))
     });
     return [
         policy("mapbox.map_loads", [
@@ -33,7 +40,7 @@ export function createQuotaPolicies(): QuotaPolicy[] {
         ]),
         policy("google.places_text_search_pro", [["month", 4950]], "America/Los_Angeles"),
         policy("google.place_details_essentials", [["month", 9900]], "America/Los_Angeles"),
-        policy("unsplash.requests", [["hour", 49]]),
+        policy("unsplash.requests", [["hour", 990]]),
         policy("open_meteo.forecast", [
             ["minute", 590],
             ["hour", 4950],

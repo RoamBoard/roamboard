@@ -38,6 +38,16 @@ try {
     await getPool().query("SELECT policy_id, window_name FROM api_quota_usage LIMIT 0");
     await getPool().query("SELECT user_id, place_id FROM google_place_reference LIMIT 0");
     report(true, "Board and API feature migrations 003 and 004 exist.");
+    const quotaKey = await getPool().query<{ compact: boolean }>(
+        `SELECT EXISTS (
+            SELECT 1 FROM pg_constraint
+            WHERE conrelid = 'api_quota_usage'::regclass AND contype = 'p'
+              AND pg_get_constraintdef(oid) = 'PRIMARY KEY (policy_id, window_name)'
+        ) AS compact`
+    );
+    report(quotaKey.rows[0]?.compact === true, "API migration 004 has the compact policy/window primary key.");
+    await getPool().query("SELECT previous_used, previous_window_end FROM api_quota_usage LIMIT 0");
+    report(true, "API migration 004 has previous-window quota fields.");
     const permissions = await getPool().query<{ writable: boolean }>(
         `SELECT has_table_privilege(current_user, 'app_user', 'INSERT')
             AND has_table_privilege(current_user, 'auth_session', 'INSERT')

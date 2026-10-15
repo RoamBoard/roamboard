@@ -5,10 +5,10 @@ public search features run here. See
 [API_FEATURES_CONTRACT.md](API_FEATURES_CONTRACT.md) for routes, permissions,
 budgets and errors; the creator uses [BOARD_API_CONTRACT.md](BOARD_API_CONTRACT.md).
 
-Apply the new ordered `db/migrations/004_api_features.sql` once through the team's
-database maintenance workflow after migrations 001–003. Do not rerun older
-migrations or rebuild the shared database. Integration tests apply the files
-only inside temporary test schemas.
+Apply unapplied migrations through `004_api_features.sql` in order through
+the team's database maintenance workflow. The shared Azure database already matches
+the consolidated 004 schema; do not rerun it or rebuild the shared database.
+Integration tests apply the files only inside temporary test schemas.
 
 `npm run dev` selects `NODE_ENV=development`. Cloudinary lab management, Google
 Places lab operations, the developer Board list and search reindexing also
@@ -136,8 +136,9 @@ follow [the shared database deployment guide](deploy/README.md). The existing
    password. The `.env` file is ignored by Git. If the password contains URL
    punctuation, URL-encode it in `DATABASE_URL`.
 3. Apply unapplied migrations in order: `001_initial.sql`, `002_auth_session.sql`,
-   `003_board_creator.sql`, `004_api_features.sql`. If the first three are already
-   applied, apply only 004. From `backend/`, for example:
+   `003_board_creator.sql`, `004_api_features.sql`. Apply only missing migrations.
+   The shared Azure database already has the consolidated 004 schema.
+   From `backend/`, for an independent database missing 004:
 
     ```powershell
     psql -h localhost -U roamboard_user -d roamboard_dev -v ON_ERROR_STOP=1 -f db/migrations/004_api_features.sql

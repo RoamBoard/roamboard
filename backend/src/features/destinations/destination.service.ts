@@ -18,7 +18,9 @@ export function createDestinationService(quota: QuotaService): DestinationServic
                 throw new AppError(503, "Destination search is not configured on the API", "PROVIDER_UNAVAILABLE");
             }
             try {
-                return await quota.run("mapbox.geocoding", () => searchMapbox(query, limit, mapboxToken));
+                return await quota.run("mapbox.geocoding", (observe) =>
+                    searchMapbox(query, limit, mapboxToken, observe)
+                );
             } catch (error) {
                 if (error instanceof AppError) throw error;
                 throw new AppError(
@@ -45,20 +47,20 @@ export function createDestinationService(quota: QuotaService): DestinationServic
             const unsplashKey = env.UNSPLASH_ACCESS_KEY;
             const [weather, article, image] = await Promise.all([
                 quota
-                    .run("open_meteo.forecast", () => fetchWeather(input.latitude, input.longitude))
+                    .run("open_meteo.forecast", (observe) => fetchWeather(input.latitude, input.longitude, observe))
                     .catch(() => {
                         unavailable.push("weather");
                         return undefined;
                     }),
                 quota
-                    .run("wikipedia.action_api", () => fetchWikipedia(input.name))
+                    .run("wikipedia.action_api", (observe) => fetchWikipedia(input.name, observe))
                     .catch(() => {
                         unavailable.push("description");
                         return undefined;
                     }),
                 unsplashKey
                     ? quota
-                          .run("unsplash.requests", () => fetchUnsplash(input.name, unsplashKey))
+                          .run("unsplash.requests", (observe) => fetchUnsplash(input.name, unsplashKey, observe))
                           .catch(() => {
                               unavailable.push("image");
                               return undefined;

@@ -5,7 +5,7 @@ These instructions apply to `backend/`. Use `../layered-backend-demo1/` as the r
 ## Current state and sources of truth
 
 - This is a Node.js 24, TypeScript, Express 5 API using npm. `src/app.ts` creates the app; `src/server.ts` starts it. `src/db.ts` owns the shared `pg` pool. The `auth` feature manages Google sign-in and sessions; `boards` and `images` persist canonical documents and protected uploads; `providers`, `destinations`, `users`, `search`, and `quotas` connect the existing frontend API surfaces. See `BOARD_API_CONTRACT.md` and `API_FEATURES_CONTRACT.md` for implemented behavior.
-- PostgreSQL schema lives in ordered files under `db/migrations/`: 001 is the baseline, 002 adds sessions, 003 adds canonical Board content/uploads, and 004 adds shared provider counters, caller-owned place references and profile timestamps. Treat migrations as the database source of truth. Do not treat the demo's in-memory Todo model or the frontend's mock data as persistent Roamboard behavior.
+- PostgreSQL schema lives in ordered files under `db/migrations/`: 001 is the baseline, 002 adds sessions, 003 adds canonical Board content/uploads, 004 adds compact shared provider counters with previous-bucket fields for conservative rolling guards, caller-owned place references and profile timestamps. Migration 004 was consolidated with user approval on 2026-10-15; see `db/MIGRATION_LOG.md` for the shared database reconciliation. Do not rerun it on the shared database. Treat migrations as the database source of truth. Do not treat the demo's in-memory Todo model or the frontend's mock data as persistent Roamboard behavior.
 - Check the relevant schema, `../frontend/REQUIREMENTS.md`, and `../frontend/src/types/` before defining a feature's contract. Preserve the product decisions already represented in the schema; ask about genuinely unresolved behavior instead of silently substituting the demo's choices.
 - Keep `backend/.env` and credentials out of Git. Document new variables in `.env.example` and `README.md` without real secrets.
 - Team development uses a shared PostgreSQL container on Azure through SSH tunnels; the backend still runs locally. See `README.md` for onboarding and `deploy/README.md` for maintenance. Do not recreate the shared database or rerun applied migrations when onboarding. `npm run check:setup` checks auth configuration and database access without changing data. Backend `GOOGLE_CLIENT_ID` must match frontend `NEXT_PUBLIC_GOOGLE_CLIENT_ID`.
@@ -49,6 +49,28 @@ Use a feature folder under `src/features/<feature>/` with the relevant files:
 - Use `.js` suffixes for relative TypeScript imports under NodeNext/ESM, as the current backend and demo do.
 
 ## API and data rules
+
+Provider quota behavior is implemented in `src/features/quotas/` and documented with
+official sources in `API_FEATURES_CONTRACT.md`. Google monthly free usage uses
+America/Los_Angeles calendar months; Mapbox billing months use UTC. Other windows
+use conservative rolling guards, counting the current and entire previous bucket
+in one row; the Open-Meteo monthly guard covers 31 days. This can block earlier or
+longer than the provider and must not be described as an exact rolling log or a
+verified provider reset timezone. Keep counters shared in PostgreSQL, including
+anonymous users. Do not replace them with per-process counters.
+
+Forward the quota observer to every quota-managed HTTP or Cloudinary Admin call,
+including Home destination context and protected image verification. Honor
+`Retry-After`, Mapbox-style reset headers and Cloudinary SDK reset metadata.
+Exhaustion feedback is stored as one shared cooldown row per policy; delayed
+responses cannot shorten a cooldown. Successful last-allowance responses still
+return their data. Rate-limit failures return 429 and a safe `Retry-After` when
+known; do not automatically retry upstream calls. Missing reset information uses
+a documented conservative fallback, never an invented reset timezone. Limits
+are application budgets, not a guarantee against provider billing: external usage,
+public-token reuse, Cloudinary storage/bandwidth/transformations and restored old
+quota state require separate account-level controls. Do not silently raise caps
+based on public pricing; confirm the team's plan and update tests/docs.
 
 Country codes in application contracts and responses are validated ISO 3166-1
 alpha-3. Reuse `shared/country-codes.json` through `src/shared/countries.ts`;

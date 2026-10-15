@@ -4,6 +4,7 @@ export interface QuotaWindow {
     period: QuotaPeriod;
     limit: number;
     timeZone: string;
+    rolling?: boolean;
 }
 
 export interface QuotaPolicy {
@@ -20,5 +21,18 @@ export interface QuotaReservationWindow extends QuotaWindow {
 }
 
 export interface QuotaRepository {
-    reserve(policyId: string, units: number, windows: QuotaReservationWindow[]): Promise<{ allowed: boolean }>;
+    reserve(
+        policyId: string,
+        units: number,
+        windows: QuotaReservationWindow[]
+    ): Promise<{ allowed: boolean; retryAt?: Date }>;
+    block?(policyId: string, until: Date): Promise<void>;
 }
+
+export interface ProviderQuotaSignal {
+    status: number;
+    retryAt?: Date;
+    exhausted?: boolean;
+}
+
+export type QuotaObserver = (signal: ProviderQuotaSignal) => Promise<void>;

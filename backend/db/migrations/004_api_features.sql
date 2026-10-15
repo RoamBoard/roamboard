@@ -5,9 +5,10 @@ CREATE TABLE api_quota_usage (
   window_start TIMESTAMPTZ NOT NULL,
   window_end TIMESTAMPTZ NOT NULL,
   used BIGINT NOT NULL CHECK (used >= 0),
-  PRIMARY KEY (policy_id, window_name, window_start)
+  previous_used BIGINT NOT NULL DEFAULT 0 CHECK (previous_used >= 0),
+  previous_window_end TIMESTAMPTZ,
+  PRIMARY KEY (policy_id, window_name)
 );
-CREATE INDEX ix_api_quota_expiry ON api_quota_usage (window_end);
 
 CREATE TABLE google_place_reference (
   user_id VARCHAR(500) NOT NULL REFERENCES app_user (user_id) ON DELETE CASCADE,

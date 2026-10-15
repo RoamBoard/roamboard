@@ -1,5 +1,5 @@
 import { AppError } from "../../shared/app-error.js";
-import type { QuotaPolicy, QuotaRepository, QuotaReservationWindow } from "./quota.types.js";
+import type { QuotaPolicy, QuotaRepository, QuotaReservationWindow, QuotaObserver } from "./quota.types.js";
 
 interface DateParts {
     year: number;
@@ -52,6 +52,18 @@ function zonedInstant(parts: DateParts, timeZone: string): Date {
 
 function bounds(policy: QuotaPolicy, now: Date): QuotaReservationWindow[] {
     return policy.windows.map((window) => {
+        if (window.rolling) {
+            const duration = { second: 1000, minute: 60000, hour: 3600000, day: 86400000, month: 31 * 86400000 }[
+                window.period
+            ];
+            const start = Math.floor(now.getTime() / duration) * duration;
+            return {
+                ...window,
+                name: `${window.period}:rolling:${window.timeZone}`,
+                startsAt: new Date(start),
+                endsAt: new Date(start + duration)
+            };
+        }
         if (window.period === "second") {
             const start = new Date(Math.floor(now.getTime() / 1000) * 1000);
             return {
@@ -100,7 +112,7 @@ function bounds(policy: QuotaPolicy, now: Date): QuotaReservationWindow[] {
 }
 
 export interface QuotaService {
-    run<T>(policyId: string, operation: () => Promise<T>, units?: number): Promise<T>;
+    run<T>(policyId: string, operation: (observe?: QuotaObserver) => Promise<T>, units?: number): Promise<T>;
     reserve(policyId: string, units?: number): Promise<void>;
 }
 
@@ -131,15 +143,41 @@ export function createQuotaService(
             throw new AppError(
                 429,
                 `${policy.provider} ${policy.operation} is paused because Roamboard reached its hard free-usage limit.`,
-                "PROVIDER_QUOTA_EXHAUSTED"
+                "PROVIDER_QUOTA_EXHAUSTED",
+                result.retryAt
             );
         }
     };
     return {
         reserve,
-        run: async <T>(policyId: string, operation: () => Promise<T>, units = 1): Promise<T> => {
+        run: async <T>(policyId: string, operation: (observe?: QuotaObserver) => Promise<T>, units = 1): Promise<T> => {
             await reserve(policyId, units);
-            return operation();
+            const observe: QuotaObserver = async ({ status, retryAt, exhausted }) => {
+                const now = clock();
+                if (status !== 429 && !(status === 503 && retryAt) && !retryAt && !exhausted) return;
+                const fallback = policyFor(policyId).windows.reduce(
+                    (longest, window) =>
+                        Math.max(
+                            longest,
+                            { second: 1000, minute: 60000, hour: 3600000, day: 86400000, month: 31 * 86400000 }[
+                                window.period
+                            ]
+                        ),
+                    5000
+                );
+                const until =
+                    retryAt && retryAt > now ? retryAt : new Date(now.getTime() + (exhausted ? fallback : 5000));
+                if (repository.block) await repository.block(policyId, until);
+                if (status === 429 || status === 503) {
+                    throw new AppError(
+                        429,
+                        "The provider is rate limited. Please try again later.",
+                        "PROVIDER_QUOTA_EXHAUSTED",
+                        until
+                    );
+                }
+            };
+            return operation(observe);
         }
     };
 }

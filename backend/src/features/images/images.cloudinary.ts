@@ -1,6 +1,7 @@
 import { Readable } from "node:stream";
 
 import { v2 as cloudinary } from "cloudinary";
+import { observeCloudinary } from "../quotas/quota.feedback.js";
 
 import { AppError } from "../../shared/app-error.js";
 import type { ImageProvider, ProviderAsset } from "./images.types.js";
@@ -115,10 +116,9 @@ export function createCloudinaryProvider(quota?: QuotaService): ImageProvider {
                         type: "authenticated",
                         image_metadata: true
                     });
-                const raw = (await (quota ? quota.run("cloudinary.admin", inspect) : inspect())) as Record<
-                    string,
-                    unknown
-                >;
+                const raw = (await (quota
+                    ? quota.run("cloudinary.admin", (observe) => observeCloudinary(inspect, observe))
+                    : inspect())) as Record<string, unknown>;
                 return parseAsset(raw);
             } catch (error) {
                 if (typeof error === "object" && error !== null && "http_code" in error && error.http_code === 404)

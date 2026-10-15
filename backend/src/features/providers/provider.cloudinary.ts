@@ -1,4 +1,6 @@
 import { v2 as cloudinary, type UploadApiResponse } from "cloudinary";
+import { observeCloudinary } from "../quotas/quota.feedback.js";
+import type { QuotaObserver } from "../quotas/quota.types.js";
 
 const env = process.env;
 import { AppError } from "../../shared/app-error.js";
@@ -123,13 +125,17 @@ export async function uploadCloudinaryImage(file: {
     return assetFromUpload(result, cloudName);
 }
 
-export async function loadCloudinaryAssets(): Promise<CloudinaryAsset[]> {
+export async function loadCloudinaryAssets(observe?: QuotaObserver): Promise<CloudinaryAsset[]> {
     const cloudName = cloudinaryConfig();
-    const result = await cloudinary.api.resources_by_tag("roamboard-provider-lab", {
-        resource_type: "image",
-        max_results: 30,
-        direction: "desc"
-    });
+    const result = await observeCloudinary(
+        () =>
+            cloudinary.api.resources_by_tag("roamboard-provider-lab", {
+                resource_type: "image",
+                max_results: 30,
+                direction: "desc"
+            }),
+        observe
+    );
     return result.resources.map((resource: CloudinaryImageResult) =>
         assetFromUpload(
             {
@@ -146,12 +152,16 @@ export async function loadCloudinaryAssets(): Promise<CloudinaryAsset[]> {
     );
 }
 
-export async function loadCloudinaryMetadata(publicId: string): Promise<PhotoMetadata> {
+export async function loadCloudinaryMetadata(publicId: string, observe?: QuotaObserver): Promise<PhotoMetadata> {
     cloudinaryConfig();
-    const result = (await cloudinary.api.resource(publicId, {
-        resource_type: "image",
-        type: "upload",
-        media_metadata: true
-    })) as CloudinaryImageResult;
+    const result = (await observeCloudinary(
+        () =>
+            cloudinary.api.resource(publicId, {
+                resource_type: "image",
+                type: "upload",
+                media_metadata: true
+            }),
+        observe
+    )) as CloudinaryImageResult;
     return normalizePhotoMetadata(result.media_metadata ?? result.image_metadata);
 }

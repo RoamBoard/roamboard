@@ -120,16 +120,32 @@ the application to create users with genuine Google identity IDs.
 Pull the reviewed code on the VM. From `backend/deploy`, apply each new migration once:
 
 ```bash
-sudo docker compose --env-file ../.env exec -T postgres psql -U roamboard_user -d roamboard_dev -v ON_ERROR_STOP=1 -f /roamboard-migrations/004_your_migration.sql
+sudo docker compose --env-file ../.env exec -T postgres psql -U roamboard_user -d roamboard_dev -v ON_ERROR_STOP=1 -f /roamboard-migrations/005_your_migration.sql
 ```
 
 The filename above is an example, not an existing migration. Coordinate one maintainer
 to apply migrations and record applied filenames; there is currently no migration ledger.
 Restarting the container does not apply new migrations to an existing database.
 
-Record shared development applications in [the manual migration log](../db/MIGRATION_LOG.md).
-Migration `004_api_features.sql` was applied on 2026-10-14; do not reapply it to
-the shared database. Fresh databases still need all ordered migrations.
+Record shared development migration applications in the
+[manual migration log](../db/MIGRATION_LOG.md). Verify the target schema before applying a migration; this
+documentation is not an automatic migration ledger.
+
+Migration `004_api_features.sql` was applied on 2026-10-14 in one transaction after
+a custom-format PostgreSQL backup. `check:setup` passed, and live Mapbox map-session
+and Eiffel Tower POI search returned HTTP 200. Earlier migrations were already
+present and were not reapplied. Do not reapply `004` to the shared database;
+fresh databases still need all ordered migrations. The pre-migration backup was
+stored locally in Git-ignored `backend/backups/`, with its archive listing checked
+using `pg_restore --list`; off-machine retention was not verified.
+
+Migration `004_api_features.sql` now creates the final compact quota schema directly,
+including previous-window fields. With user approval, the former local migrations
+005 and 006 were consolidated into 004 on 2026-10-15. The shared Azure database
+already has that final schema; do not rerun 004 or rebuild it. See the
+[migration log](../db/MIGRATION_LOG.md) for reconciliation and verification.
+Fresh databases apply 001 through 004 once, in order. Future schema changes use
+new migrations starting at 005.
 
 Useful commands from the same directory:
 
@@ -139,22 +155,124 @@ sudo docker compose --env-file ../.env logs --tail=100 postgres
 sudo docker compose --env-file ../.env exec postgres psql -U roamboard_user -d roamboard_dev
 ```
 
-Before schema changes and regularly while the team uses the database, create a backup:
-
-```bash
-mkdir -p backups
-chmod 700 backups
-sudo docker compose --env-file ../.env exec -T postgres pg_dump -U postgres -d roamboard_dev -Fc > "backups/roamboard-$(date -u +%Y%m%dT%H%M%SZ).dump"
-```
-
-Keep backups outside Git, copy them off the VM, and test restoration into a separate
-database. An example restore into a fresh recovery database is:
-
-```bash
-sudo docker compose --env-file ../.env exec -T postgres createdb -U postgres -O roamboard_user roamboard_recovery
-sudo docker compose --env-file ../.env exec -T postgres pg_restore -U postgres -d roamboard_recovery < backups/YOUR_BACKUP.dump
-```
-
 Keep the VM patched. Do not change the Postgres major image version without planning
 a database upgrade. `restart: unless-stopped` restores the container after a Docker/VM
 restart unless it was explicitly stopped; it does not provide high availability.
+
+## 6. Backups and recovery
+
+### Current VM backup configuration
+
+Configured manually on the VM on 2026-10-15:
+
+- Script: `/usr/local/sbin/roamboard-backup`, run as root.
+- Archives: `/var/backups/roamboard/roamboard-YYYYMMDDTHHMMSSZ.dump` (UTC filenames).
+- Root cron: `0 */6 * * * /usr/local/sbin/roamboard-backup >> /var/backups/roamboard/backup.log 2>&1`.
+- Schedule: 00:00, 06:00, 12:00 and 18:00 in the VM's timezone. Cron must be running;
+  missed runs while the VM is stopped are not caught up automatically.
+- Retention: dumps older than 90 days are deleted after a successful backup,
+  using `find /var/backups/roamboard -maxdepth 1 -type f -name 'roamboard-*.dump' -mmin +129600 -delete`.
+- The script uses `flock` to prevent overlapping runs, a restrictive `umask 077`,
+  custom-format `pg_dump`, and `pg_restore --list` to inspect the archive before
+  renaming its `.partial` file to `.dump`. Archive inspection is not a restore test.
+
+These host files are not provisioned by Docker Compose or recreated by cloning the
+repository. Preserve the script and cron configuration when rebuilding the VM.
+Backups include database objects and rows, not PostgreSQL cluster roles/passwords,
+`.env`, application code, or image files hosted by Cloudinary. Restoring on a fresh
+server requires provisioning the database roles first. Changes after the selected
+backup are not recovered. Off-VM backup copying and failure alerts are not configured;
+loss of the VM disk could lose both the database and its backups. Copy archives to
+separate storage and monitor successful runs. The log has no rotation configured.
+
+Inspect configuration, sizes and scheduled-run results on the VM:
+
+```bash
+sudo crontab -l
+sudo systemctl is-active cron
+timedatectl
+sudo ls -lh /var/backups/roamboard/*.dump
+sudo du -sh /var/backups/roamboard
+sudo tail -n 20 /var/backups/roamboard/backup.log
+```
+
+Create an additional backup before migrations or recovery:
+
+```bash
+sudo /usr/local/sbin/roamboard-backup
+```
+
+### Restore and verify without changing the shared database
+
+Run in the VM's SSH terminal. Choose the archive explicitly from the listing above,
+replacing `YOUR_BACKUP.dump` below. Use the same terminal for all steps so variables
+remain available. Never restore directly over the shared database for a test.
+
+```bash
+cd /home/azureuser/roamboard/backend/deploy
+backup=/var/backups/roamboard/YOUR_BACKUP.dump
+recovery="roamboard_restore_test_$(date -u +%Y%m%d%H%M%S)"
+sudo test -s "$backup"
+sudo docker compose --env-file ../.env exec -T postgres createdb -U postgres -O roamboard_user "$recovery"
+```
+
+Stop if any command fails. Restore the archive atomically; a restore error rolls back
+its changes. Bash `pipefail` also reports a failure reading the archive.
+
+```bash
+set -o pipefail
+sudo cat "$backup" | sudo docker compose --env-file ../.env exec -T postgres \
+  pg_restore -U postgres -d "$recovery" --single-transaction --exit-on-error
+```
+
+Continue only if restoration succeeds:
+
+```bash
+sudo docker compose --env-file ../.env exec -T postgres \
+  psql -U postgres -d "$recovery" -v ON_ERROR_STOP=1 \
+  -c "SELECT COUNT(*) AS restored_boards FROM board;" \
+  -c "SELECT board_id, title FROM board ORDER BY board_id LIMIT 10;"
+echo "Restored database: $recovery"
+```
+
+Inspect expected users, Boards and activities with your database client. For an
+application smoke test, point one local backend's `DATABASE_URL` at the recovery
+database name, restart that backend, and test sign-in and Board reads. Stop that
+backend afterward and restore its original configuration. A successful restore is
+not proof that every application feature or external image remains available.
+
+### Make a verified recovery database the shared database
+
+This is a maintenance operation, not part of a routine restore test. Agree on the
+backup time with the team: all changes after that backup will be absent. Have every
+teammate stop their backend, jobs and database clients. Temporarily comment out the
+backup cron entry with `sudo crontab -e` and wait for any running backup to finish.
+Create one final backup with `sudo /usr/local/sbin/roamboard-backup` before switching.
+Keep the same SSH terminal and the verified `$recovery` value from above.
+
+The following retains the original database under a timestamped name and promotes
+the restored database. Both names are changed in one transaction. It terminates
+remaining connections to those two databases; clients must remain stopped.
+
+```bash
+previous="roamboard_before_restore_$(date -u +%Y%m%d%H%M%S)"
+sudo docker compose --env-file ../.env exec -T postgres \
+  psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
+  -v recovery="$recovery" -v previous="$previous" <<'SQL'
+SELECT pg_terminate_backend(pid) FROM pg_stat_activity
+WHERE datname IN ('roamboard_dev', :'recovery') AND pid <> pg_backend_pid();
+BEGIN;
+ALTER DATABASE roamboard_dev RENAME TO :"previous";
+ALTER DATABASE :"recovery" RENAME TO roamboard_dev;
+COMMIT;
+SQL
+echo "Original database retained as: $previous"
+```
+
+Stop on errors. After success, restart one backend using the original `roamboard_dev`
+URL, run `npm run check:setup`, and verify sign-in plus Board reads/writes. Then let
+the team reconnect, re-enable the backup cron entry, and create a fresh backup.
+Preserve the original database until recovery is accepted. Dumps do not restore
+Elasticsearch; while it remains in use, its derived index needs reconciliation
+against the restored PostgreSQL state. Do not rerun migrations already contained
+in the archive; compare the restored schema with the application version first.

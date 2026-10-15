@@ -1,4 +1,6 @@
 import { toCountryCode } from "../../shared/countries.js";
+import { observeProviderResponse } from "../quotas/quota.feedback.js";
+import type { QuotaObserver } from "../quotas/quota.types.js";
 import type {
     GooglePlaceDetails,
     MapboxLocation,
@@ -52,7 +54,8 @@ export async function reverseMapbox(
     latitude: number,
     longitude: number,
     token: string,
-    permanent = false
+    permanent = false,
+    observe?: QuotaObserver
 ): Promise<MapboxLocation> {
     const url = new URL("https://api.mapbox.com/search/geocode/v6/reverse");
     url.searchParams.set("longitude", String(longitude));
@@ -61,6 +64,7 @@ export async function reverseMapbox(
     if (permanent) throw new Error("Permanent Mapbox geocoding is disabled");
     url.searchParams.set("access_token", token);
     const response = await fetch(url, { signal: AbortSignal.timeout(8_000) });
+    await observeProviderResponse(response, observe);
     if (!response.ok) throw new Error(`Mapbox returned ${response.status}`);
     const body = objectValue(await readJson(response));
     const first = Array.isArray(body.features) ? objectValue(body.features[0]) : {};
@@ -91,7 +95,12 @@ export async function reverseMapbox(
     };
 }
 
-export async function searchUnsplash(query: string, accessKey: string, limit: number): Promise<ProviderPhoto[]> {
+export async function searchUnsplash(
+    query: string,
+    accessKey: string,
+    limit: number,
+    observe?: QuotaObserver
+): Promise<ProviderPhoto[]> {
     const url = new URL("https://api.unsplash.com/search/photos");
     url.searchParams.set("query", query);
     url.searchParams.set("orientation", "landscape");
@@ -100,6 +109,7 @@ export async function searchUnsplash(query: string, accessKey: string, limit: nu
         headers: { Authorization: `Client-ID ${accessKey}`, "Accept-Version": "v1" },
         signal: AbortSignal.timeout(8_000)
     });
+    await observeProviderResponse(response, observe);
     if (!response.ok) throw new Error(`Unsplash returned ${response.status}`);
     const body = objectValue(await readJson(response));
     const photos = Array.isArray(body.results) ? body.results : [];
@@ -127,7 +137,12 @@ export async function searchUnsplash(query: string, accessKey: string, limit: nu
     });
 }
 
-export async function searchGooglePlaces(query: string, apiKey: string, limit: number): Promise<ProviderPlace[]> {
+export async function searchGooglePlaces(
+    query: string,
+    apiKey: string,
+    limit: number,
+    observe?: QuotaObserver
+): Promise<ProviderPlace[]> {
     const response = await fetch("https://places.googleapis.com/v1/places:searchText", {
         method: "POST",
         headers: {
@@ -138,6 +153,7 @@ export async function searchGooglePlaces(query: string, apiKey: string, limit: n
         body: JSON.stringify({ textQuery: query, pageSize: limit, languageCode: "en" }),
         signal: AbortSignal.timeout(8_000)
     });
+    await observeProviderResponse(response, observe);
     if (!response.ok) throw new Error(`Google Places returned ${response.status}`);
     const body = objectValue(await readJson(response));
     const places = Array.isArray(body.places) ? body.places : [];
@@ -167,7 +183,11 @@ export async function searchGooglePlaces(query: string, apiKey: string, limit: n
     });
 }
 
-export async function fetchGooglePlaceDetails(placeId: string, apiKey: string): Promise<GooglePlaceDetails> {
+export async function fetchGooglePlaceDetails(
+    placeId: string,
+    apiKey: string,
+    observe?: QuotaObserver
+): Promise<GooglePlaceDetails> {
     const response = await fetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`, {
         headers: {
             "X-Goog-Api-Key": apiKey,
@@ -175,6 +195,7 @@ export async function fetchGooglePlaceDetails(placeId: string, apiKey: string): 
         },
         signal: AbortSignal.timeout(8_000)
     });
+    await observeProviderResponse(response, observe);
     if (!response.ok) throw new Error(`Google Places returned ${response.status}`);
     const place = objectValue(await readJson(response));
     const location = objectValue(place.location);
@@ -193,13 +214,19 @@ export async function fetchGooglePlaceDetails(placeId: string, apiKey: string): 
     };
 }
 
-export async function routeMapbox(points: RoutePoint[], profile: RouteProfile, token: string): Promise<ProviderRoute> {
+export async function routeMapbox(
+    points: RoutePoint[],
+    profile: RouteProfile,
+    token: string,
+    observe?: QuotaObserver
+): Promise<ProviderRoute> {
     const coordinates = points.map((point) => `${point.longitude},${point.latitude}`).join(";");
     const url = new URL(`https://api.mapbox.com/directions/v5/mapbox/${profile}/${coordinates}`);
     url.searchParams.set("overview", "full");
     url.searchParams.set("geometries", "geojson");
     url.searchParams.set("access_token", token);
     const response = await fetch(url, { signal: AbortSignal.timeout(8_000) });
+    await observeProviderResponse(response, observe);
     if (!response.ok) throw new Error(`Mapbox returned ${response.status}`);
     const body = objectValue(await readJson(response));
     const route = objectValue(Array.isArray(body.routes) ? body.routes[0] : undefined);

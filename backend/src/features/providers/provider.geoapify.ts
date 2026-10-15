@@ -1,3 +1,5 @@
+import { observeProviderResponse } from "../quotas/quota.feedback.js";
+import type { QuotaObserver } from "../quotas/quota.types.js";
 import type { DestinationResult } from "../destinations/destination.types.js";
 import type { MapboxLocation } from "./provider.types.js";
 import { toCountryCode, toAlpha2CountryCode } from "../../shared/countries.js";
@@ -33,10 +35,11 @@ function poiType(category: string, raw: Record<string, unknown>): string {
     return "poi";
 }
 
-async function request(url: URL, key: string): Promise<GeoapifyResult[]> {
+async function request(url: URL, key: string, observe?: QuotaObserver): Promise<GeoapifyResult[]> {
     url.searchParams.set("apiKey", key);
     url.searchParams.set("lang", "en");
     const response = await fetch(url, { signal: AbortSignal.timeout(8_000) });
+    await observeProviderResponse(response, observe);
     if (!response.ok) throw new Error(`Geoapify returned ${response.status}`);
     const body = object(await response.json());
     return (Array.isArray(body.features) ? body.features : []).flatMap((feature) => {
@@ -108,7 +111,8 @@ export async function searchGeoapify(
     query: string,
     limit: number,
     key: string,
-    country?: string
+    country?: string,
+    observe?: QuotaObserver
 ): Promise<DestinationResult[]> {
     const url = new URL("https://api.geoapify.com/v1/geocode/search");
     url.searchParams.set("text", query);
@@ -119,7 +123,7 @@ export async function searchGeoapify(
         url.searchParams.set("type", "city");
         url.searchParams.set("filter", `countrycode:${alpha2.toLowerCase()}`);
     }
-    const results = await request(url, key);
+    const results = await request(url, key, observe);
     const selected = country
         ? results.filter(
               (place) => place.placeType === "place" && place.countryCode === toCountryCode(country) && place.city
@@ -139,12 +143,17 @@ export async function searchGeoapify(
     }));
 }
 
-export async function reverseGeoapify(latitude: number, longitude: number, key: string): Promise<MapboxLocation> {
+export async function reverseGeoapify(
+    latitude: number,
+    longitude: number,
+    key: string,
+    observe?: QuotaObserver
+): Promise<MapboxLocation> {
     const url = new URL("https://api.geoapify.com/v1/geocode/reverse");
     url.searchParams.set("lat", String(latitude));
     url.searchParams.set("lon", String(longitude));
     url.searchParams.set("limit", "1");
-    const [place] = await request(url, key);
+    const [place] = await request(url, key, observe);
     if (!place) throw new Error("Geoapify returned no valid location");
     const areaNames = [place.area, place.city].filter((value): value is string => Boolean(value));
     const label =

@@ -175,6 +175,95 @@ test(
                 Array.from({ length: 10 }, () => quota.reserve("concurrent", 1, windows))
             );
             assert.equal(attempts.filter((attempt) => attempt.allowed).length, 3);
+            // Rollover reuses the row, including when requests race at the boundary.
+            const nextHour = {
+                ...windows[0]!,
+                startsAt: new Date("2026-10-14T13:00:00Z"),
+                endsAt: new Date("2026-10-14T14:00:00Z")
+            };
+            const rollover = await Promise.all(
+                Array.from({ length: 10 }, () => quota.reserve("concurrent", 1, [nextHour]))
+            );
+            assert.equal(rollover.filter((attempt) => attempt.allowed).length, 3);
+            assert.equal((await quota.reserve("concurrent", 1, windows)).allowed, false);
+            const counters = await pool.query(
+                "SELECT window_start, used FROM api_quota_usage WHERE policy_id='concurrent' AND window_name='hour:UTC'"
+            );
+            assert.equal(counters.rows.length, 1);
+            assert.equal(counters.rows[0].window_start.toISOString(), nextHour.startsAt.toISOString());
+            assert.equal(counters.rows[0].used, "3");
+
+            // Resetting one window must roll back if a longer window is exhausted.
+            const day = {
+                ...windows[0]!,
+                name: "day:UTC",
+                period: "day" as const,
+                limit: 1,
+                startsAt: new Date("2026-10-14T00:00:00Z"),
+                endsAt: new Date("2026-10-15T00:00:00Z")
+            };
+            assert.equal((await quota.reserve("rollover-rollback", 1, [windows[0]!, day])).allowed, true);
+            assert.equal((await quota.reserve("rollover-rollback", 1, [nextHour, day])).allowed, false);
+            const unchanged = await pool.query(
+                "SELECT window_start, used FROM api_quota_usage WHERE policy_id='rollover-rollback' AND window_name='hour:UTC'"
+            );
+            assert.equal(unchanged.rows[0].window_start.toISOString(), windows[0]!.startsAt.toISOString());
+            assert.equal(unchanged.rows[0].used, "1");
+
+            // Many short windows still occupy just one row per window type.
+            for (const [period, duration] of [
+                ["second", 1000],
+                ["minute", 60000]
+            ] as const) {
+                for (let index = 0; index < 100; index++) {
+                    const start = Date.parse("2026-10-14T12:00:00Z") + index * duration;
+                    assert.equal(
+                        (
+                            await quota.reserve("compact", 1, [
+                                {
+                                    ...windows[0]!,
+                                    name: `${period}:UTC`,
+                                    period,
+                                    startsAt: new Date(start),
+                                    endsAt: new Date(start + duration)
+                                }
+                            ])
+                        ).allowed,
+                        true
+                    );
+                }
+            }
+            assert.equal((await pool.query("SELECT * FROM api_quota_usage WHERE policy_id='compact'")).rows.length, 3);
+
+            // A clock boundary cannot grant a fresh rolling allowance.
+            const rollingWindow = { ...windows[0]!, name: "hour:rolling:UTC", rolling: true };
+            assert.equal((await quota.reserve("rolling", 3, [rollingWindow])).allowed, true);
+            const rollingNext = { ...nextHour, name: rollingWindow.name, rolling: true };
+            assert.equal((await quota.reserve("rolling", 1, [rollingNext])).allowed, false);
+            const afterQuietPeriod = {
+                ...rollingNext,
+                startsAt: new Date("2026-10-14T14:00:00Z"),
+                endsAt: new Date("2026-10-14T15:00:00Z")
+            };
+            const rollingAttempts = await Promise.all(
+                Array.from({ length: 10 }, () => quota.reserve("rolling", 1, [afterQuietPeriod]))
+            );
+            assert.equal(rollingAttempts.filter((attempt) => attempt.allowed).length, 3);
+            assert.equal((await pool.query("SELECT * FROM api_quota_usage WHERE policy_id='rolling'")).rows.length, 2);
+
+            // Cooldowns are shared across repository instances and cannot be shortened
+            // by a delayed response; once expired, no manual reset is necessary.
+            const until = new Date(Date.now() + 60000);
+            await quota.block!("cooldown", until);
+            const anotherProcess = createPostgresQuotaRepository();
+            await anotherProcess.block!("cooldown", new Date(Date.now() + 1000));
+            const blocked = await anotherProcess.reserve("cooldown", 1, windows);
+            assert.equal(blocked.allowed, false);
+            assert.equal(blocked.retryAt?.toISOString(), until.toISOString());
+            await pool.query(
+                "UPDATE api_quota_usage SET window_end=now()-interval '1 second' WHERE policy_id='cooldown' AND window_name='provider:cooldown'"
+            );
+            assert.equal((await anotherProcess.reserve("cooldown", 1, windows)).allowed, true);
             const result = await quota.reserve("transaction", 1, [
                 windows[0]!,
                 { ...windows[0]!, name: "disabled", limit: 0 }

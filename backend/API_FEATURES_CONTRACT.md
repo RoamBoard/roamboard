@@ -146,17 +146,64 @@ upstream failure returns `502 SEARCH_FAILED`.
 Migration `004_api_features.sql` adds PostgreSQL quota counters, per-user Google
 place references and profile timestamps. All time windows reserve atomically;
 exhaustion rolls back counters and skips the upstream call. Failed upstream
-calls still consume reservations. Restarts/processes share usage. Old windows
-are pruned after 31 days. Google months use America/Los_Angeles; others use UTC.
+calls still consume reservations. Restarts/processes share usage. Each policy/window
+type uses one counter row with previous-bucket count/end fields. New periods reuse
+that row and start with the reserved units; delayed requests from an older period
+are denied rather than resetting a newer counter. All window changes still roll
+back together if any limit is exhausted. Verified billing months use calendar boundaries;
+other windows conservatively count the current bucket plus the entire previous
+bucket while it could overlap the trailing interval. This prevents boundary bursts
+without a per-request log. It can block earlier and up to a bucket longer than an
+exact sliding window. Open-Meteo's month guard is a fixed 31-day duration, not an
+assumed provider calendar month. Rows use explicit `:rolling:` names for these guards.
 
-Budgets in `src/features/quotas/quota.policies.ts` retain the prototype limits:
+There is no per-period history or cleanup job. The current policies use at most 20
+counter rows plus 11 `provider:cooldown` rows, independent of request volume.
+Cooldown rows use `window_end` as the next permitted attempt time; `window_start`
+is negative infinity and `used` stays zero. Every reservation locks its policy's
+cooldown row before checking all counters. Restarts and multiple backend instances
+share both counts and cooldowns, regardless of user authentication.
+
+### Provider reset rules and response feedback
+
+Public documentation reviewed on 2026-10-15. Account-specific limits still need
+confirmation in the team's provider consoles. Known calendar billing boundaries
+are distinguished from conservative application guards below.
+
+| Provider      | Documented rule and implemented handling                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Google Places | Free usage resets on the first of the month at midnight US Pacific time. Calendar months use `America/Los_Angeles`, including DST. [Google pricing overview](https://developers.google.com/maps/billing-and-pricing/overview).                                                                                                                                                                                                                                                                                                     |
+| Mapbox        | Calendar-month free usage; usage reporting is UTC. Monthly application counters use UTC. Other application guards are rolling. HTTP 429/reset feedback respects `X-Rate-Limit-Reset`; it describes a short rate interval, not the monthly billing allowance. [Billing](https://docs.mapbox.com/accounts/guides/invoices/), [UTC usage](https://docs.mapbox.com/accounts/guides/statistics/), [rate-limit headers](https://docs.mapbox.com/api/guides/#rate-limit-headers).                                                         |
+| Geoapify      | Daily credits and requests/second are published, but an exact daily reset timezone was not established. Rolling 24-hour and second guards avoid guessing midnight; the hourly guard is an additional application budget. Honor `Retry-After` when returned. [Pricing](https://www.geoapify.com/pricing/), [rate limiting](https://www.geoapify.com/how-to-avoid-429-too-many-requests-with-api-rate-limiting/).                                                                                                                    |
+| Unsplash      | Team-confirmed production allowance is 1,000/hour; application cap is 990. No exact hourly boundary was established from the docs, so use a conservative trailing-hour guard. Observe remaining/reset headers when present; zero remaining without a reset pauses for an hour. [Unsplash documentation](https://unsplash.com/documentation#rate-limiting).                                                                                                                                                                         |
+| Open-Meteo    | Publishes minute/hour/day/month allowances without precise reset boundaries on its pricing page. Use trailing-duration guards (including 31 days for the month); honor upstream `Retry-After`. The current five-day, three-variable request counts as one call; expanded weather requests may cost multiple units and must update accounting. [Pricing and call calculation](https://open-meteo.com/en/pricing).                                                                                                                   |
+| Wikipedia     | Per-minute limits depend on client identification, not a monthly billing reset. Use a rolling minute guard and a meaningful server `User-Agent` with a project contact URL. Honor `Retry-After`; unknown 429 cooldown defaults to five seconds. [Wikimedia limits](https://www.mediawiki.org/wiki/Wikimedia_APIs/Rate_limits).                                                                                                                                                                                                     |
+| Cloudinary    | Admin API exposes hourly remaining/reset metadata. Lab listing/inspection and protected upload verification observe that metadata, including SDK HTTP 420/429 errors, with a rolling-hour application guard. This does not meter storage or transformation/bandwidth credits: Free/self-service plans use current storage and rolling 30-day transformation/bandwidth usage. [Admin API](https://cloudinary.com/documentation/admin_api), [credit periods](https://cloudinary.com/documentation/developer_onboarding_faq_credits). |
+
+Quota-managed HTTP adapters observe feedback before parsing the response. On 429,
+or 503 with `Retry-After`, persist a cooldown and return safe 429 errors instead of
+generic provider failures. `Retry-After` supports seconds and HTTP dates; reset
+headers support Unix seconds. If both specify a time, wait for the later one.
+Zero remaining can establish a cooldown even on a successful response, while that
+response's data is returned normally. A missing/invalid 429 reset uses a five-second
+fallback; known exhaustion without a reset uses the policy's longest duration.
+Cooldown updates only extend an existing block. No automatic retries are performed.
+Already-reserved in-flight requests cannot be recalled. Local blocks also return
+`Retry-After` when known; Home context retains its partial-availability behavior.
+
+Quota counters cannot reconstruct discarded historical windows, pre-rollout requests,
+external calls or provider billing state. Restoring an older database also restores
+older quota counts. These controls do not promise exact account-wide reconciliation
+or guaranteed zero charges. Off-backend public-token calls and Cloudinary credit
+usage still require provider-console controls and monitoring.
+
+Application budgets in `src/features/quotas/quota.policies.ts` are:
 Mapbox map loads 49,500/month and 1,540/day; geocoding/directions each
 99,000/month and 3,090/day; Geoapify 2/second, 118/hour and 2,970/day; Google text
 search 4,950/month and details 9,900/month; Open-Meteo 590/minute, 4,950/hour,
 9,900/day and 297,000/month; Wikipedia 190/minute; Cloudinary Admin 495/hour,
-shared by lab inspection and Board upload verification. Unsplash uses 49/hour,
-below its [50/hour demo allowance](https://unsplash.com/documentation#rate-limiting),
-because production approval has not been established.
+shared by lab inspection and Board upload verification. Unsplash uses 990/hour,
+below the team's confirmed [1,000/hour production allowance](https://unsplash.com/documentation#rate-limiting).
 
 Mapbox Search Box has a separate conservative application budget of 495 requests
 per month and 9 per second until the team's account allowance is confirmed.

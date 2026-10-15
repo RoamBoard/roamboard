@@ -9,6 +9,8 @@ export const errorHandler: ErrorRequestHandler = (error: unknown, _request, resp
     }
 
     if (error instanceof AppError) {
+        if (error.retryAt)
+            response.set("Retry-After", String(Math.max(1, Math.ceil((error.retryAt.getTime() - Date.now()) / 1000))));
         response.status(error.statusCode).json({ error: { code: error.code, message: error.message } });
         return;
     }
