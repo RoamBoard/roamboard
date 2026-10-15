@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Plus } from "lucide-react";
 
 type Props = {
     activeHref: string;
@@ -6,6 +7,7 @@ type Props = {
 };
 
 const navigation = [
+    { href: "/create", label: "create" },
     { href: "/home", label: "roam" },
     { href: "/discover", label: "discover" },
     { href: "/boards", label: "boards" },
@@ -14,7 +16,7 @@ const navigation = [
 
 export default function Sidebar({ activeHref, discover }: Props) {
     const linkClasses =
-        "inline-flex min-h-6 items-center text-muted-foreground underline-offset-2 hover:underline aria-[current=true]:text-foreground aria-[current=true]:underline focus-visible:outline-foreground focus-visible:outline-1 focus-visible:outline-offset-4";
+        "inline-flex min-h-6 items-center text-muted-foreground underline-offset-2 hover:underline aria-[current=page]:text-foreground aria-[current=page]:underline focus-visible:outline-foreground focus-visible:outline-1 focus-visible:outline-offset-4";
 
     if (discover) {
         return (
@@ -55,9 +57,12 @@ export default function Sidebar({ activeHref, discover }: Props) {
                             ) : (
                                 <span
                                     className={
-                                        activeHref === href ? "underline underline-offset-4" : "text-muted-foreground"
+                                        activeHref === href
+                                            ? "inline-flex items-center underline underline-offset-4"
+                                            : "text-muted-foreground inline-flex items-center"
                                     }
                                 >
+                                    {href === "/create" && <Plus aria-hidden="true" className="mr-1 size-3 shrink-0" />}
                                     {label}
                                 </span>
                             )}
@@ -83,19 +88,22 @@ export default function Sidebar({ activeHref, discover }: Props) {
                 aria-label="Main navigation"
                 className="text-12 absolute top-[59%] bottom-[5%] left-1/2 flex -translate-x-1/2 flex-col items-start justify-between"
             >
-                <Link href="/home" aria-current={activeHref === "/home"} className={linkClasses}>
-                    roam
-                </Link>
-                <Link href="/discover" aria-current={activeHref === "/discover"} className={linkClasses}>
-                    discover
-                </Link>
-                <Link href="/boards" aria-current={activeHref === "/boards"} className={linkClasses}>
-                    boards
-                </Link>
-                <Link href="/social" aria-current={activeHref === "/social"} className={linkClasses}>
-                    social
-                </Link>
-                <Link href="/dev/providers" aria-current={activeHref === "/dev/providers"} className={linkClasses}>
+                {navigation.map(({ href, label }) => (
+                    <Link
+                        key={href}
+                        href={href}
+                        aria-current={activeHref === href ? "page" : undefined}
+                        className={linkClasses}
+                    >
+                        {href === "/create" && <Plus aria-hidden="true" className="mr-1 size-3 shrink-0" />}
+                        {label}
+                    </Link>
+                ))}
+                <Link
+                    href="/dev/providers"
+                    aria-current={activeHref === "/dev/providers" ? "page" : undefined}
+                    className={linkClasses}
+                >
                     labs
                 </Link>
             </nav>

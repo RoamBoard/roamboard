@@ -23,9 +23,14 @@ const routes = [
         description: "Search destinations and see weather, descriptions, and imagery."
     },
     {
+        href: "/create",
+        title: "Create",
+        description: "Choose how to start a new Board."
+    },
+    {
         href: "/boards",
         title: "Boards",
-        description: "Choose how to start a new Board."
+        description: "Placeholder for the upcoming Boards page."
     },
     {
         href: "/boards/new",
