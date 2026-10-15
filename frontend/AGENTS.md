@@ -158,6 +158,22 @@ model to the shared collage layout.
 or fitted to the available width. Its bookmarks only change local gallery state. Reusable cards accept an optional
 navigation URL and controlled bookmark callback; they perform no backend requests or persistence.
 
+### RoamFlow discovery preview
+
+Discover's RoamFlow section reuses `PhotoBoardCard` (V4) in responsive, staggered CSS Grid groups of seven.
+`src/data/roamflow-boards.ts` contains 28 distinct fictional editorial stories with existing photography;
+only `lost-in-tokyo` links to an implemented viewer. The paged mock source and presentation types in
+`src/lib/roamflow.ts` are not a backend API contract. `useRoamFlow` handles request guards, cancellation,
+deduplication, retry, and cursor progress. Automatic loading pauses after two pages until the user continues;
+the skip link cancels pending loading and keeps the existing Discover footer reachable.
+
+Cards reserve their 4:5 geometry, lazy-load images, and use CSS content visibility to avoid offscreen rendering.
+This is not DOM virtualization: the mounted collection grows as pages are loaded. Reassess a windowed virtualizer
+when a real public-Board source and substantially larger persisted collections are integrated.
+`/dev/roamflow` provides slow-source, failure/retry, empty, reduced-motion, and 1,000-card stress scenarios.
+Stress fixtures deliberately repeat photos and never appear in Discover. The reduced-motion scenario forces
+the same animation branch as the system preference; the normal gallery respects the browser preference.
+
 ### Published board preview
 
 `/boards/[boardId]` is a public viewer with the sample design at

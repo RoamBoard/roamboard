@@ -3,6 +3,8 @@ import VibeGrid from "./VibeGrid";
 import DiscoverSearch from "./DiscoverSearch";
 import DiscoverMoodMarquees from "./DiscoverMoodMarquees";
 import FeaturedBoards from "./FeaturedBoards";
+import RoamFlow from "./roamflow/RoamFlow";
+import { roamFlowInitialPage } from "@/data/roamflow-boards";
 import { Marquee } from "@/components/ui/marquee";
 import type { CSSProperties } from "react";
 import Link from "next/link";
@@ -191,39 +193,7 @@ export function DiscoverFeed() {
             </div>
             <div className="h-32 bg-gradient-to-b from-transparent to-black" />
             <VibeGrid />
-            <section
-                aria-labelledby="roamflow-title"
-                className="overflow-hidden bg-black px-5 pb-12 text-white md:px-10"
-            >
-                <header className="border-t border-white/25 pt-6 text-right">
-                    <p className="text-14">Introducing</p>
-                    <h2 id="roamflow-title" className="font-display text-48 leading-none font-bold">
-                        RoamFlow
-                    </h2>
-                </header>
-                <div className="mt-8 grid grid-cols-2 items-start gap-3 lg:grid-cols-4">
-                    {[0, 1, 2, 3].map((index) => (
-                        <article
-                            key={index}
-                            className={`relative aspect-[4/5] overflow-hidden border border-white/25 ${index % 2 === 0 ? "mt-16" : ""}`}
-                        >
-                            <DiscoverPhoto photo={discoverPhotos.hiddenGems} width={700} />
-                            <div className="absolute inset-0 bg-gradient-to-b from-black via-black/80 to-transparent" />
-                            <div className="relative p-4">
-                                <h3 className="text-[clamp(1rem,2vw,2rem)] leading-none font-bold">
-                                    Postcards
-                                    <br />
-                                    from Porto
-                                </h3>
-                                <p className="text-10 mt-3">by Inês Carvalho</p>
-                            </div>
-                        </article>
-                    ))}
-                </div>
-                <p className="text-12 mt-6 text-white/70">
-                    RoamFlow concept preview · imagery and stories are placeholders.
-                </p>
-            </section>
+            <RoamFlow initialPage={roamFlowInitialPage} />
             <footer className="border-line border-t px-5 py-10 md:px-10">
                 <details className="text-12">
                     <summary className="w-fit cursor-pointer py-2 underline underline-offset-4 focus-visible:outline-2">
