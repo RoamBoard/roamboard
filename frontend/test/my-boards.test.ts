@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { collageBoardExamples, compactBoardExamples } from "../src/data/board-card-examples";
-import { filterGalleryBoards, toGalleryBoard } from "../src/lib/my-boards";
+import { filterGalleryBoards, filterLibraryBoards, toGalleryBoard } from "../src/lib/my-boards";
+import { mockBoardCollections } from "../src/data/my-board-collections";
 import type { BoardDocument, PublishedSummary } from "../src/lib/board-creator-api";
 
 const samples = collageBoardExamples.map((collage, index) => ({ collage, compact: compactBoardExamples[index] }));
@@ -47,4 +48,21 @@ test("live gallery cards use persisted content, cover ordering and a real Board 
     assert.equal(board.collage.savedCount, undefined);
     assert.deepEqual(board.collage.highlights, ["Gamla Stan"]);
     assert.equal(filterGalleryBoards([board], "stockholm").length, 1);
+});
+
+test("collection samples keep archived Boards separate, normalize country codes and support independent search", () => {
+    const { created, saved, archived } = mockBoardCollections;
+    const activeIds = new Set([...created, ...saved].map((board) => board.compact.id));
+    assert.ok(archived.every((board) => !activeIds.has(board.compact.id)));
+    assert.deepEqual(
+        archived.map((board) => board.compact.destinationLabel),
+        ["PRT", "NOR", "ESP"]
+    );
+    assert.equal(filterLibraryBoards(archived, "PORTO portugal").length, 1);
+    assert.equal(filterLibraryBoards(archived, "ines").length, 1);
+    assert.equal(filterLibraryBoards(archived, "Tokyo").length, 0);
+    assert.equal(filterGalleryBoards(saved, "Tokyo").length, 1);
+    assert.equal(filterGalleryBoards(created, "Tokyo").length, 1);
+    assert.equal(filterLibraryBoards(archived, "zzzz").length, 0);
+    assert.ok([...created, ...saved, ...archived].every((board) => !("href" in board)));
 });

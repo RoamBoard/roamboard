@@ -23,7 +23,7 @@ export function filterGalleryBoards(boards: readonly GalleryBoard[], query: stri
     });
 }
 
-function titleLines(title: string, width: number) {
+export function boardTitleLines(title: string, width: number) {
     const lines = title.split(/\s+/).reduce<string[]>((result, word) => {
         const last = result.at(-1);
         if (last && `${last} ${word}`.length <= width) return [...result.slice(0, -1), `${last} ${word}`];
@@ -55,7 +55,7 @@ export function toGalleryBoard(summary: PublishedSummary, document: BoardDocumen
     const collage: CollageBoardCardData = {
         id: String(summary.boardId),
         title,
-        titleLines: titleLines(title, 18),
+        titleLines: boardTitleLines(title, 18),
         author: "you",
         destination: destination || "Destination not added",
         destinationLabel: country?.code ?? "",
@@ -70,7 +70,7 @@ export function toGalleryBoard(summary: PublishedSummary, document: BoardDocumen
         compact: {
             id: collage.id,
             title,
-            titleLines: titleLines(title, 10),
+            titleLines: boardTitleLines(title, 10),
             author: collage.author,
             destination: collage.destination,
             destinationLabel: collage.destinationLabel,
@@ -78,4 +78,20 @@ export function toGalleryBoard(summary: PublishedSummary, document: BoardDocumen
         },
         href: `/boards/${summary.boardId}`
     };
+}
+
+export function filterLibraryBoards<T extends { compact: CompactBoardCardData }>(
+    boards: readonly T[],
+    query: string
+): T[] {
+    const normalize = (value: string) =>
+        value
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase();
+    const words = normalize(query).trim().split(/\s+/).filter(Boolean);
+    return boards.filter(({ compact: board }) => {
+        const text = normalize([board.title, board.author, board.destination, board.destinationLabel].join(" "));
+        return words.every((word) => text.includes(word));
+    });
 }

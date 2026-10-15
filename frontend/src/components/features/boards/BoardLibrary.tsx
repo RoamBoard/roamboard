@@ -14,13 +14,27 @@ import type { GalleryBoard } from "@/lib/my-boards";
 import BoardCard from "./cards/BoardCard";
 
 type Props = {
-    boards: readonly GalleryBoard[];
-    hasMore: boolean;
-    loadingMore: boolean;
-    onLoadMore: () => Promise<void>;
+    boards: readonly Pick<GalleryBoard, "compact" | "href">[];
+    id?: string;
+    title?: string;
+    description?: string;
+    archived?: boolean;
+    hasMore?: boolean;
+    loadingMore?: boolean;
+    onLoadMore?: () => Promise<void>;
 };
 
-export default function BoardLibrary({ boards, hasMore, loadingMore, onLoadMore }: Props) {
+export default function BoardLibrary({
+    boards,
+    hasMore = false,
+    loadingMore = false,
+    onLoadMore,
+    id = "board-library",
+    title = "YOUR COLLECTION",
+    description,
+    archived = false
+}: Props) {
+    const collectionName = title.toLowerCase().replace(/ boards$/, "");
     const [api, setApi] = useState<CarouselApi>();
     const [position, setPosition] = useState({ progress: 0, visible: 1 });
     const reducedMotion = useReducedMotion();
@@ -44,7 +58,7 @@ export default function BoardLibrary({ boards, hasMore, loadingMore, onLoadMore 
                 requestedLength.current !== boards.length
             ) {
                 requestedLength.current = boards.length;
-                void onLoadMore();
+                void onLoadMore?.();
             }
         }
         const frame = requestAnimationFrame(update);
@@ -77,7 +91,7 @@ export default function BoardLibrary({ boards, hasMore, loadingMore, onLoadMore 
     }, [api, reducedMotion]);
 
     return (
-        <section aria-labelledby="board-library-heading" className="mx-auto mt-20 max-w-[1320px] md:mt-24">
+        <section aria-labelledby={`${id}-heading`} className="mx-auto mt-20 max-w-[1320px] md:mt-24">
             <Carousel
                 setApi={setApi}
                 opts={{
@@ -87,54 +101,67 @@ export default function BoardLibrary({ boards, hasMore, loadingMore, onLoadMore 
                     loop: false,
                     duration: reducedMotion ? 0 : 25
                 }}
-                aria-label="Your Board collection"
+                aria-label={`${title} collection`}
                 tabIndex={0}
                 className="outline-offset-[-2px] focus-visible:outline-1"
             >
                 <div className="mx-5 mb-6 flex items-center justify-between gap-4 sm:mx-12">
-                    <h2
-                        id="board-library-heading"
-                        className="font-display text-card-subtle text-24 md:text-36 font-medium"
-                    >
-                        YOUR COLLECTION
+                    <h2 id={`${id}-heading`} className="font-display text-foreground/60 text-24 md:text-36 font-medium">
+                        {title}
                     </h2>
                     <div className="flex gap-2">
-                        <CarouselPrevious aria-label="Previous collection Boards" className="rounded-none border-0" />
-                        <CarouselNext aria-label="Next collection Boards" className="rounded-none border-0" />
-                    </div>
-                </div>
-                <div className="border-line/50 mx-3 border-x sm:mx-10">
-                    <CarouselContent className="cursor-grab py-5 select-none active:cursor-grabbing md:py-8">
-                        {boards.map((board, index) => (
-                            <CarouselItem
-                                key={board.collage.id}
-                                aria-label={`${index + 1} of ${boards.length}: ${board.compact.title}`}
-                                className="border-line/60 relative flex basis-[220px] justify-center border-r px-5 py-12 last:border-r sm:basis-[320px] sm:px-[70px]"
-                            >
-                                <div className="w-[180px] shrink-0">
-                                    <BoardCard variant="compact" board={board.compact} href={board.href} />
-                                </div>
-                            </CarouselItem>
-                        ))}
-                    </CarouselContent>
-                    <div
-                        role="progressbar"
-                        aria-label="Board collection scroll position"
-                        aria-valuemin={0}
-                        aria-valuemax={100}
-                        aria-valuenow={Math.round(position.progress * 100)}
-                        className="bg-line/60 relative mx-auto mt-8 mb-10 h-px w-2/3 max-w-[800px]"
-                    >
-                        <div
-                            className="bg-muted-foreground absolute -top-px h-[3px]"
-                            style={{
-                                width: `${position.visible * 100}%`,
-                                left: `${position.progress * (1 - position.visible) * 100}%`
-                            }}
+                        <CarouselPrevious
+                            aria-label={`Previous ${collectionName} Boards`}
+                            className="rounded-none border-0"
                         />
+                        <CarouselNext aria-label={`Next ${collectionName} Boards`} className="rounded-none border-0" />
                     </div>
                 </div>
-                <p className="text-10 text-muted-foreground mt-4 px-5 text-center" role="status">
+                {description && <p className="text-12 text-foreground/65 mx-5 mb-8 max-w-xl sm:mx-12">{description}</p>}
+                {boards.length === 0 && (
+                    <p role="status" className="text-14 text-foreground/65 mx-5 py-16 text-center">
+                        No {collectionName} Boards match your search.
+                    </p>
+                )}
+                {boards.length > 0 && (
+                    <div className="border-line/50 mx-3 border-x sm:mx-10">
+                        <CarouselContent className="cursor-grab py-5 select-none active:cursor-grabbing md:py-8">
+                            {boards.map((board, index) => (
+                                <CarouselItem
+                                    key={board.compact.id}
+                                    aria-label={`${index + 1} of ${boards.length}: ${board.compact.title}`}
+                                    className="border-line/60 relative flex basis-[220px] justify-center border-r px-5 py-12 last:border-r sm:basis-[320px] sm:px-[70px]"
+                                >
+                                    <div className="w-[180px] shrink-0 transition-transform duration-200 motion-safe:hover:-translate-y-1 motion-reduce:transition-none">
+                                        <BoardCard variant="compact" board={board.compact} href={board.href} />
+                                        {archived && (
+                                            <p className="text-10 text-foreground/65 mt-4 text-center tracking-[.12em] uppercase">
+                                                Archived
+                                            </p>
+                                        )}
+                                    </div>
+                                </CarouselItem>
+                            ))}
+                        </CarouselContent>
+                        <div
+                            role="progressbar"
+                            aria-label={`${title} scroll position`}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-valuenow={Math.round(position.progress * 100)}
+                            className="bg-line/60 relative mx-auto mt-8 mb-10 h-px w-2/3 max-w-[800px]"
+                        >
+                            <div
+                                className="bg-muted-foreground absolute -top-px h-[3px]"
+                                style={{
+                                    width: `${position.visible * 100}%`,
+                                    left: `${position.progress * (1 - position.visible) * 100}%`
+                                }}
+                            />
+                        </div>
+                    </div>
+                )}
+                <p className="text-10 text-foreground/65 mt-4 px-5 text-center" role="status">
                     {loadingMore
                         ? "Loading more Boards…"
                         : `${boards.length} Boards · drag, swipe or scroll to explore`}
