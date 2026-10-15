@@ -1,112 +1,279 @@
-import Link from "next/link";
-import { Plus } from "lucide-react";
+"use client";
 
-type Props = {
-    activeHref: string;
-    discover?: { collapsed: boolean };
-};
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
+import { motion, useReducedMotion } from "motion/react";
+import {
+    ArrowUpRight,
+    Compass,
+    FlaskConical,
+    Layers,
+    PanelLeftClose,
+    PanelLeftOpen,
+    Plus,
+    Users,
+    X
+} from "lucide-react";
+import ProfileControl, { type ProfileControlProps } from "@/components/ui/ProfileControl";
+import { getSidebarExpanded, getSidebarServerSnapshot, setSidebarExpanded, subscribeSidebar } from "./sidebar-state";
 
 const navigation = [
-    { href: "/create", label: "create" },
-    { href: "/home", label: "roam" },
-    { href: "/discover", label: "discover" },
-    { href: "/boards", label: "boards" },
-    { href: "/social", label: "social" }
+    { href: "/home", label: "roam", icon: ArrowUpRight },
+    { href: "/create", label: "create", icon: Plus },
+    { href: "/discover", label: "discover", icon: Compass },
+    { href: "/boards", label: "boards", icon: Layers },
+    { href: "/social", label: "social", icon: Users }
 ];
+const labs = { href: "/dev/providers", label: "labs", icon: FlaskConical };
 
-export default function Sidebar({ activeHref, discover }: Props) {
-    const linkClasses =
-        "inline-flex min-h-6 items-center text-muted-foreground underline-offset-2 hover:underline aria-[current=page]:text-foreground aria-[current=page]:underline focus-visible:outline-foreground focus-visible:outline-1 focus-visible:outline-offset-4";
+function subscribeDesktop(callback: () => void) {
+    const query = window.matchMedia("(min-width: 768px)");
+    query.addEventListener("change", callback);
+    return () => query.removeEventListener("change", callback);
+}
+const getDesktopSnapshot = () => window.matchMedia("(min-width: 768px)").matches;
+const getDesktopServerSnapshot = () => true;
 
-    if (discover) {
+function activeDestination(pathname: string | null, fallback: string) {
+    if (!pathname) return fallback;
+    if (pathname.startsWith("/dev")) return labs.href;
+    if (
+        pathname === "/boards/new" ||
+        pathname.startsWith("/boards/drafts") ||
+        /^\/boards\/[^/]+\/edit$/.test(pathname)
+    ) {
+        return "/create";
+    }
+    if (pathname === "/profile" || pathname === "/settings") return "/social";
+    return navigation.find(({ href }) => pathname === href || pathname.startsWith(`${href}/`))?.href ?? fallback;
+}
+
+type NavigationProps = {
+    activeHref: string;
+    expanded: boolean;
+    onNavigate?: () => void;
+};
+
+function SidebarNavigation({ activeHref, expanded, onNavigate }: NavigationProps) {
+    const reducedMotion = useReducedMotion();
+    function renderLink({ href, label, icon: Icon }: (typeof navigation)[number]) {
+        const active = activeHref === href;
         return (
-            <aside
-                className={`bg-background border-line fixed inset-y-0 left-0 z-30 border-r transition-[width] duration-300 motion-reduce:transition-none ${discover.collapsed ? "w-16 md:w-20" : "w-20 md:w-32"}`}
+            <li key={href} className="group relative">
+                <Link
+                    href={href}
+                    aria-label={label}
+                    aria-current={active ? "page" : undefined}
+                    onClick={onNavigate}
+                    className={`relative flex h-11 items-center transition-colors duration-150 focus-visible:outline-1 focus-visible:outline-offset-4 motion-reduce:transition-none ${expanded ? "w-full" : "w-11"} ${active ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                    <Icon aria-hidden="true" className="mx-3 size-5 shrink-0" strokeWidth={1.5} />
+                    {!expanded && active && (
+                        <span aria-hidden="true" className="absolute bottom-1 left-3 h-px w-5 bg-current" />
+                    )}
+                    <motion.span
+                        aria-hidden="true"
+                        initial={false}
+                        animate={{ opacity: expanded ? 1 : 0, x: expanded ? 0 : -4 }}
+                        transition={{
+                            duration: reducedMotion ? 0 : 0.16,
+                            delay: expanded && !reducedMotion ? 0.08 : 0
+                        }}
+                        className={`font-body text-14 absolute left-12 font-medium whitespace-nowrap underline-offset-[6px] ${expanded ? "visible" : "invisible"} ${active ? "underline" : "group-hover:underline"}`}
+                    >
+                        {label}
+                    </motion.span>
+                </Link>
+            </li>
+        );
+    }
+    return (
+        <nav
+            aria-label="Main navigation"
+            className={`flex min-h-0 flex-1 flex-col [@media(max-height:650px)]:overflow-y-auto ${expanded ? "px-4" : "px-2.5 md:px-[18px]"}`}
+        >
+            <ul className="mb-6 flex w-full shrink-0 flex-col gap-2 pt-8 [@media(max-height:650px)]:pt-0">
+                {navigation.map(renderLink)}
+            </ul>
+            <ul className="border-line mt-auto w-full shrink-0 border-t pt-4">{renderLink(labs)}</ul>
+        </nav>
+    );
+}
+
+function MobileSidebar({
+    activeHref,
+    id,
+    onClose,
+    restoreFocus
+}: {
+    activeHref: string;
+    id: string;
+    onClose: () => void;
+    restoreFocus: () => void;
+}) {
+    const dialogRef = useRef<HTMLDialogElement>(null);
+    const [closing, setClosing] = useState(false);
+    const requestClose = () => setClosing(true);
+    const reducedMotion = useReducedMotion();
+
+    useEffect(() => {
+        const dialog = dialogRef.current;
+        const previousOverflow = document.body.style.overflow;
+        dialog?.showModal();
+        document.body.style.overflow = "hidden";
+        // Resizing to desktop dismisses the temporary drawer.
+        const query = window.matchMedia("(min-width: 768px)");
+        const onResize = () => {
+            if (query.matches) onClose();
+        };
+        query.addEventListener("change", onResize);
+        return () => {
+            query.removeEventListener("change", onResize);
+            dialog?.close();
+            document.body.style.overflow = previousOverflow;
+            restoreFocus();
+        };
+    }, [onClose, restoreFocus]);
+
+    return (
+        <dialog
+            id={id}
+            ref={dialogRef}
+            aria-label="Roamboard navigation"
+            onCancel={(event) => {
+                event.preventDefault();
+                requestClose();
+            }}
+            onClick={(event) => {
+                if (event.target === event.currentTarget) requestClose();
+            }}
+            className="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none border-0 bg-transparent p-0 text-inherit backdrop:bg-black/35 backdrop:backdrop-blur-sm"
+        >
+            <motion.div
+                initial={{ x: reducedMotion ? 0 : -24, opacity: 0 }}
+                animate={{ x: closing && !reducedMotion ? -24 : 0, opacity: closing ? 0 : 1 }}
+                onAnimationComplete={() => {
+                    if (closing) onClose();
+                }}
+                transition={{ duration: reducedMotion ? 0 : 0.2, ease: [0.22, 1, 0.36, 1] }}
+                className="bg-background text-foreground border-line flex h-full w-[min(18rem,calc(100vw-3rem))] flex-col border-r pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl"
             >
-                <header className="absolute top-7 left-1/2 -translate-x-1/2">
+                <header className="flex items-center justify-between gap-3 px-5 pb-12">
                     <Link
                         href="/home"
                         aria-label="Roamboard home"
-                        className={`font-display block leading-none font-bold tracking-tight transition-[font-size] duration-300 [writing-mode:vertical-rl] focus-visible:outline-2 focus-visible:outline-offset-4 motion-reduce:transition-none ${discover.collapsed ? "text-24 md:text-30" : "text-30 md:text-48"}`}
+                        onClick={requestClose}
+                        className="font-display text-24 font-bold tracking-tight focus-visible:outline-2 focus-visible:outline-offset-4"
                     >
                         ROAMBOARD
                     </Link>
+                    <button
+                        type="button"
+                        aria-label="Close navigation"
+                        onClick={requestClose}
+                        className="hover:bg-faint grid size-11 shrink-0 cursor-pointer place-items-center focus-visible:outline-2 focus-visible:outline-offset-2"
+                    >
+                        <X aria-hidden="true" size={20} strokeWidth={1.5} />
+                    </button>
                 </header>
-                <nav
-                    aria-label="Main navigation"
-                    className={`absolute left-0 flex w-full flex-col items-center ${discover.collapsed ? "top-64 gap-2" : "top-[54%] bottom-28 justify-between"}`}
-                >
-                    {navigation.map(({ href, label }) => (
-                        <Link
-                            key={href}
-                            href={href}
-                            aria-label={label}
-                            aria-current={activeHref === href ? "page" : undefined}
-                            className="group text-12 relative flex min-h-10 min-w-11 items-center justify-center focus-visible:outline-2 focus-visible:outline-offset-2"
-                        >
-                            {discover.collapsed ? (
-                                <>
-                                    <span
-                                        aria-hidden="true"
-                                        className={`size-2 rounded-full border border-current ${activeHref === href ? "bg-foreground" : "text-muted-foreground"}`}
-                                    />
-                                    <span className="bg-background border-line absolute left-full ml-2 hidden rounded border px-3 py-2 group-hover:block group-focus-visible:block">
-                                        {label}
-                                    </span>
-                                </>
-                            ) : (
-                                <span
-                                    className={
-                                        activeHref === href
-                                            ? "inline-flex items-center underline underline-offset-4"
-                                            : "text-muted-foreground inline-flex items-center"
-                                    }
-                                >
-                                    {href === "/create" && <Plus aria-hidden="true" className="mr-1 size-3 shrink-0" />}
-                                    {label}
-                                </span>
-                            )}
-                        </Link>
-                    ))}
-                </nav>
-            </aside>
-        );
-    }
+                <SidebarNavigation activeHref={activeHref} expanded onNavigate={requestClose} />
+            </motion.div>
+        </dialog>
+    );
+}
+
+export default function Sidebar({ activeHref, profile = {} }: { activeHref: string; profile?: ProfileControlProps }) {
+    const pathname = usePathname();
+    const selectedHref = activeDestination(pathname, activeHref);
+    const savedExpanded = useSyncExternalStore(subscribeSidebar, getSidebarExpanded, getSidebarServerSnapshot);
+    const desktop = useSyncExternalStore(subscribeDesktop, getDesktopSnapshot, getDesktopServerSnapshot);
+    const [accountOpen, setAccountOpen] = useState(false);
+    const expanded = (desktop && savedExpanded) || accountOpen;
+    const [mobileOpen, setMobileOpen] = useState(false);
+    const triggerRef = useRef<HTMLButtonElement>(null);
+    const reducedMotion = useReducedMotion();
+    const panelId = useId();
+
+    // The saved desktop preference never opens the mobile drawer automatically.
+    const closeMobile = useCallback(() => {
+        setMobileOpen(false);
+    }, []);
+    const restoreFocus = useCallback(() => {
+        triggerRef.current?.focus();
+    }, []);
 
     return (
-        <aside className="relative z-10 min-h-dvh">
-            <header className="absolute top-[3%] left-1/2 -translate-x-1/2">
-                <Link
-                    href="/home"
-                    aria-label="Roamboard home"
-                    className="font-display text-48 block leading-none font-bold tracking-tight [writing-mode:vertical-rl] focus-visible:outline-1 focus-visible:outline-offset-4"
-                >
-                    ROAMBOARD
-                </Link>
-            </header>
-            <nav
-                aria-label="Main navigation"
-                className="text-12 absolute top-[59%] bottom-[5%] left-1/2 flex -translate-x-1/2 flex-col items-start justify-between"
+        <>
+            <motion.aside
+                aria-label="Roamboard sidebar"
+                initial={false}
+                animate={{ "--sidebar-width": expanded ? "224px" : "80px" }}
+                transition={{ duration: reducedMotion ? 0 : 0.24, ease: [0.22, 1, 0.36, 1] }}
+                onKeyDown={(event) => {
+                    if (event.key === "Escape" && expanded) {
+                        setAccountOpen(false);
+                        setSidebarExpanded(false);
+                    }
+                }}
+                className={`bg-background text-foreground border-line fixed inset-y-0 left-0 z-40 flex ${accountOpen ? "w-56" : "w-16"} flex-col border-r pt-[env(safe-area-inset-top)] pb-[max(1.5rem,env(safe-area-inset-bottom))] md:w-[var(--sidebar-width)] ${expanded ? "shadow-[16px_0_40px_-24px_rgb(0_0_0/0.25)]" : ""}`}
             >
-                {navigation.map(({ href, label }) => (
+                <header className="relative h-[clamp(11rem,25dvh,15rem)] shrink-0 [@media(max-height:650px)]:h-20">
                     <Link
-                        key={href}
-                        href={href}
-                        aria-current={activeHref === href ? "page" : undefined}
-                        className={linkClasses}
+                        href="/home"
+                        aria-label="Roamboard home"
+                        className="font-display text-24 md:text-30 absolute top-7 left-[20px] leading-none font-bold tracking-tight focus-visible:outline-2 focus-visible:outline-offset-4 md:left-[25px]"
                     >
-                        {href === "/create" && <Plus aria-hidden="true" className="mr-1 size-3 shrink-0" />}
-                        {label}
+                        <span className="[writing-mode:vertical-rl] [@media(max-height:650px)]:hidden">ROAMBOARD</span>
+                        <span className="hidden [@media(max-height:650px)]:inline" aria-hidden="true">
+                            R.
+                        </span>
                     </Link>
-                ))}
-                <Link
-                    href="/dev/providers"
-                    aria-current={activeHref === "/dev/providers" ? "page" : undefined}
-                    className={linkClasses}
+                </header>
+                <div id={panelId} className="flex min-h-0 flex-1 flex-col">
+                    <SidebarNavigation activeHref={selectedHref} expanded={expanded} />
+                </div>
+                <div className="mx-2.5 mt-2 shrink-0 md:mx-4">
+                    <ProfileControl
+                        {...profile}
+                        sidebar
+                        iconOnly={!expanded}
+                        sidebarAccountOpen={accountOpen}
+                        onSidebarOpenChange={setAccountOpen}
+                    />
+                </div>
+                <div aria-hidden="true" className="border-line mx-2.5 mt-3 border-t md:mx-4" />
+                <button
+                    type="button"
+                    ref={triggerRef}
+                    aria-label={desktop ? (expanded ? "Collapse navigation" : "Expand navigation") : "Open navigation"}
+                    aria-expanded={desktop ? expanded : mobileOpen}
+                    aria-haspopup={desktop ? undefined : "dialog"}
+                    aria-controls={desktop ? panelId : `${panelId}-drawer`}
+                    onClick={() => {
+                        if (desktop) {
+                            setAccountOpen(false);
+                            setSidebarExpanded(!expanded);
+                        } else setMobileOpen(true);
+                    }}
+                    className={`text-muted-foreground/50 hover:text-muted-foreground mx-2.5 mt-3 flex h-11 shrink-0 cursor-pointer items-center focus-visible:outline-2 focus-visible:outline-offset-4 md:mx-4 ${expanded ? "px-3" : "justify-center"}`}
                 >
-                    labs
-                </Link>
-            </nav>
-        </aside>
+                    {expanded ? (
+                        <PanelLeftClose aria-hidden="true" size={20} strokeWidth={1.5} />
+                    ) : (
+                        <PanelLeftOpen aria-hidden="true" size={20} strokeWidth={1.5} />
+                    )}
+                    {expanded && <span className="text-12 ml-3 whitespace-nowrap">collapse</span>}
+                </button>
+            </motion.aside>
+            {mobileOpen && (
+                <MobileSidebar
+                    activeHref={selectedHref}
+                    id={`${panelId}-drawer`}
+                    onClose={closeMobile}
+                    restoreFocus={restoreFocus}
+                />
+            )}
+        </>
     );
 }
