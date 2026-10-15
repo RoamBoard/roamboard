@@ -62,7 +62,7 @@ function requireCloudinary(): void {
 
 function publicMapboxToken(): string | undefined {
     return (
-        env.MAPBOX_PUBLIC_TOKEN ?? (env.MAPBOX_ACCESS_TOKEN?.startsWith("pk.") ? env.MAPBOX_ACCESS_TOKEN : undefined)
+        env.MAPBOX_PUBLIC_TOKEN || (env.MAPBOX_ACCESS_TOKEN?.startsWith("pk.") ? env.MAPBOX_ACCESS_TOKEN : undefined)
     );
 }
 

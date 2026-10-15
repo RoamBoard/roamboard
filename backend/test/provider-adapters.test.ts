@@ -57,6 +57,13 @@ test("map sessions expose only public tokens and reserve before returning them",
     assert.deepEqual(reservations, ["mapbox.map_loads"]);
     assert.equal(JSON.stringify(provider.config()).includes("pk.public-display"), false);
     assert.equal(JSON.stringify(provider.config()).includes("sk.server-secret"), false);
+    process.env.MAPBOX_PUBLIC_TOKEN = "";
+    assert.equal(provider.config().mapbox.configured, false);
+    await assert.rejects(provider.mapboxMapSession(), /not configured/);
+    process.env.MAPBOX_ACCESS_TOKEN = "pk.fallback-display";
+    assert.equal(provider.config().mapbox.configured, true);
+    assert.deepEqual(await provider.mapboxMapSession(), { publicToken: "pk.fallback-display" });
+    assert.deepEqual(reservations, ["mapbox.map_loads", "mapbox.map_loads"]);
 });
 
 test("Mapbox adapters preserve longitude-latitude order and return kilometres and minutes", async (context) => {
