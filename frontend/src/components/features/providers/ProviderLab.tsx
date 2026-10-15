@@ -25,8 +25,7 @@ const tabs: Array<{ id: ProviderId; label: string; description: string }> = [
     {
         id: "mapbox",
         label: "Mapbox",
-        description:
-            "Search Mapbox POIs, restaurants and landmarks, preview pinpoints, reverse-geocode, and route between stops."
+        description: "Search temporary Mapbox results and preview routes. Saved activity locations use Geoapify."
     },
     {
         id: "unsplash",
@@ -41,12 +40,12 @@ const tabs: Array<{ id: ProviderId; label: string; description: string }> = [
     {
         id: "cloudinary",
         label: "Cloudinary",
-        description: "Upload images, inspect metadata, and hand GPS coordinates to Mapbox."
+        description: "Upload images, inspect metadata, and preview GPS coordinates on the map."
     },
     {
         id: "search",
-        label: "Elasticsearch",
-        description: "Explore fuzzy search, autocomplete, filters, scores, and reindexing."
+        label: "Board search",
+        description: "Explore public Board search, autocomplete, filters, and relevance scores."
     }
 ];
 

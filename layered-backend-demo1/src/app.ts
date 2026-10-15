@@ -6,7 +6,6 @@ import { pinoHttp } from "pino-http";
 import { env } from "./config/env.js";
 import { createSearchModule } from "./features/search/search.module.js";
 import type { SearchModule } from "./features/search/search.module.js";
-import type { Client } from "@elastic/elasticsearch";
 import { createDestinationModule } from "./features/destinations/destination.module.js";
 import { createProviderModule } from "./features/providers/provider.module.js";
 import type { GooglePlaceReferenceRepository } from "./features/providers/provider.types.js";
@@ -22,7 +21,6 @@ import { notFoundHandler } from "./middleware/not-found.js";
 
 interface CreateAppOptions {
     todoRepository?: TodoRepository;
-    searchClient?: Client;
     searchModule?: SearchModule;
     quotaRepository?: QuotaRepository;
     googlePlaceReferenceRepository?: GooglePlaceReferenceRepository;
@@ -32,7 +30,6 @@ interface CreateAppOptions {
 
 export function createApp({
     todoRepository,
-    searchClient,
     searchModule: providedSearchModule,
     quotaRepository,
     googlePlaceReferenceRepository,
@@ -41,7 +38,7 @@ export function createApp({
 }: CreateAppOptions = {}): Express {
     const app = express();
     const todoModule = createTodoModule({ repository: todoRepository });
-    const searchModule = providedSearchModule ?? createSearchModule({ client: searchClient });
+    const searchModule = providedSearchModule ?? createSearchModule();
     const quotaModule = createQuotaModule(quotaRepository);
     const destinationModule = createDestinationModule(quotaModule.service);
     const providerModule = createProviderModule(quotaModule.service, googlePlaceReferenceRepository);
@@ -57,7 +54,7 @@ export function createApp({
     app.get("/health", (_req, res) => {
         res.json({ status: "ok" });
     });
-    app.get("/health/elasticsearch", searchModule.controller.health);
+    app.get("/health/search", searchModule.controller.health);
 
     app.use("/api/v1/todos", todoModule.router);
     app.use("/api/v1/search", searchModule.router);

@@ -16,13 +16,13 @@ require a Google session. They are unavailable outside development. Deployed
 startup must use `npm start`, not the development command.
 
 Configure optional provider keys using `.env.example`. Missing keys produce
-explicit unavailable states. For fuzzy Board search, set `ELASTICSEARCH_NODE`
-and optionally `ELASTIC_API_KEY`; no Elasticsearch SDK or new dependency is used.
-With a signed-in development session, call `POST /api/v1/search/reindex` from
-`CLIENT_ORIGIN` once for existing public, published Boards. Later saves/deletes
-update the derived index; reindex after a search outage to reconcile missed updates.
+explicit unavailable states. Board search reads public, published Boards directly
+from PostgreSQL and ranks matches in the API, including typo-tolerant word matching,
+prefix suggestions and filters. No separate search service, credentials, index setup
+or synchronization is needed. The development-only `POST /api/v1/search/reindex`
+route remains compatible and returns the current public Board count without copying data.
 
-Indexed search contains only public Boards. POIs, restaurants and landmarks use
+Search contains only public, published Boards. POIs, restaurants and landmarks use
 the separate Mapbox Search Box text-search endpoint, with its own conservative
 495/month and 9/second application budget. These temporary provider results are
 not indexed or written to the database; persistent Board locations still use Geoapify.

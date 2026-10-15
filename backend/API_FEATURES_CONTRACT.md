@@ -121,25 +121,28 @@ protected images; the full API record stays unmodified.
 `page` (default 1), `limit` (default 10, maximum 50), within the first 1,000 results.
 It returns `{ hits: [{ document, score }], total, page, limit }`.
 `GET /api/v1/search/suggestions?q=...&limit=6` returns distinct current Board
-titles. Queries have 2–100 characters. Elasticsearch supplies fuzzy matching,
-prefix suggestions and filters.
+titles. Queries have 2?100 characters. Search reads PostgreSQL records on each
+request. The API ranks matching words with title, city and country weighting and
+bounded edit distance for typos; suggestions match title word prefixes. Country
+and category filters and pagination retain the response shape above. Ranking is
+application code over the current public dataset, not a database full-text index;
+large datasets will need a separate PostgreSQL query/index optimization.
 
 The durable source is public, published PostgreSQL Boards, represented as
-`itinerary` documents. Activities and their locations are never indexed as
-standalone search results. Place/destination entity filters are rejected with
-`400 INVALID_REQUEST`. External POIs, restaurants and landmarks use the separate
-Mapbox Search Box endpoint; they are not persisted into the Board search index.
-Provider queries filter current public
-IDs, then displayed content and suggestion titles are checked against a fresh
-database read. Private, draft and deleted Boards cannot leak from stale index
-records. Results may shift during concurrent edits.
+`itinerary` documents. Activities and their locations are never standalone search
+results. Place/destination entity filters are rejected with `400 INVALID_REQUEST`.
+External POIs, restaurants and landmarks use the separate Mapbox Search Box
+endpoint and are temporary discovery results. Geoapify provides activity locations
+that users confirm and save in PostgreSQL.
 
-`POST /api/v1/search/reindex` refreshes the derived `roamboard-boards-v1` index and
-returns `{ indexed, index }`. Existing Boards need an initial reindex. Board
-saves/deletes attempt an index update after the PostgreSQL commit. A search
-outage does not roll back a saved Board or claim saving failed; reindexing
-reconciles missed updates. Missing Elasticsearch returns `503 SEARCH_UNAVAILABLE`;
-upstream failure returns `502 SEARCH_FAILED`.
+Search and suggestions check fresh public Board data before returning content.
+Draft, private and deleted Boards are excluded. Results may shift during concurrent edits.
+No separate search store, synchronization or initial reindex is required.
+
+`POST /api/v1/search/reindex` remains as a development-only compatibility endpoint.
+It returns `{ indexed, index: "postgresql-boards" }`, where `indexed` is the current
+public, published Board count. It does not rebuild or copy records. Board writes
+and deletions are visible through the next database read.
 
 ## Shared usage budgets and verification
 

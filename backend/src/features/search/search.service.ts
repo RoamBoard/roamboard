@@ -1,5 +1,5 @@
 import type { SearchRepository, SearchProvider, SearchInput } from "./search.types.js";
-import { SEARCH_INDEX } from "./search.elasticsearch.js";
+import { SEARCH_INDEX } from "./search.postgres.js";
 
 export function createSearchService(repository: SearchRepository, provider: SearchProvider) {
     return {

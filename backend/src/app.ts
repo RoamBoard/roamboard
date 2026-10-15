@@ -63,8 +63,7 @@ export function createApp(options: AppOptions = {}): Express {
     const providers = createProviderModule(quota, attachUser);
     const destinations = createDestinationModule(quota);
     const search = createSearchModule(attachUser, options.searchRepository, options.searchProvider);
-    const refreshSearch =
-        process.env.ELASTICSEARCH_NODE || options.searchProvider ? search.service.refreshBoard : undefined;
+    const refreshSearch = options.searchProvider ? search.service.refreshBoard : undefined;
     const boards = createBoardsModule(attachUser, options.boardRepository, refreshSearch);
     const images = createImagesModule(
         attachUser,

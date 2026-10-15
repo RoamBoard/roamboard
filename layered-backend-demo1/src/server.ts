@@ -2,7 +2,6 @@ import debug from "debug";
 
 import { createApp } from "./app.js";
 import { env } from "./config/env.js";
-import { createSearchClient } from "./features/search/search.client.js";
 import { sampleSearchDocuments } from "./features/search/search.documents.js";
 import { createSearchModule } from "./features/search/search.module.js";
 import {
@@ -25,9 +24,7 @@ async function main(): Promise<void> {
         await seedSearchDocuments(pool, sampleSearchDocuments);
     }
 
-    const searchClient = createSearchClient();
     const searchModule = createSearchModule({
-        client: searchClient,
         sourceRepository: pool ? createPostgresSearchSourceRepository(pool) : undefined
     });
     if (pool) await searchModule.service.reindex();
@@ -47,7 +44,6 @@ async function main(): Promise<void> {
     async function shutdown(signal: NodeJS.Signals): Promise<void> {
         log("%s received; closing server", signal);
         server.close(async () => {
-            await searchClient.close();
             await pool?.end();
             process.exit(0);
         });
