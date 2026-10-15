@@ -1,3 +1,5 @@
+import { findCountry } from "@/lib/countries";
+
 import { discoverPhotos, type DiscoverPhoto } from "./discover-preview";
 
 export type DiscoverDestination = {
@@ -13,7 +15,7 @@ export type DiscoverDestination = {
 // Country codes match BoardDestination.countryCode; counts are visual previews.
 export const discoverDestinations: readonly DiscoverDestination[] = [
     {
-        countryCode: "FR",
+        countryCode: "FRA",
         slug: "france",
         name: "France",
         description: "Neighborhood cafés, coastal escapes, and cities worth exploring slowly.",
@@ -22,7 +24,7 @@ export const discoverDestinations: readonly DiscoverDestination[] = [
         layout: "md:col-start-1 md:col-span-2 md:row-start-1 md:row-span-3"
     },
     {
-        countryCode: "ES",
+        countryCode: "ESP",
         slug: "spain",
         name: "Spain",
         description: "Long lunches, sunlit streets, and evenings that stretch a little longer.",
@@ -31,7 +33,7 @@ export const discoverDestinations: readonly DiscoverDestination[] = [
         layout: "md:col-start-3 md:col-span-5 md:row-start-1 md:row-span-2"
     },
     {
-        countryCode: "ID",
+        countryCode: "IDN",
         slug: "indonesia",
         name: "Indonesia",
         description: "Island journeys, lush landscapes, and time beside the sea.",
@@ -40,7 +42,7 @@ export const discoverDestinations: readonly DiscoverDestination[] = [
         layout: "md:col-start-8 md:col-span-2 md:row-start-1 md:row-span-3"
     },
     {
-        countryCode: "KR",
+        countryCode: "KOR",
         slug: "south-korea",
         name: "South Korea",
         description: "Palace courtyards, lively neighborhoods, and flavors worth traveling for.",
@@ -49,7 +51,7 @@ export const discoverDestinations: readonly DiscoverDestination[] = [
         layout: "md:col-start-10 md:col-span-3 md:row-start-1 md:row-span-3"
     },
     {
-        countryCode: "BR",
+        countryCode: "BRA",
         slug: "brazil",
         name: "Brazil",
         description: "Coastal cities, open-air adventures, and a rhythm all its own.",
@@ -58,7 +60,7 @@ export const discoverDestinations: readonly DiscoverDestination[] = [
         layout: "md:col-start-1 md:col-span-2 md:row-start-4 md:row-span-3"
     },
     {
-        countryCode: "JP",
+        countryCode: "JPN",
         slug: "japan",
         name: "Japan",
         description: "Quiet temple paths, vibrant cities, and small discoveries around every corner.",
@@ -67,7 +69,7 @@ export const discoverDestinations: readonly DiscoverDestination[] = [
         layout: "md:col-start-3 md:col-span-2 md:row-start-3 md:row-span-3"
     },
     {
-        countryCode: "MA",
+        countryCode: "MAR",
         slug: "morocco",
         name: "Morocco",
         description: "Winding medina streets, mountain journeys, and warm rooftop evenings.",
@@ -76,7 +78,7 @@ export const discoverDestinations: readonly DiscoverDestination[] = [
         layout: "md:col-start-5 md:col-span-3 md:row-start-3 md:row-span-3"
     },
     {
-        countryCode: "TH",
+        countryCode: "THA",
         slug: "thailand",
         name: "Thailand",
         description: "Temple visits, street-food stops, and island days with nowhere to rush.",
@@ -89,9 +91,9 @@ export const discoverDestinations: readonly DiscoverDestination[] = [
 if (
     new Set(discoverDestinations.map((destination) => destination.slug)).size !== discoverDestinations.length ||
     new Set(discoverDestinations.map((destination) => destination.countryCode)).size !== discoverDestinations.length ||
-    discoverDestinations.some((destination) => !/^[A-Z]{2}$/.test(destination.countryCode))
+    discoverDestinations.some((destination) => findCountry(destination.countryCode)?.code !== destination.countryCode)
 ) {
-    throw new Error("Destinations must have unique slugs and two-letter country codes.");
+    throw new Error("Destinations must have unique slugs and valid three-letter country codes.");
 }
 
 export function getDiscoverDestination(slug: string) {

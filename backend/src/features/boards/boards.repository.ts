@@ -464,6 +464,29 @@ async function readBoardDocument(
 
 export function createBoardsRepository(): BoardRepository {
     return {
+        async listAccessible(userId, page, limit) {
+            const result = await getPool().query<BoardRow>(
+                `SELECT b.* FROM board b WHERE b.owner_user_id=$1 OR (b.status='published' AND (
+                   b.visibility='public' OR EXISTS (SELECT 1 FROM board_member bm WHERE bm.board_id=b.board_id AND bm.user_id=$1)
+                   OR (b.visibility='friends' AND EXISTS (SELECT 1 FROM friendship f WHERE f.status='accepted' AND
+                     ((f.requester_user_id=b.owner_user_id AND f.recipient_user_id=$1) OR
+                      (f.recipient_user_id=b.owner_user_id AND f.requester_user_id=$1))))))
+                 ORDER BY b.updated_at DESC, b.board_id DESC LIMIT $2 OFFSET $3`,
+                [userId, limit + 1, (page - 1) * limit]
+            );
+            return {
+                items: result.rows.slice(0, limit).map((row) => ({
+                    boardId: row.board_id,
+                    ownerId: row.owner_user_id,
+                    title: row.title,
+                    status: row.status,
+                    visibility: row.visibility,
+                    updatedAt: row.updated_at.toISOString(),
+                    coverImageUrl: row.cover_image_id === null ? null : imagePath(row.cover_image_id, "thumbnail")
+                })),
+                hasMore: result.rows.length > limit
+            };
+        },
         async listTags() {
             const result = await getPool().query<{ tag_id: number; tag_name: string }>(
                 "SELECT tag_id, tag_name FROM tag ORDER BY tag_name"
@@ -578,9 +601,16 @@ export function createBoardsRepository(): BoardRepository {
                 let savedId = boardId;
                 if (savedId === null) {
                     const result = await client.query<{ board_id: number }>(
-                        `INSERT INTO board (owner_user_id, title, description, visibility, status)
-                         VALUES ($1, $2, $3, $4, $5) RETURNING board_id`,
-                        [userId, input.title, input.description, input.visibility, input.status]
+                        `INSERT INTO board (owner_user_id, title, description, visibility, status, is_completed)
+                         VALUES ($1, $2, $3, $4, $5, $6) RETURNING board_id`,
+                        [
+                            userId,
+                            input.title,
+                            input.description,
+                            input.visibility,
+                            input.status,
+                            input.isCompleted ?? false
+                        ]
                     );
                     savedId = result.rows[0]!.board_id;
                 } else {
@@ -606,13 +636,24 @@ export function createBoardsRepository(): BoardRepository {
                     if (row.status === "published" && input.status !== "published") {
                         throw new AppError(400, "A published Board cannot become a draft", "INVALID_REQUEST");
                     }
-                    if (!owner && input.visibility !== row.visibility) {
-                        throw new AppError(403, "Only the owner can change visibility", "FORBIDDEN");
+                    if (
+                        !owner &&
+                        (input.visibility !== row.visibility ||
+                            (input.isCompleted !== undefined && input.isCompleted !== row.is_completed))
+                    ) {
+                        throw new AppError(403, "Only the owner can change visibility or completion", "FORBIDDEN");
                     }
                     await client.query(
                         `UPDATE board SET title=$1, description=$2, visibility=$3, status=$4,
-                         revision=revision+1, updated_at=NOW(), cover_image_id=NULL WHERE board_id=$5`,
-                        [input.title, input.description, input.visibility, input.status, savedId]
+                         revision=revision+1, updated_at=NOW(), cover_image_id=NULL, is_completed=COALESCE($6, is_completed) WHERE board_id=$5`,
+                        [
+                            input.title,
+                            input.description,
+                            input.visibility,
+                            input.status,
+                            savedId,
+                            input.isCompleted ?? null
+                        ]
                     );
                 }
                 await writeChildren(client, savedId, userId, input);

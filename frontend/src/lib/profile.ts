@@ -1,3 +1,5 @@
+import { saveBoardDocument } from "@/lib/board-creator-api";
+
 export type UserProfile = {
     id: string;
     username: string;
@@ -5,7 +7,7 @@ export type UserProfile = {
     description: string;
     location: string | null;
     interests: string[];
-    profilePicture: { url: string; storageKey: string | null } | null;
+    profilePicture: { imageId: number; url: string; storageKey: string | null } | null;
     settings: Record<string, unknown>;
     createdAt: string;
     updatedAt: string;
@@ -24,7 +26,7 @@ export type ProfileBoard = {
     ownerId: string;
     title: string;
     description: string;
-    visibility: "private" | "friends" | "public";
+    visibility: "collaborators" | "friends" | "public";
     isCompleted: boolean;
     destinations: MapDestination[];
     createdAt: string;
@@ -37,18 +39,19 @@ export type MapDestination = {
     boardId?: string;
     boardTitle?: string;
     country: string;
-    countryCode: string;
+    countryCode: string | null;
     city: string | null;
     latitude: number | null;
     longitude: number | null;
     isCompleted?: boolean;
 };
 
-const apiOrigin = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001";
+const apiOrigin = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
     const response = await fetch(`${apiOrigin}${path}`, {
         ...init,
+        credentials: "include",
         headers: init?.body ? { "content-type": "application/json", ...init.headers } : init?.headers
     });
     if (response.status === 204) return undefined as T;
@@ -63,7 +66,7 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export function loadProfile() {
-    return apiRequest<UserProfile>("/api/v1/users/me");
+    return apiRequest<UserProfile>("/api/v1/users/me").then(resolveProfilePicture);
 }
 
 export function updateProfile(changes: Pick<UserProfile, "displayName" | "description" | "location" | "interests">) {
@@ -73,10 +76,10 @@ export function updateProfile(changes: Pick<UserProfile, "displayName" | "descri
     });
 }
 
-export function setProfilePicture(url: string) {
+export function setProfilePicture(imageId: number) {
     return apiRequest<UserProfile>("/api/v1/users/me/profile-picture", {
         method: "PUT",
-        body: JSON.stringify({ url })
+        body: JSON.stringify({ imageId })
     });
 }
 
@@ -113,8 +116,53 @@ export function createBoard(input: {
         longitude: number;
     }>;
 }) {
-    return apiRequest<ProfileBoard>("/api/v1/users/me/boards", {
-        method: "POST",
-        body: JSON.stringify(input)
+    return saveBoardDocument({
+        status: "published",
+        title: input.title,
+        description: null,
+        visibility: "collaborators",
+        isCompleted: input.isCompleted,
+        tagIds: [],
+        imageIds: [],
+        coverImageId: null,
+        days: [
+            {
+                dayNumber: 1,
+                date: null,
+                activities: input.destinations.map((place, position) => ({
+                    position,
+                    title: place.city,
+                    activityTime: null,
+                    category: "city",
+                    note: null,
+                    source: "geoapify",
+                    locationConfirmed: true,
+                    location: {
+                        name: place.city,
+                        latitude: place.latitude,
+                        longitude: place.longitude,
+                        address: null,
+                        city: place.city,
+                        country: place.country,
+                        externalPlaceId: null
+                    },
+                    uploadedImageIds: [],
+                    coverImageId: null,
+                    externalImage: null
+                }))
+            }
+        ]
     });
+}
+
+function resolveProfilePicture(profile: UserProfile): UserProfile {
+    return {
+        ...profile,
+        profilePicture: profile.profilePicture
+            ? {
+                  ...profile.profilePicture,
+                  url: new URL(profile.profilePicture.url, apiOrigin).toString()
+              }
+            : null
+    };
 }

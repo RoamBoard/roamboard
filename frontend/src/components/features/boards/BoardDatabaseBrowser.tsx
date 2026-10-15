@@ -53,7 +53,7 @@ function BoardRecord({
         setLoading(true);
         setError("");
         try {
-            setRecord(await loadSavedBoard(summary.id));
+            setRecord(await loadSavedBoard(summary.boardId));
         } catch (caught) {
             setError(messageFrom(caught));
         } finally {
@@ -77,7 +77,7 @@ function BoardRecord({
                     <span>{summary.ownerId === ownerId ? "Your board" : "Shared board"}</span>
                 </span>
                 <span className="text-10 text-stone mt-2 block break-all">
-                    {summary.id} · Updated {summary.updatedAt}
+                    {summary.boardId} · Updated {summary.updatedAt}
                 </span>
             </summary>
             <div className="border-line border-t p-5">
@@ -99,7 +99,7 @@ function BoardRecord({
                         <dl className="text-12 grid gap-3 sm:grid-cols-2">
                             <div>
                                 <dt className="font-bold">Owner ID</dt>
-                                <dd className="text-graphite break-all">{record.ownerId}</dd>
+                                <dd className="text-graphite break-all">{summary.ownerId}</dd>
                             </div>
                             <div>
                                 <dt className="font-bold">Created</dt>
@@ -108,59 +108,44 @@ function BoardRecord({
                         </dl>
                         <p className="text-14 whitespace-pre-wrap">{record.description || "No description saved."}</p>
                         <div className="grid gap-5 sm:grid-cols-3">
-                            <Labels label="Tags" values={record.tags} />
-                            <Labels label="Vibes" values={record.vibes} />
-                            <Labels label="Highlights" values={record.highlights} />
-                        </div>
-                        <div>
-                            <h3 className="font-display text-20 font-bold">
-                                Destinations ({record.destinations?.length ?? 0})
-                            </h3>
-                            <ul className="text-13 mt-2 grid gap-2">
-                                {record.destinations?.map((place) => (
-                                    <li key={place.id}>
-                                        {[place.city, place.country].filter(Boolean).join(", ")}{" "}
-                                        <span className="text-graphite">
-                                            ({place.countryCode}) · {place.latitude ?? "—"}, {place.longitude ?? "—"}
-                                        </span>
-                                    </li>
-                                ))}
-                            </ul>
+                            <Labels label="Tags" values={record.tags.map((tag) => tag.name)} />
                         </div>
                         <div>
                             <h3 className="font-display text-20 font-bold">
                                 Days ({record.days?.length ?? 0}) · Pins (
-                                {record.days?.reduce((count, day) => count + day.pins.length, 0) ?? 0})
+                                {record.days?.reduce((count, day) => count + day.activities.length, 0) ?? 0})
                             </h3>
                             {record.days?.length ? (
                                 record.days.map((day) => (
-                                    <section key={day.id} className="border-line mt-4 border p-4">
+                                    <section key={day.dayId} className="border-line mt-4 border p-4">
                                         <h4 className="text-14 font-bold">
                                             Day {day.dayNumber} · {day.date ?? "Date open"}
                                         </h4>
-                                        <p className="text-10 text-stone mt-1 break-all">{day.id}</p>
+                                        <p className="text-10 text-stone mt-1 break-all">{day.dayId}</p>
                                         <ul className="mt-3 grid gap-3">
-                                            {day.pins.map((pin) => (
-                                                <li key={pin.id} className="border-line text-13 border-t pt-3">
+                                            {day.activities.map((pin) => (
+                                                <li key={pin.activityId} className="border-line text-13 border-t pt-3">
                                                     <strong>
-                                                        {pin.time} · {pin.title}
+                                                        {pin.activityTime} · {pin.title}
                                                     </strong>
                                                     <span className="text-10 text-graphite ml-2 uppercase">
                                                         {pin.category} · {pin.source}
                                                     </span>
-                                                    <p className="text-10 text-stone mt-1 break-all">{pin.id}</p>
+                                                    <p className="text-10 text-stone mt-1 break-all">
+                                                        {pin.activityId}
+                                                    </p>
                                                     <p className="text-graphite mt-1">
                                                         {pin.location
                                                             ? `${pin.location.address} · ${pin.location.latitude}, ${pin.location.longitude}`
                                                             : "No saved location; this pin has no map marker."}
                                                     </p>
-                                                    {pin.description ? (
-                                                        <p className="mt-2 whitespace-pre-wrap">{pin.description}</p>
+                                                    {pin.note ? (
+                                                        <p className="mt-2 whitespace-pre-wrap">{pin.note}</p>
                                                     ) : null}
                                                 </li>
                                             ))}
                                         </ul>
-                                        {day.pins.length === 0 ? (
+                                        {day.activities.length === 0 ? (
                                             <p className="text-12 text-graphite mt-3">No pins saved.</p>
                                         ) : null}
                                     </section>
@@ -173,43 +158,30 @@ function BoardRecord({
                             <h3 className="font-display text-20 font-bold">Images ({record.images?.length ?? 0})</h3>
                             <div className="mt-3 grid gap-4 sm:grid-cols-2">
                                 {record.images?.map((image) => (
-                                    <figure key={image.id} className="border-line min-w-0 border p-3">
+                                    <figure key={image.imageId} className="border-line min-w-0 border p-3">
                                         <img
-                                            src={image.thumbnailUrl}
+                                            src={new URL(
+                                                image.thumbnailUrl,
+                                                process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"
+                                            ).toString()}
                                             alt={`Saved image for ${record.title}`}
                                             loading="lazy"
                                             className="aspect-video w-full object-cover"
                                         />
                                         <figcaption className="text-12 mt-3 grid gap-1 break-all">
-                                            <span>
-                                                {image.source} · {image.width} × {image.height}
-                                            </span>
-                                            <span>Image ID: {image.id}</span>
-                                            <span>Provider ID: {image.publicId}</span>
-                                            <span>Pin ID: {image.pinId ?? "Unassigned"}</span>
-                                            <a href={image.url} target="_blank" rel="noreferrer" className="underline">
+                                            <span>Image ID: {image.imageId}</span>
+                                            <span>Captured: {image.capturedAt ?? "Unknown"}</span>
+                                            <a
+                                                href={new URL(
+                                                    image.url,
+                                                    process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"
+                                                ).toString()}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="underline"
+                                            >
                                                 Open image
                                             </a>
-                                            {image.credit && image.creditUrl ? (
-                                                <a
-                                                    href={image.creditUrl}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="underline"
-                                                >
-                                                    Photo by {image.credit}
-                                                </a>
-                                            ) : null}
-                                            {image.sourceUrl ? (
-                                                <a
-                                                    href={image.sourceUrl}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="underline"
-                                                >
-                                                    Photo source
-                                                </a>
-                                            ) : null}
                                         </figcaption>
                                     </figure>
                                 ))}
@@ -224,7 +196,14 @@ function BoardRecord({
                     </div>
                 ) : null}
                 <div className="mt-6 flex flex-wrap items-center gap-4">
-                    <Link href={`/boards/${summary.id}`} className="text-13 underline">
+                    <Link
+                        href={
+                            summary.status === "draft"
+                                ? `/boards/drafts/${summary.boardId}`
+                                : `/boards/${summary.boardId}`
+                        }
+                        className="text-13 underline"
+                    >
                         Open board
                     </Link>
                     {summary.ownerId === ownerId ? (
@@ -241,8 +220,8 @@ function BoardRecord({
                 {confirming ? (
                     <div className="border-line mt-4 border p-4">
                         <p className="text-13">
-                            Permanently delete “{summary.title}” and its saved days, pins, highlights and image
-                            references? Cloudinary assets are retained.
+                            Permanently delete “{summary.title}” and its saved days, activities and image references?
+                            Unreferenced uploads enter the 24-hour cleanup window.
                         </p>
                         <div className="mt-3 flex gap-3">
                             <button
@@ -312,7 +291,10 @@ export default function BoardDatabaseBrowser() {
             setBoards((current) =>
                 nextPage === 1
                     ? result.data
-                    : [...current, ...result.data.filter((board) => !current.some((item) => item.id === board.id))]
+                    : [
+                          ...current,
+                          ...result.data.filter((board) => !current.some((item) => item.boardId === board.boardId))
+                      ]
             );
             if (nextPage === 1) setGeneration((current) => current + 1);
             setOwnerId(profile.id);
@@ -330,8 +312,8 @@ export default function BoardDatabaseBrowser() {
         setError("");
         setNotice("");
         try {
-            await deleteBoard(board.id);
-            setBoards((current) => current.filter((item) => item.id !== board.id));
+            await deleteBoard(board.boardId);
+            setBoards((current) => current.filter((item) => item.boardId !== board.boardId));
             setNotice(`“${board.title}” was deleted.`);
             await refresh();
         } catch (caught) {
@@ -348,9 +330,8 @@ export default function BoardDatabaseBrowser() {
                 Saved boards
             </h1>
             <p className="text-14 text-graphite mt-4 max-w-3xl leading-6">
-                Browse database-backed boards, including your drafts and published boards shared with you. Expand a
-                board to inspect its saved records. This page uses the current prototype identity; private boards
-                belonging to other users are available through the local database viewer.
+                Browse your drafts and published Boards you can access through your signed-in account. Expand a Board to
+                inspect its saved records.
             </p>
             <div className="text-13 mt-5 flex flex-wrap gap-4">
                 <Link href="/boards/new" className="underline">
@@ -361,9 +342,8 @@ export default function BoardDatabaseBrowser() {
                 </a>
             </div>
             <p className="text-12 text-graphite mt-4">
-                PostgreSQL stores boards, tags, vibes and highlights; board_days, board_pins and board_images store
-                their related records. Elasticsearch indexes public published boards. Docker data volumes preserve saved
-                records across restarts.
+                PostgreSQL stores Boards, days, activities, tags and image references. The backend enforces access on
+                every request.
             </p>
             <div className="mt-8 flex items-center justify-between gap-4">
                 <p className="text-13">
@@ -398,13 +378,13 @@ export default function BoardDatabaseBrowser() {
             ) : null}
             {!loading && !error && boards.length === 0 ? (
                 <p className="border-line text-14 text-graphite mt-6 border p-6">
-                    No saved boards are available for this identity.
+                    No saved Boards are available for your account.
                 </p>
             ) : null}
             <div className="mt-5 grid gap-3" aria-busy={loading || deleting}>
                 {boards.map((board) => (
                     <BoardRecord
-                        key={`${board.id}-${generation}`}
+                        key={`${board.boardId}-${generation}`}
                         summary={board}
                         ownerId={ownerId}
                         busy={deleting || loading}

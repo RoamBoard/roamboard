@@ -1,0 +1,3 @@
+# Match the root .prettierrc: normalize text files and check them out with LF.
+# Auto detection leaves binary files unchanged.
+* text=auto eol=lf

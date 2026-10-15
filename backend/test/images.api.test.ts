@@ -131,6 +131,9 @@ function setup() {
         }
     };
     const boardRepository: BoardRepository = {
+        async listAccessible() {
+            return { items: [], hasMore: false };
+        },
         async listTags() {
             return [];
         },

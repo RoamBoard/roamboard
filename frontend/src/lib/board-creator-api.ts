@@ -1,4 +1,5 @@
 import type { BoardCreatorPayload, BoardDayDraft, BoardImageDraft, BoardPinDraft } from "@/types/board-creator";
+import { findCountry } from "@/lib/countries";
 
 const apiOrigin = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
@@ -37,6 +38,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 
 export type BoardWriteRequest = {
+    isCompleted?: boolean;
     status: "draft" | "published";
     title: string;
     description: string | null;
@@ -260,7 +262,7 @@ export function fromBoardDocument(board: BoardDocument): {
                           longitude: activity.location.longitude,
                           city: activity.location.city,
                           country: activity.location.country,
-                          countryCode: null,
+                          countryCode: findCountry(activity.location.country ?? "")?.code ?? null,
                           mapboxId: activity.location.externalPlaceId
                       }
                     : null

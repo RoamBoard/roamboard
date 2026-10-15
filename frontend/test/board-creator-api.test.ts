@@ -63,7 +63,7 @@ const draft: BoardCreatorPayload = {
                         latitude: 35.68,
                         longitude: 139.76,
                         country: "Japan",
-                        countryCode: "JP",
+                        countryCode: "JPN",
                         city: "Tokyo",
                         mapboxId: null
                     }

@@ -33,7 +33,7 @@ function countryFilter(countryCodes: string[]): mapboxgl.FilterSpecification {
         "all",
         ["==", ["get", "disputed"], "false"],
         ["any", ["==", ["get", "worldview"], "all"], ["in", "US", ["get", "worldview"]]],
-        ["in", ["get", "iso_3166_1"], ["literal", countryCodes]]
+        ["in", ["get", "iso_3166_1_alpha_3"], ["literal", countryCodes]]
     ];
 }
 
@@ -92,7 +92,7 @@ export default function VisitedWorldMap({ destinations }: { destinations: MapDes
             unique(
                 destinations
                     .filter((destination) => destination.isCompleted)
-                    .map((destination) => destination.countryCode)
+                    .flatMap((destination) => (destination.countryCode ? [destination.countryCode] : []))
             ),
         [destinations]
     );
@@ -102,9 +102,9 @@ export default function VisitedWorldMap({ destinations }: { destinations: MapDes
                 destinations
                     .filter(
                         (destination) =>
-                            !destination.isCompleted && !visitedCountryCodes.includes(destination.countryCode)
+                            !destination.isCompleted && !visitedCountryCodes.includes(destination.countryCode ?? "")
                     )
-                    .map((destination) => destination.countryCode)
+                    .flatMap((destination) => (destination.countryCode ? [destination.countryCode] : []))
             ),
         [destinations, visitedCountryCodes]
     );

@@ -1,9 +1,11 @@
 import { Readable } from "node:stream";
 
 import { v2 as cloudinary } from "cloudinary";
+import { observeCloudinary } from "../quotas/quota.feedback.js";
 
 import { AppError } from "../../shared/app-error.js";
 import type { ImageProvider, ProviderAsset } from "./images.types.js";
+import type { QuotaService } from "../quotas/quota.service.js";
 
 const variants = {
     display: { width: 1600, height: 1600, crop: "limit", quality: "auto", fetch_format: "jpg" },
@@ -81,7 +83,7 @@ function parseAsset(raw: Record<string, unknown>): ProviderAsset | null {
     };
 }
 
-export function createCloudinaryProvider(): ImageProvider {
+export function createCloudinaryProvider(quota?: QuotaService): ImageProvider {
     return {
         authorizeUpload(storageKey) {
             const { cloudName, apiKey, apiSecret } = config();
@@ -108,11 +110,15 @@ export function createCloudinaryProvider(): ImageProvider {
         async inspect(storageKey) {
             config();
             try {
-                const raw = (await cloudinary.api.resource(storageKey, {
-                    resource_type: "image",
-                    type: "authenticated",
-                    image_metadata: true
-                })) as Record<string, unknown>;
+                const inspect = () =>
+                    cloudinary.api.resource(storageKey, {
+                        resource_type: "image",
+                        type: "authenticated",
+                        image_metadata: true
+                    });
+                const raw = (await (quota
+                    ? quota.run("cloudinary.admin", (observe) => observeCloudinary(inspect, observe))
+                    : inspect())) as Record<string, unknown>;
                 return parseAsset(raw);
             } catch (error) {
                 if (typeof error === "object" && error !== null && "http_code" in error && error.http_code === 404)

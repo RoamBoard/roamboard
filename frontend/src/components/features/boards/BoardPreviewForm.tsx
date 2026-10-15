@@ -1,5 +1,7 @@
 "use client";
 
+import { findCountry } from "@/lib/countries";
+
 import { useState } from "react";
 import type { FormEvent } from "react";
 import type { Board } from "@/types/board";
@@ -46,12 +48,12 @@ export default function BoardPreviewForm() {
         }
 
         if ((country || countryCode || cities.length > 0) && (!country || !countryCode)) {
-            setError("To add a destination, enter both its country and two-letter country code.");
+            setError("To add a destination, enter both its country and three-letter country code.");
             return;
         }
 
-        if (countryCode && !/^[A-Z]{2}$/.test(countryCode)) {
-            setError("Use a two-letter country code, such as SE for Sweden.");
+        if (countryCode && findCountry(countryCode)?.code !== countryCode) {
+            setError("Use a three-letter country code, such as SWE for Sweden.");
             return;
         }
 
@@ -132,7 +134,7 @@ export default function BoardPreviewForm() {
                             className={inputClasses}
                         />
                         <p id="country-code-help" className="text-14 mt-2">
-                            Two letters, for example SE for Sweden.
+                            Three letters, for example SE for Sweden.
                         </p>
                     </div>
                     <div>

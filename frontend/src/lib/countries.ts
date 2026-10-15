@@ -1,27 +1,31 @@
+import countryCodePairs from "../../../shared/country-codes.json";
+
 export type Country = {
     code: string;
     name: string;
 };
 
-const countryCodes =
-    `AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW`.split(
-        " "
-    );
-
+const alpha2ToAlpha3: Record<string, string> = countryCodePairs;
+const alpha3Codes = new Set(Object.values(alpha2ToAlpha3));
 const displayNames = new Intl.DisplayNames(["en"], { type: "region" });
 
-export const countries: Country[] = countryCodes
-    .map((code) => ({ code, name: displayNames.of(code) ?? code }))
+export const countries: Country[] = Object.entries(alpha2ToAlpha3)
+    .map(([alpha2, code]) => ({ code, name: displayNames.of(alpha2) ?? code }))
     .sort((left, right) => left.name.localeCompare(right.name));
 
+export function toCountryCode(value: string): string | null {
+    const code = value.trim().toUpperCase();
+    return alpha2ToAlpha3[code] ?? (alpha3Codes.has(code) ? code : null);
+}
+
 const aliases = new Map<string, string>([
-    ["america", "US"],
-    ["britain", "GB"],
-    ["england", "GB"],
-    ["great britain", "GB"],
-    ["uk", "GB"],
-    ["united states of america", "US"],
-    ["usa", "US"]
+    ["america", "USA"],
+    ["britain", "GBR"],
+    ["england", "GBR"],
+    ["great britain", "GBR"],
+    ["uk", "GBR"],
+    ["united states of america", "USA"],
+    ["usa", "USA"]
 ]);
 
 function normalize(value: string): string {
@@ -53,7 +57,7 @@ function editDistance(left: string, right: string): number {
 
 export function findCountry(value: string): Country | undefined {
     const query = normalize(value);
-    const aliasCode = aliases.get(query);
+    const aliasCode = toCountryCode(aliases.get(query) ?? value);
     return countries.find(
         (country) =>
             normalize(country.name) === query || country.code.toLowerCase() === query || country.code === aliasCode
@@ -67,7 +71,9 @@ export function suggestCountries(value: string, limit = 6): Country[] {
     return countries
         .map((country) => {
             const name = normalize(country.name);
-            const aliasMatches = [...aliases].some(([alias, code]) => code === country.code && alias.startsWith(query));
+            const aliasMatches = [...aliases].some(
+                ([alias, code]) => toCountryCode(code) === country.code && alias.startsWith(query)
+            );
             const distance = editDistance(query, name);
             const score =
                 name === query || country.code.toLowerCase() === query

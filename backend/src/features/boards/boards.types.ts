@@ -39,6 +39,11 @@ export interface DraftSummary {
 
 export type PublishedSummary = Omit<DraftSummary, "status"> & { status: "published" };
 
+export type AccessibleSummary = Omit<DraftSummary, "status"> & {
+    status: "draft" | "published";
+    ownerId: string;
+};
+
 export function canReadBoard(access: BoardAccess, userId: string | null): boolean {
     if (access.ownerUserId === userId) return true;
     if (access.status === "draft") return false;
@@ -48,6 +53,11 @@ export function canReadBoard(access: BoardAccess, userId: string | null): boolea
 }
 
 export interface BoardRepository {
+    listAccessible(
+        userId: string,
+        page: number,
+        limit: number
+    ): Promise<{ items: AccessibleSummary[]; hasMore: boolean }>;
     listTags(): Promise<Array<{ tagId: number; name: string }>>;
     listCategories(): Promise<string[]>;
     getAccess(boardId: number, userId: string | null): Promise<BoardAccess | null>;
@@ -68,6 +78,11 @@ export interface BoardRepository {
 }
 
 export interface BoardsService {
+    listAccessible(
+        userId: string,
+        page: number,
+        limit: number
+    ): Promise<{ items: AccessibleSummary[]; hasMore: boolean }>;
     listTags(): Promise<Array<{ tagId: number; name: string }>>;
     listCategories(): Promise<string[]>;
     create(userId: string, input: BoardWrite): Promise<BoardDocument>;

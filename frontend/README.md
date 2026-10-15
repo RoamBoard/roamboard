@@ -26,6 +26,15 @@ on API requests. See `../backend/README.md` for the API and migration setup.
 Before submitting frontend changes, run `pnpm lint`, `pnpm exec tsc --noEmit`,
 and `pnpm build`.
 
+The existing `/dev/providers`, Home destination search, `/dev/profile`,
+`/dev/boards` and Board creator use the new backend and the same
+`NEXT_PUBLIC_API_URL` with session cookies. Start the backend with `npm run dev`
+and sign in before using developer management tools. Apply backend migration 004
+through the team workflow and configure provider keys; see
+[the API feature contract](../backend/API_FEATURES_CONTRACT.md). Provider lab
+uploads remain separate from persisted Board uploads. Profile pictures accept
+an owned uploaded image ID from the normal upload flow.
+
 ## Learn more
 
 - [Next.js documentation](https://nextjs.org/docs) covers App Router features and APIs.

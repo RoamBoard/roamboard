@@ -39,7 +39,7 @@ const activities: BoardActivity[] = [
             source: "manual",
             name: "Shibuya",
             city: "Tokyo",
-            countryCode: "JP",
+            countryCode: "JPN",
             latitude: 35.658,
             longitude: 139.702
         },
@@ -58,7 +58,7 @@ const activities: BoardActivity[] = [
             source: "manual",
             name: "Chatei Hatou",
             city: "Tokyo",
-            countryCode: "JP",
+            countryCode: "JPN",
             latitude: 35.6601,
             longitude: 139.7018
         },
@@ -77,7 +77,7 @@ const activities: BoardActivity[] = [
             source: "manual",
             name: "Daikanyama",
             city: "Tokyo",
-            countryCode: "JP",
+            countryCode: "JPN",
             latitude: 35.6484,
             longitude: 139.7032
         },
@@ -96,7 +96,7 @@ const activities: BoardActivity[] = [
             source: "manual",
             name: "Ebisu",
             city: "Tokyo",
-            countryCode: "JP",
+            countryCode: "JPN",
             latitude: 35.6474,
             longitude: 139.7101
         },
@@ -125,7 +125,7 @@ const activities: BoardActivity[] = [
             source: "manual",
             name: "Senso-ji, Asakusa",
             city: "Tokyo",
-            countryCode: "JP",
+            countryCode: "JPN",
             latitude: 35.7148,
             longitude: 139.7967
         },
@@ -144,7 +144,7 @@ const activities: BoardActivity[] = [
             source: "manual",
             name: "Kappabashi",
             city: "Tokyo",
-            countryCode: "JP",
+            countryCode: "JPN",
             latitude: 35.7124,
             longitude: 139.7882
         },
@@ -163,7 +163,7 @@ const activities: BoardActivity[] = [
             source: "manual",
             name: "Ameyoko, Ueno",
             city: "Tokyo",
-            countryCode: "JP",
+            countryCode: "JPN",
             latitude: 35.7099,
             longitude: 139.7745
         },
@@ -182,7 +182,7 @@ const activities: BoardActivity[] = [
             source: "manual",
             name: "Akihabara",
             city: "Tokyo",
-            countryCode: "JP",
+            countryCode: "JPN",
             latitude: 35.6984,
             longitude: 139.773
         },
@@ -202,7 +202,7 @@ export const mockPublishedBoard: PublishedBoardData = {
         isCompleted: false,
         // The viewer shows up to three tags from this list.
         tags: ["Nature", "Romantic", "Hidden Gems"],
-        destinations: [{ country: "Japan", countryCode: "JP", cities: ["Tokyo"] }],
+        destinations: [{ country: "Japan", countryCode: "JPN", cities: ["Tokyo"] }],
         durationDays: 2,
         // Custom headings are matched to day numbers, starting at 1.
         dayTitles: {

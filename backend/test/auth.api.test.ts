@@ -9,6 +9,22 @@ import { AppError } from "../src/shared/app-error.js";
 
 const origin = "http://localhost:3000";
 
+test("Google sign-in returns a configuration error when its backend client ID is missing", async () => {
+    const previous = process.env.GOOGLE_CLIENT_ID;
+    delete process.env.GOOGLE_CLIENT_ID;
+    try {
+        const response = await request(createApp({ repository: fakeDependencies().repository }))
+            .post("/api/v1/auth/google")
+            .set("Origin", origin)
+            .send({ credential: "credential-must-not-be-verified-without-an-audience" });
+        assert.equal(response.status, 503);
+        assert.equal(response.body.error.code, "GOOGLE_AUTH_UNAVAILABLE");
+    } finally {
+        if (previous === undefined) delete process.env.GOOGLE_CLIENT_ID;
+        else process.env.GOOGLE_CLIENT_ID = previous;
+    }
+});
+
 function fakeDependencies(): {
     repository: AuthRepository;
     googleVerifier: GoogleVerifier;

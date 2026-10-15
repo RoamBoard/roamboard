@@ -9,7 +9,20 @@ export const errorHandler: ErrorRequestHandler = (error: unknown, _request, resp
     }
 
     if (error instanceof AppError) {
+        if (error.retryAt)
+            response.set("Retry-After", String(Math.max(1, Math.ceil((error.retryAt.getTime() - Date.now()) / 1000))));
         response.status(error.statusCode).json({ error: { code: error.code, message: error.message } });
+        return;
+    }
+
+    const type = typeof error === "object" && error !== null && "type" in error ? error.type : null;
+    if (type === "entity.too.large" || type === "entity.parse.failed") {
+        response.status(type === "entity.too.large" ? 413 : 400).json({
+            error: {
+                code: "INVALID_REQUEST",
+                message: type === "entity.too.large" ? "Request is too large" : "Invalid JSON body"
+            }
+        });
         return;
     }
 

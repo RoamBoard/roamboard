@@ -70,6 +70,7 @@ const daySchema = z
 
 const boardFields = {
     status: z.enum(["draft", "published"]),
+    isCompleted: z.boolean().optional(),
     title: z.string().max(500),
     description: optionalText,
     visibility: z.enum(["collaborators", "friends", "public"]),

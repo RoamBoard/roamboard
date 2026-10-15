@@ -53,7 +53,7 @@ export default function ProfilePrototype() {
     const [boards, setBoards] = useState<ProfileBoard[]>([]);
     const [recent, setRecent] = useState<ProfileBoard[]>([]);
     const [destinations, setDestinations] = useState<MapDestination[]>([]);
-    const [status, setStatus] = useState("Loading the seeded database user…");
+    const [status, setStatus] = useState("Loading your profile…");
     const [busy, setBusy] = useState(false);
     const [countryQuery, setCountryQuery] = useState("");
     const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
@@ -177,8 +177,8 @@ export default function ProfilePrototype() {
 
     async function savePicture(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        const url = String(new FormData(event.currentTarget).get("pictureUrl") ?? "");
-        await run(() => setProfilePicture(url), "Profile picture saved.");
+        const imageId = Number(new FormData(event.currentTarget).get("imageId"));
+        await run(() => setProfilePicture(imageId), "Profile picture saved.");
     }
 
     async function addBoard(event: FormEvent<HTMLFormElement>) {
@@ -228,8 +228,8 @@ export default function ProfilePrototype() {
             </p>
             <h1 className="font-display text-48 mt-5 leading-none font-bold">Profile API prototype</h1>
             <p className="text-15 text-graphite mt-5 max-w-3xl leading-7">
-                Changes here target the seeded <strong>@{profile.username}</strong> user. The username is intentionally
-                read-only. With the Docker API running, refreshes and API restarts preserve these changes.
+                Changes here update your signed-in <strong>@{profile.username}</strong> account. The username is
+                read-only. PostgreSQL preserves saved changes across API restarts.
             </p>
             <p className="border-foreground text-14 mt-5 border-l-2 pl-3" role="status">
                 {status}
@@ -273,7 +273,7 @@ export default function ProfilePrototype() {
                         <input name="location" className={inputClass} defaultValue={profile.location ?? ""} />
                     </label>
                     <label className="text-12 text-graphite block">
-                        Interests, separated by commas
+                        Up to three interests from the Board tag list, separated by commas
                         <input name="interests" className={inputClass} defaultValue={profile.interests.join(", ")} />
                     </label>
                     <button
@@ -307,10 +307,11 @@ export default function ProfilePrototype() {
                     )}
                     <form className="mt-6" onSubmit={(event) => void savePicture(event)}>
                         <label className="text-12 text-graphite block">
-                            Image URL
+                            Owned uploaded image ID
                             <input
-                                type="url"
-                                name="pictureUrl"
+                                type="number"
+                                min="1"
+                                name="imageId"
                                 className={inputClass}
                                 required
                                 placeholder="https://…"

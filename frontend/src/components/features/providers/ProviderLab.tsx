@@ -25,7 +25,8 @@ const tabs: Array<{ id: ProviderId; label: string; description: string }> = [
     {
         id: "mapbox",
         label: "Mapbox",
-        description: "Search places, save pinpoint locations, reverse-geocode, and route between stops."
+        description:
+            "Search Mapbox POIs, restaurants and landmarks, preview pinpoints, reverse-geocode, and route between stops."
     },
     {
         id: "unsplash",

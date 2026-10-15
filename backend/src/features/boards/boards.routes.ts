@@ -1,6 +1,7 @@
 import { Router, type RequestHandler } from "express";
 
 import { requireFrontendOrigin } from "../../middleware/require-origin.js";
+import { developmentOnly } from "../../middleware/development-only.js";
 import { requireSessionUser } from "../../middleware/session-user.js";
 import { validateBody, validateParams, validateQuery } from "../../middleware/validate.js";
 import { boardIdParamsSchema, createBoardSchema, boardListQuerySchema, replaceBoardSchema } from "./boards.schemas.js";
@@ -11,6 +12,14 @@ export function createBoardsRouter(
     attachUser: RequestHandler
 ): Router {
     const router = Router();
+    router.get(
+        "/dev/boards",
+        developmentOnly,
+        attachUser,
+        requireSessionUser,
+        validateQuery(boardListQuerySchema.omit({ scope: true })),
+        controller.listAccessible
+    );
     router.get("/tags", controller.listTags);
     router.get("/activity-categories", controller.listCategories);
     router.get("/boards", attachUser, requireSessionUser, validateQuery(boardListQuerySchema), controller.listOwned);
