@@ -14,6 +14,15 @@
     --faint: #e7e7e7; /* porcelain */
     --decorative-line: #bdbdbd; /* stone */
     --board-highlight: #acffd1;
+    --card-title: #363636;
+    --card-description: #777777;
+    --card-author: #565656;
+    --card-subtle: #c9c9c9;
+    --card-watermark: #ebebeb;
+    --card-line: #c9c9c9;
+    --card-rule: #777777;
+    --card-divider: #dddddd;
+    --card-border: #969696;
 }
 
 .dark {
@@ -25,6 +34,15 @@
     --faint: #2a2a2a;
     --decorative-line: #383838;
     --board-highlight: #264f39;
+    --card-title: #e7e7e7;
+    --card-description: #a3a3a3;
+    --card-author: #a3a3a3;
+    --card-subtle: #a3a3a3;
+    --card-watermark: #2a2a2a;
+    --card-line: #383838;
+    --card-rule: #383838;
+    --card-divider: #383838;
+    --card-border: #383838;
 }
 
 /* Roamboard brand tokens (Tailwind v4). */
@@ -42,6 +60,15 @@
     --color-faint: var(--faint);
     --color-decorative-line: var(--decorative-line);
     --color-board-highlight: var(--board-highlight);
+    --color-card-title: var(--card-title);
+    --color-card-description: var(--card-description);
+    --color-card-author: var(--card-author);
+    --color-card-subtle: var(--card-subtle);
+    --color-card-watermark: var(--card-watermark);
+    --color-card-line: var(--card-line);
+    --color-card-rule: var(--card-rule);
+    --color-card-divider: var(--card-divider);
+    --color-card-border: var(--card-border);
 
     /* Colour palette */
     --color-obsidian: #161616;

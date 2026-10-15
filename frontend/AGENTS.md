@@ -146,6 +146,18 @@ For UI changes, inspect the affected flow on desktop and a smaller screen, inclu
 
 The frontend uses `pnpm test` for its Node/TSX integration tests. Documentation-only edits need content and link checks, not application tests.
 
+### Collapsed Board cards
+
+`src/components/features/boards/cards/BoardCard.tsx` selects four independent layouts: `collage`, `compact`,
+`landscape`, and `photo`. Their presentation types live in `src/types/board-card.ts`; they are not backend response
+contracts. Cards use explicit Satoshi/Cabinet Grotesk fonts, local Figma assets, scoped theme tokens, and container
+units to preserve their compositions at different widths. `SocialBoardCard` adapts the profile's existing mock
+model to the shared collage layout.
+
+`/dev/board-cards` renders all twelve Figma fixtures from `src/data/board-card-examples.ts` at their reference sizes
+or fitted to the available width. Its bookmarks only change local gallery state. Reusable cards accept an optional
+navigation URL and controlled bookmark callback; they perform no backend requests or persistence.
+
 ### Published board preview
 
 `/boards/[boardId]` is a public viewer with the sample design at
