@@ -150,11 +150,14 @@ test(
             });
             assert.equal(changed.isCompleted, true);
             const source = createSearchRepository();
+            assert.deepEqual(await source.listPublicIds(), [String(publicBoard.boardId)]);
+            assert.deepEqual(await source.listPublic([]), []);
+            assert.deepEqual(await source.listPublic(["0"]), []);
             assert.deepEqual(
                 (await source.listPublic()).map((document) => document.title),
                 ["New title"]
             );
-            assert.deepEqual((await source.listPublic(publicBoard.boardId))[0]?.categories, ["city"]);
+            assert.deepEqual((await source.listPublic([String(publicBoard.boardId)]))[0]?.categories, ["city"]);
             const references = createPostgresGooglePlaceReferenceRepository();
             await references.save("owner", "place-1");
             assert.deepEqual(await references.list("friend"), []);

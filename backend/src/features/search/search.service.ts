@@ -4,12 +4,9 @@ import { SEARCH_INDEX } from "./search.elasticsearch.js";
 export function createSearchService(repository: SearchRepository, provider: SearchProvider) {
     return {
         async search(input: SearchInput) {
-            const documents = await repository.listPublic();
-            const result = await provider.search(
-                input,
-                documents.map((document) => document.id)
-            );
-            const current = await repository.listPublic();
+            const publicIds = await repository.listPublicIds();
+            const result = await provider.search(input, publicIds);
+            const current = await repository.listPublic([...new Set(result.hits.map((hit) => hit.id))]);
             const byId = new Map(current.map((document) => [document.id, document]));
             return {
                 hits: result.hits.flatMap((hit) => {
@@ -22,13 +19,9 @@ export function createSearchService(repository: SearchRepository, provider: Sear
             };
         },
         async suggestions(query: string, limit: number) {
-            const documents = await repository.listPublic();
-            const ids = await provider.suggestions(
-                query,
-                limit,
-                documents.map((document) => document.id)
-            );
-            const current = await repository.listPublic();
+            const publicIds = await repository.listPublicIds();
+            const ids = await provider.suggestions(query, limit, publicIds);
+            const current = await repository.listPublic([...new Set(ids)]);
             const byId = new Map(current.map((document) => [document.id, document.title]));
             return [
                 ...new Set(
@@ -45,7 +38,7 @@ export function createSearchService(repository: SearchRepository, provider: Sear
             return { indexed: documents.length, index: SEARCH_INDEX };
         },
         async refreshBoard(boardId: number) {
-            const documents = await repository.listPublic(boardId);
+            const documents = await repository.listPublic([String(boardId)]);
             await provider.update(boardId, documents[0] ?? null);
         }
     };

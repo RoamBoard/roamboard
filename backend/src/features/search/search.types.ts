@@ -21,7 +21,8 @@ export interface SearchInput {
     limit: number;
 }
 export interface SearchRepository {
-    listPublic(boardId?: number): Promise<SearchDocument[]>;
+    listPublicIds(): Promise<string[]>;
+    listPublic(boardIds?: string[]): Promise<SearchDocument[]>;
 }
 export interface SearchProvider {
     search(

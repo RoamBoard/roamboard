@@ -320,7 +320,11 @@ test("search and suggestions only return current public database documents", asy
         repository,
         searchProvider: provider,
         searchRepository: {
-            async listPublic() {
+            async listPublicIds() {
+                return [document.id];
+            },
+            async listPublic(ids) {
+                if (ids !== undefined) assert.deepEqual(ids, ["7", "private"]);
                 return [document];
             }
         }

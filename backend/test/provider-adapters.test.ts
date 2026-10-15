@@ -181,7 +181,11 @@ test("search and suggestions discard Boards made private during the upstream req
     };
     const search = createSearchService(
         {
-            async listPublic() {
+            async listPublicIds() {
+                return publicDocuments.map((document) => document.id);
+            },
+            async listPublic(ids) {
+                assert.deepEqual(ids, ["7"]);
                 return publicDocuments;
             }
         },
@@ -286,6 +290,9 @@ test("POI search uses Search Box and its own budget while Home retains city geoc
 test("indexed search rejects standalone place and destination entity filters before accessing data", async () => {
     const app = createApp({
         searchRepository: {
+            async listPublicIds() {
+                throw new Error("Invalid filter must not reach the repository");
+            },
             async listPublic() {
                 throw new Error("Invalid filter must not reach the repository");
             }
