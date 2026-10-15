@@ -37,17 +37,19 @@ function stringValue(value: unknown): string | null {
 }
 
 function coordinateValue(value: unknown, reference: unknown, maximum: number): number | null {
-    if (typeof value === "number") return Number.isFinite(value) && Math.abs(value) <= maximum ? value : null;
-    if (typeof value !== "string") return null;
-
+    if (typeof value !== "number" && typeof value !== "string") return null;
     const direct = Number(value);
-    if (Number.isFinite(direct)) return Math.abs(direct) <= maximum ? direct : null;
-
-    const parts = value.match(/-?\d+(?:\.\d+)?/g)?.map(Number) ?? [];
+    const parts = Number.isFinite(direct)
+        ? [direct]
+        : typeof value === "string"
+          ? (value.match(/-?\d+(?:\.\d+)?/g)?.map(Number) ?? [])
+          : [];
     if (parts.length === 0 || parts.some((part) => !Number.isFinite(part))) return null;
     const absolute = Math.abs(parts[0] ?? 0) + (parts[1] ?? 0) / 60 + (parts[2] ?? 0) / 3600;
     if (absolute > maximum) return null;
-    const direction = stringValue(reference)?.toUpperCase().at(0) ?? value.match(/\b([NSEW])\s*$/i)?.[1]?.toUpperCase();
+    const direction =
+        stringValue(reference)?.toUpperCase().at(0) ??
+        (typeof value === "string" ? value.match(/\b([NSEW])\s*$/i)?.[1]?.toUpperCase() : undefined);
     return direction === "S" || direction === "W" || (parts[0] ?? 0) < 0 ? -absolute : absolute;
 }
 
