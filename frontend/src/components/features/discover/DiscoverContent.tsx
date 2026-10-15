@@ -2,12 +2,13 @@ import DiscoverPhoto from "./DiscoverPhoto";
 import VibeGrid from "./VibeGrid";
 import DiscoverSearch from "./DiscoverSearch";
 import DiscoverMoodMarquees from "./DiscoverMoodMarquees";
+import FeaturedBoards from "./FeaturedBoards";
 import { Marquee } from "@/components/ui/marquee";
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { discoverDestinations, discoverDestinationHref } from "@/data/discover-destinations";
 import { discoverBentoCollections, discoverCollectionHref } from "@/data/discover-collections";
-import { discoverPhotos, journeyColumns, previewBoards } from "@/data/discover-preview";
+import { discoverPhotos, journeyColumns } from "@/data/discover-preview";
 
 const heading = "font-display text-[clamp(1.8rem,3.8vw,4rem)] leading-none font-bold tracking-tight";
 
@@ -100,59 +101,6 @@ export function DiscoverJourney({ mobilePanel }: { mobilePanel?: number } = {}) 
                     </Marquee>
                 ))}
             </div>
-        </section>
-    );
-}
-
-function FeaturedBoards() {
-    return (
-        <section
-            aria-labelledby="featured-title"
-            className="relative mt-24 mb-16 grid gap-6 lg:grid-cols-2 lg:gap-x-12 lg:gap-y-0"
-        >
-            <h2
-                id="featured-title"
-                className="font-display self-center text-[clamp(2.5rem,5.5vw,6rem)] leading-[.95] font-bold tracking-tight lg:col-start-1 lg:row-start-1 lg:text-right"
-            >
-                THIS
-                <br className="hidden lg:block" /> WEEK’S <span className="lg:sr-only">FEATURED BOARDS</span>
-            </h2>
-            {previewBoards.map((board, index) => (
-                <article
-                    key={board.code}
-                    className={`border-line bg-background relative grid min-h-80 grid-cols-[.9fr_1.1fr] overflow-hidden border ${index === 0 ? "lg:col-start-2 lg:row-start-1" : index === 1 ? "lg:col-start-1 lg:row-start-2 lg:-mt-20" : "lg:col-start-2 lg:row-start-2 lg:mt-8"}`}
-                >
-                    <div className="relative min-h-80">
-                        <DiscoverPhoto photo={board.photo} width={700} />
-                    </div>
-                    <div className="relative z-10 px-4 pt-5 pb-20 md:px-6">
-                        <h3 className="font-display text-[clamp(1.5rem,2.9vw,3rem)] leading-[.95] font-bold tracking-tight">
-                            {board.title}
-                        </h3>
-                        <p className="text-12 mt-3">by {board.author}</p>
-                        <p className="text-12 mt-5 leading-relaxed">{board.description}</p>
-                        <ul className="text-12 mt-4 leading-relaxed">
-                            {board.highlights.map((item) => (
-                                <li key={item}>{item}</li>
-                            ))}
-                        </ul>
-                    </div>
-                    <span
-                        aria-hidden="true"
-                        className="text-faint font-display absolute right-3 -bottom-5 text-[clamp(4rem,7vw,8rem)] leading-none font-bold"
-                    >
-                        {board.code}
-                    </span>
-                </article>
-            ))}
-            <p
-                aria-hidden="true"
-                className="font-display hidden self-end text-right text-[clamp(2.5rem,5.5vw,6rem)] leading-[.95] font-bold tracking-tight lg:col-start-1 lg:row-start-2 lg:block"
-            >
-                FEATURED
-                <br />
-                BOARDS
-            </p>
         </section>
     );
 }
