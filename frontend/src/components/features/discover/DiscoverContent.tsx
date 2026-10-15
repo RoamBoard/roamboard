@@ -2,12 +2,15 @@ import DiscoverPhoto from "./DiscoverPhoto";
 import VibeGrid from "./VibeGrid";
 import DiscoverSearch from "./DiscoverSearch";
 import DiscoverMoodMarquees from "./DiscoverMoodMarquees";
+import FeaturedBoards from "./FeaturedBoards";
+import RoamFlow from "./roamflow/RoamFlow";
+import { roamFlowInitialPage } from "@/data/roamflow-boards";
 import { Marquee } from "@/components/ui/marquee";
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { discoverDestinations, discoverDestinationHref } from "@/data/discover-destinations";
 import { discoverBentoCollections, discoverCollectionHref } from "@/data/discover-collections";
-import { discoverPhotos, journeyColumns, previewBoards } from "@/data/discover-preview";
+import { discoverPhotos, journeyColumns } from "@/data/discover-preview";
 
 const heading = "font-display text-[clamp(1.8rem,3.8vw,4rem)] leading-none font-bold tracking-tight";
 
@@ -104,59 +107,6 @@ export function DiscoverJourney({ mobilePanel }: { mobilePanel?: number } = {}) 
     );
 }
 
-function FeaturedBoards() {
-    return (
-        <section
-            aria-labelledby="featured-title"
-            className="relative mt-24 mb-16 grid gap-6 lg:grid-cols-2 lg:gap-x-12 lg:gap-y-0"
-        >
-            <h2
-                id="featured-title"
-                className="font-display self-center text-[clamp(2.5rem,5.5vw,6rem)] leading-[.95] font-bold tracking-tight lg:col-start-1 lg:row-start-1 lg:text-right"
-            >
-                THIS
-                <br className="hidden lg:block" /> WEEK’S <span className="lg:sr-only">FEATURED BOARDS</span>
-            </h2>
-            {previewBoards.map((board, index) => (
-                <article
-                    key={board.code}
-                    className={`border-line bg-background relative grid min-h-80 grid-cols-[.9fr_1.1fr] overflow-hidden border ${index === 0 ? "lg:col-start-2 lg:row-start-1" : index === 1 ? "lg:col-start-1 lg:row-start-2 lg:-mt-20" : "lg:col-start-2 lg:row-start-2 lg:mt-8"}`}
-                >
-                    <div className="relative min-h-80">
-                        <DiscoverPhoto photo={board.photo} width={700} />
-                    </div>
-                    <div className="relative z-10 px-4 pt-5 pb-20 md:px-6">
-                        <h3 className="font-display text-[clamp(1.5rem,2.9vw,3rem)] leading-[.95] font-bold tracking-tight">
-                            {board.title}
-                        </h3>
-                        <p className="text-12 mt-3">by {board.author}</p>
-                        <p className="text-12 mt-5 leading-relaxed">{board.description}</p>
-                        <ul className="text-12 mt-4 leading-relaxed">
-                            {board.highlights.map((item) => (
-                                <li key={item}>{item}</li>
-                            ))}
-                        </ul>
-                    </div>
-                    <span
-                        aria-hidden="true"
-                        className="text-faint font-display absolute right-3 -bottom-5 text-[clamp(4rem,7vw,8rem)] leading-none font-bold"
-                    >
-                        {board.code}
-                    </span>
-                </article>
-            ))}
-            <p
-                aria-hidden="true"
-                className="font-display hidden self-end text-right text-[clamp(2.5rem,5.5vw,6rem)] leading-[.95] font-bold tracking-tight lg:col-start-1 lg:row-start-2 lg:block"
-            >
-                FEATURED
-                <br />
-                BOARDS
-            </p>
-        </section>
-    );
-}
-
 export function DiscoverFeed() {
     return (
         <div className="bg-background w-[var(--panel-width)] shrink-0">
@@ -243,39 +193,7 @@ export function DiscoverFeed() {
             </div>
             <div className="h-32 bg-gradient-to-b from-transparent to-black" />
             <VibeGrid />
-            <section
-                aria-labelledby="roamflow-title"
-                className="overflow-hidden bg-black px-5 pb-12 text-white md:px-10"
-            >
-                <header className="border-t border-white/25 pt-6 text-right">
-                    <p className="text-14">Introducing</p>
-                    <h2 id="roamflow-title" className="font-display text-48 leading-none font-bold">
-                        RoamFlow
-                    </h2>
-                </header>
-                <div className="mt-8 grid grid-cols-2 items-start gap-3 lg:grid-cols-4">
-                    {[0, 1, 2, 3].map((index) => (
-                        <article
-                            key={index}
-                            className={`relative aspect-[4/5] overflow-hidden border border-white/25 ${index % 2 === 0 ? "mt-16" : ""}`}
-                        >
-                            <DiscoverPhoto photo={discoverPhotos.hiddenGems} width={700} />
-                            <div className="absolute inset-0 bg-gradient-to-b from-black via-black/80 to-transparent" />
-                            <div className="relative p-4">
-                                <h3 className="text-[clamp(1rem,2vw,2rem)] leading-none font-bold">
-                                    Postcards
-                                    <br />
-                                    from Porto
-                                </h3>
-                                <p className="text-10 mt-3">by Inês Carvalho</p>
-                            </div>
-                        </article>
-                    ))}
-                </div>
-                <p className="text-12 mt-6 text-white/70">
-                    RoamFlow concept preview · imagery and stories are placeholders.
-                </p>
-            </section>
+            <RoamFlow initialPage={roamFlowInitialPage} />
             <footer className="border-line border-t px-5 py-10 md:px-10">
                 <details className="text-12">
                     <summary className="w-fit cursor-pointer py-2 underline underline-offset-4 focus-visible:outline-2">

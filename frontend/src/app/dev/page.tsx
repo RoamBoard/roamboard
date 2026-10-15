@@ -8,6 +8,11 @@ export const metadata: Metadata = {
 
 const routes = [
     {
+        href: "/dev/board-cards",
+        title: "Board card gallery",
+        description: "All four collapsed Board designs with twelve Figma reference examples."
+    },
+    {
         href: "/",
         title: "Start page",
         description: "Introduction and entry into Roamboard."
