@@ -175,9 +175,7 @@ test("search and suggestions discard Boards made private during the upstream req
             assert.deepEqual(ids, ["7"]);
             publicDocuments = [];
             return ["7"];
-        },
-        async replace() {},
-        async update() {}
+        }
     };
     const search = createSearchService(
         {

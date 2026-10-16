@@ -5,7 +5,6 @@ import test from "node:test";
 import request from "supertest";
 
 import { createApp } from "../src/app.js";
-import { createSearchClient } from "../src/features/search/search.client.js";
 import { sampleSearchDocuments } from "../src/features/search/search.documents.js";
 import { createSearchModule } from "../src/features/search/search.module.js";
 import {
@@ -17,12 +16,11 @@ import { createPostgresPool, runMigrations } from "../src/infrastructure/postgre
 
 const runIntegration = process.env.RUN_POSTGRES_INTEGRATION === "1";
 
-test("PostgreSQL persists API todos and supplies Elasticsearch search records", { skip: !runIntegration }, async () => {
+test("PostgreSQL persists API todos and supplies database search records", { skip: !runIntegration }, async () => {
     const databaseUrl = process.env.TEST_DATABASE_URL;
     assert.ok(databaseUrl, "Set TEST_DATABASE_URL for the PostgreSQL integration test");
 
     const pool = createPostgresPool(databaseUrl);
-    const client = createSearchClient();
     const createdIds: string[] = [];
     const privateDocumentId = `private-integration-${randomUUID()}`;
 
@@ -42,7 +40,7 @@ test("PostgreSQL persists API todos and supplies Elasticsearch search records", 
             })
         ]);
         const sourceRepository = createPostgresSearchSourceRepository(pool);
-        const searchModule = createSearchModule({ client, sourceRepository });
+        const searchModule = createSearchModule({ sourceRepository });
         assert.ok((await searchModule.service.reindex()) >= sampleSearchDocuments.length);
 
         const repository = createPostgresTodoRepository(pool);
@@ -71,7 +69,6 @@ test("PostgreSQL persists API todos and supplies Elasticsearch search records", 
             await pool.query("DELETE FROM todos WHERE id = $1", [id]);
         }
         await pool.query("DELETE FROM search_documents WHERE id = $1", [privateDocumentId]);
-        await client.close();
         await pool.end();
     }
 });

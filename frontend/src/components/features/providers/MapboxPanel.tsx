@@ -171,7 +171,8 @@ export default function MapboxPanel({ configured, initialPoint }: Props) {
             </div>
             <p className="text-14 text-graphite mt-3 leading-6">
                 Search for restaurants, landmarks, addresses or cities through Mapbox. Add temporary results as numbered
-                pinpoints, click the map to add a location, then route between two or more stops.
+                pinpoints, click the map to add a location, then route between two or more stops. Permanent activity
+                locations are looked up through Geoapify and saved in PostgreSQL in the Board editor.
             </p>
             <form className="mt-6 flex flex-wrap items-end gap-4" onSubmit={(event) => void submitSearch(event)}>
                 <label className="text-12 text-graphite min-w-56 flex-1">

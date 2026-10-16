@@ -62,10 +62,8 @@ export function createApp(options: AppOptions = {}): Express {
     const quota = options.quotaService ?? createQuotaService(createPostgresQuotaRepository(), createQuotaPolicies());
     const providers = createProviderModule(quota, attachUser);
     const destinations = createDestinationModule(quota);
-    const search = createSearchModule(attachUser, options.searchRepository, options.searchProvider);
-    const refreshSearch =
-        process.env.ELASTICSEARCH_NODE || options.searchProvider ? search.service.refreshBoard : undefined;
-    const boards = createBoardsModule(attachUser, options.boardRepository, refreshSearch);
+    const search = createSearchModule(options.searchRepository, options.searchProvider);
+    const boards = createBoardsModule(attachUser, options.boardRepository);
     const images = createImagesModule(
         attachUser,
         boards.repository,

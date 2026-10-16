@@ -1,7 +1,5 @@
-import type { Client } from "@elastic/elasticsearch";
 import type { Router } from "express";
 
-import { createSearchClient } from "./search.client.js";
 import { createSearchController, type SearchController } from "./search.controller.js";
 import { sampleSearchDocuments } from "./search.documents.js";
 import { createSearchRouter } from "./search.routes.js";
@@ -10,7 +8,6 @@ import { createSearchSourceRepository } from "./search.repository.js";
 import type { SearchSourceRepository } from "./search.types.js";
 
 interface CreateSearchModuleOptions {
-    client?: Client;
     sourceRepository?: SearchSourceRepository;
 }
 
@@ -21,10 +18,9 @@ export interface SearchModule {
 }
 
 export function createSearchModule({
-    client = createSearchClient(),
     sourceRepository = createSearchSourceRepository(sampleSearchDocuments)
 }: CreateSearchModuleOptions = {}): SearchModule {
-    const service = createSearchService(client, sourceRepository);
+    const service = createSearchService(sourceRepository);
     const controller = createSearchController(service);
     const router = createSearchRouter(controller);
 

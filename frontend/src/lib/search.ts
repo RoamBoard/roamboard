@@ -45,10 +45,3 @@ export const searchIndex = (
 
 export const suggestIndex = (query: string, signal: AbortSignal) =>
     read<string[]>(`/api/v1/search/suggestions?q=${encodeURIComponent(query)}&limit=6`, { signal });
-
-export const reindexSearch = () =>
-    read<{ indexed: number; index: string }>("/api/v1/search/reindex", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: "{}"
-    });

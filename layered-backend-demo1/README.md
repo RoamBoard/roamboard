@@ -1,13 +1,23 @@
-# Layered backend demo
+# Unsupported old backend — pending deletion
 
-This Express 5 backend has a todo API, a prototype user/profile and Board API, a sample travel search API, and a destination discovery API. PostgreSQL stores users, profiles, Boards, Board days and pins, confirmed image references, discovery metadata, destinations, Board visits, friendships, saved resources, todos, search-source records, quota counters, and saved Google Place ID references. Elasticsearch is a derived search index, rebuilt by the backend from PostgreSQL. Other destination provider response fields are live discovery data and are not persisted or indexed.
+This folder is abandoned and unsupported. It contains an old version of the active [`backend/`](../backend/README.md)
+and is planned for deletion in a later PR. It is not a supported legacy application: running, building, testing, and
+maintaining it are no longer required. Bugs confined to this folder are out of scope and should not be fixed in response
+to code review comments. Do not add features, fixes, tests, or infrastructure here.
+
+All backend development belongs in `backend/`, following [`backend/AGENTS.md`](../backend/AGENTS.md).
+
+The setup instructions and API descriptions below describe the historical prototype, not the current backend.
+
+## Historical layered backend demo
+
+This Express 5 backend has a todo API, a prototype user/profile and Board API, a sample travel search API, and a destination discovery API. PostgreSQL stores users, profiles, Boards, Board days and pins, confirmed image references, discovery metadata, destinations, Board visits, friendships, saved resources, todos, search-source records, quota counters, and saved Google Place ID references. Search reads its durable PostgreSQL source directly; matching and ranking run in the API. Other destination provider response fields are live discovery data and are not persisted or indexed.
 
 ```text
 HTTP client -> Express API -> PostgreSQL (source of truth)
-                           -> Elasticsearch (search index)
 ```
 
-PostgreSQL and Elasticsearch do not talk directly. The API reads the source records from PostgreSQL and indexes only public records. Creating a public published Board writes its search document in the same PostgreSQL transaction as the Board, then attempts an immediate Elasticsearch update. A failed live update does not lose the durable source record; API startup and the reindex command reconcile the derived index.
+The API searches public records read from PostgreSQL on each request. Creating or deleting a Board updates its durable search source in the same transaction. No separate search service or synchronization is required.
 
 ## Run all three services with Docker
 
@@ -19,7 +29,7 @@ docker compose up --build -d
 docker compose ps
 ```
 
-To stop and start the project again later without deleting PostgreSQL or Elasticsearch data:
+To stop and start the project again later without deleting PostgreSQL data:
 
 ```powershell
 docker compose down
@@ -35,11 +45,11 @@ docker compose up -d api
 
 Run the frontend separately from `frontend/` with `pnpm dev`; it uses `http://localhost:3001` from `.env.local` and is available at `http://localhost:3000`.
 
-The API is at `http://localhost:3001`. PostgreSQL is available to local tools at `localhost:5433`, Adminer is at `http://localhost:8080`, and Elasticsearch is at `localhost:9200`; all published ports are bound to the host's loopback address. Adminer and the unsecured local Elasticsearch service are development tools, not production deployments. Compose waits for the database and search service health checks before starting the API. The API applies the SQL migrations, including the durable API quota counter, seeds missing sample travel records in PostgreSQL, and rebuilds Elasticsearch before it listens.
+The API is at `http://localhost:3001`, PostgreSQL at `localhost:5433`, and Adminer at `http://localhost:8080`; published ports bind to loopback. Adminer is a development tool. Compose waits for PostgreSQL health before starting the API, which applies local demo migrations and seeds missing sample travel records.
 
 To browse database tables without installing a desktop application, use Adminer at `http://localhost:8080`. Select PostgreSQL and sign in with server `postgres`, username/database `roamboard`, and the `POSTGRES_PASSWORD` value from `.env`.
 
-The frontend uses `NEXT_PUBLIC_API_BASE_URL=http://localhost:3001` so browser requests reach the published API address. Set `MAPBOX_ACCESS_TOKEN` for server-side search and routing. Prefer a separate public `pk.` `MAPBOX_PUBLIC_TOKEN`, restricted to the frontend URLs and minimum map scopes, for the interactive map; a `pk.` access token remains a backward-compatible fallback. `Open-Meteo` and Wikipedia need no key; `UNSPLASH_ACCESS_KEY` is optional and adds destination imagery. The provider lab at `http://localhost:3000/dev/providers` also exposes Mapbox routing and saved pinpoints, Unsplash, Google Places, Cloudinary upload/metadata extraction, and Elasticsearch fuzzy search/autocomplete. Saved Board destinations and pin locations use Geoapify. Set `GEOAPIFY_API_KEY` in `.env` and run `docker compose up --build -d api` to apply the adapter and database migration. Permanent Mapbox geocoding is disabled; Mapbox still displays maps and calculates routes. Google Places also requires a billing-enabled Google Cloud project. Provider credentials remain in the API container. The intentionally public browser token is released only after the backend reserves a map-load unit.
+The frontend uses `NEXT_PUBLIC_API_BASE_URL=http://localhost:3001` so browser requests reach the published API address. Set `MAPBOX_ACCESS_TOKEN` for server-side search and routing. Prefer a separate public `pk.` `MAPBOX_PUBLIC_TOKEN`, restricted to the frontend URLs and minimum map scopes, for the interactive map; a `pk.` access token remains a backward-compatible fallback. `Open-Meteo` and Wikipedia need no key; `UNSPLASH_ACCESS_KEY` is optional and adds destination imagery. The provider lab at `http://localhost:3000/dev/providers` also exposes Mapbox routing and temporary pinpoints, Unsplash, Google Places, Cloudinary upload/metadata extraction, and database-backed fuzzy search/autocomplete. Saved Board destinations and pin locations use Geoapify. Set `GEOAPIFY_API_KEY` in `.env` and run `docker compose up --build -d api` to apply the adapter and database migration. Permanent Mapbox geocoding is disabled; Mapbox still displays maps and calculates routes. Google Places also requires a billing-enabled Google Cloud project. Provider credentials remain in the API container. The intentionally public browser token is released only after the backend reserves a map-load unit.
 
 External provider calls are protected by fail-closed hard quotas. Docker uses PostgreSQL for atomic counters that survive restarts and coordinate multiple API instances. Quota limits are reviewed code constants rather than environment configuration. Read [docs/API_QUOTAS.md](docs/API_QUOTAS.md) before adding or changing any provider endpoint.
 
@@ -59,21 +69,21 @@ Open `http://localhost:3000/dev/profile` after starting the frontend to edit the
 
 Until authentication is implemented, protected prototype routes use `x-demo-user-id`. If the header is omitted, the seeded user `00000000-0000-4000-8000-000000000001` is selected. A user created with `POST /api/v1/users` can be selected by sending its returned ID in that header. This behavior must be replaced by verified authentication before production use.
 
-Restarting the computer or API preserves Boards, pins, image IDs, tags, highlights, and other saved records because PostgreSQL uses a named volume. Elasticsearch also has its own named volume; public published Board tags are derived from PostgreSQL, and startup reindexing rebuilds that index. Unsaved creator state lives only in the browser. A host API started with STORAGE=memory loses its records on process restart. `docker compose down` stops and removes the containers but keeps both named data volumes. Changing the PostgreSQL password after its volume has been initialized requires changing the database role password too; editing `.env` alone does not change an existing database.
+Restarting the computer or API preserves Boards, pins, image IDs, tags, highlights, and other saved records because PostgreSQL uses a named volume. Search reads the persisted PostgreSQL source. Unsaved creator state lives only in the browser. A host API started with STORAGE=memory loses its records on process restart. `docker compose down` stops and removes the containers but keeps the PostgreSQL named data volume. Changing the PostgreSQL password after its volume has been initialized requires changing the database role password too; editing `.env` alone does not change an existing database.
 
-Rebuild the derived index from the PostgreSQL records with:
+Check the current public PostgreSQL search-source count with the compatibility command:
 
 ```powershell
 docker compose exec api npm run search:reindex:container
 ```
 
-The HTTP `POST /api/v1/search/reindex` route is disabled in the production-mode Docker API unless `SEARCH_REINDEX_KEY` is configured. Use the container command for this local demo. Reindexing briefly replaces the search index, so run it when search traffic is quiet.
+The HTTP `POST /api/v1/search/reindex` route is disabled in the production-mode Docker API unless `SEARCH_REINDEX_KEY` is configured. Use the container command for this local demo. This only reads the source and returns its current public-record count.
 
 ## Run the API locally
 
-Run `npm install` and `npm run dev` from this directory. The default `STORAGE=memory` uses the original in-memory todo and travel source repositories. Elasticsearch still needs to run for search; use `npm run search:setup` and `npm run search:seed` to populate it.
+Run `npm install` and `npm run dev` from this directory. The default `STORAGE=memory` uses the original in-memory todo and travel source repositories. Search uses the same selected repository; the memory option is only a local prototype and is not durable.
 
-To use the Docker database from a host-run API, set `STORAGE=postgres`, `DATABASE_URL=postgres://roamboard:<your-password>@localhost:5433/roamboard`, and `ELASTICSEARCH_NODE=http://localhost:9200` in `.env`, then run `npm run dev`. The host-run API listens on port 3000 by default; the containerized API is published on port 3001.
+To use the Docker database from a host-run API, set `STORAGE=postgres`, `DATABASE_URL=postgres://roamboard:<your-password>@localhost:5433/roamboard` in `.env`, then run `npm run dev`. The host-run API listens on port 3000 by default; the containerized API is published on port 3001.
 
 ## Tests
 
@@ -85,15 +95,15 @@ $env:TEST_DATABASE_URL = 'postgres://roamboard:<your-password>@localhost:5433/ro
 npm run test:integration
 ```
 
-The separate Elasticsearch integration test can also be enabled with `RUN_ELASTICSEARCH_INTEGRATION=1`. These tests reset the derived Elasticsearch index; run them only against the local demo stack.
+Search behavior tests run without an external service. The opt-in PostgreSQL integration tests exercise durable source records against the local demo database.
 
 ## Routes
 
 | Method           | Path                                             | Purpose                                                                                                                                          |
 | ---------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `GET`            | `/health`                                        | API process health                                                                                                                               |
-| `GET`            | `/health/elasticsearch`                          | Elasticsearch connectivity                                                                                                                       |
-| `GET`            | `/api/v1/providers/mapbox/board-destinations`    | Validate a city and country and return persistable canonical destination data                                                                    |
+| `GET`            | `/health/search`                                 | Search source connectivity                                                                                                                       |
+| `GET`            | `/api/v1/providers/mapbox/board-destinations`    | Geoapify city validation for saved destinations (legacy alias)                                                                                   |
 | `GET`            | `/api/v1/todos`                                  | List todos, optionally filtered by `completed`                                                                                                   |
 | `GET`            | `/api/v1/todos/:todoId`                          | Read a todo                                                                                                                                      |
 | `POST`           | `/api/v1/todos`                                  | Create a todo                                                                                                                                    |
@@ -108,7 +118,7 @@ The separate Elasticsearch integration test can also be enabled with `RUN_ELASTI
 | `GET`            | `/api/v1/providers/mapbox/search?q=...`          | Mapbox search prototype                                                                                                                          |
 | `GET`            | `/api/v1/providers/mapbox/board-search?q=...`    | Geoapify search for a saved pin (legacy alias)                                                                                                   |
 | `GET`            | `/api/v1/providers/mapbox/reverse?...`           | Reverse-geocode coordinates into an area label, concise location detail, and geographic type                                                     |
-| `GET`            | `/api/v1/providers/mapbox/board-reverse?...`     | Permanent reverse geocoding for a pin that may be persisted                                                                                      |
+| `GET`            | `/api/v1/providers/mapbox/board-reverse?...`     | Geoapify reverse lookup for saved activity locations (legacy alias)                                                                              |
 | `POST`           | `/api/v1/providers/mapbox/directions`            | Route between 2-10 saved coordinates using walking, cycling, or driving                                                                          |
 | `GET`            | `/api/v1/providers/unsplash/search?q=...`        | Unsplash image search prototype                                                                                                                  |
 | `GET`            | `/api/v1/providers/google-places/search?q=...`   | Google Places text-search prototype                                                                                                              |
@@ -136,9 +146,9 @@ The separate Elasticsearch integration test can also be enabled with `RUN_ELASTI
 | `POST`           | `/api/v1/boards`                                 | Save a detailed draft or published Board with days, pins, image references, tags, vibes, highlights, and visibility                              |
 | `PUT` / `DELETE` | `/api/v1/users/me/saved-boards/:boardId`         | Save or unsave an accessible Board                                                                                                               |
 
-Deletion removes the PostgreSQL search source in the same transaction as the Board. Live Elasticsearch removal is attempted immediately; if Elasticsearch is unavailable, startup/manual reindexing reconciles stale entries. Drafts are readable only by their owner, regardless of their visibility selection.
+Deletion removes the PostgreSQL search source in the same transaction as the Board. Search sees the database deletion on its next read. Drafts are readable only by their owner, regardless of their visibility selection.
 
-The Elasticsearch provider lab is backed by the existing public sample records and demonstrates fuzzy search, search-as-you-type suggestions, filters, relevance scores, and development reindexing. It does not add external provider data to the index.
+The Board search lab reads public sample records from its selected repository and demonstrates typo-tolerant matching, prefix suggestions, filters and relevance scores. The legacy reindex endpoint returns a current public-record count; it does not rebuild a separate index. External provider data is not added to search.
 
 This is still a prototype: detailed Board creation persists, but it has no passwords or production authentication, post-save Board editing, full account lifecycle, saved-pin library, or PostGIS. Cloudinary continues to own image binaries; PostgreSQL stores Board associations and selected metadata. The `x-demo-user-id` boundary exists only to exercise frontend-to-database behavior.
 

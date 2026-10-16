@@ -272,7 +272,5 @@ echo "Original database retained as: $previous"
 Stop on errors. After success, restart one backend using the original `roamboard_dev`
 URL, run `npm run check:setup`, and verify sign-in plus Board reads/writes. Then let
 the team reconnect, re-enable the backup cron entry, and create a fresh backup.
-Preserve the original database until recovery is accepted. Dumps do not restore
-Elasticsearch; while it remains in use, its derived index needs reconciliation
-against the restored PostgreSQL state. Do not rerun migrations already contained
+Preserve the original database until recovery is accepted. PostgreSQL dumps include all saved Board and search data; search reads the restored database directly. Do not rerun migrations already contained
 in the archive; compare the restored schema with the application version first.

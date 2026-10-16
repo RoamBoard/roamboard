@@ -47,14 +47,14 @@ export function createSearchController(service: SearchService): SearchController
         }
 
         const count = await service.reindex();
-        res.json({ data: { indexed: count, index: "roamboard-search-v1" } });
+        res.json({ data: { indexed: count, index: "postgresql-search-source" } });
     };
 
     const health: RequestHandler = async (_req, res) => {
         const ready = await service.isReady();
         res.status(ready ? 200 : 503).json({
             status: ready ? "ok" : "unavailable",
-            service: "elasticsearch"
+            service: "postgresql"
         });
     };
 

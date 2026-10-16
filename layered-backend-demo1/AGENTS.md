@@ -1,4 +1,15 @@
-# Roamboard backend instructions
+# Unsupported old backend: do not develop here
+
+`layered-backend-demo1/` is abandoned and unsupported, pending deletion in a later PR. It is not a supported legacy
+application and does not need to run, build, or pass tests. Bugs confined to this folder are out of scope; do not fix
+them in response to code review comments. Reviewing a comment does not reactivate support for this folder.
+All new backend features, fixes, tests, and infrastructure changes belong in `backend/`; read
+[`backend/AGENTS.md`](../backend/AGENTS.md) before implementing them.
+
+Do not write or update code in this folder unless the user explicitly changes this unsupported-folder policy.
+The instructions below are historical reference only and do not authorize continued development here.
+
+## Historical backend instructions
 
 These instructions apply to work inside `layered-backend-demo1/`. Roamboard is a student project, so keep the backend understandable, testable, and easy for the team to explain. Make small, focused changes and preserve the existing architecture unless the task requires a deliberate migration.
 
@@ -6,7 +17,7 @@ This is a living project guide. Agents may and should update `AGENTS.md` when th
 
 ## Current status and product context
 
-This folder is the TypeScript backend prototype for Roamboard. It has an Express 5 todo API, a prototype user/profile and Board API, a sample travel search API, a destination discovery API, and a server-side provider lab. Detailed Board creation persists draft/published state, days, ordered pins, confirmed image references, tags, up to three vibes, highlights, and visibility. Public published Boards are written to the durable PostgreSQL search source and immediately offered to Elasticsearch; startup reindexing reconciles any failed live index attempt. Local development defaults to in-memory repositories; Docker Compose runs the API with PostgreSQL persistence and a derived Elasticsearch index. Prototype protected routes select a seeded user through `x-demo-user-id` and default to `roam_demo`; this is explicitly not real authentication. The provider, profile, and Board creator surfaces are integrated with the frontend.
+This folder is the TypeScript backend prototype for Roamboard. It has an Express 5 todo API, a prototype user/profile and Board API, a sample travel search API, a destination discovery API, and a server-side provider lab. Detailed Board creation persists draft/published state, days, ordered pins, confirmed image references, tags, up to three vibes, highlights, and visibility. Public published Boards are written to the durable PostgreSQL search source and searched directly. Local development defaults to in-memory repositories; Docker Compose runs the API with PostgreSQL persistence and database-backed search. Prototype protected routes select a seeded user through `x-demo-user-id` and default to `roam_demo`; this is explicitly not real authentication. The provider, profile, and Board creator surfaces are integrated with the frontend.
 
 The frontend is a Next.js App Router application in `frontend/`. Read [frontend/AGENTS.md](../frontend/AGENTS.md) and [frontend/REQUIREMENTS.md](../frontend/REQUIREMENTS.md) when an API change affects the UI. The frontend currently uses mock data and the Board model in `frontend/src/types/board.ts` is a provisional contract, not proof that persistence or authentication exists.
 
@@ -44,12 +55,12 @@ src/features/<feature>/
 - **Controllers** translate HTTP input into service calls and service results into responses. Do not put business rules or database queries here.
 - **Services** own business rules, authorization decisions, orchestration, and provider coordination. Keep them independent of Express where practical.
 - **Repositories** own persistence and expose interfaces for services. The todo and search source features each have an in-memory implementation and a PostgreSQL implementation. SQL stays out of controllers.
-- **Provider adapters** wrap Cloudinary, Mapbox, Google Places, Unsplash, Elasticsearch, and similar services. Keep third-party SDK types and request details behind an interface.
+- **Provider adapters** wrap Cloudinary, Mapbox, Google Places, Unsplash, and similar services. Keep third-party SDK types and request details behind an interface.
 - **Modules** construct repositories, services, controllers, and routers. Preserve dependency injection so tests can provide fakes or in-memory implementations.
 - **Middleware** handles cross-cutting concerns such as authentication, authorization helpers, validation, request logging, not-found handling, and centralized errors.
 - **Shared code** belongs in `src/shared/` only when it is genuinely used across features. Avoid creating a generic abstraction for one caller.
 
-The `todo` feature is the reference implementation for layering and test injection. The search feature reads sample travel records from PostgreSQL, indexes only public records in Elasticsearch, and supports full reindexing. Those records have no write API; when real Board writes arrive, design durable index updates and retries before claiming the search index stays synchronized.
+The `todo` feature is the reference implementation for layering and test injection. The search feature reads public sample travel records directly from PostgreSQL (or the explicit local memory prototype). Board transactions maintain the durable search source. Compatibility reindex operations return a record count without copying records.
 
 ## Backend stack and planned infrastructure
 
@@ -62,25 +73,25 @@ Current stack:
 - Helmet and CORS for security and cross-origin middleware.
 - `debug` for application, integration, provider, and development logging, using stable namespaces such as `roamboard:http`, `roamboard:auth`, `roamboard:db`, `roamboard:search`, and `roamboard:media`.
 - `pino-http` may remain as request middleware where useful, but it must not replace the required `debug` logging convention for application/debug logs.
-- `pg` for parameterized PostgreSQL queries and `@elastic/elasticsearch` for the derived search index.
+- `pg` for parameterized PostgreSQL queries, including durable search records.
 - Node's built-in test runner with Supertest for API tests.
 - npm is the package manager for this folder. Keep `package-lock.json` in sync and do not create another lockfile here.
 
 Implemented demo infrastructure:
 
 - **PostgreSQL:** persistent prototype users, profiles, basic Boards and destinations, friendships, Board visits, saved resources, todos, and sample travel search documents. The in-memory adapters remain for tests and local development.
-- **Elasticsearch:** public sample travel search, suggestions, filters, and reindexing from PostgreSQL when the Docker stack is used.
+- **Database search:** public sample travel search, prefix suggestions, filters and API-side fuzzy ranking over the PostgreSQL source.
 - **Board destinations:** Board creation requires one or more complete city destinations. The profile lab validates country/city pairs through Geoapify geocoding and stores canonical country, ISO code, and coordinates; one Board may contain multiple cities and countries.
-- **Docker Compose:** API, PostgreSQL, Elasticsearch, and a loopback-only Adminer database viewer, with health checks and separate named data volumes. The local Adminer and unsecured Elasticsearch configuration is not a production deployment.
-- **Provider configuration and quotas:** Docker passes optional `MAPBOX_ACCESS_TOKEN`, `MAPBOX_PUBLIC_TOKEN`, `UNSPLASH_ACCESS_KEY`, `GOOGLE_PLACES_API_KEY`, and Cloudinary credentials into the API container. Provider calls reserve hard-quota units before dispatch; production counters are atomic and durable in PostgreSQL. Quota limits live in reviewed code, not `.env`. Before adding or changing any provider, endpoint, field mask, or billable operation, read `docs/API_QUOTAS.md` and update both that inventory and `src/features/quotas/quota.policies.ts` in the same change. The general configuration response never contains the Mapbox token. A dedicated map-session route reserves a map load before returning the intentionally public `pk.` token needed by Mapbox GL. Saved Board destinations, pin search, and photo/map reverse lookup use Geoapify under one shared quota; permanent Mapbox geocoding is disabled. Provider-neutral /locations routes are used by the frontend; legacy /mapbox/board-* routes remain aliases. Pin source geoapify is accepted by migration006; legacy mapboxId stores a namespaced provider ID. Google Places requires a billing-enabled Google Cloud project; only stable Place IDs are persisted and live Essentials data is fetched on demand. Cloudinary uploads are tagged, accept HEIC/HEIF files that browsers report with a generic MIME type, and normalize EXIF/XMP degree-minute-second GPS metadata for prototype handoff. Asset listings remain lightweight; metadata is fetched from the original asset through the single-resource Admin API. Detailed Boards store Cloudinary references and confirmed metadata, not raw image binaries or raw EXIF. Image delivery uses automatic browser format conversion; the pin editor rebuilds delivery from the stored public ID. GET /api/v1/boards provides paginated accessible records; DELETE /api/v1/boards/:boardId is owner-only and cascades Board records plus the durable search source, with live Elasticsearch removal and reindex reconciliation. Cloudinary delivery/storage credits cannot be made foolproof by request counting alone; see `docs/API_QUOTAS.md`.
+- **Docker Compose:** API, PostgreSQL, and a loopback-only Adminer database viewer, with health checks and a named PostgreSQL data volume. Local Adminer is not a production deployment.
+- **Provider configuration and quotas:** Docker passes optional `MAPBOX_ACCESS_TOKEN`, `MAPBOX_PUBLIC_TOKEN`, `UNSPLASH_ACCESS_KEY`, `GOOGLE_PLACES_API_KEY`, and Cloudinary credentials into the API container. Provider calls reserve hard-quota units before dispatch; production counters are atomic and durable in PostgreSQL. Quota limits live in reviewed code, not `.env`. Before adding or changing any provider, endpoint, field mask, or billable operation, read `docs/API_QUOTAS.md` and update both that inventory and `src/features/quotas/quota.policies.ts` in the same change. The general configuration response never contains the Mapbox token. A dedicated map-session route reserves a map load before returning the intentionally public `pk.` token needed by Mapbox GL. Saved Board destinations, pin search, and photo/map reverse lookup use Geoapify under one shared quota; permanent Mapbox geocoding is disabled. Provider-neutral /locations routes are used by the frontend; legacy /mapbox/board-* routes remain aliases. Pin source geoapify is accepted by migration006; legacy mapboxId stores a namespaced provider ID. Google Places requires a billing-enabled Google Cloud project; only stable Place IDs are persisted and live Essentials data is fetched on demand. Cloudinary uploads are tagged, accept HEIC/HEIF files that browsers report with a generic MIME type, and normalize EXIF/XMP degree-minute-second GPS metadata for prototype handoff. Asset listings remain lightweight; metadata is fetched from the original asset through the single-resource Admin API. Detailed Boards store Cloudinary references and confirmed metadata, not raw image binaries or raw EXIF. Image delivery uses automatic browser format conversion; the pin editor rebuilds delivery from the stored public ID. GET /api/v1/boards provides paginated accessible records; DELETE /api/v1/boards/:boardId is owner-only and cascades Board records plus the durable search source; search sees committed changes on the next database read. Cloudinary delivery/storage credits cannot be made foolproof by request counting alone; see `docs/API_QUOTAS.md`.
 
 Planned Roamboard infrastructure, to be introduced incrementally:
 
 - **PostgreSQL:** expand the system of record to users, profiles, Boards, items, locations, media metadata, tags, friend relationships, saved resources, visibility, and travel history. Use migrations, foreign keys, unique constraints, timestamps, and indexes.
-- **Elasticsearch:** expand the derived index to real public Board, destination, and location discovery. Add a durable update/retry path and keep private data out of the index.
+- **Database search:** optimize PostgreSQL-backed discovery queries as the public dataset grows. Keep private data out of search.
 - **Docker:** harden the current local demo before deployment. Continue using service names and environment variables inside Compose, never `localhost` for another container.
 - **Cloudinary or another object store:** store uploaded media; PostgreSQL stores metadata, ownership, association, provider key, URL, MIME type, dimensions, and extraction status rather than large binary content.
-- **Mapbox:** map display, geocoding, and routes where approved. Treat provider results as external data and persist only the data the product needs.
+- **Mapbox:** map display, temporary discovery geocoding, and routes where approved. Permanent activity location lookup uses Geoapify; confirmed locations are saved in PostgreSQL.
 - **Google Places API and Unsplash:** location/place enrichment and application-provided imagery through provider adapters. Never expose provider secrets to the frontend.
 - **Image metadata and autofill:** uploads may be inspected server-side for EXIF GPS coordinates and other metadata, then optionally used to suggest a location or itinerary item. Treat extracted data as untrusted suggestions: validate coordinates, handle missing or stripped EXIF, make user confirmation explicit, and avoid exposing private metadata unintentionally.
 - **Recommendations:** a future discovery/recommendation service may combine Board activity, search signals, provider data, and trend calculations. Keep this behind a service boundary and return explainable, testable results. Do not add machine-learning infrastructure until the product slice and data contract are agreed.
@@ -171,7 +182,7 @@ When a feature or API is implemented, separate feature implementation from test 
 
 The implementation agent must not create tests solely to validate its own assumptions when an independent test author is available. If staffing makes separation impossible, record that limitation in the handoff and require a separate review of test intent and coverage before treating the feature as verified. Do not weaken tests to match an implementation; change the implementation or explicitly revise the agreed contract.
 
-Use the built-in Node test runner and Supertest patterns already in `test/` unless the team agrees to another runner. API tests should import `createApp` without opening a network port for isolated tests, and should also include appropriately marked integration tests against real PostgreSQL, Elasticsearch, or provider boundaries when those integrations are part of the feature. Inject repositories and provider fakes for deterministic unit tests, but do not let fakes replace the API-level coverage required for the feature. Tests must not require live Cloudinary, Google, Mapbox, Unsplash, Elasticsearch, or PostgreSQL services unless explicitly marked and documented as integration tests.
+Use the built-in Node test runner and Supertest patterns already in `test/` unless the team agrees to another runner. API tests should import `createApp` without opening a network port for isolated tests, and should also include appropriately marked integration tests against real PostgreSQL or provider boundaries when those integrations are part of the feature. Inject repositories and provider fakes for deterministic unit tests, but do not let fakes replace the API-level coverage required for the feature. Tests must not require live Cloudinary, Google, Mapbox, Unsplash or PostgreSQL services unless explicitly marked and documented as integration tests.
 
 Run from `layered-backend-demo1/`:
 
@@ -184,7 +195,7 @@ npm run build
 docker compose up --build -d    # after creating .env from .env.example
 ```
 
-The README documents Docker Compose and an opt-in test against PostgreSQL and Elasticsearch. The normal API tests still use in-memory adapters. Run the opt-in integration test when changing database or search wiring. Do not claim authentication, Boards, or persistent Board media exist. Provider endpoints are implemented, but live provider behavior still depends on valid credentials and external network access.
+The README documents Docker Compose and an opt-in test against PostgreSQL. The normal API tests still use in-memory adapters. Run the opt-in integration test when changing database or search wiring. Do not claim authentication, Boards, or persistent Board media exist. Provider endpoints are implemented, but live provider behavior still depends on valid credentials and external network access.
 
 ## Code style and consistency
 

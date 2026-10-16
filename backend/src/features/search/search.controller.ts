@@ -10,9 +10,6 @@ export function createSearchController(service: ReturnType<typeof createSearchSe
         suggestions: (async (_request, response) => {
             const { q, limit } = response.locals.query as { q: string; limit: number };
             response.json({ data: await service.suggestions(q, limit) });
-        }) as RequestHandler,
-        reindex: (async (_request, response) => {
-            response.json({ data: await service.reindex() });
         }) as RequestHandler
     };
 }

@@ -30,6 +30,4 @@ export interface SearchProvider {
         publicIds: string[]
     ): Promise<{ hits: Array<{ id: string; score: number }>; total: number }>;
     suggestions(query: string, limit: number, publicIds: string[]): Promise<string[]>;
-    replace(documents: SearchDocument[]): Promise<void>;
-    update(boardId: number, document: SearchDocument | null): Promise<void>;
 }

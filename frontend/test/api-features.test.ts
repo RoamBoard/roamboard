@@ -60,7 +60,7 @@ test("API-backed feature boundaries use the configured backend and signed-in ses
             assert.equal(calls.at(-1)?.url.searchParams.get("longitude"), "-74");
         });
 
-        await t.test("search preserves filters, suggestions cancellation and explicit reindex action", async () => {
+        await t.test("search preserves filters and suggestions cancellation", async () => {
             const result = { hits: [], total: 0, page: 1, limit: 10 };
             response.data = { data: result };
             assert.deepEqual(
@@ -79,10 +79,6 @@ test("API-backed feature boundaries use the configured backend and signed-in ses
             response.data = { data: ["Stockholm"] };
             assert.deepEqual(await search.suggestIndex("Sto", controller.signal), ["Stockholm"]);
             assert.equal(calls.at(-1)?.init?.signal, controller.signal);
-            response.data = { data: { indexed: 2, index: "boards" } };
-            assert.equal((await search.reindexSearch()).indexed, 2);
-            assert.equal(calls.at(-1)?.url.pathname, "/api/v1/search/reindex");
-            assert.equal(calls.at(-1)?.init?.method, "POST");
         });
 
         await t.test("developer Board browsing retains numeric IDs and pagination", async () => {

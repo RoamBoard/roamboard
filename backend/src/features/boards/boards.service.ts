@@ -83,14 +83,7 @@ async function validateDocument(repository: BoardRepository, input: BoardWrite):
     return normalized;
 }
 
-export function createBoardsService(
-    repository: BoardRepository,
-    refreshSearch?: (boardId: number) => Promise<void>
-): BoardsService {
-    // PostgreSQL remains authoritative if the derived search index is temporarily unavailable.
-    const refresh = async (boardId: number) => {
-        await refreshSearch?.(boardId).catch(() => undefined);
-    };
+export function createBoardsService(repository: BoardRepository): BoardsService {
     return {
         listTags: () => repository.listTags(),
         listCategories: () => repository.listCategories(),
@@ -103,9 +96,7 @@ export function createBoardsService(
             )
                 invalid();
             const validated = await validateDocument(repository, input);
-            const board = await repository.saveBoard(userId, null, null, validated);
-            await refresh(board.boardId);
-            return board;
+            return repository.saveBoard(userId, null, null, validated);
         },
         async replace(userId, boardId, revision, input) {
             const access = await repository.getAccess(boardId, userId);
@@ -126,9 +117,7 @@ export function createBoardsService(
                 if (current?.isCompleted !== input.isCompleted)
                     throw new AppError(403, "Only the owner can change completion", "FORBIDDEN");
             }
-            const board = await repository.saveBoard(userId, boardId, revision, validated);
-            await refresh(boardId);
-            return board;
+            return repository.saveBoard(userId, boardId, revision, validated);
         },
         async read(boardId, userId) {
             const board = await repository.getBoard(boardId, userId);
@@ -147,7 +136,6 @@ export function createBoardsService(
             if (!(await repository.deleteBoard(boardId, userId))) {
                 throw new AppError(404, "Board not found", "NOT_FOUND");
             }
-            await refresh(boardId);
         }
     };
 }

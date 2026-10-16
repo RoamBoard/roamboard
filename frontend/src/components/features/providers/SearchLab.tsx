@@ -40,7 +40,7 @@ export default function SearchLab() {
             setResult(await searchIndex(query.trim(), filters));
             setSuggestions([]);
         } catch (caught) {
-            setError(caught instanceof Error ? caught.message : "Elasticsearch search failed.");
+            setError(caught instanceof Error ? caught.message : "Board search failed.");
         } finally {
             setLoading(false);
         }
@@ -49,17 +49,17 @@ export default function SearchLab() {
     return (
         <div className="border-line mt-8 border p-6">
             <div className="flex flex-wrap items-baseline justify-between gap-3">
-                <h2 className="font-display text-24 text-foreground font-bold">Public Board search index</h2>
+                <h2 className="font-display text-24 text-foreground font-bold">Public Board search</h2>
                 <span className="text-10 tracking-label text-graphite font-bold uppercase">fuzzy + autocomplete</span>
             </div>
             <p className="text-14 text-graphite mt-3 max-w-2xl leading-6">
                 Try misspellings such as “stokholm”. Suggestions use search-as-you-type; results use fuzzy matching,
-                field boosts, public Board visibility and filters. Activities and locations are not indexed as search
+                field boosts, public Board visibility and filters. Activities and locations are not standalone search
                 results.
             </p>
             <form className="mt-6" onSubmit={(event) => void submit(event)}>
                 <label className="text-12 text-graphite">
-                    Search index
+                    Search Boards
                     <input
                         className="border-line text-15 text-foreground focus:border-foreground mt-2 w-full border-b bg-transparent py-3 outline-none"
                         value={query}
@@ -127,13 +127,13 @@ export default function SearchLab() {
                         className="border-foreground bg-foreground text-14 text-background border px-5 py-3 disabled:opacity-50"
                         disabled={loading}
                     >
-                        {loading ? "Searching" : "Search index"}
+                        {loading ? "Searching" : "Search Boards"}
                     </button>
                 </div>
             </form>
             <p className="text-12 text-graphite mt-5">
-                Reindex public Boards through <code>POST /api/v1/search/reindex</code> with a signed-in development
-                session. Find restaurants and landmarks in the Mapbox tab.
+                Search reads saved public Boards directly from the database. Find temporary restaurant and landmark
+                results in the Mapbox tab.
             </p>
             {error ? (
                 <p className="text-14 mt-5" role="alert">

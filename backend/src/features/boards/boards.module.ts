@@ -14,10 +14,9 @@ export interface BoardsModule {
 
 export function createBoardsModule(
     attachUser: RequestHandler,
-    repository: BoardRepository = createBoardsRepository(),
-    refreshSearch?: (boardId: number) => Promise<void>
+    repository: BoardRepository = createBoardsRepository()
 ): BoardsModule {
-    const service = createBoardsService(repository, refreshSearch);
+    const service = createBoardsService(repository);
     const controller = createBoardsController(service);
     return { router: createBoardsRouter(controller, attachUser), service, repository };
 }
