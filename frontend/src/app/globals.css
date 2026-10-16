@@ -6,6 +6,11 @@
 /* Semantic tokens: components use these, so dark mode is just a swap of
    the values below. Names follow shadcn's convention. */
 :root {
+    /* The Atlas is an intentional photographic night scene in both application themes. */
+    --atlas-background: #161616;
+    --atlas-foreground: #f4f1e8;
+    --atlas-muted: #b9b9b9;
+    --atlas-line: #484848;
     color-scheme: light;
     --background: #ffffff;
     --foreground: #161616; /* obsidian */
@@ -26,6 +31,10 @@
 }
 
 .dark {
+    --atlas-background: #161616;
+    --atlas-foreground: #f4f1e8;
+    --atlas-muted: #b9b9b9;
+    --atlas-line: #484848;
     color-scheme: dark;
     --background: #161616;
     --foreground: #e7e7e7;

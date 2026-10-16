@@ -50,12 +50,12 @@ export function DiscoverHero() {
                         seasonal timing, and what’s looking especially good right now — all in search of the most
                         unforgettable trip for you.
                     </p>
-                    <a
-                        href="#discover-feed"
+                    <Link
+                        href="/discover/destinations/kyoto"
                         className="text-14 mt-6 inline-flex min-h-11 items-center gap-3 self-start underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4"
                     >
                         explore <span aria-hidden="true">→</span>
-                    </a>
+                    </Link>
                 </div>
             </div>
             <p className="text-muted-foreground text-10 absolute top-28 left-5 md:top-5 md:left-10">

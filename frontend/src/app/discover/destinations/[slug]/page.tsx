@@ -6,20 +6,33 @@ import DiscoverPhoto from "@/components/features/discover/DiscoverPhoto";
 import DiscoverBoardCard from "@/components/features/discover/DiscoverBoardCard";
 import { getDiscoverDestination } from "@/data/discover-destinations";
 import { getDiscoverBoardsByDestination } from "@/data/discover-boards";
+import { getDestinationPage } from "@/data/destination-atlas";
+import { DestinationPage as DestinationExperience } from "@/components/features/destinations/DestinationPage";
 
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-    const destination = getDiscoverDestination((await params).slug);
+    const slug = (await params).slug;
+    const destination = getDestinationPage(slug) ?? getDiscoverDestination(slug);
     if (!destination) notFound();
     return {
         title: `${destination.name} | Roamboard`,
-        description: destination.description
+        description: "introduction" in destination ? destination.introduction : destination.description
     };
 }
 
 export default async function DestinationPage({ params }: Props) {
-    const destination = getDiscoverDestination((await params).slug);
+    const slug = (await params).slug;
+    const guide = getDestinationPage(slug);
+    if (guide)
+        return (
+            <div className="[&+footer]:pl-20 [&+footer]:transition-colors [&+footer]:duration-500 motion-reduce:[&+footer]:transition-none md:[&+footer]:pl-28 [&:has([href='#atlas'][aria-current='location'])+footer]:bg-[var(--atlas-background)] [&:has([href='#atlas'][aria-current='location'])+footer]:text-[var(--atlas-muted)] [&>div]:min-h-0">
+                <AppShell activeHref="/discover" discover={{ collapsed: true }}>
+                    <DestinationExperience key={guide.slug} destination={guide} />
+                </AppShell>
+            </div>
+        );
+    const destination = getDiscoverDestination(slug);
     if (!destination) notFound();
     const { boards, available } = await getDiscoverBoardsByDestination(destination.countryCode);
 

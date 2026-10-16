@@ -1,5 +1,7 @@
 "use client";
 
+import { destinationPages, destinationPageHref } from "@/data/destination-atlas";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowUpRight, MapPin, Layers } from "lucide-react";
@@ -73,6 +75,20 @@ export default function DiscoverSearch() {
                             >
                                 <Layers size={16} aria-hidden="true" />
                                 <span>{collection.title}</span>
+                                <ArrowUpRight className="ml-auto" size={14} aria-hidden="true" />
+                            </CommandItem>
+                        ))}
+                    </CommandGroup>
+                    <CommandGroup heading="Destination guides">
+                        {destinationPages.map((destination) => (
+                            <CommandItem
+                                key={destination.slug}
+                                value={`guide:${destination.slug}`}
+                                keywords={[destination.name, destination.country, ...destination.aliases]}
+                                onSelect={() => navigate(destinationPageHref(destination))}
+                            >
+                                <MapPin size={16} aria-hidden="true" />
+                                <span>{destination.name}</span>
                                 <ArrowUpRight className="ml-auto" size={14} aria-hidden="true" />
                             </CommandItem>
                         ))}
