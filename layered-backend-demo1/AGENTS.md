@@ -1,4 +1,13 @@
-# Roamboard backend instructions
+# Legacy backend: do not develop here
+
+`layered-backend-demo1/` is a legacy snapshot of an older version of [`backend/`](../backend/README.md).
+All new backend features, fixes, tests, and infrastructure changes belong in `backend/`; read
+[`backend/AGENTS.md`](../backend/AGENTS.md) before implementing them.
+
+Do not write or update code in this folder unless the user explicitly requests a legacy-folder change.
+The instructions below are historical reference only and do not authorize continued development here.
+
+## Historical backend instructions
 
 These instructions apply to work inside `layered-backend-demo1/`. Roamboard is a student project, so keep the backend understandable, testable, and easy for the team to explain. Make small, focused changes and preserve the existing architecture unless the task requires a deliberate migration.
 

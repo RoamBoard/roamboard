@@ -1,4 +1,13 @@
-# Layered backend demo
+# Legacy backend snapshot
+
+This folder contains an old version of the active [`backend/`](../backend/README.md) and is retained for historical
+reference only. All new backend features, fixes, tests, and infrastructure changes belong in `backend/`, following
+[`backend/AGENTS.md`](../backend/AGENTS.md). Do not develop in `layered-backend-demo1/` unless the user explicitly requests
+a legacy-folder change.
+
+The setup instructions and API descriptions below describe the historical prototype, not the current backend.
+
+## Historical layered backend demo
 
 This Express 5 backend has a todo API, a prototype user/profile and Board API, a sample travel search API, and a destination discovery API. PostgreSQL stores users, profiles, Boards, Board days and pins, confirmed image references, discovery metadata, destinations, Board visits, friendships, saved resources, todos, search-source records, quota counters, and saved Google Place ID references. Search reads its durable PostgreSQL source directly; matching and ranking run in the API. Other destination provider response fields are live discovery data and are not persisted or indexed.
 

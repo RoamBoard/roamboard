@@ -1,5 +1,11 @@
 # roamboard
 
+## Where to develop
+
+Use [`frontend/`](frontend/README.md) for frontend work and [`backend/`](backend/README.md) for all backend development.
+`layered-backend-demo1/` contains an old version of the backend and is retained for historical reference only. Do not add
+features, fixes, tests, or infrastructure there; use `backend/` and its [agent instructions](backend/AGENTS.md).
+
 ## Run the project with the team's Azure database
 
 Follow [the backend team quick start](backend/README.md#team-quick-start-local-backend-shared-azure-database)

@@ -1,5 +1,14 @@
 # Roamboard shared agent instructions
 
+## Active backend and legacy code
+
+`backend/` is the active backend. Make all new backend features, fixes, tests, and infrastructure changes there, following
+[`backend/AGENTS.md`](backend/AGENTS.md).
+
+`layered-backend-demo1/` is a legacy snapshot of an older version of `backend/`, retained for historical reference only.
+Do not write or update code in that folder unless the user explicitly requests a legacy-folder change. Its documentation
+and examples are historical and must not guide current implementation over the active backend's instructions and contracts.
+
 When the user says **"enter contract mode"** (or explicitly asks for a joint frontend/backend feature contract), read and follow [`CONTRACT_MODE.md`](CONTRACT_MODE.md) before proposing endpoints or changing feature code. Contract mode is a discussion and documentation workflow. Do not treat a mock UI, a database table, or an agent's proposal as a team decision.
 
 Instructions in `frontend/AGENTS.md` and `backend/AGENTS.md`, when present on the current branch, still apply to implementation work in those directories. The user's current decisions take precedence over older drafts and project documents.
