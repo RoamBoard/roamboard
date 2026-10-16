@@ -2,6 +2,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { destinationPages, destinationPageHref, findDestinationPage } from "@/data/destination-atlas";
 import type { FormEvent } from "react";
 import {
     loadDestinationContext,
@@ -22,6 +25,7 @@ function formatDate(value: string) {
 }
 
 export default function DestinationExplorer() {
+    const router = useRouter();
     const [query, setQuery] = useState("");
     const [results, setResults] = useState<Destination[]>([]);
     const [selected, setSelected] = useState<DestinationContext | null>(null);
@@ -50,6 +54,11 @@ export default function DestinationExplorer() {
     }
 
     async function chooseDestination(destination: Destination) {
+        const guide = findDestinationPage(destination);
+        if (guide) {
+            router.push(destinationPageHref(guide));
+            return;
+        }
         setContextLoading(true);
         setError("");
         try {
@@ -74,9 +83,19 @@ export default function DestinationExplorer() {
                     Where will you wander?
                 </h1>
                 <p className="text-15 text-graphite mt-6 max-w-xl leading-7">
-                    Search a place, then open its compact travel brief with location, a short description, imagery, and
-                    a five-day forecast.
+                    Search a place to explore its destination guide or compact travel brief.
                 </p>
+                <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm" aria-label="Editorial destination guides">
+                    {destinationPages.map((destination) => (
+                        <Link
+                            key={destination.slug}
+                            href={destinationPageHref(destination)}
+                            className="inline-flex min-h-11 items-center underline underline-offset-4"
+                        >
+                            {destination.name} ↗
+                        </Link>
+                    ))}
+                </div>
                 <form className="mt-10 flex items-end gap-4" onSubmit={handleSearch}>
                     <label className="min-w-0 flex-1" htmlFor="destination-search">
                         <span className="sr-only">Destination or place</span>
