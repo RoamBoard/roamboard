@@ -1,9 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useEffect, useSyncExternalStore, type ReactNode } from "react";
+import { useState, useEffect, useId, useRef, useSyncExternalStore, type ReactNode } from "react";
 import { getCurrentUser, signOut, type AuthUser } from "@/lib/auth";
 import {
     getMockAuthState,
@@ -19,7 +20,9 @@ import {
     DropdownMenu,
     DropdownMenuTrigger,
     DropdownMenuContent,
-    DropdownMenuItem
+    DropdownMenuItem,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem
 } from "@/components/ui/dropdown-menu";
 
 export type ProfileControlProps = {
@@ -33,21 +36,37 @@ export type ProfileControlProps = {
     handle?: string;
     compact?: boolean;
     floating?: boolean;
+    sidebar?: boolean;
+    iconOnly?: boolean;
+    sidebarAccountOpen?: boolean;
+    onSidebarOpenChange?: (open: boolean) => void;
 };
 
 export default function ProfileControl({
     user = null,
     href,
     profileHref = "/profile",
-    settingsHref = "/settings",
     label = "my profile",
     userName,
-    avatarUrl,
     handle,
     compact = false,
-    floating = false
+    floating = false,
+    sidebar = false,
+    iconOnly = false,
+    onSidebarOpenChange,
+    sidebarAccountOpen
 }: ProfileControlProps) {
     const router = useRouter();
+    const [internalOpen, setSidebarOpen] = useState(false);
+    const sidebarOpen = sidebarAccountOpen ?? internalOpen;
+    const accountPanelId = useId();
+    const accountTrigger = useRef<HTMLButtonElement>(null);
+    const reducedMotion = useReducedMotion();
+    const toggleSidebarAccount = (open: boolean) => {
+        setSidebarOpen(open);
+        onSidebarOpenChange?.(open);
+        if (open) setSelectedTheme(document.documentElement.classList.contains("dark") ? "dark" : "light");
+    };
     const [sessionUser, setSessionUser] = useState<AuthUser | null>(null);
     const [signingOut, setSigningOut] = useState(false);
     const [logoutError, setLogoutError] = useState("");
@@ -69,12 +88,6 @@ export default function ProfileControl({
         } catch {
             // Theme still switches in memory
         }
-    };
-
-    const toggleTheme = () => {
-        if (typeof document === "undefined") return;
-        const isDark = document.documentElement.classList.contains("dark");
-        selectTheme(isDark ? "light" : "dark");
     };
 
     useEffect(() => {
@@ -121,55 +134,103 @@ export default function ProfileControl({
     const isLoggedIn = Boolean(user || sessionUser || mockIsLoggedIn);
 
     const displayName = user?.name || sessionUser?.displayName || profile.name || userName || "Rowan";
-    const displayAvatar = user?.avatarUrl || profile.avatarUrl || avatarUrl;
     const rawHandle = user?.handle || profile.handle || handle;
     const displayHandle = rawHandle ? (rawHandle.startsWith("@") ? rawHandle : `@${rawHandle}`) : null;
     const resolvedProfileHref = href ?? profileHref;
 
-    const containerClasses = compact
-        ? "fixed bottom-4 left-4 z-40"
-        : floating
-          ? "fixed top-6 right-6 z-40 sm:top-8 sm:right-10"
-          : "absolute top-6 right-6 z-40 sm:top-8 sm:right-10";
+    const containerClasses = sidebar
+        ? "relative"
+        : compact
+          ? "fixed bottom-4 left-20 z-40 md:left-24"
+          : floating
+            ? "fixed top-6 right-6 z-40 sm:top-8 sm:right-10"
+            : "absolute top-6 right-6 z-40 sm:top-8 sm:right-10";
 
-    if (!isLoggedIn) {
+    if (sidebar) {
         return (
-            <div className={`${containerClasses} flex items-center gap-2 sm:gap-2.5`}>
+            <div
+                onKeyDown={(event) => {
+                    if (event.key === "Escape" && sidebarOpen) {
+                        event.stopPropagation();
+                        toggleSidebarAccount(false);
+                        accountTrigger.current?.focus();
+                    }
+                }}
+            >
+                <AnimatePresence initial={false}>
+                    {sidebarOpen && (
+                        <motion.div
+                            id={accountPanelId}
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: reducedMotion ? 0 : 0.2 }}
+                            role="region"
+                            aria-label="Account options"
+                            className="max-h-[min(40dvh,max(3rem,calc(100dvh-12rem)))] overflow-y-auto overscroll-contain"
+                        >
+                            <div className="font-body text-12 flex flex-col items-start gap-1 py-2 pr-3 pl-12">
+                                {isLoggedIn && (
+                                    <span className="text-muted-foreground mb-1 break-words">{displayName}</span>
+                                )}
+                                <Link
+                                    href={isLoggedIn ? resolvedProfileHref : "/login"}
+                                    className="text-foreground py-2 underline-offset-4 hover:underline"
+                                >
+                                    {isLoggedIn ? "my profile" : "sign in"} ↗
+                                </Link>
+                                <button type="button" disabled className="text-muted-foreground py-2 opacity-50">
+                                    settings
+                                </button>
+                                <div role="group" aria-label="Appearance" className="flex gap-3 py-2">
+                                    {["light", "dark"].map((theme) => (
+                                        <button
+                                            key={theme}
+                                            type="button"
+                                            aria-pressed={selectedTheme === theme}
+                                            onClick={() => selectTheme(theme)}
+                                            className={`cursor-pointer underline-offset-4 ${selectedTheme === theme ? "text-foreground underline" : "text-muted-foreground hover:text-foreground"}`}
+                                        >
+                                            {theme}
+                                        </button>
+                                    ))}
+                                </div>
+                                {isLoggedIn && (
+                                    <button
+                                        type="button"
+                                        disabled={Boolean(user) || signingOut}
+                                        onClick={() => void handleSignOut()}
+                                        className="cursor-pointer py-2 disabled:opacity-50"
+                                    >
+                                        {signingOut ? "signing out…" : "log out"}
+                                    </button>
+                                )}
+                                {logoutError && (
+                                    <p role="alert" className="text-red-600">
+                                        {logoutError}
+                                    </p>
+                                )}
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
                 <button
+                    ref={accountTrigger}
                     type="button"
-                    onClick={toggleTheme}
-                    aria-label="Color theme"
-                    className="text-12 text-muted-foreground hover:text-foreground hover:bg-faint font-body flex cursor-pointer items-center gap-1.5 rounded-[2px] px-2.5 py-1.5 font-medium transition-colors focus-visible:outline-1 focus-visible:outline-offset-4"
+                    aria-label="Account menu"
+                    aria-expanded={sidebarOpen}
+                    aria-controls={accountPanelId}
+                    onClick={() => toggleSidebarAccount(!sidebarOpen)}
+                    className="font-body text-12 text-muted-foreground hover:text-foreground flex min-h-11 w-full cursor-pointer items-center gap-3 px-3 font-medium focus-visible:outline-1 focus-visible:outline-offset-4"
                 >
-                    <span
-                        aria-hidden="true"
-                        className="size-4 bg-current mask-[url('/icons/sun.svg')] mask-contain mask-center mask-no-repeat dark:mask-[url('/icons/moon.svg')]"
-                    />
-                    <span className="dark:hidden">light</span>
-                    <span className="hidden dark:inline">dark</span>
+                    <UserRound aria-hidden="true" size={20} strokeWidth={1.5} className="shrink-0" />
+                    {!iconOnly && <span>account</span>}
+                    {!iconOnly && (
+                        <span aria-hidden="true" className="text-16 ml-auto">
+                            {sidebarOpen ? "−" : "+"}
+                        </span>
+                    )}
                 </button>
-                <Link
-                    href="/login"
-                    className="border-line text-12 text-muted-foreground hover:text-foreground hover:border-foreground font-body bg-background/90 hover:bg-background flex cursor-pointer items-center gap-2 rounded-[2px] border px-3 py-1.5 font-medium transition-colors focus-visible:outline-1 focus-visible:outline-offset-4"
-                >
-                    <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.75"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="text-muted-foreground shrink-0"
-                        aria-hidden="true"
-                    >
-                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-                        <polyline points="10 17 15 12 10 7" />
-                        <line x1="15" y1="12" x2="3" y2="12" />
-                    </svg>
-                    <span>log in</span>
-                </Link>
             </div>
         );
     }
@@ -179,156 +240,92 @@ export default function ProfileControl({
             <DropdownMenu
                 modal={false}
                 onOpenChange={(open) => {
-                    if (open) {
-                        setSelectedTheme(document.documentElement.classList.contains("dark") ? "dark" : "light");
-                    }
+                    if (open) setSelectedTheme(document.documentElement.classList.contains("dark") ? "dark" : "light");
                 }}
             >
                 <DropdownMenuTrigger asChild>
                     <button
                         type="button"
-                        aria-label="User profile menu"
-                        className="border-line text-12 text-muted-foreground hover:text-foreground hover:border-foreground font-body bg-background/90 hover:bg-background flex cursor-pointer items-center gap-2.5 rounded-[2px] border px-3 py-1.5 font-medium transition-colors focus-visible:outline-1 focus-visible:outline-offset-4"
+                        aria-label="Account menu"
+                        className={`font-body text-12 text-muted-foreground hover:text-foreground flex min-h-11 cursor-pointer items-center font-medium focus-visible:outline-1 focus-visible:outline-offset-4 ${sidebar ? "w-full gap-3 px-3" : "bg-background/95 border-line gap-5 border px-4 py-2"}`}
                     >
-                        {displayAvatar ? (
-                            <div className="bg-faint relative h-5 w-5 shrink-0 overflow-hidden rounded-[1px]">
-                                <Image
-                                    src={displayAvatar}
-                                    alt=""
-                                    fill
-                                    sizes="20px"
-                                    className="object-cover"
-                                    unoptimized
-                                />
-                            </div>
-                        ) : (
-                            <svg
-                                width="14"
-                                height="14"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="1.75"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="text-muted-foreground shrink-0"
-                                aria-hidden="true"
-                            >
-                                <path d="M20 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-                                <circle cx="12" cy="7" r="4" />
-                            </svg>
+                        {sidebar && <UserRound aria-hidden="true" size={20} strokeWidth={1.5} className="shrink-0" />}
+                        {!iconOnly && <span>{isLoggedIn ? label : "account"}</span>}
+                        {!iconOnly && (
+                            <span aria-hidden="true" className="text-muted-foreground text-16 ml-auto">
+                                +
+                            </span>
                         )}
-
-                        <span className="truncate">{label}</span>
-
-                        <svg
-                            width="10"
-                            height="10"
-                            viewBox="0 0 10 10"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="text-muted-foreground"
-                            aria-hidden="true"
-                        >
-                            <path d="m2 3.5 3 3 3-3" />
-                        </svg>
                     </button>
                 </DropdownMenuTrigger>
-
                 <DropdownMenuContent
+                    aria-label="Account options"
                     align="end"
+                    side={sidebar ? "right" : compact ? "top" : "bottom"}
                     sideOffset={8}
-                    collisionPadding={8}
-                    className="border-line bg-background min-w-[13rem] rounded-[2px] border p-1 shadow-xs"
+                    collisionPadding={12}
+                    className="border-line bg-background min-w-56 rounded-none border p-0 shadow-none"
                 >
-                    {Boolean(displayName) && (
-                        <div className="border-line border-b px-3 py-2">
-                            <span className="font-display text-12 text-foreground block font-bold tracking-tight uppercase">
+                    {isLoggedIn && (
+                        <div className="border-line border-b px-5 py-4">
+                            <span className="font-display text-14 text-foreground block font-bold uppercase">
                                 {displayName}
                             </span>
-                            {Boolean(displayHandle) && (
-                                <span className="text-10 text-muted-foreground block font-medium lowercase">
-                                    {displayHandle}
-                                </span>
-                            )}
+                            {displayHandle && <span className="text-12 text-muted-foreground">{displayHandle}</span>}
                         </div>
                     )}
-
-                    <div className="flex flex-col py-0.5">
-                        <DropdownMenuItem asChild>
+                    <div className="px-2 py-2">
+                        <DropdownMenuItem asChild className="rounded-none px-3 py-3">
                             <Link
-                                href={resolvedProfileHref}
-                                className="text-12 text-muted-foreground hover:text-foreground hover:bg-faint focus-visible:text-foreground focus-visible:bg-faint flex cursor-pointer items-center justify-between rounded-[2px] px-3 py-2 font-medium transition-colors"
+                                href={isLoggedIn ? resolvedProfileHref : "/login"}
+                                className="text-14 justify-between"
                             >
-                                <span>my profile</span>
-                                <span className="text-10 text-muted-foreground font-normal" aria-hidden="true">
-                                    →
-                                </span>
+                                <span>{isLoggedIn ? "my profile" : "sign in"}</span>
+                                <span aria-hidden="true">↗</span>
                             </Link>
                         </DropdownMenuItem>
-
-                        <div className="bg-line my-0.5 h-px" aria-hidden="true" />
-
-                        <DropdownMenuItem asChild>
-                            <Link
-                                href={settingsHref}
-                                className="text-12 text-muted-foreground hover:text-foreground hover:bg-faint focus-visible:text-foreground focus-visible:bg-faint flex cursor-pointer items-center justify-between rounded-[2px] px-3 py-2 font-medium transition-colors"
-                            >
-                                <span>settings</span>
-                                <span className="text-10 text-muted-foreground font-normal" aria-hidden="true">
-                                    →
-                                </span>
-                            </Link>
-                        </DropdownMenuItem>
-
-                        <div className="bg-line my-0.5 h-px" aria-hidden="true" />
-
-                        {/* Theme row: completely uniform with other menu items */}
-                        <DropdownMenuItem asChild onSelect={(e) => e.preventDefault()}>
-                            <button
-                                type="button"
-                                onClick={toggleTheme}
-                                className="text-12 text-muted-foreground hover:text-foreground hover:bg-faint focus-visible:text-foreground focus-visible:bg-faint flex w-full cursor-pointer items-center justify-between rounded-[2px] px-3 py-2 text-left font-medium transition-colors"
-                            >
-                                <div className="flex items-center gap-2">
-                                    <span
-                                        aria-hidden="true"
-                                        className="size-3.5 shrink-0 bg-current mask-[url('/icons/sun.svg')] mask-contain mask-center mask-no-repeat dark:mask-[url('/icons/moon.svg')]"
-                                    />
-                                    <span>theme</span>
-                                </div>
-                                <span className="text-10 text-muted-foreground tracking-label font-normal uppercase">
-                                    {selectedTheme}
-                                </span>
-                            </button>
-                        </DropdownMenuItem>
-
-                        <div className="bg-line my-0.5 h-px" aria-hidden="true" />
-
-                        <DropdownMenuItem asChild disabled={Boolean(user) || signingOut}>
-                            <button
-                                type="button"
-                                disabled={Boolean(user) || signingOut}
-                                onClick={() => void handleSignOut()}
-                                className="text-12 text-muted-foreground hover:text-foreground hover:bg-faint focus-visible:text-foreground focus-visible:bg-faint flex w-full cursor-pointer items-center justify-between rounded-[2px] px-3 py-2 text-left font-medium transition-colors disabled:pointer-events-none disabled:opacity-50"
-                            >
-                                <span>{signingOut ? "signing out…" : "log out"}</span>
-                                <span className="text-10 text-muted-foreground font-normal" aria-hidden="true">
-                                    ↳
-                                </span>
-                            </button>
+                        <DropdownMenuItem disabled className="text-14 justify-between rounded-none px-3 py-3">
+                            <span>settings</span>
+                            <span className="text-10">soon</span>
                         </DropdownMenuItem>
                     </div>
-
-                    {logoutError && (
-                        <div className="border-line border-t px-3 py-2">
-                            <p role="alert" className="text-11 font-medium text-red-600">
-                                {logoutError}
-                            </p>
+                    <div className="border-line border-t px-5 pt-4 pb-2">
+                        <span className="text-10 text-muted-foreground tracking-label uppercase">appearance</span>
+                    </div>
+                    <DropdownMenuRadioGroup value={selectedTheme} onValueChange={selectTheme} className="px-2 pb-3">
+                        {["light", "dark"].map((theme) => (
+                            <DropdownMenuRadioItem
+                                key={theme}
+                                value={theme}
+                                className="text-14 rounded-none px-3 py-3 [&>span:first-child]:hidden"
+                            >
+                                <span
+                                    className={
+                                        selectedTheme === theme
+                                            ? "underline underline-offset-4"
+                                            : "text-muted-foreground"
+                                    }
+                                >
+                                    {theme}
+                                </span>
+                            </DropdownMenuRadioItem>
+                        ))}
+                    </DropdownMenuRadioGroup>
+                    {isLoggedIn && (
+                        <div className="border-line border-t p-2">
+                            <DropdownMenuItem
+                                disabled={Boolean(user) || signingOut}
+                                onSelect={() => void handleSignOut()}
+                                className="text-14 rounded-none px-3 py-3"
+                            >
+                                {signingOut ? "signing out…" : "log out"}
+                            </DropdownMenuItem>
                         </div>
+                    )}
+                    {logoutError && (
+                        <p role="alert" className="text-12 px-5 py-3 text-red-600">
+                            {logoutError}
+                        </p>
                     )}
                 </DropdownMenuContent>
             </DropdownMenu>

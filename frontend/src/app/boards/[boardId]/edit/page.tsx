@@ -4,7 +4,7 @@ import AppShell from "@/components/layout/AppShell";
 export default async function EditPublishedBoardPage({ params }: { params: Promise<{ boardId: string }> }) {
     const { boardId } = await params;
     return (
-        <AppShell activeHref="/boards">
+        <AppShell activeHref="/create">
             <BoardCreator initialBoardId={Number(boardId)} expectedStatus="published" />
         </AppShell>
     );
