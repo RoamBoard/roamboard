@@ -11,7 +11,7 @@ the consolidated 004 schema; do not rerun it or rebuild the shared database.
 Integration tests apply the files only inside temporary test schemas.
 
 `npm run dev` selects `NODE_ENV=development`. Cloudinary lab management, Google
-Places lab operations, the developer Board list and search reindexing also
+Places lab operations and the developer Board list also
 require a Google session. They are unavailable outside development. Deployed
 startup must use `npm start`, not the development command.
 
@@ -19,8 +19,7 @@ Configure optional provider keys using `.env.example`. Missing keys produce
 explicit unavailable states. Board search reads public, published Boards directly
 from PostgreSQL and ranks matches in the API, including typo-tolerant word matching,
 prefix suggestions and filters. No separate search service, credentials, index setup
-or synchronization is needed. The development-only `POST /api/v1/search/reindex`
-route remains compatible and returns the current public Board count without copying data.
+or synchronization is needed.
 
 Search contains only public, published Boards. POIs, restaurants and landmarks use
 the separate Mapbox Search Box text-search endpoint, with its own conservative

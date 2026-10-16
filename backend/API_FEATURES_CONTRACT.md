@@ -12,8 +12,8 @@ public Board search are anonymous. Profile routes require a real session.
 POST/PUT/PATCH/DELETE requests require the exact configured `CLIENT_ORIGIN`,
 including map sessions and directions. Prototype identity headers are ignored.
 
-Cloudinary lab routes, Google Places lab routes, `/api/v1/dev/boards` and search
-reindexing require both `NODE_ENV=development` and a signed-in user. They return
+Cloudinary lab routes, Google Places lab routes and `/api/v1/dev/boards` require
+both `NODE_ENV=development` and a signed-in user. They return
 `404 NOT_FOUND` outside development and `401 UNAUTHENTICATED` without a session.
 `npm run dev` explicitly selects development mode; `npm start` does not enable
 these tools. An unapproved mutation Origin returns `403 ORIGIN_NOT_ALLOWED`.
@@ -137,12 +137,8 @@ that users confirm and save in PostgreSQL.
 
 Search and suggestions check fresh public Board data before returning content.
 Draft, private and deleted Boards are excluded. Results may shift during concurrent edits.
-No separate search store, synchronization or initial reindex is required.
-
-`POST /api/v1/search/reindex` remains as a development-only compatibility endpoint.
-It returns `{ indexed, index: "postgresql-boards" }`, where `indexed` is the current
-public, published Board count. It does not rebuild or copy records. Board writes
-and deletions are visible through the next database read.
+No separate search store, synchronization or initial reindex is required. Board
+writes and deletions are visible through the next database read.
 
 ## Shared usage budgets and verification
 

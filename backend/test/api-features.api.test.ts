@@ -47,10 +47,6 @@ test("developer tools require explicit development mode and a real session", asy
     ]) {
         assert.equal((await request(app).get(path).set("Cookie", cookie)).status, 404);
     }
-    assert.equal(
-        (await request(app).post("/api/v1/search/reindex").set("Cookie", cookie).set("Origin", origin)).status,
-        404
-    );
     process.env.NODE_ENV = "development";
     assert.equal(
         (await request(app).get("/api/v1/providers/cloudinary/assets").set("x-demo-user-id", "owner")).status,
@@ -65,7 +61,6 @@ test("developer tools require explicit development mode and a real session", asy
         ).status,
         403
     );
-    assert.equal((await request(app).post("/api/v1/search/reindex").set("Cookie", cookie)).status, 403);
 });
 
 test("provider validation, missing keys, quotas and upstream errors have safe responses", async (context) => {
@@ -295,7 +290,6 @@ test("search and suggestions only return current public database documents", asy
         updatedAt: "2026-10-14T00:00:00Z"
     };
     const publicIds: string[][] = [];
-    let indexed = 0;
     const provider: SearchProvider = {
         async search(_input, ids) {
             publicIds.push(ids);
@@ -310,11 +304,7 @@ test("search and suggestions only return current public database documents", asy
         async suggestions(_query, _limit, ids) {
             publicIds.push(ids);
             return ["7", "private", "7"];
-        },
-        async replace(documents) {
-            indexed = documents.length;
-        },
-        async update() {}
+        }
     };
     const app = createApp({
         repository,
@@ -338,7 +328,4 @@ test("search and suggestions only return current public database documents", asy
     assert.deepEqual((await request(app).get("/api/v1/search/suggestions?q=tok")).body.data, ["Tokyo today"]);
     assert.deepEqual(publicIds, [["7"], ["7"]]);
     assert.equal((await request(app).get("/api/v1/search?q=tokyo&limit=100")).status, 400);
-    const reindexed = await request(app).post("/api/v1/search/reindex").set("Cookie", cookie).set("Origin", origin);
-    assert.equal(reindexed.status, 200);
-    assert.equal(indexed, 1);
 });

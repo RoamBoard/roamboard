@@ -1,5 +1,4 @@
 import type { SearchRepository, SearchProvider, SearchInput } from "./search.types.js";
-import { SEARCH_INDEX } from "./search.postgres.js";
 
 export function createSearchService(repository: SearchRepository, provider: SearchProvider) {
     return {
@@ -31,15 +30,6 @@ export function createSearchService(repository: SearchRepository, provider: Sear
                     })
                 )
             ];
-        },
-        async reindex() {
-            const documents = await repository.listPublic();
-            await provider.replace(documents);
-            return { indexed: documents.length, index: SEARCH_INDEX };
-        },
-        async refreshBoard(boardId: number) {
-            const documents = await repository.listPublic([String(boardId)]);
-            await provider.update(boardId, documents[0] ?? null);
         }
     };
 }

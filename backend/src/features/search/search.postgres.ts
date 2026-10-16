@@ -1,6 +1,6 @@
 import type { SearchProvider, SearchRepository } from "./search.types.js";
 import { rankDocuments, suggestDocuments } from "./search.ranking.js";
-export const SEARCH_INDEX = "postgresql-boards";
+
 // Read canonical PostgreSQL records on every request; there is no separate search store.
 export function createSearchProvider(repository: SearchRepository): SearchProvider {
     return {
@@ -17,9 +17,6 @@ export function createSearchProvider(repository: SearchRepository): SearchProvid
             return titles.flatMap((title) =>
                 documents.filter((document) => document.title === title).map((document) => document.id)
             );
-        },
-        // Compatibility hooks: PostgreSQL writes are already current.
-        async replace() {},
-        async update() {}
+        }
     };
 }
