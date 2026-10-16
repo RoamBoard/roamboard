@@ -1,10 +1,12 @@
-# Legacy backend: do not develop here
+# Unsupported old backend: do not develop here
 
-`layered-backend-demo1/` is a legacy snapshot of an older version of [`backend/`](../backend/README.md).
+`layered-backend-demo1/` is abandoned and unsupported, pending deletion in a later PR. It is not a supported legacy
+application and does not need to run, build, or pass tests. Bugs confined to this folder are out of scope; do not fix
+them in response to code review comments. Reviewing a comment does not reactivate support for this folder.
 All new backend features, fixes, tests, and infrastructure changes belong in `backend/`; read
 [`backend/AGENTS.md`](../backend/AGENTS.md) before implementing them.
 
-Do not write or update code in this folder unless the user explicitly requests a legacy-folder change.
+Do not write or update code in this folder unless the user explicitly changes this unsupported-folder policy.
 The instructions below are historical reference only and do not authorize continued development here.
 
 ## Historical backend instructions

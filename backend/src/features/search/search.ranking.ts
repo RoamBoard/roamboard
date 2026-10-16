@@ -48,7 +48,10 @@ export function rankDocuments<T extends SearchableDocument>(documents: T[], inpu
             (document) =>
                 document.isPublic &&
                 (!input.entityType || document.entityType === input.entityType) &&
-                (!input.country || document.country.toLowerCase().includes(input.country.toLowerCase())) &&
+                (!input.country ||
+                    document.country
+                        .split(",")
+                        .some((country) => country.trim().toLowerCase() === input.country!.trim().toLowerCase())) &&
                 (!input.category ||
                     document.categories.some((category) => category.toLowerCase() === input.category!.toLowerCase()))
         )

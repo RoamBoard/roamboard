@@ -3,8 +3,9 @@
 ## Where to develop
 
 Use [`frontend/`](frontend/README.md) for frontend work and [`backend/`](backend/README.md) for all backend development.
-`layered-backend-demo1/` contains an old version of the backend and is retained for historical reference only. Do not add
-features, fixes, tests, or infrastructure there; use `backend/` and its [agent instructions](backend/AGENTS.md).
+`layered-backend-demo1/` is abandoned and unsupported, pending deletion in a later PR. It is not maintained or expected
+to run, build, or pass tests. Bugs confined to that folder are out of scope for fixes and code review follow-up.
+Do not add features, fixes, tests, or infrastructure there; use `backend/` and its [agent instructions](backend/AGENTS.md).
 
 ## Run the project with the team's Azure database
 

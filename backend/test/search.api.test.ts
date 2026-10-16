@@ -54,6 +54,39 @@ test("default search provider reads publication changes and deletions on every r
     assert.equal((await request(app).get("/api/v1/search?q=stockholm")).body.data.total, 0);
 });
 
+test("country filters match complete names in single-country and multi-country Boards", async () => {
+    const records = [
+        { ...document, id: "1", country: "Niger" },
+        { ...document, id: "2", country: "Nigeria" },
+        { ...document, id: "3", country: "Nigeria, Niger" },
+        { ...document, id: "4", country: "Niger, Sweden" }
+    ];
+    const app = createApp({
+        searchRepository: {
+            async listPublicIds() {
+                return records.map((record) => record.id);
+            },
+            async listPublic() {
+                return records;
+            }
+        }
+    });
+    for (const [country, expectedIds] of [
+        [" nIgEr ", ["1", "3", "4"]],
+        ["Nigeria", ["2", "3"]],
+        ["Sweden", ["4"]],
+        ["Nige", []]
+    ] as const) {
+        const response = await request(app).get("/api/v1/search").query({ q: "stockholm", country });
+        assert.equal(response.status, 200);
+        assert.equal(response.body.data.total, expectedIds.length);
+        assert.deepEqual(
+            response.body.data.hits.map((hit: { document: SearchDocument }) => hit.document.id),
+            expectedIds
+        );
+    }
+});
+
 test("default search validates queries and applies filters and pagination", async () => {
     const records = [document, { ...document, id: "8", title: "Stockholm food", categories: ["food"] }];
     const app = createApp({

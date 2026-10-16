@@ -1,9 +1,11 @@
-# Legacy backend snapshot
+# Unsupported old backend — pending deletion
 
-This folder contains an old version of the active [`backend/`](../backend/README.md) and is retained for historical
-reference only. All new backend features, fixes, tests, and infrastructure changes belong in `backend/`, following
-[`backend/AGENTS.md`](../backend/AGENTS.md). Do not develop in `layered-backend-demo1/` unless the user explicitly requests
-a legacy-folder change.
+This folder is abandoned and unsupported. It contains an old version of the active [`backend/`](../backend/README.md)
+and is planned for deletion in a later PR. It is not a supported legacy application: running, building, testing, and
+maintaining it are no longer required. Bugs confined to this folder are out of scope and should not be fixed in response
+to code review comments. Do not add features, fixes, tests, or infrastructure here.
+
+All backend development belongs in `backend/`, following [`backend/AGENTS.md`](../backend/AGENTS.md).
 
 The setup instructions and API descriptions below describe the historical prototype, not the current backend.
 
