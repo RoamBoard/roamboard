@@ -126,7 +126,7 @@ export function DestinationRail({
                     <span className="sm:hidden">Back</span>
                 </Link>
                 <span className="text-muted-foreground hidden text-[10px] tracking-widest uppercase lg:block">
-                    {name} / A Roamboard destination
+                    {name}
                 </span>
                 <div className="flex gap-3 sm:gap-6" aria-label="Destination chapters">
                     {chapters.map((chapter) => (

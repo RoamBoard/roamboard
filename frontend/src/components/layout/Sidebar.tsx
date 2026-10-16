@@ -80,7 +80,7 @@ function SidebarNavigation({ activeHref, expanded, onNavigate }: NavigationProps
                             duration: reducedMotion ? 0 : 0.16,
                             delay: expanded && !reducedMotion ? 0.08 : 0
                         }}
-                        className={`font-body text-14 absolute left-12 font-medium whitespace-nowrap underline-offset-[6px] ${expanded ? "visible" : "invisible"} ${active ? "underline" : "group-hover:underline"}`}
+                        className={`font-body text-14 absolute left-12 font-medium whitespace-nowrap underline-offset-[6px] ${expanded ? "block" : "hidden"} ${active ? "underline" : "group-hover:underline"}`}
                     >
                         {label}
                     </motion.span>
@@ -91,7 +91,7 @@ function SidebarNavigation({ activeHref, expanded, onNavigate }: NavigationProps
     return (
         <nav
             aria-label="Main navigation"
-            className={`flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain ${expanded ? "px-4" : "px-2.5 md:px-[18px]"}`}
+            className={`flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-contain ${expanded ? "px-4" : "px-2.5 md:px-[18px]"}`}
         >
             <ul className="mb-6 flex w-full shrink-0 flex-col gap-2 pt-8 [@media(max-height:650px)]:pt-0">
                 {navigation.map(renderLink)}
@@ -216,7 +216,7 @@ export default function Sidebar({ activeHref, profile = {} }: { activeHref: stri
                         setSidebarExpanded(false);
                     }
                 }}
-                className={`bg-background text-foreground border-line fixed inset-y-0 left-0 z-40 flex overflow-y-auto ${accountOpen ? "w-56" : "w-16"} flex-col border-r pt-[env(safe-area-inset-top)] pb-[max(1.5rem,env(safe-area-inset-bottom))] md:w-[var(--sidebar-width)] [@media(max-height:400px)]:pb-2 ${expanded ? "shadow-[16px_0_40px_-24px_rgb(0_0_0/0.25)]" : ""}`}
+                className={`bg-background text-foreground border-line fixed inset-y-0 left-0 z-40 flex overflow-x-hidden overflow-y-auto ${accountOpen ? "w-56" : "w-16"} flex-col border-r pt-[env(safe-area-inset-top)] pb-[max(1.5rem,env(safe-area-inset-bottom))] md:w-[var(--sidebar-width)] [@media(max-height:400px)]:pb-2 ${expanded ? "shadow-[16px_0_40px_-24px_rgb(0_0_0/0.25)]" : ""}`}
             >
                 <header className="relative h-[clamp(11rem,25dvh,15rem)] shrink-0 [@media(max-height:400px)]:h-12 [@media(max-height:650px)]:h-20">
                     <Link
@@ -230,7 +230,7 @@ export default function Sidebar({ activeHref, profile = {} }: { activeHref: stri
                         </span>
                     </Link>
                 </header>
-                <div id={panelId} className="flex min-h-11 flex-1 flex-col">
+                <div id={panelId} className="flex min-h-11 min-w-0 flex-1 flex-col">
                     <SidebarNavigation activeHref={selectedHref} expanded={expanded} />
                 </div>
                 <div className="mx-2.5 mt-2 shrink-0 md:mx-4">

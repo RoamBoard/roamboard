@@ -314,13 +314,13 @@ export function DestinationPage({ destination }: { destination: DestinationPageD
                     id="destination-create"
                     tabIndex={-1}
                     aria-labelledby="destination-create-heading"
-                    className="bg-background border-line relative isolate h-full w-[var(--destination-width)] shrink-0 overflow-x-hidden overflow-y-auto border-l outline-none lg:w-[max(1250px,var(--destination-width))] lg:overflow-y-hidden"
+                    className="bg-background border-line relative isolate h-full w-[var(--destination-width)] shrink-0 overflow-x-hidden overflow-y-auto border-l outline-none lg:w-[max(1250px,var(--destination-width))] lg:overflow-y-hidden lg:[--create-photo-width:max(640px,48vw)]"
                 >
                     <span
                         aria-hidden="true"
-                        className="pointer-events-none absolute inset-y-0 left-0 hidden w-12 bg-[var(--atlas-background)] [clip-path:ellipse(100%_60%_at_0%_50%)] lg:block"
+                        className="after:bg-background pointer-events-none absolute inset-y-0 left-0 hidden w-[clamp(6rem,14vw,14rem)] overflow-hidden bg-[var(--atlas-background)] after:absolute after:top-1/2 after:left-5 after:aspect-[1077/1254] after:w-[var(--create-photo-width)] after:-translate-y-1/2 after:rounded-[50%] lg:block"
                     />
-                    <div className="relative z-10 flex flex-col px-6 pt-10 pb-8 lg:min-h-full lg:w-[56%] lg:pt-[6dvh] lg:pr-0 lg:pb-7 lg:pl-16">
+                    <div className="relative z-10 flex flex-col px-6 pt-16 pb-8 lg:min-h-full lg:w-[66%] lg:pt-[10dvh] lg:pr-0 lg:pb-7 lg:pl-[clamp(7rem,12vw,12rem)]">
                         <h2
                             id="destination-create-heading"
                             className="font-display text-[clamp(4rem,min(8vw,13dvh),8rem)] leading-[1.02] font-bold tracking-[-0.055em]"
@@ -351,7 +351,7 @@ export function DestinationPage({ destination }: { destination: DestinationPageD
                     </div>
                     <div
                         aria-hidden="true"
-                        className="pointer-events-none relative -mt-3 ml-[18%] aspect-[1077/1254] w-[125%] overflow-hidden rounded-[50%] lg:absolute lg:top-1/2 lg:left-[48%] lg:z-20 lg:mt-0 lg:ml-0 lg:w-[max(780px,60vw)] lg:-translate-y-1/2"
+                        className="pointer-events-none relative -mt-3 ml-[18%] aspect-[1077/1254] w-[125%] overflow-hidden rounded-[50%] lg:absolute lg:top-1/2 lg:left-[62%] lg:z-20 lg:mt-0 lg:ml-0 lg:w-[var(--create-photo-width)] lg:-translate-y-1/2"
                     >
                         <motion.div
                             className="absolute inset-[-8%]"

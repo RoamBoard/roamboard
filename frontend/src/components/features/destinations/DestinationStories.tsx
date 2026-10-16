@@ -27,19 +27,12 @@ export function DestinationStories({ destination }: { destination: DestinationPa
             className="border-line relative flex h-full w-[var(--destination-width)] shrink-0 flex-col overflow-y-auto border-x px-6 py-7 outline-none md:w-[max(1100px,var(--destination-width))] md:flex-row md:gap-8 md:px-14 md:py-12"
         >
             <div className="md:border-line relative z-10 flex shrink-0 flex-col justify-center md:w-[27%] md:border-r md:pr-8">
-                <p className="text-muted-foreground text-[10px] tracking-[0.2em] uppercase">
-                    Travel stories / {destination.country}
-                </p>
+                <p className="text-muted-foreground text-[10px] tracking-[0.2em] uppercase">Trending boards</p>
                 <h2
                     id="destination-boards-heading"
-                    className="font-display mt-5 text-[clamp(3rem,5.4vw,6rem)] leading-[0.87] tracking-[-0.055em]"
+                    className="font-display mt-5 text-[clamp(2.7rem,min(5vw,9dvh),5.5rem)] leading-[0.95] tracking-[-0.055em]"
                 >
-                    One city.
-                    <br />
-                    <span className="text-muted-foreground">
-                        Many
-                        <br className="hidden md:block" /> stories.
-                    </span>
+                    Trending boards for {destination.name}
                 </h2>
                 <p className="text-muted-foreground mt-6 max-w-60 text-xs leading-6">
                     A few different ways to see {destination.name}. Find a story that feels like you.
@@ -108,7 +101,7 @@ export function DestinationStories({ destination }: { destination: DestinationPa
                                     x: `${offset * 66}%`,
                                     y: focused ? 0 : 34,
                                     scale: focused ? 1 : 0.72,
-                                    rotate: focused ? 0 : offset * 7,
+                                    rotate: 0,
                                     opacity: focused ? 1 : 0.48
                                 }}
                                 transition={reduced ? { duration: 0 } : { type: "spring", stiffness: 145, damping: 25 }}
