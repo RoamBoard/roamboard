@@ -2,7 +2,7 @@
 
 import type { CSSProperties } from "react";
 import BoardPhoto from "@/components/features/boards/BoardPhoto";
-import type { BoardActivity, BoardItem } from "@/types/board";
+import type { BoardActivity, BoardImage, BoardItem } from "@/types/board";
 import type { PublishedBoardDay as BoardDay } from "@/types/published-board";
 
 // Five entries repeat across four desktop rows. These named positions match
@@ -94,10 +94,14 @@ function OtherBoardItem({ item }: { item: Exclude<BoardItem, BoardActivity> }) {
 // Render one day, including links that jump to its activity cards.
 export default function PublishedBoardDay({
     day,
-    onSelectActivity
+    onSelectActivity,
+    photos = {},
+    photoLabels = {}
 }: {
     day: BoardDay;
     onSelectActivity: (activity: BoardActivity) => void;
+    photos?: { first?: BoardImage; second?: BoardImage };
+    photoLabels?: { first?: string; second?: string };
 }) {
     // Keep a separate activity list for the timeline and card numbering.
     const activities = day.items.filter((item) => item.type === "activity");
@@ -149,10 +153,12 @@ export default function PublishedBoardDay({
                     <div
                         className={`grid min-w-0 gap-x-6 gap-y-7 lg:grid-cols-10 ${activities.length > 0 ? "lg:col-span-10" : "lg:col-span-12"}`}
                     >
-                        {/* Extra photos fill spaces in the desktop layout. */}
-                        {first?.images[1] ? (
+                        {/* Location photos fill the desktop spaces independently of activity uploads. */}
+                        {first ? (
                             <BoardPhoto
-                                image={first.images[1]}
+                                image={photos.first}
+                                placeholderLabel={photoLabels.first || first.location?.name || `Day ${day.number}`}
+                                showCredit
                                 className={`hidden aspect-[1.8] grayscale lg:row-start-1 lg:block ${evenDay ? "lg:col-span-4 lg:col-start-7" : "lg:col-span-5 lg:col-start-1"}`}
                             />
                         ) : null}
@@ -176,9 +182,11 @@ export default function PublishedBoardDay({
                                 </div>
                             );
                         })}
-                        {fourth?.images[1] ? (
+                        {fourth ? (
                             <BoardPhoto
-                                image={fourth.images[1]}
+                                image={photos.second}
+                                placeholderLabel={photoLabels.second || fourth.location?.name || `Day ${day.number}`}
+                                showCredit
                                 className="hidden aspect-[1.7] grayscale lg:col-span-4 lg:col-start-7 lg:row-start-3 lg:block"
                             />
                         ) : null}

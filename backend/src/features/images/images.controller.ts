@@ -23,9 +23,12 @@ export function createImagesController(service: ImagesService): ImagesController
         },
         content: async (_request, response, next) => {
             const { imageId } = response.locals.params as { imageId: number };
-            const { variant } = response.locals.query as { variant: "display" | "thumbnail" };
+            const { variant, boardId } = response.locals.query as {
+                variant: "display" | "thumbnail";
+                boardId?: number;
+            };
             const user = response.locals.user as AppUser | null;
-            const { stream, contentType } = await service.openImage(imageId, variant, user?.userId ?? null);
+            const { stream, contentType } = await service.openImage(imageId, variant, user?.userId ?? null, boardId);
             response.set({
                 "Content-Type": contentType,
                 "Cache-Control": "private, no-store",

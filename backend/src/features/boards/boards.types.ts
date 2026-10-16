@@ -11,6 +11,11 @@ export interface BoardAccess {
 }
 
 export interface BoardDocument extends BoardWrite {
+    author: {
+        username: string;
+        bio: string;
+        photo: { imageId: number; url: string } | null;
+    };
     boardId: number;
     revision: number;
     isCompleted: boolean;

@@ -89,6 +89,7 @@ export function addActivityToPreviewCopy(source: Board, activity: BoardActivity,
         title: existing ? draft.title : `${activity.title} trip`,
         description: existing ? draft.description : "",
         durationDays: Math.max(existing?.durationDays ?? 1, copied.dayNumber ?? 1),
+        dayNumbers: existing ? existing.dayNumbers : [1],
         dayTitles: existing?.dayTitles,
         items: existing ? [...draft.items, copied] : [copied],
         updatedAt: new Date().toISOString()

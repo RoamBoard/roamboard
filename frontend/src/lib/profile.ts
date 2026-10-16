@@ -156,13 +156,12 @@ export function createBoard(input: {
 }
 
 function resolveProfilePicture(profile: UserProfile): UserProfile {
+    if (!profile.profilePicture?.url) return profile;
     return {
         ...profile,
-        profilePicture: profile.profilePicture
-            ? {
-                  ...profile.profilePicture,
-                  url: new URL(profile.profilePicture.url, apiOrigin).toString()
-              }
-            : null
+        profilePicture: {
+            ...profile.profilePicture,
+            url: new URL(profile.profilePicture.url, apiOrigin).toString()
+        }
     };
 }

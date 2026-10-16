@@ -152,8 +152,10 @@ export const routeMapboxProvider = (
         })
     });
 
-export const searchUnsplashProvider = (query: string) =>
-    request<ProviderPhoto[]>(`/api/v1/providers/unsplash/search?q=${encodeURIComponent(query)}`);
+export const searchUnsplashProvider = (query: string, limit?: number) =>
+    request<ProviderPhoto[]>(
+        `/api/v1/providers/unsplash/search?q=${encodeURIComponent(query)}${limit === undefined ? "" : `&limit=${limit}`}`
+    );
 
 export const searchGooglePlacesProvider = (query: string) =>
     request<ProviderPlace[]>(`/api/v1/providers/google-places/search?q=${encodeURIComponent(query)}`);

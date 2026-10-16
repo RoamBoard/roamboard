@@ -1,6 +1,6 @@
 import type { Board, BoardImage, BoardItem } from "@/types/board";
 
-// Frontend presentation data; not an implemented backend response contract.
+// Viewer presentation data, adapted from the canonical Board document.
 export type BoardAuthor = {
     id: string;
     name: string;
@@ -15,6 +15,9 @@ export type PublishedBoardData = {
     board: Board;
     author: BoardAuthor;
     highlights: string[];
+    tagLabels?: string[];
+    isSample?: boolean;
+    canEditContent?: boolean;
 };
 
 // One day after the board's items have been grouped for display.

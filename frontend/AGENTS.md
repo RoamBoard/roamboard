@@ -199,19 +199,37 @@ when a real public-Board source and substantially larger persisted collections a
 Stress fixtures deliberately repeat photos and never appear in Discover. The reduced-motion scenario forces
 the same animation branch as the system preference; the normal gallery respects the browser preference.
 
-### Published board preview
+### Published board viewer
 
-`/boards/[boardId]` is a public viewer with the sample design at
-`/boards/lost-in-tokyo`. It reuses the homepage sidebar and account control,
+`/boards/[boardId]` loads numeric database IDs through the credentialed Board API and renders the full published
+design. Every existing and newly published Board uses this route; no page generation or fixture update is needed.
+Public Boards work anonymously; other Boards retain backend read permissions. Drafts stay in the draft editor.
+It reuses the homepage sidebar and account control,
 supports both themes and smaller screens, and opens full activity details in a
 native dialog. Account loading does not gate board viewing. The account control
 hides after the page is scrolled down.
 
-The mock loading boundary is `src/lib/published-board.ts`. The existing Board
-types now support optional one-based `dayNumber` on items and optional
-`dayTitles`; calendar dates and activity times remain optional. Public board
-author/highlight data is a frontend presentation shape awaiting a backend
-contract. Backend photo URLs and fallbacks belong in the supplied image data.
+`src/lib/published-board-store.ts` loads saved documents and handles retry and access states without sample
+fallbacks. `src/lib/published-board-data.ts` maps saved days, activity/photo order, chosen covers, tags and current
+author details. Author names use the database username; missing bio/photos remain empty, and unsupported
+statistics and Highlights are absent. Author photos use the Board-scoped image authorization described in
+`backend/BOARD_API_CONTRACT.md`. API image URLs resolve against `NEXT_PUBLIC_API_URL` and load directly in the
+browser so protected requests carry its session cookie. The presentation model retains optional dates/times and
+explicit saved day numbers, including empty days and gaps.
+
+`src/lib/published-board.ts` remains the mock boundary for sample slug routes such as `/boards/lost-in-tokyo`,
+which the unchanged Discover preview still links to. The old `PublishedBoardView` inspector is no longer used by
+the numeric page route.
+
+`useBoardPhotos` fills desktop grayscale photo spaces with distinct Unsplash photos from the saved location, with
+broader location/tag searches when a result pool is empty or runs out. A missing user-selected header uses another
+distinct automatic photo. Existing headers and activity photos are retained; IDs and image URLs already used in
+the Board are excluded from automatic selection. `src/lib/board-photos.ts` shares queries through a bounded
+browser-tab cache and calls the existing credentialed, quota-managed backend Unsplash endpoint. Failed provider
+requests do not trigger automatic backup requests. Photo lookup never delays Board rendering or writes to the
+Board document. Missing results and image-load errors retain a gray location-name placeholder in automatic photo
+spaces. Author photos still disappear when absent. Automatic photos have a small credit line on the image, with
+links to the photographer and Unsplash. The same behavior applies to sample and database Boards.
 
 `src/lib/board-preview.ts` uses tab-local session storage for preview bookmarks,
 saved activities, and editable copies. These actions do not write to the backend

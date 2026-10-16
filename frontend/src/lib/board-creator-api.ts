@@ -5,6 +5,17 @@ const apiOrigin = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 type ApiError = { error?: { code?: string; message?: string } };
 
+export class BoardApiError extends Error {
+    constructor(
+        message: string,
+        public readonly status: number,
+        public readonly code?: string
+    ) {
+        super(message);
+        this.name = "BoardApiError";
+    }
+}
+
 async function requestEnvelope<T>(
     path: string,
     init: RequestInit = {}
@@ -28,7 +39,11 @@ async function requestEnvelope<T>(
         meta?: { hasMore?: boolean };
     } & ApiError;
     if (!response.ok || body.data === undefined) {
-        throw new Error(body.error?.message ?? `Board request failed (${response.status}).`);
+        throw new BoardApiError(
+            body.error?.message ?? `Board request failed (${response.status}).`,
+            response.status,
+            body.error?.code
+        );
     }
     return { data: body.data, meta: body.meta };
 }
@@ -83,6 +98,11 @@ export type BoardWriteRequest = {
 };
 
 export type BoardDocument = Omit<BoardWriteRequest, "days"> & {
+    author?: {
+        username: string;
+        bio: string;
+        photo: { imageId: number; url: string } | null;
+    };
     boardId: number;
     revision: number;
     permissions: { canEditContent: boolean; canManageBoard: boolean };

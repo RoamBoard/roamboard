@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import DatabasePublishedBoard from "@/components/features/boards/DatabasePublishedBoard";
 import PublishedBoard from "@/components/features/boards/PublishedBoard";
 import PublishedBoardShell from "@/components/features/boards/PublishedBoardShell";
-import PublishedBoardView from "@/components/features/boards/PublishedBoardView";
-import AppShell from "@/components/layout/AppShell";
 import { getPublishedBoard } from "@/lib/published-board";
 
 type Props = {
@@ -19,8 +18,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
     if (isDatabaseBoardId(boardId)) {
         return {
-            title: "Board inspector | Roamboard",
-            description: "Inspect a saved Roamboard Board."
+            title: "Board | Roamboard",
+            description: "View a published Roamboard Board.",
+            robots: { index: false, follow: false }
         };
     }
 
@@ -36,13 +36,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function BoardPage({ params }: Props) {
     const { boardId } = await params;
 
-    // Saved boards use the existing backend viewer.
+    // Every database ID uses the same live viewer, including newly published Boards.
     if (isDatabaseBoardId(boardId)) {
-        return (
-            <AppShell activeHref="/boards">
-                <PublishedBoardView boardId={boardId} />
-            </AppShell>
-        );
+        return <DatabasePublishedBoard key={boardId} boardId={boardId} />;
     }
 
     const data = await getPublishedBoard(boardId);

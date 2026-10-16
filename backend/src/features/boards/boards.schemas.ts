@@ -119,7 +119,8 @@ export const boardListQuerySchema = z
 
 export const imageVariantQuerySchema = z
     .object({
-        variant: z.enum(["display", "thumbnail"]).default("display")
+        variant: z.enum(["display", "thumbnail"]).default("display"),
+        boardId: z.coerce.number().int().positive().optional()
     })
     .strict();
 

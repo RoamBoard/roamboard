@@ -19,7 +19,7 @@ export function getBoardDays(board: Board): PublishedBoardDay[] {
     }
 
     // Include empty days too if the board has a longer planned duration.
-    for (const number of Array.from({ length: board.durationDays ?? 0 }, (_, index) => index + 1)) {
+    for (const number of board.dayNumbers ?? Array.from({ length: board.durationDays ?? 0 }, (_, index) => index + 1)) {
         if (!groups.has(number)) groups.set(number, []);
     }
 

@@ -9,6 +9,7 @@ import BoardIcon from "@/components/features/boards/BoardIcon";
 import BoardPhoto from "@/components/features/boards/BoardPhoto";
 import PublishedBoardDay from "@/components/features/boards/PublishedBoardDay";
 import useBoardPreview from "@/components/features/boards/useBoardPreview";
+import useBoardPhotos from "@/components/features/boards/useBoardPhotos";
 import { getBoardDays, getBoardPlaceNames } from "@/lib/board-presentation";
 import type { BoardActivity } from "@/types/board";
 import type { PublishedBoardData } from "@/types/published-board";
@@ -18,7 +19,7 @@ const actionClasses =
 
 const numberLabel = (number: number) => String(number).padStart(2, "0");
 
-// Temporary icon lookup until the tag database is connected.
+// The tag API has names but no icon field.
 function getTagIcon(tag: string) {
     const name = tag.toLowerCase();
     if (name.includes("nature")) return "leaf";
@@ -26,9 +27,19 @@ function getTagIcon(tag: string) {
     return "gem";
 }
 
-export default function PublishedBoard({ board, author, highlights }: PublishedBoardData) {
+export default function PublishedBoard({
+    board,
+    author,
+    highlights,
+    tagLabels = board.tags,
+    isSample = true,
+    canEditContent = false
+}: PublishedBoardData) {
     const days = getBoardDays(board);
     const places = getBoardPlaceNames(board);
+    const automaticPhotos = useBoardPhotos(board, tagLabels);
+    const cover = board.coverImage?.url ? board.coverImage : automaticPhotos.photos.cover;
+    const coverLabel = automaticPhotos.slots.find((slot) => slot.id === "cover")?.label || board.title;
     const [selectedActivity, setSelectedActivity] = useState<BoardActivity | null>(null);
     // Preview saves and copies only stay in this browser tab.
     const preview = useBoardPreview(board, selectedActivity);
@@ -51,7 +62,7 @@ export default function PublishedBoard({ board, author, highlights }: PublishedB
     const feedback = (
         <>
             <p role="status" className="text-muted-foreground text-12 mt-3">
-                {preview.message}
+                {preview.message || "Bookmarks and copies are previews saved in this tab."}
             </p>
             {preview.error ? (
                 <p role="alert" className="text-14 mt-3">
@@ -72,12 +83,15 @@ export default function PublishedBoard({ board, author, highlights }: PublishedB
                         <BoardIcon name="arrow" className="size-3" /> back
                     </Link>
                     <BoardPhoto
-                        image={board.coverImage}
+                        image={cover}
+                        placeholderLabel={coverLabel}
+                        showCredit={!board.coverImage?.url}
+                        insetCredit
                         preload
                         className="mx-auto h-[16rem] w-[82%] rounded-b-[50%] sm:h-[25rem] lg:h-[29rem] lg:w-[80%]"
                         sizes="80vw"
                     />
-                    <div className={`relative mx-auto w-fit ${board.coverImage ? "-mt-7" : "pt-28"}`}>
+                    <div className="relative mx-auto -mt-7 w-fit">
                         <BoardPhoto
                             image={author.photo}
                             className="border-background mx-auto size-16 rounded-full border-4"
@@ -105,6 +119,11 @@ export default function PublishedBoard({ board, author, highlights }: PublishedB
                     </button>
                     {/* Show feedback on the page when no popup is open. */}
                     <div className="mx-auto max-w-md px-5">{selectedActivity || preview.draft ? null : feedback}</div>
+                    {canEditContent ? (
+                        <Link href={`/boards/${board.id}/edit`} className={`${actionClasses} mt-5`}>
+                            Edit Board
+                        </Link>
+                    ) : null}
                     {highlights.length ? (
                         <ul className="border-line text-muted-foreground text-16 mx-auto mt-8 w-fit min-w-56 space-y-3 border-t px-6 pt-9">
                             {highlights.map((highlight) => (
@@ -123,9 +142,9 @@ export default function PublishedBoard({ board, author, highlights }: PublishedB
                         </div>
                     </dl>
                     {/* Only show the first three tags. */}
-                    {board.tags.length ? (
+                    {tagLabels.length ? (
                         <ul className="border-line text-muted-foreground text-12 mx-auto mt-8 flex w-fit max-w-[90%] flex-wrap justify-center gap-x-7 gap-y-4 border-b px-2 pb-8">
-                            {board.tags.slice(0, 3).map((tag) => (
+                            {tagLabels.slice(0, 3).map((tag) => (
                                 <li key={tag} className="flex items-center gap-2">
                                     <BoardIcon name={getTagIcon(tag)} className="size-6" />
                                     {tag}
@@ -143,24 +162,41 @@ export default function PublishedBoard({ board, author, highlights }: PublishedB
                 </header>
                 {days.length ? (
                     days.map((day) => (
-                        <PublishedBoardDay key={day.number} day={day} onSelectActivity={handleOpenActivity} />
+                        <PublishedBoardDay
+                            key={day.number}
+                            day={day}
+                            onSelectActivity={handleOpenActivity}
+                            photos={{
+                                first: automaticPhotos.photos[`day-${day.number}-first`],
+                                second: automaticPhotos.photos[`day-${day.number}-second`]
+                            }}
+                            photoLabels={{
+                                first: automaticPhotos.slots.find((slot) => slot.id === `day-${day.number}-first`)
+                                    ?.label,
+                                second: automaticPhotos.slots.find((slot) => slot.id === `day-${day.number}-second`)
+                                    ?.label
+                            }}
+                        />
                     ))
                 ) : (
                     <p className="text-muted-foreground px-5 py-16 text-center">This board has no activities yet.</p>
                 )}
-                <footer className="border-line grid min-h-[42rem] gap-24 border-t px-5 py-10 sm:px-9 lg:gap-36 lg:py-12">
+                <footer className="border-line grid min-h-[42rem] grid-cols-1 gap-24 border-t px-5 py-10 sm:px-9 lg:gap-36 lg:py-12">
                     <section>
                         <p className="text-muted-foreground text-12">like this board?</p>
                         <h2 className="font-display text-36 mt-1 font-bold uppercase">Make it yours</h2>
                         <p className="text-muted-foreground text-14 mt-1 max-w-60">
-                            Save a copy and add your own ideas. Keep the places you love, change the rest.
+                            Create a preview copy in this tab and add your own ideas.
                         </p>
                         <button type="button" onClick={preview.copyBoard} className={`${actionClasses} mt-5`}>
                             <BoardIcon name="copy" className="size-4" />
-                            Copy board
+                            Copy board preview
                         </button>
                     </section>
-                    <section aria-labelledby="board-author-heading" className="max-w-lg self-end justify-self-end">
+                    <section
+                        aria-labelledby="board-author-heading"
+                        className="w-full max-w-lg min-w-0 self-end justify-self-end"
+                    >
                         <h2
                             id="board-author-heading"
                             className="font-display text-36 text-right leading-none font-bold uppercase"
@@ -197,7 +233,9 @@ export default function PublishedBoard({ board, author, highlights }: PublishedB
                         </div>
                     </section>
                     <p className="text-muted-foreground text-10">
-                        Development preview: sample board and author. Saves and copies stay in this tab.
+                        {isSample
+                            ? "Development preview: sample board and author. Saves and copies stay in this tab."
+                            : "Bookmarks and copies are previews saved in this tab."}
                     </p>
                 </footer>
             </article>

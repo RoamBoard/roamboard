@@ -300,7 +300,18 @@ async function readBoardDocument(
     boardId: number,
     userId: string | null | undefined
 ): Promise<BoardDocument | null> {
-    const boardResult = await client.query<BoardRow>("SELECT * FROM board WHERE board_id = $1", [boardId]);
+    const boardResult = await client.query<
+        BoardRow & {
+            author_username: string;
+            author_bio: string | null;
+            author_image_id: number | null;
+        }
+    >(
+        `SELECT b.*, u.username AS author_username, u.biography AS author_bio,
+          u.profile_picture_image_id AS author_image_id
+         FROM board b JOIN app_user u ON u.user_id = b.owner_user_id WHERE b.board_id = $1`,
+        [boardId]
+    );
     const board = boardResult.rows[0];
     if (!board) return null;
 
@@ -437,6 +448,17 @@ async function readBoardDocument(
         });
     }
     return {
+        author: {
+            username: board.author_username,
+            bio: board.author_bio ?? "",
+            photo:
+                board.author_image_id === null
+                    ? null
+                    : {
+                          imageId: board.author_image_id,
+                          url: `${imagePath(board.author_image_id, "display")}&boardId=${boardId}`
+                      }
+        },
         boardId: board.board_id,
         revision: board.revision,
         status: board.status,

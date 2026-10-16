@@ -80,10 +80,15 @@ export function createImagesService(
                 longitude: image.longitude
             };
         },
-        async openImage(imageId, variant, userId) {
+        async openImage(imageId, variant, userId, boardId) {
             const image = await repository.findImage(imageId);
             if (!image) throw new AppError(404, "Image not found", "NOT_FOUND");
-            if (image.boardId === null) {
+            if (boardId !== undefined) {
+                const access = await boards.getAccess(boardId, userId);
+                if (!access || !canReadBoard(access, userId) || image.profileOwnerUserId !== access.ownerUserId) {
+                    throw new AppError(404, "Image not found", "NOT_FOUND");
+                }
+            } else if (image.boardId === null) {
                 if (image.uploaderUserId !== userId) {
                     throw new AppError(404, "Image not found", "NOT_FOUND");
                 }
