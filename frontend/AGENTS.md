@@ -385,7 +385,7 @@ explicit saved day numbers, including empty days and gaps.
 Published Board routes use the database viewer exclusively. The former hardcoded Tokyo document and sample
 lookup were removed after importing Tokyo into the user's account through the canonical Board/image services.
 The retired sample slug has no database alias and shows the missing-Board state. The old `PublishedBoardView`
-inspector is no longer used by the page route. The separate profile page still uses its existing mock data.
+inspector is no longer used by the page route. The profile page reads live account data through the profile API. `/profile` redirects signed-in users to `/profile/{handle}`. Handle pages are public: visitors see profile details, public Boards and public travel data, while the owner sees the existing account profile and saved Boards. Published Board author names link to handle pages.
 
 `useBoardPhotos` fills desktop grayscale photo spaces with distinct Unsplash photos from the saved location, with
 broader location/tag searches when a result pool is empty or runs out. A missing user-selected header uses another

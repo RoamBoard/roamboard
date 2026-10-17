@@ -21,6 +21,7 @@ export interface UploadedImage {
     boardId: number | null;
     // A profile image can be shown with a readable Board without being attached as Board media.
     profileOwnerUserId?: string | null;
+    profileOwnerUsername?: string | null;
     capturedAt: Date | null;
     latitude: number | null;
     longitude: number | null;
@@ -91,7 +92,8 @@ export interface ImagesService {
         imageId: number,
         variant: "display" | "thumbnail",
         userId: string | null,
-        boardId?: number
+        boardId?: number,
+        profileHandle?: string
     ): Promise<{ stream: Readable; contentType: string }>;
     cleanupUnused(): Promise<{ removed: number }>;
 }

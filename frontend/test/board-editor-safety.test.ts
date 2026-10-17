@@ -336,9 +336,9 @@ test("canonical save-and-reopen mapping preserves the content fingerprint despit
     const tags = source.tags.map((name, index) => ({ name, tagId: index + 1 }));
     const write = toBoardWrite(source, tags, new Set(["photo-pin"]));
     const saved: BoardDocument = {
-        author: { username: "test-author", bio: "", photo: null },
         ...write,
         boardId: 40,
+        author: { username: "owner", bio: "", photo: null },
         revision: 2,
         tags,
         permissions: { canEditContent: true, canManageBoard: true },

@@ -448,6 +448,12 @@ async function readBoardDocument(
                     : null
         });
     }
+    const savedResult = userId
+        ? await client.query<{ saved: boolean }>(
+              "SELECT EXISTS (SELECT 1 FROM saved_boards WHERE board_id=$1 AND user_id=$2) AS saved",
+              [boardId, userId]
+          )
+        : null;
     return {
         author: {
             username: board.author_username,
@@ -461,6 +467,7 @@ async function readBoardDocument(
                       }
         },
         boardId: board.board_id,
+        savedByMe: savedResult?.rows[0]?.saved ?? false,
         revision: board.revision,
         status: board.status,
         title: board.title,

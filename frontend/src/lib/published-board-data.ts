@@ -136,6 +136,8 @@ export function toPublishedBoardData(document: BoardDocument): PublishedBoardDat
                 : undefined
         },
         tagLabels: document.tags.map((tag) => tag.name),
-        canEditContent: document.permissions.canEditContent
+        canEditContent: document.permissions.canEditContent,
+        canManageBoard: document.permissions.canManageBoard,
+        savedByMe: Boolean(document.savedByMe)
     };
 }

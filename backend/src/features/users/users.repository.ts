@@ -1,6 +1,7 @@
 import { getPool } from "../../db.js";
 import { AppError } from "../../shared/app-error.js";
 import { countryCodeForName } from "../../shared/countries.js";
+import { continentForCountry } from "../../shared/continents.js";
 import type { UsersRepository, UserProfile, ProfileBoard, MapDestination } from "./users.types.js";
 
 export function createUsersRepository(): UsersRepository {
@@ -12,13 +13,18 @@ export function createUsersRepository(): UsersRepository {
                 display_name: string;
                 biography: string | null;
                 location: string | null;
+                occupation: string | null;
+                default_board_visibility: UserProfile["defaultBoardVisibility"];
+                profile_revision: number;
                 profile_picture_image_id: number | null;
                 interests: string[];
+                languages: string[];
                 created_at: Date;
                 updated_at: Date;
             }>(
                 `SELECT u.*, COALESCE((SELECT array_agg(t.tag_name ORDER BY t.tag_name) FROM user_tag ut
-                   JOIN tag t ON t.tag_id=ut.tag_id WHERE ut.user_id=u.user_id), '{}') AS interests
+                   JOIN tag t ON t.tag_id=ut.tag_id WHERE ut.user_id=u.user_id), '{}') AS interests,
+                   COALESCE((SELECT array_agg(language_name ORDER BY language_name) FROM user_language WHERE user_id=u.user_id), '{}') AS languages
                  FROM app_user u WHERE u.user_id=$1`,
                 [userId]
             );
@@ -30,6 +36,8 @@ export function createUsersRepository(): UsersRepository {
                 displayName: row.display_name,
                 description: row.biography ?? "",
                 location: row.location,
+                occupation: row.occupation,
+                languages: row.languages,
                 interests: row.interests,
                 profilePicture:
                     row.profile_picture_image_id === null
@@ -39,35 +47,72 @@ export function createUsersRepository(): UsersRepository {
                               url: `/api/v1/images/${row.profile_picture_image_id}/content?variant=thumbnail`,
                               storageKey: null
                           },
-                settings: {},
+                defaultBoardVisibility: row.default_board_visibility,
+                revision: row.profile_revision,
                 createdAt: row.created_at.toISOString(),
                 updatedAt: row.updated_at.toISOString()
             };
             return profile;
         },
+        async findIdByHandle(handle) {
+            const result = await getPool().query<{ user_id: string }>(
+                "SELECT user_id FROM app_user WHERE username=$1",
+                [handle]
+            );
+            return result.rows[0]?.user_id ?? null;
+        },
         async update(userId, input) {
             const client = await getPool().connect();
             try {
                 await client.query("BEGIN");
-                await client.query("SELECT user_id FROM app_user WHERE user_id=$1 FOR UPDATE", [userId]);
+                const current = await client.query<{ profile_revision: number }>(
+                    "SELECT profile_revision FROM app_user WHERE user_id=$1 FOR UPDATE",
+                    [userId]
+                );
+                if (!current.rows[0]) throw new AppError(404, "Profile not found", "NOT_FOUND");
+                if (current.rows[0].profile_revision !== input.revision)
+                    throw new AppError(409, "Your profile changed. Reload it before saving.", "STALE_PROFILE");
                 const tags = await client.query<{ tag_id: number }>(
                     "SELECT tag_id FROM tag WHERE tag_name=ANY($1::text[])",
                     [input.interests]
                 );
                 if (tags.rows.length !== input.interests.length)
-                    throw new AppError(
-                        400,
-                        "Choose up to three distinct interests from the tag list",
-                        "INVALID_REQUEST"
-                    );
-                await client.query(
-                    "UPDATE app_user SET display_name=$2, biography=$3, location=$4, updated_at=NOW() WHERE user_id=$1",
-                    [userId, input.displayName, input.description, input.location]
+                    throw new AppError(400, "Choose interests from the tag list", "INVALID_REQUEST");
+                const languages = await client.query<{ language_name: string }>(
+                    "SELECT language_name FROM language WHERE language_name=ANY($1::text[])",
+                    [input.languages]
                 );
+                if (languages.rows.length !== input.languages.length)
+                    throw new AppError(400, "Choose languages from the list", "INVALID_REQUEST");
+                try {
+                    await client.query(
+                        `UPDATE app_user SET username=$2, display_name=$3, biography=$4, location=$5,
+                         occupation=$6, default_board_visibility=$7, profile_revision=profile_revision+1,
+                         updated_at=NOW() WHERE user_id=$1`,
+                        [
+                            userId,
+                            input.username,
+                            input.displayName,
+                            input.description,
+                            input.location,
+                            input.occupation,
+                            input.defaultBoardVisibility
+                        ]
+                    );
+                } catch (error) {
+                    if ((error as { code?: string }).code === "23505")
+                        throw new AppError(409, "That username is already taken.", "USERNAME_TAKEN");
+                    throw error;
+                }
                 await client.query("DELETE FROM user_tag WHERE user_id=$1", [userId]);
                 await client.query("INSERT INTO user_tag (user_id, tag_id) SELECT $1, UNNEST($2::int[])", [
                     userId,
                     tags.rows.map((tag) => tag.tag_id)
+                ]);
+                await client.query("DELETE FROM user_language WHERE user_id=$1", [userId]);
+                await client.query("INSERT INTO user_language (user_id, language_name) SELECT $1, UNNEST($2::text[])", [
+                    userId,
+                    input.languages
                 ]);
                 await client.query("COMMIT");
             } catch (error) {
@@ -96,7 +141,7 @@ export function createUsersRepository(): UsersRepository {
                     ]);
                 }
                 await client.query(
-                    "UPDATE app_user SET profile_picture_image_id=$2, updated_at=NOW() WHERE user_id=$1",
+                    "UPDATE app_user SET profile_picture_image_id=$2, profile_revision=profile_revision+1, updated_at=NOW() WHERE user_id=$1",
                     [userId, imageId]
                 );
                 const previous = user.rows[0]?.profile_picture_image_id;
@@ -112,7 +157,7 @@ export function createUsersRepository(): UsersRepository {
                 client.release();
             }
         },
-        async listBoards(userId, recent) {
+        async listBoards(userId, recent, publicOnly = false) {
             const result = await getPool().query<{
                 board_id: number;
                 owner_user_id: string;
@@ -123,13 +168,17 @@ export function createUsersRepository(): UsersRepository {
                 is_completed: boolean;
                 created_at: Date;
                 updated_at: Date;
+                cover_image_id: number | null;
                 destinations: MapDestination[];
             }>(
                 `SELECT b.*, COALESCE((SELECT jsonb_agg(d) FROM (
                     SELECT DISTINCT l.location_id::text AS id, l.country, l.city, l.latitude::float8 AS latitude, l.longitude::float8 AS longitude
-                    FROM activity a JOIN location l ON l.location_id=a.location_id WHERE a.board_id=b.board_id AND l.country IS NOT NULL
+                    FROM activity a JOIN location l ON l.location_id=a.location_id WHERE a.board_id=b.board_id
+                        AND a.location_confirmed AND l.country IS NOT NULL
                 ) d), '[]') AS destinations
-                 FROM board b WHERE b.owner_user_id=$1 ORDER BY b.updated_at DESC, b.board_id DESC ${recent ? "LIMIT 6" : ""}`,
+                 FROM board b WHERE b.owner_user_id=$1
+                 ${publicOnly ? "AND b.status='published' AND b.visibility='public'" : ""}
+                 ORDER BY b.updated_at DESC, b.board_id DESC ${recent ? "LIMIT 6" : ""}`,
                 [userId]
             );
             return result.rows.map((row) => ({
@@ -145,21 +194,121 @@ export function createUsersRepository(): UsersRepository {
                     countryCode: countryCodeForName(place.country)
                 })),
                 createdAt: row.created_at.toISOString(),
-                updatedAt: row.updated_at.toISOString()
+                updatedAt: row.updated_at.toISOString(),
+                coverImageUrl:
+                    row.cover_image_id === null
+                        ? null
+                        : `/api/v1/images/${row.cover_image_id}/content?variant=thumbnail`
             }));
         },
-        async stats(userId) {
-            const result = await getPool().query<Record<string, number>>(
-                `SELECT
-                 (SELECT COUNT(DISTINCT l.country)::int FROM board b JOIN activity a ON a.board_id=b.board_id JOIN location l ON l.location_id=a.location_id WHERE b.owner_user_id=$1 AND b.is_completed AND b.status='published') AS "countriesVisited",
-                 (SELECT COUNT(*)::int FROM board WHERE owner_user_id=$1) AS "boardsCreated",
-                 (SELECT COUNT(*)::int FROM friendship WHERE status='accepted' AND (requester_user_id=$1 OR recipient_user_id=$1)) AS friends,
-                 (SELECT COUNT(*)::int FROM saved_activities WHERE user_id=$1) AS "placesSaved",
-                 (SELECT COUNT(*)::int FROM saved_boards WHERE user_id=$1) AS "boardsSaved"
-                `,
+        async countPublicPhotos(userId) {
+            const result = await getPool().query<{ count: number }>(
+                `SELECT COUNT(DISTINCT bi.uploaded_image_id)::int AS count
+                 FROM board_image bi JOIN board b ON b.board_id=bi.board_id
+                 WHERE b.owner_user_id=$1 AND b.status='published' AND b.visibility='public' AND b.is_completed`,
                 [userId]
             );
-            return result.rows[0]!;
+            return result.rows[0]?.count ?? 0;
+        },
+        async stats(userId) {
+            const [locations, counts] = await Promise.all([
+                getPool().query<{ country: string; city: string | null }>(
+                    `SELECT DISTINCT l.country, l.city FROM board b
+                     JOIN activity a ON a.board_id=b.board_id JOIN location l ON l.location_id=a.location_id
+                     WHERE b.owner_user_id=$1 AND b.is_completed AND b.status='published'
+                       AND a.location_confirmed AND l.country IS NOT NULL`,
+                    [userId]
+                ),
+                getPool().query<{
+                    photosUploaded: number;
+                    boardsCreated: number;
+                    friends: number;
+                    activitiesSaved: number;
+                    boardsSaved: number;
+                }>(
+                    `SELECT
+                     (SELECT COUNT(DISTINCT bi.uploaded_image_id)::int FROM board_image bi JOIN board b ON b.board_id=bi.board_id
+                        WHERE b.owner_user_id=$1 AND b.is_completed AND b.status='published') AS "photosUploaded",
+                     (SELECT COUNT(*)::int FROM board WHERE owner_user_id=$1 AND status='published') AS "boardsCreated",
+                     (SELECT COUNT(*)::int FROM friendship WHERE status='accepted' AND
+                        (requester_user_id=$1 OR recipient_user_id=$1)) AS friends,
+                     (SELECT COUNT(*)::int FROM saved_activities WHERE user_id=$1) AS "activitiesSaved",
+                     (SELECT COUNT(*)::int FROM saved_boards sb JOIN board b ON b.board_id=sb.board_id
+                        WHERE sb.user_id=$1 AND b.status='published' AND b.owner_user_id<>$1 AND
+                        (b.visibility='public' OR
+                         (b.visibility='friends' AND EXISTS (SELECT 1 FROM friendship f WHERE f.status='accepted' AND
+                            ((f.requester_user_id=b.owner_user_id AND f.recipient_user_id=$1) OR
+                             (f.recipient_user_id=b.owner_user_id AND f.requester_user_id=$1)))) OR
+                         EXISTS (SELECT 1 FROM board_member bm WHERE bm.board_id=b.board_id AND bm.user_id=$1))) AS "boardsSaved"`,
+                    [userId]
+                )
+            ]);
+            const countries = new Set<string>();
+            const cities = new Set<string>();
+            const continents = new Set<string>();
+            for (const row of locations.rows) {
+                const code = countryCodeForName(row.country);
+                if (!code) continue;
+                countries.add(code);
+                if (row.city?.trim()) cities.add(`${code}:${row.city.trim().toLocaleLowerCase("en")}`);
+                const continent = continentForCountry(code);
+                if (continent) continents.add(continent);
+            }
+            return {
+                countriesVisited: countries.size,
+                citiesExplored: cities.size,
+                continentsCovered: continents.size,
+                ...counts.rows[0]
+            };
+        },
+        async listSavedBoards(userId, page, limit) {
+            const result = await getPool().query<{
+                board_id: number;
+                title: string;
+                description: string | null;
+                owner_user_id: string;
+                username: string;
+                display_name: string;
+                cover_image_id: number | null;
+                saved_at: Date;
+            }>(
+                `SELECT b.board_id, b.title, b.description, b.owner_user_id, u.username, u.display_name,
+                        b.cover_image_id, sb.saved_at FROM saved_boards sb
+                 JOIN board b ON b.board_id=sb.board_id JOIN app_user u ON u.user_id=b.owner_user_id
+                 WHERE sb.user_id=$1 AND b.status='published' AND b.owner_user_id<>$1 AND
+                   (b.visibility='public' OR
+                    (b.visibility='friends' AND EXISTS (SELECT 1 FROM friendship f WHERE f.status='accepted' AND
+                       ((f.requester_user_id=b.owner_user_id AND f.recipient_user_id=$1) OR
+                        (f.recipient_user_id=b.owner_user_id AND f.requester_user_id=$1)))) OR
+                    EXISTS (SELECT 1 FROM board_member bm WHERE bm.board_id=b.board_id AND bm.user_id=$1))
+                 ORDER BY sb.saved_at DESC, b.board_id DESC LIMIT $2 OFFSET $3`,
+                [userId, limit + 1, (page - 1) * limit]
+            );
+            return {
+                items: result.rows.slice(0, limit).map((row) => ({
+                    boardId: row.board_id,
+                    title: row.title,
+                    description: row.description ?? "",
+                    owner: { id: row.owner_user_id, username: row.username, displayName: row.display_name },
+                    coverImageUrl:
+                        row.cover_image_id === null
+                            ? null
+                            : `/api/v1/images/${row.cover_image_id}/content?variant=thumbnail`,
+                    savedAt: row.saved_at.toISOString()
+                })),
+                hasMore: result.rows.length > limit
+            };
+        },
+        async saveBoard(userId, boardId) {
+            const result = await getPool().query(
+                `INSERT INTO saved_boards (user_id, board_id) VALUES ($1, $2)
+                 ON CONFLICT (board_id, user_id) DO NOTHING RETURNING board_id`,
+                [userId, boardId]
+            );
+            return result.rowCount === 1;
+        },
+        async unsaveBoard(userId, boardId) {
+            await getPool().query("DELETE FROM saved_boards WHERE user_id=$1 AND board_id=$2", [userId, boardId]);
         }
     };
 }

@@ -32,7 +32,7 @@ import type {
     BoardPinDraft,
     BoardStatus
 } from "@/types/board-creator";
-import { getMockSettings, restoreMockStore } from "@/data/mock-social";
+import { loadProfile } from "@/lib/profile";
 
 const chapterClasses =
     "mx-auto grid w-full max-w-[96rem] scroll-mt-36 gap-8 px-5 pb-20 sm:gap-10 sm:px-8 lg:grid-cols-[21rem_minmax(0,1fr)] lg:gap-16 lg:px-12 lg:pb-28";
@@ -74,14 +74,6 @@ function addPhotoSuggestions(current: BoardDayDraft[], uploads: UploadedBoardIma
     }, current);
 }
 
-function getDefaultBoardCreatorVisibility(): BoardCreatorPayload["visibility"] {
-    restoreMockStore();
-    const defaultVis = getMockSettings().defaultBoardVisibility;
-    if (defaultVis === "friends") return "friends";
-    if (defaultVis === "public") return "public";
-    return "collaborators";
-}
-
 export default function BoardCreator({
     initialBoardId,
     expectedStatus = "draft",
@@ -103,9 +95,10 @@ export default function BoardCreator({
     const [days, setDays] = useState<BoardDayDraft[]>(() => [{ id: initialDayId, dayNumber: 1, date: null, pins: [] }]);
     const [tags, setTags] = useState<string[]>([]);
     const [allowedTags, setAllowedTags] = useState<Array<{ tagId: number; name: string }>>([]);
-    const [visibility, setVisibility] = useState<BoardCreatorPayload["visibility"]>(() =>
-        initialBoardId !== undefined ? "collaborators" : getDefaultBoardCreatorVisibility()
-    );
+    const [visibility, setVisibility] = useState<BoardCreatorPayload["visibility"]>("collaborators");
+    const visibilityTouched = useRef(false);
+    const [preferenceLoading, setPreferenceLoading] = useState(initialBoardId === undefined);
+    const [preferenceError, setPreferenceError] = useState(false);
     const [confirmedPhotoPins, setConfirmedPhotoPins] = useState<Set<string>>(() => new Set());
     const [saving, setSaving] = useState<BoardStatus | null>(null);
     const [boardUploading, setBoardUploading] = useState(false);
@@ -213,7 +206,30 @@ export default function BoardCreator({
     );
 
     const fingerprint = boardEditorFingerprint(payload, confirmedPhotoPins);
-    const [initialFingerprint] = useState(fingerprint);
+    const initialPayload = useRef(payload);
+    const [initialFingerprint, setInitialFingerprint] = useState(fingerprint);
+    useEffect(() => {
+        if (initialBoardId !== undefined) return;
+        void loadProfile()
+            .then((profile) => {
+                if (!visibilityTouched.current) {
+                    setVisibility(profile.defaultBoardVisibility);
+                    setInitialFingerprint(
+                        boardEditorFingerprint(
+                            { ...initialPayload.current, visibility: profile.defaultBoardVisibility },
+                            new Set()
+                        )
+                    );
+                }
+            })
+            .catch((caught: unknown) => {
+                if (!visibilityTouched.current) {
+                    setPreferenceError(true);
+                    setError(caught instanceof Error ? caught.message : "Board preferences could not be loaded.");
+                }
+            })
+            .finally(() => setPreferenceLoading(false));
+    }, [initialBoardId]);
     const dirty = fingerprint !== (savedFingerprint ?? initialFingerprint);
     useBoardLeaveWarning((!editorDisabled && dirty) || saving !== null || uploading, setLeaveHref);
     useEffect(
@@ -366,6 +382,10 @@ export default function BoardCreator({
 
     async function save(status: BoardStatus) {
         if (saveInFlight.current || editorDisabled || uploading) return;
+        if ((preferenceLoading || preferenceError) && !visibilityTouched.current) {
+            setSaveError("Wait for Board preferences or choose a visibility option above before saving.");
+            return;
+        }
         const unconfirmedPhotoPin = days
             .flatMap((day) => day.pins)
             .find((pin) => pin.source === "photo" && !confirmedPhotoPins.has(pin.id));
@@ -630,7 +650,15 @@ export default function BoardCreator({
                                     void loadTags();
                                 }}
                                 onTagsChange={setTags}
-                                onVisibilityChange={setVisibility}
+                                onVisibilityChange={(value) => {
+                                    visibilityTouched.current = true;
+                                    setVisibility(value);
+                                    if (preferenceError) {
+                                        setPreferenceError(false);
+                                        setError("");
+                                    }
+                                    setSaveError("");
+                                }}
                             />
                         </div>
                     </section>

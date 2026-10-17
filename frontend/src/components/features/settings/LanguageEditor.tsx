@@ -5,17 +5,17 @@ import { useState } from "react";
 type Props = {
     languages: string[];
     onChangeLanguages: (languages: string[]) => void;
+    choices: string[];
     maxLanguages?: number;
 };
 
-export default function LanguageEditor({ languages, onChangeLanguages, maxLanguages = 10 }: Props) {
+export default function LanguageEditor({ languages, onChangeLanguages, choices, maxLanguages = 10 }: Props) {
     const [newLanguage, setNewLanguage] = useState("");
 
     function handleAddLanguage() {
         if (languages.length >= maxLanguages) return;
-        const trimmed = newLanguage.trim();
-        if (trimmed && !languages.includes(trimmed)) {
-            onChangeLanguages([...languages, trimmed]);
+        if (choices.includes(newLanguage) && !languages.includes(newLanguage)) {
+            onChangeLanguages([...languages, newLanguage]);
             setNewLanguage("");
         }
     }
@@ -58,25 +58,22 @@ export default function LanguageEditor({ languages, onChangeLanguages, maxLangua
             </div>
 
             <div className="mt-4 flex max-w-sm gap-2">
-                <input
-                    type="text"
+                <select
                     aria-label="Add language"
                     value={newLanguage}
                     disabled={languages.length >= maxLanguages}
                     onChange={(e) => setNewLanguage(e.target.value)}
-                    onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                            e.preventDefault();
-                            handleAddLanguage();
-                        }
-                    }}
-                    placeholder={
-                        languages.length >= maxLanguages
-                            ? `Limit reached (${maxLanguages} max)`
-                            : "Add language (e.g. Spanish)"
-                    }
                     className="border-line bg-background text-12 text-foreground placeholder:text-muted-foreground font-body focus:border-foreground flex-1 rounded-[2px] border px-3 py-1.5 transition-colors focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                />
+                >
+                    <option value="">Choose a language</option>
+                    {choices
+                        .filter((choice) => !languages.includes(choice))
+                        .map((choice) => (
+                            <option key={choice} value={choice}>
+                                {choice}
+                            </option>
+                        ))}
+                </select>
                 <button
                     type="button"
                     disabled={languages.length >= maxLanguages || !newLanguage.trim()}

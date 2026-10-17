@@ -41,7 +41,9 @@ test(
                     "001_initial.sql",
                     "002_auth_session.sql",
                     "003_board_creator.sql",
-                    "004_api_features.sql"
+                    "004_api_features.sql",
+                    "006_profile.sql",
+                    "007_profile_tag_catalog.sql"
                 ]) {
                     const sql = await readFile(new URL(`../db/migrations/${name}`, import.meta.url), "utf8");
                     await migrationClient.query(sql);
@@ -138,7 +140,11 @@ test(
             const imageA = images.rows[0]!.uploaded_image_id;
             const imageB = images.rows[1]!.uploaded_image_id;
             const tags = await createBoardsRepository().listTags();
-            assert.equal(tags.length, 40);
+            const catalog = JSON.parse(
+                await readFile(new URL("../../shared/roamboard-tags.json", import.meta.url), "utf8")
+            ) as { tags: Array<{ name: string }> };
+            const availableNames = new Set(tags.map((tag) => tag.name));
+            assert.ok(catalog.tags.every((tag) => availableNames.has(tag.name)));
             const foodId = tags.find((tag) => tag.name === "Food")!.tagId;
             const repository = createBoardsRepository();
             const service = createBoardsService(repository);

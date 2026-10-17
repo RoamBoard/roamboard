@@ -1,27 +1,24 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { boardTags, getBoardTag, type BoardTag, type BoardTagId } from "@/data/board-tags";
+import { boardTags, type BoardTag } from "@/data/board-tags";
 import TagIcon from "@/components/ui/TagIcon";
 
 type Props = {
-    selectedTagIds: BoardTagId[];
-    onChange: (tags: BoardTagId[]) => void;
+    selectedTags: string[];
+    onChange: (tags: string[]) => void;
     maxTags?: number;
     className?: string;
 };
 
-export default function ProfileTagSelector({ selectedTagIds, onChange, maxTags = 10, className = "" }: Props) {
+export default function ProfileTagSelector({ selectedTags, onChange, maxTags = 10, className = "" }: Props) {
     const [searchQuery, setSearchQuery] = useState("");
 
-    // Resolve active tags strictly from catalog IDs
     const activeTags = useMemo(() => {
-        return selectedTagIds.map((id) => getBoardTag(id)).filter((t): t is BoardTag => Boolean(t));
-    }, [selectedTagIds]);
+        return selectedTags.map((name) => ({ name, catalogTag: boardTags.find((tag) => tag.name === name) }));
+    }, [selectedTags]);
 
-    const activeTagIdSet = useMemo(() => {
-        return new Set(activeTags.map((t) => t.id));
-    }, [activeTags]);
+    const activeTagNames = useMemo(() => new Set(selectedTags), [selectedTags]);
 
     // Filter catalog tags based on search query
     const filteredTags = useMemo(() => {
@@ -35,21 +32,19 @@ export default function ProfileTagSelector({ selectedTagIds, onChange, maxTags =
         );
     }, [searchQuery]);
 
-    const isMaxReached = activeTags.length >= maxTags;
+    const isMaxReached = selectedTags.length >= maxTags;
 
     function handleToggleTag(tag: BoardTag) {
-        if (activeTagIdSet.has(tag.id)) {
-            // Remove
-            onChange(activeTags.filter((t) => t.id !== tag.id).map((t) => t.id));
+        if (activeTagNames.has(tag.name)) {
+            onChange(selectedTags.filter((name) => name !== tag.name));
         } else {
-            // Add if limit not reached
             if (isMaxReached) return;
-            onChange([...activeTags.map((t) => t.id), tag.id]);
+            onChange([...selectedTags, tag.name]);
         }
     }
 
-    function handleRemoveTag(tagId: BoardTagId) {
-        onChange(activeTags.filter((t) => t.id !== tagId).map((t) => t.id));
+    function handleRemoveTag(name: string) {
+        onChange(selectedTags.filter((selected) => selected !== name));
     }
 
     return (
@@ -59,7 +54,7 @@ export default function ProfileTagSelector({ selectedTagIds, onChange, maxTags =
                 <div className="flex items-center justify-between">
                     <h2 className="font-display text-16 text-foreground font-bold tracking-tight uppercase">Tags</h2>
                     <span className="text-11 text-muted-foreground font-medium">
-                        ({activeTags.length}/{maxTags})
+                        ({selectedTags.length}/{maxTags})
                     </span>
                 </div>
                 <p className="text-12 text-muted-foreground mt-0.5">
@@ -72,14 +67,16 @@ export default function ProfileTagSelector({ selectedTagIds, onChange, maxTags =
                 <div className="flex flex-wrap gap-2">
                     {activeTags.map((tag) => (
                         <span
-                            key={tag.id}
+                            key={tag.name}
                             className="border-line bg-faint text-12 text-foreground font-body flex items-center gap-1.5 rounded-[2px] border px-2.5 py-1 font-medium"
                         >
-                            <TagIcon tag={tag} size={13} className="text-foreground shrink-0" />
+                            {tag.catalogTag && (
+                                <TagIcon tag={tag.catalogTag} size={13} className="text-foreground shrink-0" />
+                            )}
                             <span>{tag.name}</span>
                             <button
                                 type="button"
-                                onClick={() => handleRemoveTag(tag.id)}
+                                onClick={() => handleRemoveTag(tag.name)}
                                 aria-label={`Remove ${tag.name}`}
                                 className="text-muted-foreground hover:text-foreground cursor-pointer text-xs leading-none"
                             >
@@ -126,7 +123,7 @@ export default function ProfileTagSelector({ selectedTagIds, onChange, maxTags =
                         </p>
                     ) : (
                         filteredTags.map((tag) => {
-                            const isSelected = activeTagIdSet.has(tag.id);
+                            const isSelected = activeTagNames.has(tag.name);
                             const isDisabled = isMaxReached && !isSelected;
 
                             return (

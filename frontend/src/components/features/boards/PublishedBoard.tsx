@@ -13,6 +13,7 @@ import useBoardPhotos from "@/components/features/boards/useBoardPhotos";
 import { getBoardDays, getBoardPlaceNames } from "@/lib/board-presentation";
 import type { BoardActivity } from "@/types/board";
 import type { PublishedBoardData } from "@/types/published-board";
+import { ProfileApiError, saveBoardBookmark, unsaveBoardBookmark } from "@/lib/profile";
 
 const actionClasses =
     "border-line hover:bg-faint inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 border px-5 py-2 text-14 focus-visible:outline-2 focus-visible:outline-offset-4";
@@ -39,7 +40,9 @@ export default function PublishedBoard({
     board,
     author,
     tagLabels = board.tags,
-    canEditContent = false
+    canEditContent = false,
+    canManageBoard = false,
+    savedByMe = false
 }: PublishedBoardData) {
     const days = getBoardDays(board);
     const places = getBoardPlaceNames(board);
@@ -47,8 +50,32 @@ export default function PublishedBoard({
     const cover = board.coverImage?.url ? board.coverImage : automaticPhotos.photos.cover;
     const coverLabel = automaticPhotos.slots.find((slot) => slot.id === "cover")?.label || board.title;
     const [selectedActivity, setSelectedActivity] = useState<BoardActivity | null>(null);
+    const [bookmarked, setBookmarked] = useState(savedByMe);
+    const [bookmarkBusy, setBookmarkBusy] = useState(false);
+    const [bookmarkMessage, setBookmarkMessage] = useState("");
+    const [signInToSave, setSignInToSave] = useState(false);
     // Preview saves and copies only stay in this browser tab.
     const preview = useBoardPreview(board, selectedActivity);
+
+    async function toggleBookmark() {
+        if (bookmarkBusy) return;
+        setBookmarkBusy(true);
+        setBookmarkMessage("");
+        setSignInToSave(false);
+        try {
+            if (bookmarked) await unsaveBoardBookmark(Number(board.id));
+            else await saveBoardBookmark(Number(board.id));
+            setBookmarked(!bookmarked);
+            setBookmarkMessage(
+                bookmarked ? "Board removed from your saved collection." : "Board saved to your collection."
+            );
+        } catch (caught) {
+            setSignInToSave(caught instanceof ProfileApiError && caught.status === 401);
+            setBookmarkMessage(caught instanceof Error ? caught.message : "The Board could not be saved.");
+        } finally {
+            setBookmarkBusy(false);
+        }
+    }
 
     // Don't carry a previous activity's save message into this popup.
     function handleOpenActivity(activity: BoardActivity) {
@@ -68,7 +95,7 @@ export default function PublishedBoard({
     const feedback = (
         <>
             <p role="status" className="text-muted-foreground text-12 mt-3">
-                {preview.message || "Bookmarks and copies are previews saved in this tab."}
+                {preview.message || "Activity saves and copies are previews saved in this tab."}
             </p>
             {preview.error ? (
                 <p role="alert" className="text-14 mt-3">
@@ -99,14 +126,16 @@ export default function PublishedBoard({
                     />
                     <div className="relative mx-auto -mt-7 w-fit">
                         {/* Keep the avatar circle when there is no profile photo, so the name stays below the cover. */}
-                        <div
-                            role={author.photo ? undefined : "img"}
-                            aria-label={author.photo ? undefined : `Profile photo placeholder for ${author.name}`}
-                            className="border-background bg-faint mx-auto size-16 overflow-hidden rounded-full border-4"
-                        >
-                            <BoardPhoto image={author.photo} className="h-full w-full" sizes="64px" />
-                        </div>
-                        <p className="text-12 mt-2">{author.name}</p>
+                        <Link href={`/profile/${encodeURIComponent(author.id)}`} className="block hover:underline">
+                            <div
+                                role={author.photo ? undefined : "img"}
+                                aria-label={author.photo ? undefined : `Profile photo placeholder for ${author.name}`}
+                                className="border-background bg-faint mx-auto size-16 overflow-hidden rounded-full border-4"
+                            >
+                                <BoardPhoto image={author.photo} className="h-full w-full" sizes="64px" />
+                            </div>
+                            <p className="text-12 mt-2">{author.name}</p>
+                        </Link>
                         <p className="text-muted-foreground text-10">presents</p>
                     </div>
                     <h1 className="font-display mx-auto mt-7 max-w-6xl px-5 text-[clamp(2.75rem,7vw,8rem)] leading-[0.95] font-bold tracking-tight break-words uppercase">
@@ -118,15 +147,28 @@ export default function PublishedBoard({
                             {board.description}
                         </p>
                     ) : null}
-                    <button
-                        type="button"
-                        onClick={preview.saveBoard}
-                        aria-label={preview.boardSaved ? "Remove board preview bookmark" : "Bookmark board preview"}
-                        aria-pressed={preview.boardSaved}
-                        className="hover:bg-faint mt-7 inline-flex size-11 cursor-pointer items-center justify-center focus-visible:outline-2 focus-visible:outline-offset-4"
-                    >
-                        <BoardIcon name="bookmark" className={`size-5 ${preview.boardSaved ? "fill-current" : ""}`} />
-                    </button>
+                    {!canManageBoard && (
+                        <button
+                            type="button"
+                            onClick={() => void toggleBookmark()}
+                            disabled={bookmarkBusy}
+                            aria-label={bookmarked ? "Remove saved Board" : "Save Board"}
+                            aria-pressed={bookmarked}
+                            className="hover:bg-faint mt-7 inline-flex size-11 cursor-pointer items-center justify-center focus-visible:outline-2 focus-visible:outline-offset-4"
+                        >
+                            <BoardIcon name="bookmark" className={`size-5 ${bookmarked ? "fill-current" : ""}`} />
+                        </button>
+                    )}
+                    {bookmarkMessage && (
+                        <p role="status" className="text-12 text-muted-foreground">
+                            {bookmarkMessage}{" "}
+                            {signInToSave && (
+                                <Link href="/login" className="underline">
+                                    Sign in
+                                </Link>
+                            )}
+                        </p>
+                    )}
                     {/* Show feedback on the page when no popup is open. */}
                     <div className="mx-auto max-w-md px-5">{selectedActivity || preview.draft ? null : feedback}</div>
                     {canEditContent ? (
@@ -221,7 +263,7 @@ export default function PublishedBoard({
                         </div>
                     </section>
                     <p className="text-muted-foreground text-10">
-                        Bookmarks and copies are previews saved in this tab.
+                        Activity saves and copies are previews saved in this tab.
                     </p>
                 </footer>
             </article>

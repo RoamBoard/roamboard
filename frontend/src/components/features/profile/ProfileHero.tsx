@@ -1,12 +1,14 @@
-import Image from "@/components/images/LibraryImage";
+import { Fragment } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import type { UserProfile } from "@/types/social";
-import { getBoardTag, boardTagHref } from "@/data/board-tags";
+import { apiOrigin, type PublicProfile, type ProfileStats } from "@/lib/profile";
+import { boardTags, boardTagHref } from "@/data/board-tags";
 import TagIcon from "@/components/ui/TagIcon";
-import { getTierGradientStyle } from "@/utils/tier";
 
 type Props = {
-    profile: UserProfile;
+    profile: PublicProfile;
+    stats: ProfileStats | null;
+    isOwner?: boolean;
 };
 
 function getNameStyle(nameStr: string): string {
@@ -23,10 +25,12 @@ function getNameStyle(nameStr: string): string {
     return "text-48 sm:text-60 leading-[0.85] -mt-8 sm:-mt-12";
 }
 
-export default function ProfileHero({ profile }: Props) {
-    const occupation = profile.occupation || profile.details?.occupation;
-    const languages = profile.details?.languages ?? [];
-    const rawTags = profile.details?.tags ?? profile.details?.interests ?? [];
+export default function ProfileHero({ profile, stats, isOwner = true }: Props) {
+    const portraitUrl = profile.profilePicture ? new URL(profile.profilePicture.url, apiOrigin) : null;
+    portraitUrl?.searchParams.set("variant", "display");
+    const occupation = profile.occupation;
+    const languages = profile.languages;
+    const rawTags = profile.interests;
     const hasOccupation = Boolean(occupation);
     const hasLanguages = languages.length > 0;
     const hasTags = rawTags.length > 0;
@@ -37,40 +41,35 @@ export default function ProfileHero({ profile }: Props) {
             {/* Left column: Hero photo + Name */}
             <div className="flex flex-col lg:col-span-5">
                 <div className="bg-faint border-line relative aspect-[3/4] w-full overflow-hidden rounded-[2px] border">
-                    <Image
-                        src={profile.avatarUrl}
-                        alt={`Portrait of ${profile.name}`}
-                        fill
-                        priority
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 40vw, 380px"
-                        className="object-cover"
-                    />
+                    {portraitUrl ? (
+                        <Image
+                            src={portraitUrl.toString()}
+                            alt={`Portrait of ${profile.displayName}`}
+                            fill
+                            priority
+                            unoptimized
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 40vw, 380px"
+                            className="object-cover"
+                        />
+                    ) : (
+                        <div className="text-muted-foreground flex h-full items-center justify-center">
+                            No profile photo
+                        </div>
+                    )}
 
                     {/* Subtle bottom fade to guarantee readable contrast when display name overlaps */}
                     <div className="from-background/90 via-background/40 pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t to-transparent sm:h-28" />
-
-                    {/* Notice in the box: photo upload implementation pending backend */}
-                    <div className="border-line bg-background/95 absolute top-3 right-3 left-3 rounded-[2px] border p-2.5 shadow-xs backdrop-blur-xs">
-                        <div className="flex items-center gap-1.5">
-                            <span className="bg-foreground h-1.5 w-1.5 shrink-0 rounded-full" />
-                            <span className="text-10 tracking-label text-foreground block font-bold uppercase">
-                                Photo Upload Note
-                            </span>
-                        </div>
-                        <p className="text-10 text-muted-foreground mt-1 leading-normal font-medium">
-                            Upload should be implemented later when the backend framework is created.
-                        </p>
-                    </div>
                 </div>
 
                 {/* Display Name slightly overlapping the picture with responsive font sizing */}
                 <h2
                     className={`font-display text-foreground relative z-10 px-1 font-black tracking-tight break-words uppercase select-none ${getNameStyle(
-                        profile.name
+                        profile.displayName
                     )}`}
                 >
-                    {profile.name}
+                    {profile.displayName}
                 </h2>
+                <p className="text-12 text-muted-foreground mt-2 px-1">@{profile.username}</p>
             </div>
 
             {/* Right column: Location, Buttons, Headline, Bio, Stats with vertical lines, Platinum Tier */}
@@ -99,29 +98,33 @@ export default function ProfileHero({ profile }: Props) {
                                     based in
                                 </span>
                                 <span className="text-14 text-foreground block leading-tight font-bold">
-                                    {profile.location}
+                                    {profile.location || "—"}
                                 </span>
                             </div>
                         </div>
 
                         {/* Top right button: [ edit profile ] */}
-                        <div className="flex items-center gap-2">
-                            <Link
-                                href="/settings"
-                                className="border-line text-12 text-muted-foreground hover:text-foreground hover:border-foreground font-body cursor-pointer rounded-[2px] border px-3.5 py-1 font-medium transition-colors"
-                            >
-                                edit profile
-                            </Link>
-                        </div>
+                        {isOwner && (
+                            <div className="flex items-center gap-2">
+                                <Link
+                                    href="/settings"
+                                    className="border-line text-12 text-muted-foreground hover:text-foreground hover:border-foreground font-body cursor-pointer rounded-[2px] border px-3.5 py-1 font-medium transition-colors"
+                                >
+                                    edit profile
+                                </Link>
+                            </div>
+                        )}
                     </div>
 
-                    {/* Headline & Bio */}
+                    {/* Biography */}
                     <div className="mt-8">
-                        <h3 className="font-display text-30 sm:text-36 text-foreground leading-tight font-bold">
-                            {profile.headline || "Chasing places, collecting stories."}
-                        </h3>
                         <p className="text-13 text-muted-foreground mt-3 max-w-xl leading-relaxed">
-                            {profile.bio}{" "}
+                            {profile.description.split(/\r\n?|\n/).map((line, index) => (
+                                <Fragment key={index}>
+                                    {index > 0 && <br />}
+                                    {line}
+                                </Fragment>
+                            ))}{" "}
                             <span
                                 className="text-muted-foreground/30 pointer-events-none animate-pulse font-normal select-none motion-reduce:animate-none"
                                 aria-hidden="true"
@@ -200,14 +203,13 @@ export default function ProfileHero({ profile }: Props) {
                                             </svg>
                                             <span className="text-muted-foreground text-12 font-normal">Tags:</span>
                                         </div>
-                                        {rawTags
-                                            .map((id) => getBoardTag(id))
-                                            .filter((t): t is NonNullable<typeof t> => Boolean(t))
-                                            .map((tag) => (
+                                        {rawTags.map((name) => {
+                                            const tag = boardTags.find((item) => item.name === name);
+                                            return tag ? (
                                                 <Link
-                                                    key={tag.id}
+                                                    key={name}
                                                     href={boardTagHref(tag.id)}
-                                                    title={`Explore ${tag.name} tag: ${tag.description}`}
+                                                    title={`Explore ${name} tag: ${tag.description}`}
                                                     className="group border-line/60 hover:bg-faint/60 hover:border-foreground/70 text-11 text-muted-foreground hover:text-foreground font-body flex cursor-pointer items-center gap-1.5 rounded-[2px] border bg-transparent px-2 py-0.5 font-medium transition-colors"
                                                 >
                                                     <TagIcon
@@ -215,9 +217,17 @@ export default function ProfileHero({ profile }: Props) {
                                                         size={11}
                                                         className="text-muted-foreground/60 group-hover:text-foreground shrink-0 transition-colors"
                                                     />
-                                                    <span>{tag.name}</span>
+                                                    <span>{name}</span>
                                                 </Link>
-                                            ))}
+                                            ) : (
+                                                <span
+                                                    key={name}
+                                                    className="border-line/60 text-11 text-muted-foreground font-body flex items-center rounded-[2px] border bg-transparent px-2 py-0.5 font-medium"
+                                                >
+                                                    {name}
+                                                </span>
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </div>
@@ -225,98 +235,86 @@ export default function ProfileHero({ profile }: Props) {
                     </div>
 
                     {/* Stats metrics row with vertical separator lines */}
-                    <div className="border-line mt-8 border-t border-b py-6">
-                        <div className="divide-line grid grid-cols-2 divide-x sm:grid-cols-5">
-                            {/* Stat 1: countries visited */}
-                            <div className="pr-3">
-                                <div className="font-display text-24 sm:text-30 text-foreground flex items-center gap-1.5 font-bold">
-                                    {profile.stats.countriesVisited}
-                                    <span className="text-14 text-muted-foreground font-normal" aria-hidden="true">
-                                        →
-                                    </span>
+                    {stats && (
+                        <div className="border-line mt-8 border-t border-b py-6">
+                            <div className="divide-line grid grid-cols-2 divide-x sm:grid-cols-5">
+                                {/* Stat 1: countries visited */}
+                                <div className="pr-3">
+                                    <div className="font-display text-24 sm:text-30 text-foreground flex items-center gap-1.5 font-bold">
+                                        {stats.countriesVisited}
+                                        <span className="text-14 text-muted-foreground font-normal" aria-hidden="true">
+                                            →
+                                        </span>
+                                    </div>
+                                    <div className="text-10 text-muted-foreground mt-1 leading-tight font-medium">
+                                        countries
+                                        <br />
+                                        visited
+                                    </div>
                                 </div>
-                                <div className="text-10 text-muted-foreground mt-1 leading-tight font-medium">
-                                    countries
-                                    <br />
-                                    visited
-                                </div>
-                            </div>
 
-                            {/* Stat 2: boards created */}
-                            <div className="px-3">
-                                <div className="font-display text-24 sm:text-30 text-foreground flex items-center gap-1.5 font-bold">
-                                    {profile.stats.boardsCreated}
-                                    <span className="text-14 text-muted-foreground font-normal" aria-hidden="true">
-                                        →
-                                    </span>
+                                {/* Stat 2: boards created */}
+                                <div className="px-3">
+                                    <div className="font-display text-24 sm:text-30 text-foreground flex items-center gap-1.5 font-bold">
+                                        {stats.boardsCreated}
+                                        <span className="text-14 text-muted-foreground font-normal" aria-hidden="true">
+                                            →
+                                        </span>
+                                    </div>
+                                    <div className="text-10 text-muted-foreground mt-1 leading-tight font-medium">
+                                        boards
+                                        <br />
+                                        created
+                                    </div>
                                 </div>
-                                <div className="text-10 text-muted-foreground mt-1 leading-tight font-medium">
-                                    boards
-                                    <br />
-                                    created
-                                </div>
-                            </div>
 
-                            {/* Stat 3: friend made */}
-                            <div className="px-3">
-                                <div className="font-display text-24 sm:text-30 text-foreground flex items-center gap-1.5 font-bold">
-                                    {profile.stats.friendsMade}
-                                    <span className="text-14 text-muted-foreground font-normal" aria-hidden="true">
-                                        →
-                                    </span>
+                                {/* Stat 3: friend made */}
+                                <div className="px-3">
+                                    <div className="font-display text-24 sm:text-30 text-foreground flex items-center gap-1.5 font-bold">
+                                        {stats.friends}
+                                        <span className="text-14 text-muted-foreground font-normal" aria-hidden="true">
+                                            →
+                                        </span>
+                                    </div>
+                                    <div className="text-10 text-muted-foreground mt-1 leading-tight font-medium">
+                                        friend
+                                        <br />
+                                        made
+                                    </div>
                                 </div>
-                                <div className="text-10 text-muted-foreground mt-1 leading-tight font-medium">
-                                    friend
-                                    <br />
-                                    made
-                                </div>
-                            </div>
 
-                            {/* Stat 4: places saved */}
-                            <div className="px-3">
-                                <div className="font-display text-24 sm:text-30 text-foreground flex items-center gap-1.5 font-bold">
-                                    {profile.stats.placesSaved}
-                                    <span className="text-14 text-muted-foreground font-normal" aria-hidden="true">
-                                        →
-                                    </span>
+                                {/* Stat 4: places saved */}
+                                <div className="px-3">
+                                    <div className="font-display text-24 sm:text-30 text-foreground flex items-center gap-1.5 font-bold">
+                                        {stats.activitiesSaved}
+                                        <span className="text-14 text-muted-foreground font-normal" aria-hidden="true">
+                                            →
+                                        </span>
+                                    </div>
+                                    <div className="text-10 text-muted-foreground mt-1 leading-tight font-medium">
+                                        activities
+                                        <br />
+                                        saved
+                                    </div>
                                 </div>
-                                <div className="text-10 text-muted-foreground mt-1 leading-tight font-medium">
-                                    places
-                                    <br />
-                                    saved
-                                </div>
-                            </div>
 
-                            {/* Stat 5: boards saved */}
-                            <div className="pl-3">
-                                <div className="font-display text-24 sm:text-30 text-foreground flex items-center gap-1.5 font-bold">
-                                    {profile.stats.boardsSaved}
-                                    <span className="text-14 text-muted-foreground font-normal" aria-hidden="true">
-                                        →
-                                    </span>
-                                </div>
-                                <div className="text-10 text-muted-foreground mt-1 leading-tight font-medium">
-                                    boards
-                                    <br />
-                                    saved
+                                {/* Stat 5: boards saved */}
+                                <div className="pl-3">
+                                    <div className="font-display text-24 sm:text-30 text-foreground flex items-center gap-1.5 font-bold">
+                                        {stats.boardsSaved}
+                                        <span className="text-14 text-muted-foreground font-normal" aria-hidden="true">
+                                            →
+                                        </span>
+                                    </div>
+                                    <div className="text-10 text-muted-foreground mt-1 leading-tight font-medium">
+                                        boards
+                                        <br />
+                                        saved
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-
-                {/* Traveler tier banner with metallic styling extending into open space */}
-                <div className="mt-12 pt-4 sm:mt-16">
-                    <span className="text-10 tracking-label text-muted-foreground mb-1.5 block font-bold uppercase">
-                        Traveler Tier
-                    </span>
-                    <div
-                        className={`font-display text-44 sm:text-56 lg:text-68 leading-none font-black tracking-wider uppercase transition-all select-none ${getTierGradientStyle(
-                            profile.tier
-                        )}`}
-                    >
-                        {profile.tier}
-                    </div>
+                    )}
                 </div>
             </div>
         </section>

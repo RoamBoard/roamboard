@@ -3,7 +3,7 @@
 import type { BoardVisibility } from "@/types/board";
 
 type VisibilityOption = {
-    value: BoardVisibility;
+    value: BoardVisibility | "collaborators";
     label: string;
     description: string;
     icon: (isActive: boolean) => React.ReactNode;
@@ -11,9 +11,9 @@ type VisibilityOption = {
 
 const VISIBILITY_OPTIONS: VisibilityOption[] = [
     {
-        value: "private",
+        value: "collaborators",
         label: "Private",
-        description: "Only you can see this",
+        description: "You and invited Board members can see this",
         icon: (isActive: boolean) => (
             <svg
                 className={`size-4 shrink-0 transition-colors ${
@@ -82,8 +82,8 @@ const VISIBILITY_OPTIONS: VisibilityOption[] = [
 ];
 
 type Props = {
-    value: BoardVisibility;
-    onChange: (value: BoardVisibility) => void;
+    value: BoardVisibility | "collaborators";
+    onChange: (value: BoardVisibility | "collaborators") => void;
     name?: string;
     showLabel?: boolean;
     className?: string;

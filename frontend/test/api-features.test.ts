@@ -102,6 +102,71 @@ test("API-backed feature boundaries use the configured backend and signed-in ses
             assert.deepEqual(JSON.parse(String(calls.at(-1)?.init?.body)), { imageId: 17 });
         });
 
+        await t.test("profile save, language choices and saved Boards use the contract endpoints", async () => {
+            const changes = {
+                revision: 4,
+                username: "traveler",
+                displayName: "Traveler",
+                description: "Hello",
+                location: null,
+                occupation: null,
+                languages: ["Swedish"],
+                interests: [],
+                defaultBoardVisibility: "friends" as const
+            };
+            response.data = { data: { ...changes, revision: 5, profilePicture: null } };
+            await profile.updateProfile(changes);
+            assert.equal(calls.at(-1)?.url.pathname, "/api/v1/users/me");
+            assert.equal(calls.at(-1)?.init?.method, "PATCH");
+            assert.deepEqual(JSON.parse(String(calls.at(-1)?.init?.body)), changes);
+            response.data = { data: ["Swedish", "English"] };
+            assert.deepEqual(await profile.loadLanguages(), ["Swedish", "English"]);
+            assert.equal(calls.at(-1)?.url.pathname, "/api/v1/languages");
+            response.data = { data: [{ boardId: 42 }], meta: { page: 1, limit: 3, hasMore: false } };
+            assert.equal((await profile.loadSavedBoardsPage(1, 3)).meta?.hasMore, false);
+            assert.equal(calls.at(-1)?.url.searchParams.get("limit"), "3");
+            response.data = { data: { boardId: 42, saved: true } };
+            await profile.saveBoardBookmark(42);
+            assert.equal(calls.at(-1)?.init?.method, "PUT");
+            assert.equal(calls.at(-1)?.url.pathname, "/api/v1/boards/42/save");
+            response.status = 204;
+            await profile.unsaveBoardBookmark(42);
+            assert.equal(calls.at(-1)?.init?.method, "DELETE");
+            response.status = 200;
+        });
+
+        await t.test("public profile reads by handle and resolves its photo from the API", async () => {
+            response.data = {
+                data: {
+                    profile: {
+                        username: "rowan.mercer",
+                        displayName: "Rowan",
+                        description: "Hello",
+                        location: null,
+                        occupation: null,
+                        languages: [],
+                        interests: [],
+                        profilePicture: {
+                            imageId: 17,
+                            url: "/api/v1/images/17/content?variant=thumbnail&profileHandle=rowan.mercer",
+                            storageKey: null
+                        }
+                    },
+                    isOwner: false,
+                    stats: {},
+                    boards: [],
+                    destinations: []
+                }
+            };
+            const view = await profile.loadPublicProfile("rowan.mercer");
+            assert.equal(calls.at(-1)?.url.pathname, "/api/v1/users/by-handle/rowan.mercer");
+            assert.equal(calls.at(-1)?.init?.credentials, "include");
+            assert.equal(
+                view.profile.profilePicture?.url.startsWith("https://api.roamboard.test/api/v1/images/17"),
+                true
+            );
+        });
+
         await t.test("profile Board creation persists a canonical published Board with city activities", async () => {
             response.data = { data: { boardId: 53 } };
             await profile.createBoard({
