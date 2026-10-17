@@ -11,6 +11,7 @@ import { type BoardDayDraft, type BoardImageDraft, type BoardPinDraft } from "@/
 
 type Props = {
     disabled?: boolean;
+    onActivityUploadingChange?: (uploading: boolean) => void;
     days: BoardDayDraft[];
     images: BoardImageDraft[];
     onAddDay: () => void;
@@ -34,6 +35,7 @@ function scrollBehavior(): ScrollBehavior {
 
 export default function DayPlanner({
     disabled = false,
+    onActivityUploadingChange,
     days,
     images,
     onAddDay,
@@ -175,7 +177,10 @@ export default function DayPlanner({
                 <AddPinDialog
                     day={dialogDay}
                     days={days}
-                    onAdd={(dayId, pin, image) => onAddPin(dayId, pin, image)}
+                    onAdd={(dayId, pin, image) => {
+                        onAddPin(dayId, pin, image);
+                        setAnnouncement(`${pin.title} added to the day plan.`);
+                    }}
                     onClose={() => setDialogDayId(null)}
                     onEditExisting={openExistingPin}
                 />
@@ -183,12 +188,14 @@ export default function DayPlanner({
             {editingPin ? (
                 <PinEditorDialog
                     pin={editingPin}
+                    onUploadingChange={onActivityUploadingChange}
                     images={images}
                     remainingUploads={10 - images.filter((image) => image.source === "upload").length}
                     onClose={() => setEditingPinId(null)}
                     onSave={onUpdatePin}
                     onDelete={() => {
                         onRemovePin(editingPin.id);
+                        setAnnouncement(`${editingPin.title} removed. Attached photos remain available.`);
                         setEditingPinId(null);
                     }}
                     onAddImage={onAddActivityImage}
@@ -205,6 +212,7 @@ export default function DayPlanner({
                     onCancel={() => setRemovingDayId(null)}
                     onConfirm={() => {
                         onRemoveDay(removingDay.id);
+                        setAnnouncement(`Day ${removingDay.dayNumber} removed. Attached photos remain available.`);
                         setRemovingDayId(null);
                     }}
                 />

@@ -9,6 +9,12 @@ import BoardDiscoveryDetails from "@/components/features/boards/BoardDiscoveryDe
 import BoardImageIntake, { type UploadedBoardImage } from "@/components/features/boards/BoardImageIntake";
 import CreatorSectionIntro from "@/components/features/boards/CreatorSectionIntro";
 import DayPlanner from "@/components/features/boards/DayPlanner";
+import CreatorNotifications, { creatorToastOptions } from "./CreatorNotifications";
+import CreatorProgress from "./CreatorProgress";
+import { toast } from "sonner";
+import CreatorLeaveDialog from "./CreatorLeaveDialog";
+import { boardEditorFingerprint } from "@/lib/board-editor-safety";
+import { useBoardLeaveWarning } from "@/lib/use-board-leave-warning";
 import {
     fromBoardDocument,
     listBoardTags,
@@ -29,7 +35,7 @@ import type {
 import { getMockSettings, restoreMockStore } from "@/data/mock-social";
 
 const chapterClasses =
-    "mx-auto grid w-full max-w-[96rem] scroll-mt-10 gap-8 px-5 pb-20 sm:gap-10 sm:px-8 lg:grid-cols-[21rem_minmax(0,1fr)] lg:gap-16 lg:px-12 lg:pb-28";
+    "mx-auto grid w-full max-w-[96rem] scroll-mt-36 gap-8 px-5 pb-20 sm:gap-10 sm:px-8 lg:grid-cols-[21rem_minmax(0,1fr)] lg:gap-16 lg:px-12 lg:pb-28";
 const fullChapterClasses = `${chapterClasses} lg:min-h-[min(70rem,100svh)]`;
 
 function newDay(dayNumber: number, date: string | null = null): BoardDayDraft {
@@ -85,6 +91,9 @@ export default function BoardCreator({
     expectedStatus?: BoardStatus;
     initialMode?: "smart" | "scratch";
 }) {
+    const [leaveHref, setLeaveHref] = useState<string | null>(null);
+    const saveToastId = useId();
+    const saveInFlight = useRef(false);
     const [mode, setMode] = useState(initialMode);
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
@@ -99,7 +108,9 @@ export default function BoardCreator({
     );
     const [confirmedPhotoPins, setConfirmedPhotoPins] = useState<Set<string>>(() => new Set());
     const [saving, setSaving] = useState<BoardStatus | null>(null);
-    const [uploading, setUploading] = useState(false);
+    const [boardUploading, setBoardUploading] = useState(false);
+    const [activityUploading, setActivityUploading] = useState(false);
+    const uploading = boardUploading || activityUploading;
     const pendingUploadRef = useRef<Promise<unknown> | null>(null);
     const [draftLoading, setDraftLoading] = useState(initialBoardId !== undefined);
     const [error, setError] = useState("");
@@ -108,8 +119,13 @@ export default function BoardCreator({
     const [saveError, setSaveError] = useState("");
     const [tagsLoading, setTagsLoading] = useState(true);
     const [tagsError, setTagsError] = useState("");
+    const [savedFingerprint, setSavedFingerprint] = useState<string | null>(null);
     const [savedBoard, setSavedBoard] = useState<BoardDocument | null>(null);
-    const editorDisabled = saving !== null || draftLoading || (initialBoardId !== undefined && !savedBoard);
+    const editorDisabled =
+        saving !== null ||
+        draftLoading ||
+        (initialBoardId !== undefined && !savedBoard) ||
+        (savedBoard?.status === "published" && expectedStatus !== "published");
     const showSmartIntro = initialBoardId === undefined && mode === "smart";
 
     function switchMode() {
@@ -143,6 +159,24 @@ export default function BoardCreator({
                 if (board.status !== expectedStatus) throw new Error(`This Board is not ${expectedStatus}.`);
                 if (!board.permissions.canEditContent) throw new Error("You cannot edit this Board.");
                 const restored = fromBoardDocument(board);
+                setSavedFingerprint(
+                    boardEditorFingerprint(
+                        {
+                            title: board.title,
+                            description: board.description ?? "",
+                            status: board.status,
+                            visibility: board.visibility,
+                            coverImageId:
+                                board.coverImageId ??
+                                restored.images.find((image) => image.source === "upload")?.uploadedImageId ??
+                                null,
+                            tags: board.tags.map((tag) => tag.name),
+                            days: restored.days,
+                            images: restored.images
+                        },
+                        restored.confirmedPhotoPins
+                    )
+                );
                 setSavedBoard(board);
                 setTitle(board.title);
                 setDescription(board.description ?? "");
@@ -176,6 +210,17 @@ export default function BoardCreator({
             images
         }),
         [coverImageId, days, description, images, tags, title, visibility]
+    );
+
+    const fingerprint = boardEditorFingerprint(payload, confirmedPhotoPins);
+    const [initialFingerprint] = useState(fingerprint);
+    const dirty = fingerprint !== (savedFingerprint ?? initialFingerprint);
+    useBoardLeaveWarning((!editorDisabled && dirty) || saving !== null || uploading, setLeaveHref);
+    useEffect(
+        () => () => {
+            toast.dismiss(saveToastId);
+        },
+        [saveToastId]
     );
 
     function handleUploads(items: UploadedBoardImage[]) {
@@ -320,23 +365,38 @@ export default function BoardCreator({
     }
 
     async function save(status: BoardStatus) {
+        if (saveInFlight.current || editorDisabled || uploading) return;
         const unconfirmedPhotoPin = days
             .flatMap((day) => day.pins)
             .find((pin) => pin.source === "photo" && !confirmedPhotoPins.has(pin.id));
         if (status === "published" && unconfirmedPhotoPin) {
-            setSaveError(`Confirm the photo location for “${unconfirmedPhotoPin.title}” before publishing.`);
+            const detail = `Confirm the photo location for “${unconfirmedPhotoPin.title}” before publishing.`;
+            setSaveError(detail);
+            toast.error("Review your Board before publishing", {
+                ...creatorToastOptions,
+                id: saveToastId,
+                description: detail
+            });
             setSaveMessage("");
             return;
         }
-        if (pendingUploadRef.current) {
-            setSaveMessage("Waiting for image uploads to finish...");
-            await pendingUploadRef.current;
-            pendingUploadRef.current = null;
-        }
+        saveInFlight.current = true;
         setSaving(status);
         setSaveError("");
         setSaveMessage("");
+        toast.loading(
+            status === "draft"
+                ? "Saving your draft…"
+                : expectedStatus === "published"
+                  ? "Saving your changes…"
+                  : "Publishing your Board…",
+            { ...creatorToastOptions, id: saveToastId }
+        );
         try {
+            if (pendingUploadRef.current) {
+                await pendingUploadRef.current;
+                pendingUploadRef.current = null;
+            }
             const currentPayload = {
                 title,
                 description,
@@ -357,6 +417,15 @@ export default function BoardCreator({
                 );
             }
             setSavedBoard(board);
+            setSavedFingerprint(boardEditorFingerprint(currentPayload, confirmedPhotoPins));
+            toast.success(
+                expectedStatus === "published"
+                    ? "Board changes saved"
+                    : status === "draft"
+                      ? "Draft saved"
+                      : "Board published",
+                { ...creatorToastOptions, id: saveToastId }
+            );
             setDays((current) => mergeServerIds(current, sentDays, board));
             setImages((current) => mergeServerImages(current, board));
             setSaveMessage(
@@ -367,14 +436,38 @@ export default function BoardCreator({
                       : `“${board.title}” is published and ready to share.`
             );
         } catch (caught) {
-            setSaveError(caught instanceof Error ? caught.message : "The Board could not be saved.");
+            const detail = caught instanceof Error ? caught.message : "The Board could not be saved.";
+            setSaveError(detail);
+            toast.error("Board could not be saved", {
+                ...creatorToastOptions,
+                id: saveToastId,
+                description: "Your edits are still here. Review the save details and try again.",
+                action: {
+                    label: "Review",
+                    onClick: () => {
+                        const feedback = document.getElementById("board-save-feedback");
+                        feedback?.scrollIntoView({ block: "center" });
+                        feedback?.focus({ preventScroll: true });
+                    }
+                }
+            });
         } finally {
+            saveInFlight.current = false;
             setSaving(null);
         }
     }
 
     return (
         <article className="font-body bg-background text-foreground relative min-w-0 overflow-x-clip">
+            <CreatorNotifications />
+            {leaveHref ? <CreatorLeaveDialog href={leaveHref} onClose={() => setLeaveHref(null)} /> : null}
+            <CreatorProgress
+                dirty={dirty}
+                saved={savedBoard !== null}
+                loading={draftLoading}
+                saving={saving}
+                uploading={uploading}
+            />
             {showSmartIntro ? (
                 <header className="px-5 pt-16 pb-16 text-center sm:px-10 sm:pt-24 sm:pb-28">
                     <h1 className="font-display text-[clamp(2.5rem,5.6vw,6rem)] leading-[1.02] font-bold tracking-[-0.035em]">
@@ -407,10 +500,10 @@ export default function BoardCreator({
                     <BoardImageIntake
                         images={images.filter((image) => image.source === "upload")}
                         coverImageId={coverImageId}
-                        disabled={editorDisabled}
+                        disabled={editorDisabled || activityUploading}
                         loading={draftLoading}
                         showDropZone={showSmartIntro}
-                        onUploadingChange={setUploading}
+                        onUploadingChange={setBoardUploading}
                         onUploadPromise={(promise) => {
                             pendingUploadRef.current = promise;
                         }}
@@ -432,6 +525,7 @@ export default function BoardCreator({
                         </label>
                         <input
                             id="board-title"
+                            style={{ scrollMarginTop: "9rem" }}
                             value={title}
                             onChange={(event) => setTitle(event.target.value)}
                             placeholder={draftLoading ? "LOADING BOARD…" : "BOARD TITLE"}
@@ -490,7 +584,8 @@ export default function BoardCreator({
                         />
                         <div className="min-w-0">
                             <DayPlanner
-                                disabled={editorDisabled}
+                                disabled={editorDisabled || boardUploading}
+                                onActivityUploadingChange={setActivityUploading}
                                 days={days}
                                 images={images}
                                 onAddDay={() => setDays((current) => [...current, newDay(current.length + 1)])}

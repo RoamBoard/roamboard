@@ -68,7 +68,14 @@ export default function BoardPublishPanel({
                     ? "Changes use the visibility selected above. Only the Board owner can change visibility."
                     : "Drafts can stay incomplete and remain visible only to you. Publishing needs a title, at least one confirmed location, and confirmation of every photo suggestion."}
             </p>
-            <div id="board-save-feedback" className="mx-auto mt-6 max-w-lg text-left text-xs leading-relaxed">
+            <p className="text-muted-foreground mx-auto mt-3 max-w-md text-[11px] leading-relaxed">
+                Save before using your browser’s Back or Forward controls. This page does not save automatically.
+            </p>
+            <div
+                id="board-save-feedback"
+                tabIndex={-1}
+                className="mx-auto mt-6 max-w-lg text-left text-xs leading-relaxed"
+            >
                 {saving !== null || uploading ? (
                     <p role="status" className="border-line border-l pl-4">
                         {uploading

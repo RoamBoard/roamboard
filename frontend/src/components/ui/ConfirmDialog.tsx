@@ -38,14 +38,18 @@ export default function ConfirmDialog({ title, description, confirmLabel, onCanc
                 <p id="confirm-description" className="text-14 text-muted-foreground mt-3 leading-6">
                     {description}
                 </p>
-                <div className="mt-7 flex justify-end gap-3">
-                    <button type="button" onClick={onCancel} className="border-line text-13 border px-5 py-3">
+                <div className="mt-7 flex flex-col justify-end gap-3 sm:flex-row">
+                    <button
+                        type="button"
+                        onClick={onCancel}
+                        className="border-line text-13 border px-5 py-3 focus-visible:outline-2 focus-visible:outline-offset-4"
+                    >
                         Cancel
                     </button>
                     <button
                         type="button"
                         onClick={onConfirm}
-                        className="border-foreground bg-foreground text-13 text-background border px-5 py-3"
+                        className="border-foreground bg-foreground text-13 text-background border px-5 py-3 focus-visible:outline-2 focus-visible:outline-offset-4"
                     >
                         {confirmLabel}
                     </button>

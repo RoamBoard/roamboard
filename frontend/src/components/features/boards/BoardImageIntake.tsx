@@ -1,11 +1,14 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import BoardCoverHero from "@/components/features/boards/BoardCoverHero";
 import CreatorUploadArtwork from "@/components/features/boards/CreatorUploadArtwork";
 import { uploadBoardImage } from "@/lib/board-creator-api";
+import { uploadBoardImageBatch } from "@/lib/board-image-upload";
+import { toast } from "sonner";
+import { creatorToastOptions } from "./CreatorNotifications";
 import type { BoardImageDraft, BoardPinDraft } from "@/types/board-creator";
 
 const MAX_IMAGES = 10;
@@ -106,28 +109,60 @@ export default function BoardImageIntake({
     onRemove
 }: Props) {
     const inputRef = useRef<HTMLInputElement>(null);
+    const uploadId = useId();
+    const uploadLock = useRef(false);
+    useEffect(
+        () => () => {
+            toast.dismiss(uploadId);
+        },
+        [uploadId]
+    );
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState("");
     const remaining = MAX_IMAGES - images.length;
     const cover = images.find((image) => image.uploadedImageId === coverImageId);
 
     async function upload(files: File[]) {
-        if (disabled || busy || files.length === 0) return;
+        if (disabled || uploadLock.current || files.length === 0) return;
         if (files.length > remaining) {
             setError(`Choose no more than ${remaining} additional image${remaining === 1 ? "" : "s"}.`);
             return;
         }
+        uploadLock.current = true;
+        toast.loading("Uploading Board images…", { ...creatorToastOptions, id: uploadId });
         setBusy(true);
         onUploadingChange?.(true);
         setError("");
         const uploadTask = (async () => {
             try {
-                const assets = await Promise.all(files.map((file) => uploadBoardImage(file)));
+                const { assets, failures } = await uploadBoardImageBatch(files);
                 const prepared = assets.map((asset, index) => prepareUpload(asset, images.length + index));
-                onUploaded(prepared);
+                if (prepared.length) onUploaded(prepared);
+                if (failures.length) {
+                    const detail = `${assets.length} uploaded; ${failures.length} failed. Retry only the failed files. ${failures.join(" ")}`;
+                    setError(detail);
+                    toast.error("Some images could not be uploaded", {
+                        ...creatorToastOptions,
+                        id: uploadId,
+                        description: `${assets.length} uploaded; ${failures.length} failed. Details are beside your images.`
+                    });
+                } else {
+                    toast.success(`${assets.length} ${assets.length === 1 ? "image" : "images"} uploaded`, {
+                        ...creatorToastOptions,
+                        id: uploadId,
+                        description: "Save your Board to keep these changes."
+                    });
+                }
             } catch (caught) {
-                setError(caught instanceof Error ? caught.message : "The images could not be uploaded.");
+                const detail = caught instanceof Error ? caught.message : "The images could not be uploaded.";
+                setError(detail);
+                toast.error("Images could not be uploaded", {
+                    ...creatorToastOptions,
+                    id: uploadId,
+                    description: detail
+                });
             } finally {
+                uploadLock.current = false;
                 setBusy(false);
                 onUploadingChange?.(false);
                 if (inputRef.current) inputRef.current.value = "";
@@ -142,7 +177,7 @@ export default function BoardImageIntake({
             id="board-images"
             aria-label="Board images"
             aria-busy={busy || loading}
-            className="mx-auto w-[92%] max-w-[78rem] sm:w-[80%]"
+            className="mx-auto w-[92%] max-w-[78rem] scroll-mt-36 sm:w-[80%]"
         >
             <input
                 ref={inputRef}
@@ -205,7 +240,7 @@ export default function BoardImageIntake({
             ) : null}
 
             {error ? (
-                <p className="text-14 mt-4 text-center" role="alert">
+                <p className="text-14 mt-4 text-center break-words" role="alert">
                     {error}
                 </p>
             ) : null}

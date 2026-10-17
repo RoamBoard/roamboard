@@ -82,6 +82,21 @@ retries. `draft-boards-store.ts` owns page-local request guards, pagination de-d
 protection; it never substitutes sample data. Reopening still uses `/boards/drafts/[boardId]` and the shared
 `BoardCreator` document, permission, and revision handling. Draft-only access is labelled accurately.
 
+The creator's ruled sticky chapter navigation also shows its real loading/uploading/saving and unsaved state.
+`board-editor-safety.ts` compares persisted content, excluding transient IDs and protected-image URL refreshes.
+The baseline changes only after document loading or a confirmed save. A synchronous save latch rejects duplicate
+submissions. After publishing from the draft flow, the finished editor locks; published editing remains a separate route.
+Unsaved content or active operations register a native refresh/close warning and intercept same-window internal links
+with the existing confirmation dialog. Hash links, mode switches, new tabs and downloads remain usable. Same-document
+browser Back/Forward and arbitrary programmatic routing are not blocked; no history entries are fabricated and there
+is no autosave/recovery store. The publication panel explicitly advises saving before using browser history controls.
+Activity dialogs confirm discarding unfinished fields, preserve focus, and pause the outer focus trap during confirmation.
+Activity uploads prevent dialog dismissal and Board saving until finished; previously attached images remain available.
+The user-approved `sonner` dependency powers a Create-scoped, theme-aware notification host. Each save/upload operation
+updates one notification from loading to confirmed success or failure. Frequent local edits use planner announcements
+instead of toasts; persistent inline error details remain available. Board image batches use `Promise.allSettled` so a
+failed upload never discards successful files, and failure details identify which files need retrying.
+
 ## Project purpose and requirements
 
 Country codes in application data, mock/discovery data, provider responses and

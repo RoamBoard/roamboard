@@ -23,6 +23,7 @@ export default function BoardCoverHero({ coverUrl, disabled, loading = false, on
                         src="/images/destinations/bamboo.webp"
                         alt="Sunlight filtering through a green bamboo forest"
                         fill
+                        loading="eager"
                         sizes="(max-width: 640px) 92vw, (max-width: 1700px) 80vw, 1248px"
                         className="object-cover object-[center_65%]"
                     />
