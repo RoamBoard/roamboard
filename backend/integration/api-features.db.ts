@@ -39,7 +39,8 @@ test(
                 "002_auth_session.sql",
                 "003_board_creator.sql",
                 "004_api_features.sql",
-                "005_profile.sql"
+                "005_profile.sql",
+                "006_profile_tag_catalog.sql"
             ]) {
                 await pool.query(await readFile(new URL(`../db/migrations/${name}`, import.meta.url), "utf8"));
             }
@@ -124,7 +125,7 @@ test(
                 location: "Stockholm",
                 occupation: null,
                 languages: ["English"],
-                interests: ["Food"],
+                interests: ["Foodie"],
                 defaultBoardVisibility: "collaborators" as const
             };
             await users.update("owner", {
@@ -132,7 +133,7 @@ test(
                 revision: 1
             });
             assert.equal((await users.read("owner")).displayName, "Updated owner");
-            assert.deepEqual((await users.read("owner")).interests, ["Food"]);
+            assert.deepEqual((await users.read("owner")).interests, ["Foodie"]);
             assert.deepEqual((await users.read("owner")).languages, ["English"]);
             await assert.rejects(
                 () => users.update("owner", { ...profileChanges, revision: 1 }),
