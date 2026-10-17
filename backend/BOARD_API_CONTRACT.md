@@ -229,6 +229,30 @@ Requires a session. Lists only the caller's own published Boards for the “My B
 
 Returns `200` with `{ "data": Board }`. It uses the nested document shape shown above and adds server IDs (`boardId`, each `dayId`, each `activityId`, and uploaded `imageId`), `revision`, resolved tag names, display image URLs, timestamps, and edit permissions. Activities retain their saved order, location-confirmation state, uploaded-image order, and external-image credit. The owner uses it to reopen a draft; a public published Board can be read anonymously. All other reads follow the access table. An inaccessible Board returns `404`, so its existence is not disclosed.
 
+Board documents returned by reads and saves also include the current owner's viewer summary:
+
+```json
+{
+    "author": {
+        "username": "example_traveller",
+        "bio": "Notes from my trips.",
+        "photo": {
+            "imageId": 12,
+            "url": "/api/v1/images/12/content?variant=display&boardId=42"
+        }
+    }
+}
+```
+
+`username` is the stored username, rather than the display name. `bio` is empty when no biography is saved, and
+`photo` is `null` when no profile picture is set. This summary follows the Board's read permission and contains no
+email, Google identity or unsupported statistics.
+
+An image-content request with `boardId` is an author-photo request. Express checks that the caller can read that
+Board and that the requested image is its owner's current profile picture. An unrelated image, removed profile
+picture or inaccessible Board returns `404`. Omitting `boardId` keeps the existing Board-image and uploader rules.
+Both paths stream metadata-stripped variants with `Cache-Control: private, no-store`.
+
 ### `DELETE /api/v1/boards/:boardId`
 
 Owner-only. Returns `204` with no body. Database relationships such as days, activities, tags, memberships, and saved-Board records are deleted or unlinked according to their foreign keys. Uploaded files that become unreferenced enter the same 24-hour cleanup window.

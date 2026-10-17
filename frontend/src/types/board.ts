@@ -10,7 +10,7 @@ export type BoardTravelStyle = "solo" | "couple" | "friends" | "family";
 
 export type BoardDestination = {
     country: string;
-    // Two-letter country code, for example "SE".
+    // ISO 3166-1 alpha-3 country code, for example "SWE".
     countryCode: string;
     cities?: string[];
 };
@@ -36,6 +36,9 @@ export type BoardImage = {
     url: string;
     alt: string;
     source: "application" | "upload";
+    photographer?: string;
+    photographerUrl?: string;
+    sourceUrl?: string;
 };
 
 // The type field tells the renderer which kind of board item it has.
@@ -85,11 +88,11 @@ export type Board = {
     ownerId: string;
     title: string;
     description: string;
-    // Private Boards are visible only to their owner.
-    visibility: BoardVisibility;
+    // Sample settings use private; persisted Boards use collaborators for invited-member access.
+    visibility: BoardVisibility | "collaborators";
     // Tracks the owner's completed trip. New Boards and copies should start false.
     isCompleted: boolean;
-    // Stable IDs from shared/roamboard-tags.json, never display names.
+    // Persisted numeric tag IDs as strings, or catalogue IDs for sample Boards.
     tags: BoardTagId[];
     // An empty array allows a Board without a chosen destination.
     destinations: BoardDestination[];
@@ -98,6 +101,10 @@ export type Board = {
     endDate?: string;
     // Supports undated trips; keep consistent with the date range when set.
     durationDays?: number;
+    // Saved day numbers include empty days and may have gaps.
+    dayNumbers?: number[];
+    // Saved calendar dates belong to days, including days with no activities.
+    dayDates?: Record<number, string>;
     // Optional headings for numbered days, such as "Shibuya to Shinjuku".
     dayTitles?: Record<number, string>;
     budget?: BoardBudget;

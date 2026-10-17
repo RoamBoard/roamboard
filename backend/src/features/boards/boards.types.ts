@@ -11,6 +11,12 @@ export interface BoardAccess {
 }
 
 export interface BoardDocument extends BoardWrite {
+    // Only public-facing author details belong in a Board response, not Google IDs or email addresses.
+    author: {
+        username: string;
+        bio: string;
+        photo: { imageId: number; url: string } | null;
+    };
     boardId: number;
     revision: number;
     isCompleted: boolean;

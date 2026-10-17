@@ -152,8 +152,11 @@ export const routeMapboxProvider = (
         })
     });
 
-export const searchUnsplashProvider = (query: string) =>
-    request<ProviderPhoto[]>(`/api/v1/providers/unsplash/search?q=${encodeURIComponent(query)}`);
+// Automatic Board photos request one pool of candidates to share between the empty photo spaces.
+export const searchUnsplashProvider = (query: string, limit?: number) =>
+    request<ProviderPhoto[]>(
+        `/api/v1/providers/unsplash/search?q=${encodeURIComponent(query)}${limit === undefined ? "" : `&limit=${limit}`}`
+    );
 
 export const searchGooglePlacesProvider = (query: string) =>
     request<ProviderPlace[]>(`/api/v1/providers/google-places/search?q=${encodeURIComponent(query)}`);

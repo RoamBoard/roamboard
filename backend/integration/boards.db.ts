@@ -24,6 +24,7 @@ test(
         skip: databaseUrl ? undefined : "TEST_DATABASE_URL or DATABASE_URL is required"
     },
     async () => {
+        // Fixture writes use a temporary schema so this test cannot overwrite application Boards.
         const schema = `rb_test_${randomBytes(6).toString("hex")}`;
         const admin = new Client({ connectionString: databaseUrl });
         await admin.connect();
@@ -36,7 +37,12 @@ test(
             const migrationClient = new Client({ connectionString: url.toString() });
             await migrationClient.connect();
             try {
-                for (const name of ["001_initial.sql", "002_auth_session.sql", "003_board_creator.sql"]) {
+                for (const name of [
+                    "001_initial.sql",
+                    "002_auth_session.sql",
+                    "003_board_creator.sql",
+                    "004_api_features.sql"
+                ]) {
                     const sql = await readFile(new URL(`../db/migrations/${name}`, import.meta.url), "utf8");
                     await migrationClient.query(sql);
                     if (name === "002_auth_session.sql") {

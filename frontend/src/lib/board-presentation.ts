@@ -19,18 +19,19 @@ export function getBoardDays(board: Board): PublishedBoardDay[] {
     }
 
     // Include empty days too if the board has a longer planned duration.
-    for (const number of Array.from({ length: board.durationDays ?? 0 }, (_, index) => index + 1)) {
+    for (const number of board.dayNumbers ?? Array.from({ length: board.durationDays ?? 0 }, (_, index) => index + 1)) {
         if (!groups.has(number)) groups.set(number, []);
     }
 
     return Array.from(groups, ([number, items]) => {
         const activities = items.filter((item) => item.type === "activity");
+        const date = board.dayDates?.[number] ?? activities.find((activity) => activity.date)?.date;
         const first = activities[0]?.title;
         const last = activities.at(-1)?.title;
         // Use a custom heading, or build one from the first and last activity.
         const title =
             board.dayTitles?.[number] ?? (first && last && first !== last ? `${first} → ${last}` : (first ?? ""));
-        return { number, title, items };
+        return { number, date, title, items };
     }).sort((first, second) => first.number - second.number);
 }
 

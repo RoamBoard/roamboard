@@ -114,14 +114,18 @@ export function createImagesRepository(): ImagesRepository {
                 storage_key: string;
                 uploaded_by_user_id: string;
                 board_id: number | null;
+                // The current profile link determines whose avatar this image is.
+                profile_owner_user_id: string | null;
                 captured_at: Date | null;
                 latitude: string | null;
                 longitude: string | null;
             }>(
                 `SELECT i.uploaded_image_id, i.storage_key, i.uploaded_by_user_id,
-                  bi.board_id, i.captured_at, i.latitude, i.longitude
+                  bi.board_id, i.captured_at, i.latitude, i.longitude,
+                  profile_owner.user_id AS profile_owner_user_id
                  FROM uploaded_image i
                  LEFT JOIN board_image bi ON bi.uploaded_image_id = i.uploaded_image_id
+                 LEFT JOIN app_user profile_owner ON profile_owner.profile_picture_image_id = i.uploaded_image_id
                  WHERE i.uploaded_image_id = $1`,
                 [imageId]
             );
@@ -132,6 +136,7 @@ export function createImagesRepository(): ImagesRepository {
                       storageKey: row.storage_key,
                       uploaderUserId: row.uploaded_by_user_id,
                       boardId: row.board_id,
+                      profileOwnerUserId: row.profile_owner_user_id,
                       capturedAt: row.captured_at,
                       latitude: row.latitude === null ? null : Number(row.latitude),
                       longitude: row.longitude === null ? null : Number(row.longitude)

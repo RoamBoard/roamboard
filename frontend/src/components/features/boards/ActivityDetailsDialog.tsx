@@ -25,18 +25,58 @@ export default function ActivityDetailsDialog({ activity, days, saved, onClose, 
     // Use the activity's day if it has one, otherwise find the day it belongs to.
     const dayNumber =
         activity.dayNumber ?? days.find((day) => day.items.some((item) => item.id === activity.id))?.number ?? 1;
+    const date = days.find((day) => day.number === dayNumber)?.date ?? activity.date;
 
     return (
         <BoardDialog title={activity.title} onClose={onClose}>
             <p className="text-muted-foreground text-14 mb-5">
                 Day {dayNumber}
+                {date ? (
+                    <>
+                        {" · "}
+                        <time dateTime={date}>{date}</time>
+                    </>
+                ) : null}
                 {activity.time ? ` · ${activity.time}` : ""}
             </p>
             {/* Show every photo here; the card only shows the first one. */}
             {activity.images.length ? (
                 <div className="mb-6 grid gap-4 sm:grid-cols-2">
                     {activity.images.map((image, index) => (
-                        <BoardPhoto key={`${image.id}-${index}`} image={image} className="aspect-[4/3]" />
+                        <figure key={`${image.id}-${index}`}>
+                            <BoardPhoto image={image} className="aspect-[4/3]" />
+                            {image.photographer ? (
+                                <figcaption className="text-muted-foreground text-12 mt-2">
+                                    Photo by{" "}
+                                    {image.photographerUrl ? (
+                                        <a
+                                            href={image.photographerUrl}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="underline underline-offset-4"
+                                        >
+                                            {image.photographer}
+                                        </a>
+                                    ) : (
+                                        image.photographer
+                                    )}
+                                    {image.sourceUrl ? (
+                                        <>
+                                            {" "}
+                                            on{" "}
+                                            <a
+                                                href={image.sourceUrl}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="underline underline-offset-4"
+                                            >
+                                                Unsplash
+                                            </a>
+                                        </>
+                                    ) : null}
+                                </figcaption>
+                            ) : null}
+                        </figure>
                     ))}
                 </div>
             ) : null}

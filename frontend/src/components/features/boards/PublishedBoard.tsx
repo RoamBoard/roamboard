@@ -9,6 +9,7 @@ import BoardIcon from "@/components/features/boards/BoardIcon";
 import BoardPhoto from "@/components/features/boards/BoardPhoto";
 import PublishedBoardDay from "@/components/features/boards/PublishedBoardDay";
 import useBoardPreview from "@/components/features/boards/useBoardPreview";
+import useBoardPhotos from "@/components/features/boards/useBoardPhotos";
 import { getBoardDays, getBoardPlaceNames } from "@/lib/board-presentation";
 import type { BoardActivity } from "@/types/board";
 import type { PublishedBoardData } from "@/types/published-board";
@@ -18,7 +19,15 @@ const actionClasses =
 
 const numberLabel = (number: number) => String(number).padStart(2, "0");
 
-// Temporary icon lookup until the tag database is connected.
+// Invited members can also read friends-only boards under the backend's access rules.
+const accessLabels = {
+    public: "Anyone",
+    friends: "Friends and invited members",
+    collaborators: "Invited members",
+    private: "Only you"
+};
+
+// The tag API has names but no icon field.
 function getTagIcon(tag: string) {
     const name = tag.toLowerCase();
     if (name.includes("nature")) return "leaf";
@@ -26,9 +35,17 @@ function getTagIcon(tag: string) {
     return "gem";
 }
 
-export default function PublishedBoard({ board, author, highlights }: PublishedBoardData) {
+export default function PublishedBoard({
+    board,
+    author,
+    tagLabels = board.tags,
+    canEditContent = false
+}: PublishedBoardData) {
     const days = getBoardDays(board);
     const places = getBoardPlaceNames(board);
+    const automaticPhotos = useBoardPhotos(board, tagLabels);
+    const cover = board.coverImage?.url ? board.coverImage : automaticPhotos.photos.cover;
+    const coverLabel = automaticPhotos.slots.find((slot) => slot.id === "cover")?.label || board.title;
     const [selectedActivity, setSelectedActivity] = useState<BoardActivity | null>(null);
     // Preview saves and copies only stay in this browser tab.
     const preview = useBoardPreview(board, selectedActivity);
@@ -51,7 +68,7 @@ export default function PublishedBoard({ board, author, highlights }: PublishedB
     const feedback = (
         <>
             <p role="status" className="text-muted-foreground text-12 mt-3">
-                {preview.message}
+                {preview.message || "Bookmarks and copies are previews saved in this tab."}
             </p>
             {preview.error ? (
                 <p role="alert" className="text-14 mt-3">
@@ -72,23 +89,30 @@ export default function PublishedBoard({ board, author, highlights }: PublishedB
                         <BoardIcon name="arrow" className="size-3" /> back
                     </Link>
                     <BoardPhoto
-                        image={board.coverImage}
+                        image={cover}
+                        placeholderLabel={coverLabel}
+                        showCredit={!board.coverImage?.url}
+                        insetCredit
                         preload
                         className="mx-auto h-[16rem] w-[82%] rounded-b-[50%] sm:h-[25rem] lg:h-[29rem] lg:w-[80%]"
                         sizes="80vw"
                     />
-                    <div className={`relative mx-auto w-fit ${board.coverImage ? "-mt-7" : "pt-28"}`}>
-                        <BoardPhoto
-                            image={author.photo}
-                            className="border-background mx-auto size-16 rounded-full border-4"
-                            sizes="64px"
-                        />
+                    <div className="relative mx-auto -mt-7 w-fit">
+                        {/* Keep the avatar circle when there is no profile photo, so the name stays below the cover. */}
+                        <div
+                            role={author.photo ? undefined : "img"}
+                            aria-label={author.photo ? undefined : `Profile photo placeholder for ${author.name}`}
+                            className="border-background bg-faint mx-auto size-16 overflow-hidden rounded-full border-4"
+                        >
+                            <BoardPhoto image={author.photo} className="h-full w-full" sizes="64px" />
+                        </div>
                         <p className="text-12 mt-2">{author.name}</p>
                         <p className="text-muted-foreground text-10">presents</p>
                     </div>
                     <h1 className="font-display mx-auto mt-7 max-w-6xl px-5 text-[clamp(2.75rem,7vw,8rem)] leading-[0.95] font-bold tracking-tight break-words uppercase">
                         {board.title}
                     </h1>
+                    <p className="text-muted-foreground text-12 mt-4 px-5">Access: {accessLabels[board.visibility]}</p>
                     {board.description ? (
                         <p className="text-muted-foreground text-14 sm:text-16 mx-auto mt-9 max-w-lg px-5 leading-snug whitespace-pre-line">
                             {board.description}
@@ -105,12 +129,10 @@ export default function PublishedBoard({ board, author, highlights }: PublishedB
                     </button>
                     {/* Show feedback on the page when no popup is open. */}
                     <div className="mx-auto max-w-md px-5">{selectedActivity || preview.draft ? null : feedback}</div>
-                    {highlights.length ? (
-                        <ul className="border-line text-muted-foreground text-16 mx-auto mt-8 w-fit min-w-56 space-y-3 border-t px-6 pt-9">
-                            {highlights.map((highlight) => (
-                                <li key={highlight}>{highlight}</li>
-                            ))}
-                        </ul>
+                    {canEditContent ? (
+                        <Link href={`/boards/${board.id}/edit`} className={`${actionClasses} mt-5`}>
+                            Edit Board
+                        </Link>
                     ) : null}
                     <dl className="border-line text-muted-foreground mx-auto mt-10 flex w-fit border-y px-8 py-6">
                         <div className="border-line flex items-baseline gap-1 border-r pr-8">
@@ -123,9 +145,9 @@ export default function PublishedBoard({ board, author, highlights }: PublishedB
                         </div>
                     </dl>
                     {/* Only show the first three tags. */}
-                    {board.tags.length ? (
+                    {tagLabels.length ? (
                         <ul className="border-line text-muted-foreground text-12 mx-auto mt-8 flex w-fit max-w-[90%] flex-wrap justify-center gap-x-7 gap-y-4 border-b px-2 pb-8">
-                            {board.tags.slice(0, 3).map((tag) => (
+                            {tagLabels.slice(0, 3).map((tag) => (
                                 <li key={tag} className="flex items-center gap-2">
                                     <BoardIcon name={getTagIcon(tag)} className="size-6" />
                                     {tag}
@@ -143,24 +165,41 @@ export default function PublishedBoard({ board, author, highlights }: PublishedB
                 </header>
                 {days.length ? (
                     days.map((day) => (
-                        <PublishedBoardDay key={day.number} day={day} onSelectActivity={handleOpenActivity} />
+                        <PublishedBoardDay
+                            key={day.number}
+                            day={day}
+                            onSelectActivity={handleOpenActivity}
+                            photos={{
+                                first: automaticPhotos.photos[`day-${day.number}-first`],
+                                second: automaticPhotos.photos[`day-${day.number}-second`]
+                            }}
+                            photoLabels={{
+                                first: automaticPhotos.slots.find((slot) => slot.id === `day-${day.number}-first`)
+                                    ?.label,
+                                second: automaticPhotos.slots.find((slot) => slot.id === `day-${day.number}-second`)
+                                    ?.label
+                            }}
+                        />
                     ))
                 ) : (
                     <p className="text-muted-foreground px-5 py-16 text-center">This board has no activities yet.</p>
                 )}
-                <footer className="border-line grid min-h-[42rem] gap-24 border-t px-5 py-10 sm:px-9 lg:gap-36 lg:py-12">
+                <footer className="border-line grid min-h-[42rem] grid-cols-1 gap-24 border-t px-5 py-10 sm:px-9 lg:gap-36 lg:py-12">
                     <section>
                         <p className="text-muted-foreground text-12">like this board?</p>
                         <h2 className="font-display text-36 mt-1 font-bold uppercase">Make it yours</h2>
                         <p className="text-muted-foreground text-14 mt-1 max-w-60">
-                            Save a copy and add your own ideas. Keep the places you love, change the rest.
+                            Create a preview copy in this tab and add your own ideas.
                         </p>
                         <button type="button" onClick={preview.copyBoard} className={`${actionClasses} mt-5`}>
                             <BoardIcon name="copy" className="size-4" />
-                            Copy board
+                            Copy board preview
                         </button>
                     </section>
-                    <section aria-labelledby="board-author-heading" className="max-w-lg self-end justify-self-end">
+                    <section
+                        aria-labelledby="board-author-heading"
+                        className="w-full max-w-lg min-w-0 self-end justify-self-end"
+                    >
                         <h2
                             id="board-author-heading"
                             className="font-display text-36 text-right leading-none font-bold uppercase"
@@ -172,32 +211,17 @@ export default function PublishedBoard({ board, author, highlights }: PublishedB
                         </p>
                         <div className="mt-6 grid gap-5 sm:grid-cols-[1fr_1.1fr]">
                             <div className="text-muted-foreground text-right">
-                                <dl className="mb-6 flex justify-end gap-7 sm:flex-col sm:gap-5">
-                                    {/* Zero is a valid count; only hide missing values. */}
-                                    {author.countriesVisited !== undefined ? (
-                                        <div>
-                                            <dt className="text-10">countries visited</dt>
-                                            <dd className="font-display text-30 font-semibold">
-                                                {author.countriesVisited}
-                                            </dd>
-                                        </div>
-                                    ) : null}
-                                    {author.boardsCreated !== undefined ? (
-                                        <div>
-                                            <dt className="text-10">boards created</dt>
-                                            <dd className="font-display text-30 font-semibold">
-                                                {author.boardsCreated}
-                                            </dd>
-                                        </div>
-                                    ) : null}
-                                </dl>
                                 <p className="text-14 leading-snug whitespace-pre-line">{author.bio}</p>
                             </div>
-                            <BoardPhoto image={author.photo} className="aspect-[3/4] min-h-72" />
+                            <BoardPhoto
+                                image={author.photo}
+                                placeholderLabel={`${author.name}'s profile photo`}
+                                className="aspect-[3/4] min-h-72"
+                            />
                         </div>
                     </section>
                     <p className="text-muted-foreground text-10">
-                        Development preview: sample board and author. Saves and copies stay in this tab.
+                        Bookmarks and copies are previews saved in this tab.
                     </p>
                 </footer>
             </article>
