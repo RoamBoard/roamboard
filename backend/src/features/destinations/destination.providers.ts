@@ -1,5 +1,5 @@
 import { toCountryCode } from "../../shared/countries.js";
-import { destinationSuggestions } from "./destination.suggestions.js";
+import { destinationSuggestions, type DestinationCandidate } from "./destination.suggestions.js";
 import { observeProviderResponse } from "../quotas/quota.feedback.js";
 import type { QuotaObserver } from "../quotas/quota.types.js";
 import type {
@@ -44,7 +44,7 @@ async function requestMapbox(
     limit: number,
     token: string,
     observe?: QuotaObserver
-): Promise<DestinationResult[]> {
+): Promise<DestinationCandidate[]> {
     const url = new URL(
         options.poi
             ? "https://api.mapbox.com/search/searchbox/v1/forward"
@@ -55,7 +55,7 @@ async function requestMapbox(
     url.searchParams.set("language", "en");
     if (!options.poi) {
         url.searchParams.set("autocomplete", "true");
-        url.searchParams.set("types", "place");
+        url.searchParams.set("types", "country,region,place");
     }
     url.searchParams.set("access_token", token);
     const response = await fetch(url, { signal: AbortSignal.timeout(8_000) });
@@ -73,25 +73,44 @@ async function requestMapbox(
         if (longitude === undefined || latitude === undefined || Math.abs(longitude) > 180 || Math.abs(latitude) > 90)
             return [];
         const name = stringValue(properties.name_preferred ?? properties.name, "Unknown place");
-        const featureType = stringValue(properties.feature_type, "place");
+        const featureType = stringValue(properties.feature_type, "unknown");
         const context = objectValue(properties.context);
         const countryContext = objectValue(context.country);
         const placeContext = objectValue(context.place);
-        const country = stringValue(countryContext.name);
-        const countryCode = stringValue(countryContext.country_code).toUpperCase();
-        const city = featureType === "place" ? name : stringValue(placeContext.name);
+        const ownContext = objectValue(context[featureType]);
+        const regionContext = objectValue(context.region);
+        const districtContext = objectValue(context.district);
+        const country = stringValue(countryContext.name, featureType === "country" ? name : "");
+        const countryCode = stringValue(
+            countryContext.country_code_alpha_3,
+            stringValue(countryContext.country_code)
+        ).toUpperCase();
+        const city = featureType === "place" ? name : options.poi ? stringValue(placeContext.name) : "";
         return [
             {
-                id: stringValue(feature.id ?? properties.mapbox_id, `mapbox-${index}`),
-                name,
-                address: stringValue(properties.full_address ?? properties.place_formatted, name),
-                latitude,
-                longitude,
-                placeType: featureType,
-                context: [stringValue(placeContext.name), country].filter(Boolean),
-                country: country || null,
-                countryCode: toCountryCode(countryCode),
-                city: city || null
+                names: [
+                    name,
+                    stringValue(properties.name),
+                    stringValue(ownContext.name),
+                    stringValue(objectValue(ownContext.alternate).name)
+                ].filter(Boolean),
+                qualifiers: [regionContext, districtContext, countryContext].flatMap((item) =>
+                    [item.name, item.region_code, item.region_code_full, item.country_code, item.country_code_alpha_3]
+                        .map((value) => stringValue(value))
+                        .filter(Boolean)
+                ),
+                destination: {
+                    id: stringValue(feature.id ?? properties.mapbox_id, `mapbox-${index}`),
+                    name,
+                    address: stringValue(properties.full_address ?? properties.place_formatted, name),
+                    latitude,
+                    longitude,
+                    placeType: featureType,
+                    context: [stringValue(placeContext.name), country].filter(Boolean),
+                    country: country || null,
+                    countryCode: toCountryCode(countryCode),
+                    city: city || null
+                }
             }
         ];
     });
@@ -104,7 +123,7 @@ export function searchMapbox(
     observe?: QuotaObserver
 ): Promise<DestinationResult[]> {
     return requestMapbox({ query, poi: false }, 10, token, observe).then((results) =>
-        destinationSuggestions(results, limit)
+        destinationSuggestions(results, query, limit)
     );
 }
 
@@ -114,7 +133,9 @@ export function searchMapboxPlaces(
     token: string,
     observe?: QuotaObserver
 ): Promise<DestinationResult[]> {
-    return requestMapbox({ query, poi: true }, limit, token, observe);
+    return requestMapbox({ query, poi: true }, limit, token, observe).then((results) =>
+        results.map((result) => result.destination)
+    );
 }
 
 export async function fetchWeather(

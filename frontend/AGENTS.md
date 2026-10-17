@@ -103,14 +103,29 @@ The `/dev` index links to the implemented frontend routes and explains how to op
 
 The Board creator now uses the versioned Board and image upload-intent endpoints with the session cookie. Existing drafts are listed at `/boards/drafts` and reopen at `/boards/drafts/[boardId]`; saving again sends the Board revision to the backend. `/create` contains the creation landing page and links to `/boards/mine`, which lists the signed-in owner's published Boards. Published Boards open for editing at `/boards/[boardId]/edit`; owners can edit content and visibility, while members with the editor role can edit content but not visibility. The creator has one selected Board cover and lets users attach several uploaded images to an activity, order them, and choose its activity cover. Unattached uploads can be assigned while editing an activity. The creator uses the backend's allowed tag list. Geoapify location search/reverse geocoding and Unsplash search are implemented in the current backend, with missing-key, quota and provider-failure states. Manual coordinates remain available. Vibe and Highlights controls are absent by agreement. The developer provider lab remains separate from persisted Board media.
 
-Home is a minimal centered city input with smaller country labels in autocomplete and Kyoto, Paris and Copenhagen
-links. There are no large headings, decorative artwork, promotional copy or visible keyboard instructions.
-Debounced, cancellable search forwards city queries to Mapbox without a hardcoded city catalog or geographic bias.
-Mapbox controls ranking and namesake relevance. The backend keeps the highest-ranked result per normalized city name,
-removes duplicate provider IDs and non-city feature types, and guards against transport facility labels that Mapbox
-misclassifies as places. There is no population cutoff; country/region qualifiers can promote smaller namesakes.
-Home fades out over 320ms before navigating, respecting reduced motion. Search links use the existing
+The `/home` route has a centered ROAMBOARD heading just above its search, using the Cabinet Grotesk typography and
+desktop sizing of MY BOARDS. ROAM and BOARD both use 90% foreground color, linking to `/discover` and `/boards`
+respectively. Both brighten to full foreground on hover without underlines and retain visible keyboard focus.
+Its horizontally centered destination search sits at the same upper-page height as the `/boards` search, rather than
+the viewport midpoint, and matches its dimensions:
+550px maximum width, 64px mobile / 80px desktop minimum height, and 14px mobile / 20px desktop input text.
+A faint resting underline and search icon make the field discoverable; the underline strengthens on hover and focus. Search retains
+smaller country labels in autocomplete and Kyoto, Paris and Copenhagen links. Autocomplete requests and displays
+at most the three highest-ranked filtered suggestions. There is no promotional copy or visible
+keyboard instruction. The URL remains `/home` for existing navigation and welcome flows.
+Debounced, cancellable search forwards destination queries to Mapbox without a hardcoded catalog or geographic bias.
+Countries and regions/provinces/states are included alongside cities. The backend ranks exact/qualified matches above
+close whole-name spellings, prefixes and fuzzy fallback, returning only the strongest available group. Mapbox order
+breaks ties and repeated displayed names/provider IDs are removed. Short queries preserve provider prefix ordering.
+Transport facilities remain excluded by type and generic label safeguards. There is no population cutoff or extra
+provider request. Countries display a small "Country" label; other destinations retain the smaller country label.
+General destination page support remains owned by its separate workstream.
+Home fades out and moves 6px upward over 400ms before navigating, respecting reduced motion. Search links use the existing
 `/discover/destinations/[slug]` convention; destination-page implementation belongs to its separate workstream.
+The destination segment's `template.tsx` supplies the matching 400ms entrance fade and 6px downward settle from above
+for existing and future city/country pages. It remounts for destination slug changes without changing page content.
+Home and destination arrivals share timing/distance in `src/lib/destination-transition.ts`, with inverse easing curves;
+reduced-motion users skip both animations.
 All API clients use NEXT_PUBLIC_API_URL and session cookies.
 
 `/discover/destinations/[slug]` renders the reusable Destination Atlas for Kyoto, Paris and Copenhagen from

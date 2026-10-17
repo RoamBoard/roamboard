@@ -3,10 +3,10 @@ import AppShell from "@/components/layout/AppShell";
 import DestinationExplorer from "@/components/features/destinations/DestinationExplorer";
 
 export const metadata: Metadata = {
-    title: "Home | Roamboard"
+    title: "Roam | Roamboard"
 };
 
-export default function HomePage() {
+export default function RoamPage() {
     return (
         <AppShell activeHref="/home">
             <DestinationExplorer />

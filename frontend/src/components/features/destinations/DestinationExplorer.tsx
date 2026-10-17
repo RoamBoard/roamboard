@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, LoaderCircle } from "lucide-react";
+import { ArrowRight, LoaderCircle, Search } from "lucide-react";
 import { AnimatePresence, motion, useAnimationControls, useReducedMotion } from "motion/react";
 import { destinationPages, destinationPageHref } from "@/data/destination-atlas";
 import { destinationSearchHref } from "@/lib/destination-search";
+import { destinationTransition } from "@/lib/destination-transition";
 import { searchDestinations, type Destination } from "@/lib/destinations";
 
 export default function DestinationExplorer() {
@@ -31,7 +32,7 @@ export default function DestinationExplorer() {
             void searchDestinations(query.trim(), controller.signal)
                 .then((places) => {
                     if (controller.signal.aborted) return;
-                    setResults(places);
+                    setResults(places.slice(0, 3));
                     setActive(places.length ? 0 : -1);
                     setSearched(true);
                 })
@@ -56,7 +57,11 @@ export default function DestinationExplorer() {
         setOpen(false);
         router.prefetch(href);
         if (!reduced)
-            await controls.start({ opacity: 0, y: -6, transition: { duration: 0.32, ease: [0.4, 0, 0.8, 1] } });
+            await controls.start({
+                opacity: 0,
+                y: -destinationTransition.distance,
+                transition: { duration: destinationTransition.duration, ease: destinationTransition.exitEase }
+            });
         router.push(href);
     }
 
@@ -70,17 +75,36 @@ export default function DestinationExplorer() {
         if (!loading && results[active]) choose(results[active]);
         else {
             setOpen(true);
-            if (query.trim().length < 2) setError("Enter a city name.");
+            if (query.trim().length < 2) setError("Enter a destination name.");
         }
     }
 
     return (
         <section
-            className="flex min-h-dvh items-center justify-center px-6 py-24 sm:px-10"
-            aria-label="Destination discovery"
+            className="flex min-h-dvh items-start justify-center px-6 pt-56 pb-32 sm:px-10 md:pt-[calc(13.75rem+clamp(40px,6.4vw,96px))]"
+            aria-labelledby="roamboard-heading"
         >
-            <h1 className="sr-only">Find a destination</h1>
-            <motion.div animate={controls} className="w-full max-w-sm -translate-y-8" inert={leaving}>
+            <motion.div animate={controls} className="relative w-full max-w-[550px]" inert={leaving}>
+                <h1
+                    id="roamboard-heading"
+                    aria-label="Roamboard"
+                    className="font-display absolute inset-x-0 bottom-full pb-8 text-center text-[clamp(32px,6.4vw,96px)] leading-[1.02] font-bold tracking-[-0.045em] whitespace-nowrap sm:pb-10"
+                >
+                    <Link
+                        href="/discover"
+                        aria-label="Roam: discover destinations"
+                        className="text-foreground/90 hover:text-foreground transition-colors focus-visible:outline-1 focus-visible:outline-offset-4 motion-reduce:transition-none"
+                    >
+                        ROAM
+                    </Link>
+                    <Link
+                        href="/boards"
+                        aria-label="Board: view your Boards"
+                        className="text-foreground/90 hover:text-foreground transition-colors focus-visible:outline-1 focus-visible:outline-offset-4 motion-reduce:transition-none"
+                    >
+                        BOARD
+                    </Link>
+                </h1>
                 <form
                     onSubmit={submit}
                     className="relative"
@@ -88,9 +112,15 @@ export default function DestinationExplorer() {
                         if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
                     }}
                 >
-                    <div className="group relative">
+                    <div className="group border-line/65 hover:border-muted-foreground/60 focus-within:border-foreground/60 relative flex min-h-16 items-center border-b transition-colors motion-reduce:transition-none md:min-h-20">
+                        <Search
+                            aria-hidden="true"
+                            size={18}
+                            strokeWidth={1.3}
+                            className="text-muted-foreground/65 pointer-events-none ml-3 shrink-0"
+                        />
                         <label htmlFor="destination-search" className="sr-only">
-                            Search cities
+                            Search destinations
                         </label>
                         <input
                             id="destination-search"
@@ -105,7 +135,7 @@ export default function DestinationExplorer() {
                             spellCheck={false}
                             value={query}
                             placeholder="where would you like to go?"
-                            className="placeholder:text-muted-foreground hover:border-line focus:border-line w-full border-b border-transparent bg-transparent px-11 py-4 text-center text-base transition-colors outline-none placeholder:text-sm"
+                            className="text-14 placeholder:text-muted-foreground md:text-20 w-full min-w-0 bg-transparent px-4 py-5 text-center outline-none"
                             onFocus={() => setOpen(true)}
                             onChange={(event) => {
                                 const value = event.target.value;
@@ -134,12 +164,12 @@ export default function DestinationExplorer() {
                                 }
                             }}
                         />
-                        {query.trim() && (
+                        {query.trim() ? (
                             <button
                                 type="submit"
-                                aria-label="Explore selected city"
+                                aria-label="Explore selected destination"
                                 disabled={loading || leaving}
-                                className="text-muted-foreground hover:text-foreground focus-visible:outline-foreground absolute top-1/2 right-0 grid size-11 -translate-y-1/2 place-items-center focus-visible:outline-2 disabled:opacity-40"
+                                className="text-muted-foreground hover:text-foreground focus-visible:outline-foreground mr-1 grid size-11 shrink-0 place-items-center focus-visible:outline-2 disabled:opacity-40"
                             >
                                 {loading ? (
                                     <LoaderCircle
@@ -151,6 +181,8 @@ export default function DestinationExplorer() {
                                     <ArrowRight size={16} strokeWidth={1.2} aria-hidden="true" />
                                 )}
                             </button>
+                        ) : (
+                            <span aria-hidden="true" className="mr-1 block size-11 shrink-0" />
                         )}
                     </div>
                     <AnimatePresence>
@@ -162,7 +194,12 @@ export default function DestinationExplorer() {
                                 transition={{ duration: reduced ? 0 : 0.16 }}
                                 className="bg-background absolute inset-x-0 top-full z-20 pt-3 pb-4"
                             >
-                                <ul id="destination-suggestions" role="listbox" aria-label="Cities" aria-busy={loading}>
+                                <ul
+                                    id="destination-suggestions"
+                                    role="listbox"
+                                    aria-label="Destinations"
+                                    aria-busy={loading}
+                                >
                                     {results.map((destination, index) => (
                                         <li
                                             key={destination.id}
@@ -183,7 +220,9 @@ export default function DestinationExplorer() {
                                                     {destination.name}
                                                 </span>
                                                 <span className="text-muted-foreground text-xs">
-                                                    {destination.country}
+                                                    {destination.placeType === "country"
+                                                        ? "Country"
+                                                        : destination.country}
                                                 </span>
                                             </button>
                                         </li>
@@ -191,7 +230,7 @@ export default function DestinationExplorer() {
                                 </ul>
                                 {(error || (!loading && searched && !results.length)) && (
                                     <p role="status" className="text-muted-foreground px-2 py-3 text-xs">
-                                        {error || "No cities found."}
+                                        {error || "No destinations found."}
                                     </p>
                                 )}
                             </motion.div>
@@ -204,7 +243,7 @@ export default function DestinationExplorer() {
                     )}
                 </form>
                 <nav
-                    className={`mt-7 flex flex-wrap justify-center gap-x-6 gap-y-1 text-xs ${showSuggestions ? "invisible" : ""}`}
+                    className={`absolute inset-x-0 top-full mt-7 flex flex-wrap justify-center gap-x-6 gap-y-1 text-xs ${showSuggestions ? "invisible" : ""}`}
                     aria-label="Suggested destinations"
                     inert={showSuggestions}
                 >
@@ -235,9 +274,9 @@ export default function DestinationExplorer() {
                 {leaving
                     ? "Opening destination."
                     : loading
-                      ? "Searching cities."
+                      ? "Searching destinations."
                       : searched
-                        ? `${results.length} cities found.`
+                        ? `${results.length} destinations found.`
                         : ""}
             </p>
         </section>

@@ -47,13 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </head>
             <body className={`${cabinet.variable} ${satoshi.variable} antialiased`}>
                 <ImageLibraryProvider>
-                    <WelcomeTransitionProvider>
-                        {children}
-                        <footer className="text-12 text-graphite px-6 py-3">
-                            Location data: <a href="https://www.geoapify.com/">Powered by Geoapify</a> &middot;{" "}
-                            <a href="https://www.openstreetmap.org/copyright">&copy; OpenStreetMap contributors</a>
-                        </footer>
-                    </WelcomeTransitionProvider>
+                    <WelcomeTransitionProvider>{children}</WelcomeTransitionProvider>
                 </ImageLibraryProvider>
             </body>
         </html>
