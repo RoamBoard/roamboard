@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import BoardCreationPreview from "@/components/features/boards/BoardCreationPreview";
 import BoardDiscoveryDetails from "@/components/features/boards/BoardDiscoveryDetails";
@@ -26,6 +26,10 @@ import type {
     BoardStatus
 } from "@/types/board-creator";
 import { getMockSettings, restoreMockStore } from "@/data/mock-social";
+
+const chapterClasses =
+    "mx-auto grid w-full max-w-[96rem] scroll-mt-10 gap-8 px-5 pb-20 sm:gap-10 sm:px-8 lg:grid-cols-[21rem_minmax(0,1fr)] lg:gap-16 lg:px-12 lg:pb-28";
+const fullChapterClasses = `${chapterClasses} lg:min-h-[min(70rem,100svh)]`;
 
 function newDay(dayNumber: number, date: string | null = null): BoardDayDraft {
     return { id: crypto.randomUUID(), dayNumber, date, pins: [] };
@@ -75,16 +79,20 @@ function getDefaultBoardCreatorVisibility(): BoardCreatorPayload["visibility"] {
 
 export default function BoardCreator({
     initialBoardId,
-    expectedStatus = "draft"
+    expectedStatus = "draft",
+    initialMode = "smart"
 }: {
     initialBoardId?: number;
     expectedStatus?: BoardStatus;
+    initialMode?: "smart" | "scratch";
 }) {
+    const [mode, setMode] = useState(initialMode);
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [images, setImages] = useState<BoardImageDraft[]>([]);
     const [selectedCoverImageId, setSelectedCoverImageId] = useState<number | null>(null);
-    const [days, setDays] = useState<BoardDayDraft[]>(() => [newDay(1)]);
+    const initialDayId = useId();
+    const [days, setDays] = useState<BoardDayDraft[]>(() => [{ id: initialDayId, dayNumber: 1, date: null, pins: [] }]);
     const [tags, setTags] = useState<string[]>([]);
     const [allowedTags, setAllowedTags] = useState<Array<{ tagId: number; name: string }>>([]);
     const [visibility, setVisibility] = useState<BoardCreatorPayload["visibility"]>(() =>
@@ -98,6 +106,17 @@ export default function BoardCreator({
     const [error, setError] = useState("");
     const [message, setMessage] = useState("");
     const [savedBoard, setSavedBoard] = useState<BoardDocument | null>(null);
+    const editorDisabled = saving !== null || draftLoading || (initialBoardId !== undefined && !savedBoard);
+    const showSmartIntro = initialBoardId === undefined && mode === "smart";
+
+    function switchMode() {
+        const nextMode = mode === "smart" ? "scratch" : "smart";
+        setMode(nextMode);
+        const url = new URL(window.location.href);
+        if (nextMode === "scratch") url.searchParams.set("mode", "scratch");
+        else url.searchParams.delete("mode");
+        window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+    }
 
     useEffect(() => {
         void listBoardTags()
@@ -357,27 +376,42 @@ export default function BoardCreator({
     }
 
     return (
-        <article className="bg-background text-foreground min-w-0">
-            <header className="px-5 pt-14 pb-16 text-center sm:px-10 sm:pt-20">
-                <h1 className="font-display text-48 sm:text-72 lg:text-96 leading-none font-bold tracking-tight">
-                    SMART CREATE
+        <article className="font-body bg-background text-foreground relative min-w-0 overflow-x-clip">
+            {showSmartIntro ? (
+                <header className="px-5 pt-16 pb-16 text-center sm:px-10 sm:pt-24 sm:pb-28">
+                    <h1 className="font-display text-[clamp(2.5rem,5.6vw,6rem)] leading-[1.02] font-bold tracking-[-0.035em]">
+                        SMART CREATE
+                    </h1>
+                    <p className="text-muted-foreground mx-auto mt-4 max-w-[38rem] text-xs leading-relaxed sm:text-sm">
+                        Drop in your photos and we’ll turn metadata into editable beginnings for a Board. Review every
+                        suggestion before anything is published.
+                    </p>
+                    <p className="text-muted-foreground/70 mt-6 text-[10px] sm:text-xs">
+                        Powered by Roamboard Intelligence Engine
+                    </p>
+                </header>
+            ) : (
+                <h1 className="sr-only">
+                    {initialBoardId === undefined
+                        ? "Create a new Board"
+                        : expectedStatus === "published"
+                          ? "Edit published Board"
+                          : "Edit Board draft"}
                 </h1>
-                <p className="text-12 text-graphite mx-auto mt-4 max-w-xl leading-5">
-                    Drop in your photos and we’ll turn metadata into editable beginnings for a Board. Review every
-                    suggestion before anything is published.
-                </p>
-                <p className="text-10 text-stone mt-6">Powered by Roamboard Intelligence Engine</p>
-            </header>
+            )}
 
-            <div className="px-4 sm:px-8 lg:px-16">
+            <div>
                 <fieldset
-                    disabled={saving !== null}
+                    disabled={editorDisabled}
+                    aria-busy={draftLoading}
                     className="m-0 min-w-0 border-0 p-0 disabled:pointer-events-none disabled:opacity-80"
                 >
                     <BoardImageIntake
                         images={images.filter((image) => image.source === "upload")}
                         coverImageId={coverImageId}
-                        disabled={saving !== null}
+                        disabled={editorDisabled}
+                        loading={draftLoading}
+                        showDropZone={showSmartIntro}
                         onUploadingChange={setUploading}
                         onUploadPromise={(promise) => {
                             pendingUploadRef.current = promise;
@@ -387,17 +421,33 @@ export default function BoardCreator({
                         onRemove={removeImage}
                     />
 
-                    <div className="mx-auto mt-8 max-w-4xl text-center">
-                        <label htmlFor="board-title" className="text-10 tracking-label text-stone uppercase">
-                            Board creator
+                    <div className="mx-auto mt-10 max-w-4xl px-5 text-center sm:mt-12">
+                        <p className="font-display text-muted-foreground text-xs uppercase sm:text-sm lg:text-base">
+                            {initialBoardId === undefined
+                                ? "Board creator"
+                                : expectedStatus === "published"
+                                  ? "Board editor"
+                                  : "Board draft"}
+                        </p>
+                        <label htmlFor="board-title" className="sr-only">
+                            Board title
                         </label>
                         <input
                             id="board-title"
                             value={title}
                             onChange={(event) => setTitle(event.target.value)}
-                            placeholder="BOARD TITLE"
-                            className="font-display text-36 placeholder:text-foreground sm:text-48 mt-2 w-full bg-transparent text-center leading-none font-bold uppercase outline-none focus:placeholder:text-transparent"
+                            placeholder={draftLoading ? "LOADING BOARD…" : "BOARD TITLE"}
+                            className="font-display placeholder:text-foreground focus-visible:outline-foreground mt-3 min-h-12 w-full min-w-0 bg-transparent py-1 text-center text-[clamp(1.75rem,3.8vw,4rem)] leading-[1.02] font-bold tracking-[-0.035em] uppercase focus-visible:outline-1 focus-visible:outline-offset-4"
                         />
+                        {initialBoardId === undefined ? (
+                            <button
+                                type="button"
+                                onClick={switchMode}
+                                className="text-muted-foreground hover:text-foreground mt-4 min-h-11 cursor-pointer px-3 text-xs underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4"
+                            >
+                                {mode === "smart" ? "Switch to Start from Scratch" : "Switch to Smart Create"}
+                            </button>
+                        ) : null}
                     </div>
 
                     {message ? (
@@ -416,31 +466,25 @@ export default function BoardCreator({
                         </p>
                     ) : null}
 
-                    <section
-                        id="board-basics"
-                        className="mx-auto mt-24 grid max-w-7xl scroll-mt-8 gap-10 lg:grid-cols-[15rem_1fr] lg:gap-16"
-                    >
+                    <section id="board-basics" className={`${chapterClasses} mt-20 sm:mt-28 lg:mt-36 lg:min-h-[22rem]`}>
                         <CreatorSectionIntro
                             number="01"
                             title="BOARD BASICS"
                             description="Let’s start with the essentials to set the scene for everything you’re about to plan."
                         />
-                        <label className="font-display text-20 block max-w-3xl font-bold">
+                        <label className="text-foreground/80 text-20 sm:text-24 block max-w-3xl min-w-0 font-bold">
                             Description
                             <textarea
                                 value={description}
                                 onChange={(event) => setDescription(event.target.value)}
                                 placeholder="type here..."
                                 rows={7}
-                                className="border-line font-body text-14 placeholder:text-stone focus:border-foreground mt-3 w-full resize-y border-0 border-b bg-transparent py-3 leading-6 font-normal outline-none"
+                                className="border-line text-foreground font-body text-14 placeholder:text-muted-foreground focus:border-foreground focus-visible:outline-foreground mt-3 w-full resize-y border-0 border-b bg-transparent py-3 leading-6 font-normal focus-visible:outline-1 focus-visible:outline-offset-4 sm:text-base"
                             />
                         </label>
                     </section>
 
-                    <section
-                        id="day-plan"
-                        className="mx-auto mt-28 grid max-w-7xl scroll-mt-8 gap-10 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-16"
-                    >
+                    <section id="day-plan" className={fullChapterClasses}>
                         <CreatorSectionIntro
                             number="02"
                             title="BUILD YOUR DAY PLAN"
@@ -448,7 +492,7 @@ export default function BoardCreator({
                         />
                         <div className="min-w-0">
                             <DayPlanner
-                                disabled={saving !== null}
+                                disabled={editorDisabled}
                                 days={days}
                                 images={images}
                                 onAddDay={() => setDays((current) => [...current, newDay(current.length + 1)])}
@@ -469,45 +513,43 @@ export default function BoardCreator({
                         </div>
                     </section>
 
-                    <section
-                        id="details-discovery"
-                        className="mx-auto mt-28 grid max-w-7xl scroll-mt-8 gap-10 lg:grid-cols-[15rem_1fr] lg:gap-16"
-                    >
+                    <section id="details-discovery" className={fullChapterClasses}>
                         <CreatorSectionIntro
                             number="03"
                             title="DETAILS & DISCOVERY"
                             description="Give your Board more context to keep plans organized and make it easier for others to discover."
                         />
-                        <BoardDiscoveryDetails
-                            tags={tags}
-                            allowedTags={allowedTags.map((tag) => tag.name)}
-                            visibility={visibility}
-                            canChangeVisibility={savedBoard?.permissions.canManageBoard ?? true}
-                            onTagsChange={setTags}
-                            onVisibilityChange={setVisibility}
-                        />
+                        <div className="min-w-0 lg:self-center">
+                            <BoardDiscoveryDetails
+                                tags={tags}
+                                allowedTags={allowedTags.map((tag) => tag.name)}
+                                visibility={visibility}
+                                canChangeVisibility={savedBoard?.permissions.canManageBoard ?? true}
+                                onTagsChange={setTags}
+                                onVisibilityChange={setVisibility}
+                            />
+                        </div>
                     </section>
                 </fieldset>
 
-                <section
-                    id="board-preview"
-                    className="mx-auto mt-28 grid max-w-7xl scroll-mt-8 gap-10 lg:grid-cols-[15rem_1fr] lg:gap-16"
-                >
+                <section id="board-preview" className={fullChapterClasses}>
                     <CreatorSectionIntro
                         number="04"
                         title="BOARD PREVIEW"
                         description="A final look at the trip you’ve built, just to make sure everything feels exactly how you want it."
                     />
-                    <BoardCreationPreview board={payload} />
+                    <div className="min-w-0 lg:self-center">
+                        <BoardCreationPreview board={payload} />
+                    </div>
                 </section>
 
-                <section className="mx-auto mt-28 mb-32 grid max-w-7xl gap-10 lg:grid-cols-[15rem_1fr] lg:gap-16">
+                <section className={`${fullChapterClasses} mb-20 sm:mb-32`}>
                     <CreatorSectionIntro
                         number="05"
                         title="PUBLISH"
                         description="Save it for yourself, or share it if you feel like it."
                     />
-                    <div>
+                    <div className="min-w-0 lg:self-center">
                         <h2 className="font-display text-36 font-bold">Ready when you are.</h2>
                         <p className="text-14 text-graphite mt-3 max-w-xl leading-6">
                             Drafts can stay incomplete. Publishing requires a title and at least one pin with a

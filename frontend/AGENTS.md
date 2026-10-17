@@ -44,8 +44,12 @@ The provider lab (/dev/providers) uses current backend Mapbox, Geoapify, Unsplas
 The `/create` landing follows Figma 3.0–3.1 with a local, credited Unsplash photograph, a curved hero, and circular
 creation choices. `BoardCreationChoices` owns only the New Board expansion state; Motion respects reduced motion,
 and Escape collapses the choices and restores trigger focus. Smart Create opens `/boards/new`; Scratch opens
-`/boards/new?mode=scratch`, retaining the entry choice for the next editor milestone. The editor currently renders
-the same existing experience for both URLs. Draft and My Boards navigation remain available; remixing remains
+`/boards/new?mode=scratch`. Smart includes the circuit upload introduction; Scratch, reopened drafts, and published
+edits begin at the shared curved cover. New Boards can switch modes without discarding local edits or remounting
+the upload controller. The shared editor uses spacious numbered chapters, Cabinet display titles, and Satoshi
+supporting text. Existing Boards lock editing while loading and remain locked after a failed load. Planner,
+discovery controls, preview, and publication retain their existing functionality pending later redesign milestones.
+Draft and My Boards navigation remain available; remixing remains
 explicitly deferred. Discover links to `/discover`. The shared sidebar is unchanged.
 
 ## Project purpose and requirements

@@ -5,3 +5,11 @@
 The source identifies it as free to use under the [Unsplash License](https://unsplash.com/license).
 The Create landing page links to the photographer and original photo. This editorial asset is separate
 from user-uploaded Board covers and the backend’s Unsplash search integration.
+
+The editor's default cover reuses `../destinations/bamboo.webp`, credited to Karen Chew on
+[Unsplash](https://unsplash.com/photos/EvsuNMbZNJw); its original source notes are in
+[`../destinations/README.md`](../destinations/README.md). It is a visual fallback, not a persisted user upload.
+
+`circuit/` contains unchanged SVG traces and a circular terminal exported from Roamboard's Figma file
+`4hUe6aKuQnp7zotBG7qqug`, artwork frame `609:3591` in Smart Create. `CreatorUploadArtwork` arranges these
+original assets at their reference coordinates and uses CSS masks to apply the current theme's line color.
