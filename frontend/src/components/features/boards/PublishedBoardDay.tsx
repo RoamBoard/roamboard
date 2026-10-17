@@ -115,6 +115,11 @@ export default function PublishedBoardDay({
                 <h2 id={`day-${day.number}`} className="font-display text-36 font-bold uppercase">
                     Day {day.number}
                 </h2>
+                {day.date ? (
+                    <time dateTime={day.date} className="text-muted-foreground text-14">
+                        {day.date}
+                    </time>
+                ) : null}
                 {day.title ? <p className="text-muted-foreground text-14 uppercase">{day.title}</p> : null}
             </header>
             {day.items.length === 0 ? (

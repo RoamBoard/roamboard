@@ -91,6 +91,8 @@ export function addActivityToPreviewCopy(source: Board, activity: BoardActivity,
         durationDays: Math.max(existing?.durationDays ?? 1, copied.dayNumber ?? 1),
         dayNumbers: existing ? existing.dayNumbers : [1],
         dayTitles: existing?.dayTitles,
+        // A new one-activity copy starts on day one, so its date must move with it.
+        dayDates: existing ? existing.dayDates : copied.date ? { 1: copied.date } : undefined,
         items: existing ? [...draft.items, copied] : [copied],
         updatedAt: new Date().toISOString()
     };

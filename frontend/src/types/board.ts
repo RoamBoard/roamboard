@@ -103,6 +103,8 @@ export type Board = {
     durationDays?: number;
     // Saved day numbers include empty days and may have gaps.
     dayNumbers?: number[];
+    // Saved calendar dates belong to days, including days with no activities.
+    dayDates?: Record<number, string>;
     // Optional headings for numbered days, such as "Shibuya to Shinjuku".
     dayTitles?: Record<number, string>;
     budget?: BoardBudget;

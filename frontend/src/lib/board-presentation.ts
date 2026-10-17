@@ -25,12 +25,13 @@ export function getBoardDays(board: Board): PublishedBoardDay[] {
 
     return Array.from(groups, ([number, items]) => {
         const activities = items.filter((item) => item.type === "activity");
+        const date = board.dayDates?.[number] ?? activities.find((activity) => activity.date)?.date;
         const first = activities[0]?.title;
         const last = activities.at(-1)?.title;
         // Use a custom heading, or build one from the first and last activity.
         const title =
             board.dayTitles?.[number] ?? (first && last && first !== last ? `${first} → ${last}` : (first ?? ""));
-        return { number, title, items };
+        return { number, date, title, items };
     }).sort((first, second) => first.number - second.number);
 }
 

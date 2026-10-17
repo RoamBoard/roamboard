@@ -114,6 +114,7 @@ export function toPublishedBoardData(document: BoardDocument): PublishedBoardDat
             durationDays: document.days.length,
             // Keep empty saved days too, rather than reconstructing days only from activities.
             dayNumbers: document.days.map((day) => day.dayNumber),
+            dayDates: Object.fromEntries(document.days.flatMap((day) => (day.date ? [[day.dayNumber, day.date]] : []))),
             startDate: dates[0],
             endDate: dates.at(-1),
             coverImage: document.coverImageId === null ? undefined : images.get(document.coverImageId),

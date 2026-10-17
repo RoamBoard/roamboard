@@ -19,6 +19,14 @@ const actionClasses =
 
 const numberLabel = (number: number) => String(number).padStart(2, "0");
 
+// Invited members can also read friends-only boards under the backend's access rules.
+const accessLabels = {
+    public: "Anyone",
+    friends: "Friends and invited members",
+    collaborators: "Invited members",
+    private: "Only you"
+};
+
 // The tag API has names but no icon field.
 function getTagIcon(tag: string) {
     const name = tag.toLowerCase();
@@ -104,6 +112,7 @@ export default function PublishedBoard({
                     <h1 className="font-display mx-auto mt-7 max-w-6xl px-5 text-[clamp(2.75rem,7vw,8rem)] leading-[0.95] font-bold tracking-tight break-words uppercase">
                         {board.title}
                     </h1>
+                    <p className="text-muted-foreground text-12 mt-4 px-5">Access: {accessLabels[board.visibility]}</p>
                     {board.description ? (
                         <p className="text-muted-foreground text-14 sm:text-16 mx-auto mt-9 max-w-lg px-5 leading-snug whitespace-pre-line">
                             {board.description}

@@ -24,6 +24,7 @@ export type PublishedBoardState = {
 // One day after the board's items have been grouped for display.
 export type PublishedBoardDay = {
     number: number;
+    date?: string;
     title: string;
     items: BoardItem[];
 };

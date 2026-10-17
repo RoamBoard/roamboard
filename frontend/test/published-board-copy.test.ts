@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { getBoardDays } from "../src/lib/board-presentation";
-import { addActivityToPreviewCopy } from "../src/lib/board-preview";
+import { addActivityToPreviewCopy, createPreviewCopy } from "../src/lib/board-preview";
 import type { Board, BoardActivity } from "../src/types/board";
 
 // A day-five activity catches preview copies that accidentally retain their source Board's empty days.
@@ -77,4 +77,32 @@ test("adding an activity to an existing preview copy keeps its empty days and in
     );
     assert.equal(getBoardDays(copy)[1]?.title, "Rest day");
     assert.deepEqual(existing, before);
+});
+
+test("a single undated activity copy discards calendar dates belonging to other source days", () => {
+    const source = { ...board(), dayDates: { 1: "2026-10-01", 2: "2026-10-03" } };
+    const before = structuredClone(source);
+    const copy = addActivityToPreviewCopy(source, activity(), null);
+    assert.deepEqual(Object.keys(copy.dayDates ?? {}), []);
+    assert.deepEqual(
+        getBoardDays(copy).map((day) => ({ number: day.number, date: day.date })),
+        [{ number: 1, date: undefined }]
+    );
+    assert.deepEqual(source, before);
+});
+
+test("a whole preview copy retains calendar dates including dates on empty days", () => {
+    const source = { ...board(), dayDates: { 1: "2026-10-01", 2: "2026-10-03" } };
+    const before = structuredClone(source);
+    const copy = createPreviewCopy(source);
+    assert.deepEqual(copy.dayDates, { 1: "2026-10-01", 2: "2026-10-03" });
+    assert.deepEqual(
+        getBoardDays(copy).map((day) => ({ number: day.number, date: day.date })),
+        [
+            { number: 1, date: "2026-10-01" },
+            { number: 2, date: "2026-10-03" },
+            { number: 5, date: undefined }
+        ]
+    );
+    assert.deepEqual(source, before);
 });

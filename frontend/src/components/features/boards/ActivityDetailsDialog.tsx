@@ -25,11 +25,18 @@ export default function ActivityDetailsDialog({ activity, days, saved, onClose, 
     // Use the activity's day if it has one, otherwise find the day it belongs to.
     const dayNumber =
         activity.dayNumber ?? days.find((day) => day.items.some((item) => item.id === activity.id))?.number ?? 1;
+    const date = days.find((day) => day.number === dayNumber)?.date ?? activity.date;
 
     return (
         <BoardDialog title={activity.title} onClose={onClose}>
             <p className="text-muted-foreground text-14 mb-5">
                 Day {dayNumber}
+                {date ? (
+                    <>
+                        {" · "}
+                        <time dateTime={date}>{date}</time>
+                    </>
+                ) : null}
                 {activity.time ? ` · ${activity.time}` : ""}
             </p>
             {/* Show every photo here; the card only shows the first one. */}

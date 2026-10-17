@@ -172,6 +172,82 @@ test("database presentation keeps the stored author, cover, empty numbered days 
     assert.deepEqual(source, before);
 });
 
+test("saved calendar dates survive grouping for populated and empty days without dating undated days", () => {
+    const source = document();
+    source.days[0].date = "2026-10-14";
+    const before = structuredClone(source);
+    const result = toPublishedBoardData(source);
+    assert.deepEqual(
+        getBoardDays(result.board).map((day) => ({ number: day.number, date: day.date })),
+        [
+            { number: 1, date: "2026-10-14" },
+            { number: 2, date: "2026-10-15" },
+            { number: 5, date: undefined }
+        ]
+    );
+    assert.deepEqual(source, before);
+});
+
+test("published day headings show exact saved dates even on empty days and leave undated headings undated", () => {
+    const source = document();
+    source.days[0].date = "2026-10-14";
+    const markup = renderToStaticMarkup(createElement(PublishedBoard, toPublishedBoardData(source)));
+    const header = (number: number) => {
+        const match = markup.match(
+            new RegExp(
+                `<section\\b[^>]*aria-labelledby="day-${number}"[^>]*>[\\s\\S]*?<header\\b[^>]*>([\\s\\S]*?)<\\/header>`
+            )
+        );
+        assert.ok(match, `Day ${number} must have a heading`);
+        return match[1];
+    };
+    assert.match(header(1), /<time\b[^>]*datetime="2026-10-14"[^>]*>\s*2026-10-14\s*<\/time>/i);
+    assert.match(header(2), /<time\b[^>]*datetime="2026-10-15"[^>]*>\s*2026-10-15\s*<\/time>/i);
+    assert.doesNotMatch(header(5), /<time\b|2026-10-/i);
+});
+
+test("activity details show their saved day date and retain the activity time without dating undated activities", () => {
+    const source = document();
+    const renderDetails = () => {
+        const data = toPublishedBoardData(source);
+        const activity = data.board.items.find((item) => item.type === "activity");
+        assert.ok(activity?.type === "activity");
+        return renderToStaticMarkup(
+            ActivityDetailsDialog({
+                activity,
+                days: getBoardDays(data.board),
+                saved: false,
+                onClose() {},
+                onSave() {},
+                onCopy() {},
+                children: null
+            })
+        );
+    };
+    const dated = renderDetails();
+    assert.match(dated, /<time\b[^>]*datetime="2026-10-15"[^>]*>\s*2026-10-15\s*<\/time>/i);
+    assert.match(dated, /18:00/);
+    source.days[1].date = null;
+    assert.doesNotMatch(renderDetails(), /datetime="\d{4}-\d{2}-\d{2}"|2026-10-15/i);
+});
+
+for (const [visibility, label] of [
+    ["public", "Access: Anyone"],
+    ["friends", "Access: Friends and invited members"],
+    ["collaborators", "Access: Invited members"],
+    ["private", "Access: Only you"]
+] as const) {
+    test(`the published header explains ${visibility} access`, () => {
+        const data = toPublishedBoardData(document());
+        data.board.visibility = visibility;
+        const markup = renderToStaticMarkup(createElement(PublishedBoard, data));
+        const header = markup.match(/<header\b[^>]*>([\s\S]*?)<\/header>/);
+        assert.ok(header);
+        const text = header[1].replace(/<[^>]*>/g, " ").replace(/\s+/g, " ");
+        assert.ok(text.includes(label), `The header must show ${label}`);
+    });
+}
+
 test("activity images show the chosen upload first and retain saved photo order and Unsplash credit", () => {
     const result = toPublishedBoardData(document());
     const activity = result.board.items.find((item) => item.type === "activity");
