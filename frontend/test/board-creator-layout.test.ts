@@ -28,7 +28,7 @@ function sharedEditorControls(markup: string) {
         assert.ok(markup.includes(`id="${section}"`), `The ${section} chapter must remain available`);
     }
     assert.match(markup, />Save as draft<\/button>/);
-    assert.match(markup, />Publish Board<\/button>/);
+    assert.match(markup, /aria-label="Publish Board"/);
 }
 
 function controlTag(markup: string, selector: string): string {

@@ -54,8 +54,15 @@ menus with typeahead; they do not use Board discovery tags or introduce new back
 retain 30-minute time placement. Activity move menus provide keyboard/touch reordering and cross-day moves
 without changing times, with focus restoration and live announcements. Explicit order is retained through edits,
 additions, and removals; new activities append to their day. `board-planner.ts` owns immutable move calculations,
-while `BoardCreator` remains the state/save owner. Discovery controls, preview, and publication retain their
-existing functionality pending later redesign milestones.
+while `BoardCreator` remains the state/save owner.
+Details & Discovery uses removable tag chips and the installed Command search over backend-provided names,
+with a maximum of three selections and explicit catalog loading/error/retry states. The shared editorial tag
+catalog supplies matching icons only; it does not supply persisted tag IDs or choices. Native visibility radios
+retain owner-only changes and explain that draft access remains owner-only. Publication uses the large Cabinet
+typographic action and an underlined draft action; published editing offers Save changes and never a downgrade.
+Save status/errors appear beside these controls with review links, separately from upload/load feedback. All writes,
+revision checks, server ID reconciliation, and permission gates remain in `BoardCreator`. Preview redesign remains
+for a later milestone.
 Draft and My Boards navigation remain available; remixing remains
 explicitly deferred. Discover links to `/discover`. The shared sidebar is unchanged.
 

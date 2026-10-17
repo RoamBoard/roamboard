@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { movePlannerPin, reorderPlannerPin } from "@/lib/board-planner";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 
 import BoardCreationPreview from "@/components/features/boards/BoardCreationPreview";
+import BoardPublishPanel from "@/components/features/boards/BoardPublishPanel";
 import BoardDiscoveryDetails from "@/components/features/boards/BoardDiscoveryDetails";
 import BoardImageIntake, { type UploadedBoardImage } from "@/components/features/boards/BoardImageIntake";
 import CreatorSectionIntro from "@/components/features/boards/CreatorSectionIntro";
@@ -104,6 +104,10 @@ export default function BoardCreator({
     const [draftLoading, setDraftLoading] = useState(initialBoardId !== undefined);
     const [error, setError] = useState("");
     const [message, setMessage] = useState("");
+    const [saveMessage, setSaveMessage] = useState("");
+    const [saveError, setSaveError] = useState("");
+    const [tagsLoading, setTagsLoading] = useState(true);
+    const [tagsError, setTagsError] = useState("");
     const [savedBoard, setSavedBoard] = useState<BoardDocument | null>(null);
     const editorDisabled = saving !== null || draftLoading || (initialBoardId !== undefined && !savedBoard);
     const showSmartIntro = initialBoardId === undefined && mode === "smart";
@@ -117,13 +121,20 @@ export default function BoardCreator({
         window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
     }
 
+    const loadTags = useCallback(
+        () =>
+            listBoardTags()
+                .then(setAllowedTags)
+                .catch((caught: unknown) =>
+                    setTagsError(caught instanceof Error ? caught.message : "Tags could not be loaded.")
+                )
+                .finally(() => setTagsLoading(false)),
+        []
+    );
+
     useEffect(() => {
-        void listBoardTags()
-            .then(setAllowedTags)
-            .catch((caught: unknown) =>
-                setError(caught instanceof Error ? caught.message : "Tags could not be loaded.")
-            );
-    }, []);
+        void loadTags();
+    }, [loadTags]);
 
     useEffect(() => {
         if (initialBoardId === undefined) return;
@@ -313,20 +324,18 @@ export default function BoardCreator({
             .flatMap((day) => day.pins)
             .find((pin) => pin.source === "photo" && !confirmedPhotoPins.has(pin.id));
         if (status === "published" && unconfirmedPhotoPin) {
-            setError(`Confirm the photo location for “${unconfirmedPhotoPin.title}” before publishing.`);
-            setMessage("");
-            const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
-            document.getElementById("day-plan")?.scrollIntoView({ behavior, block: "start" });
+            setSaveError(`Confirm the photo location for “${unconfirmedPhotoPin.title}” before publishing.`);
+            setSaveMessage("");
             return;
         }
         if (pendingUploadRef.current) {
-            setMessage("Waiting for image uploads to finish...");
+            setSaveMessage("Waiting for image uploads to finish...");
             await pendingUploadRef.current;
             pendingUploadRef.current = null;
         }
         setSaving(status);
-        setError("");
-        setMessage("");
+        setSaveError("");
+        setSaveMessage("");
         try {
             const currentPayload = {
                 title,
@@ -350,7 +359,7 @@ export default function BoardCreator({
             setSavedBoard(board);
             setDays((current) => mergeServerIds(current, sentDays, board));
             setImages((current) => mergeServerImages(current, board));
-            setMessage(
+            setSaveMessage(
                 expectedStatus === "published"
                     ? "Board changes saved."
                     : status === "draft"
@@ -358,7 +367,7 @@ export default function BoardCreator({
                       : `“${board.title}” is published and ready to share.`
             );
         } catch (caught) {
-            setError(caught instanceof Error ? caught.message : "The Board could not be saved.");
+            setSaveError(caught instanceof Error ? caught.message : "The Board could not be saved.");
         } finally {
             setSaving(null);
         }
@@ -517,6 +526,14 @@ export default function BoardCreator({
                                 allowedTags={allowedTags.map((tag) => tag.name)}
                                 visibility={visibility}
                                 canChangeVisibility={savedBoard?.permissions.canManageBoard ?? true}
+                                disabled={editorDisabled}
+                                tagsLoading={tagsLoading}
+                                tagsError={tagsError}
+                                onRetryTags={() => {
+                                    setTagsLoading(true);
+                                    setTagsError("");
+                                    void loadTags();
+                                }}
                                 onTagsChange={setTags}
                                 onVisibilityChange={setVisibility}
                             />
@@ -535,64 +552,23 @@ export default function BoardCreator({
                     </div>
                 </section>
 
-                <section className={`${fullChapterClasses} mb-20 sm:mb-32`}>
+                <section id="publish" className={`${fullChapterClasses} mb-20 sm:mb-32`}>
                     <CreatorSectionIntro
                         number="05"
                         title="PUBLISH"
                         description="Save it for yourself, or share it if you feel like it."
                     />
                     <div className="min-w-0 lg:self-center">
-                        <h2 className="font-display text-36 font-bold">Ready when you are.</h2>
-                        <p className="text-14 text-graphite mt-3 max-w-xl leading-6">
-                            Drafts can stay incomplete. Publishing requires a title and at least one pin with a
-                            confirmed location.
-                        </p>
-                        <div className="mt-7 flex flex-wrap gap-3">
-                            {expectedStatus !== "published" ? (
-                                <button
-                                    type="button"
-                                    disabled={
-                                        draftLoading ||
-                                        saving !== null ||
-                                        uploading ||
-                                        (initialBoardId !== undefined && !savedBoard) ||
-                                        savedBoard?.status === "published"
-                                    }
-                                    onClick={() => void save("draft")}
-                                    className="border-foreground text-14 border px-6 py-4 disabled:opacity-40"
-                                >
-                                    {saving === "draft" ? "Saving draft..." : "Save as draft"}
-                                </button>
-                            ) : null}
-                            <button
-                                type="button"
-                                disabled={
-                                    draftLoading ||
-                                    saving !== null ||
-                                    uploading ||
-                                    (initialBoardId !== undefined && !savedBoard) ||
-                                    (savedBoard?.status === "published" && expectedStatus !== "published")
-                                }
-                                onClick={() => void save("published")}
-                                className="border-foreground bg-foreground text-14 text-background border px-6 py-4 disabled:opacity-40"
-                            >
-                                {saving === "published"
-                                    ? expectedStatus === "published"
-                                        ? "Saving changes..."
-                                        : "Publishing..."
-                                    : expectedStatus === "published"
-                                      ? "Save changes"
-                                      : "Publish Board"}
-                            </button>
-                            {savedBoard ? (
-                                <Link
-                                    href={`/boards/${savedBoard.boardId}`}
-                                    className="border-foreground text-14 border-b px-2 py-4"
-                                >
-                                    View saved Board →
-                                </Link>
-                            ) : null}
-                        </div>
+                        <BoardPublishPanel
+                            expectedStatus={expectedStatus}
+                            savedBoard={savedBoard}
+                            disabled={editorDisabled}
+                            saving={saving}
+                            uploading={uploading}
+                            message={saveMessage}
+                            error={saveError}
+                            onSave={(status) => void save(status)}
+                        />
                     </div>
                 </section>
             </div>

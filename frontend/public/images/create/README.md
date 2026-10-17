@@ -13,3 +13,7 @@ The editor's default cover reuses `../destinations/bamboo.webp`, credited to Kar
 `circuit/` contains unchanged SVG traces and a circular terminal exported from Roamboard's Figma file
 `4hUe6aKuQnp7zotBG7qqug`, artwork frame `609:3591` in Smart Create. `CreatorUploadArtwork` arranges these
 original assets at their reference coordinates and uses CSS masks to apply the current theme's line color.
+
+`details/` contains unchanged visibility and information SVGs from Figma frame `1009:2283`.
+`CreatorDetailIcon` preserves their exported dimensions and uses theme-colored CSS masks. Selected tag icons
+come from the existing editorial catalog only when its display name matches the backend-provided selection.
