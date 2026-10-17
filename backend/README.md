@@ -5,9 +5,10 @@ public search features run here. See
 [API_FEATURES_CONTRACT.md](API_FEATURES_CONTRACT.md) for routes, permissions,
 budgets and errors; the creator uses [BOARD_API_CONTRACT.md](BOARD_API_CONTRACT.md).
 
-Apply unapplied migrations through `005_profile.sql` in order to an independent
+Apply unapplied migrations through `006_profile_tag_catalog.sql` in order to an independent
 local database. The shared Azure database has the consolidated 004 schema and was
-reconciled with 005; do not rerun either file there. See
+reconciled with 005; do not rerun either file there. Migration 006 is pending on Azure
+until a fresh backup is confirmed. See
 [the migration log](db/MIGRATION_LOG.md) for the remaining column-length difference.
 Integration tests apply the files only inside temporary test schemas.
 
@@ -136,9 +137,11 @@ follow [the shared database deployment guide](deploy/README.md). The existing
    password. The `.env` file is ignored by Git. If the password contains URL
    punctuation, URL-encode it in `DATABASE_URL`.
 3. Apply unapplied migrations in order: `001_initial.sql`, `002_auth_session.sql`,
-   `003_board_creator.sql`, `004_api_features.sql`, `005_profile.sql`. Apply only missing migrations.
+   `003_board_creator.sql`, `004_api_features.sql`, `005_profile.sql`,
+   `006_profile_tag_catalog.sql`. Apply only missing migrations.
    The shared Azure database already has the consolidated 004 schema and the
-   reconciled 005 changes; do not rerun either migration there.
+   reconciled 005 changes; do not rerun either migration there. Apply 006 there
+   only after a fresh backup is confirmed.
    From `backend/`, for an independent database missing 005:
 
     ```powershell
@@ -150,9 +153,8 @@ follow [the shared database deployment guide](deploy/README.md). The existing
 
     Check whether `app_user.profile_revision` exists before running 005. The API and
     local integration tests require 005; do not apply it to the shared Azure database.
-    `npm run test:db` creates isolated temporary schemas in the configured local
-    database, applies 001 through 005 there, and removes
-    those schemas after the tests.
+    `npm run test:db` creates isolated temporary schemas in the configured
+    database, applies 001 through 006 there, and removes those schemas after the tests.
 
 4. Set `GOOGLE_CLIENT_ID` in `.env` to your Google web application's client ID.
    Set `CLIENT_ORIGIN` to the exact frontend origin (locally,
