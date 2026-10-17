@@ -203,14 +203,13 @@ export default function ProfileHero({ profile, stats, isOwner = true }: Props) {
                                             </svg>
                                             <span className="text-muted-foreground text-12 font-normal">Tags:</span>
                                         </div>
-                                        {rawTags
-                                            .map((name) => boardTags.find((tag) => tag.name === name))
-                                            .filter((t): t is NonNullable<typeof t> => Boolean(t))
-                                            .map((tag) => (
+                                        {rawTags.map((name) => {
+                                            const tag = boardTags.find((item) => item.name === name);
+                                            return tag ? (
                                                 <Link
-                                                    key={tag.id}
+                                                    key={name}
                                                     href={boardTagHref(tag.id)}
-                                                    title={`Explore ${tag.name} tag: ${tag.description}`}
+                                                    title={`Explore ${name} tag: ${tag.description}`}
                                                     className="group border-line/60 hover:bg-faint/60 hover:border-foreground/70 text-11 text-muted-foreground hover:text-foreground font-body flex cursor-pointer items-center gap-1.5 rounded-[2px] border bg-transparent px-2 py-0.5 font-medium transition-colors"
                                                 >
                                                     <TagIcon
@@ -218,9 +217,17 @@ export default function ProfileHero({ profile, stats, isOwner = true }: Props) {
                                                         size={11}
                                                         className="text-muted-foreground/60 group-hover:text-foreground shrink-0 transition-colors"
                                                     />
-                                                    <span>{tag.name}</span>
+                                                    <span>{name}</span>
                                                 </Link>
-                                            ))}
+                                            ) : (
+                                                <span
+                                                    key={name}
+                                                    className="border-line/60 text-11 text-muted-foreground font-body flex items-center rounded-[2px] border bg-transparent px-2 py-0.5 font-medium"
+                                                >
+                                                    {name}
+                                                </span>
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </div>
