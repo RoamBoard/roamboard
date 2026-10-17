@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
+import { editorialFallback } from "../src/lib/image-library";
 import test from "node:test";
 import { Children, createElement, isValidElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -75,7 +76,12 @@ test("guides carry usable, credited place references without pretending their sa
             destination.closingImage,
             ...destination.places.map((place) => place.image)
         ]) {
-            assert.ok(existsSync(new URL(`../public${image.src}`, import.meta.url)), `${image.src} must be shipped`);
+            assert.ok(image.src.startsWith("library:"), `${image.src} must use a database reference`);
+            const fallback = editorialFallback(image.src);
+            assert.ok(
+                fallback && existsSync(new URL(`../public${fallback}`, import.meta.url)),
+                `${image.src} must retain its original fallback`
+            );
             assert.equal(new URL(image.sourceUrl).protocol, "https:");
         }
         assert.ok(destination.relatedBoards.every((board) => !("href" in board) && !("savedCount" in board)));

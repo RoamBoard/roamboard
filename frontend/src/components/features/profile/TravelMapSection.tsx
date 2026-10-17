@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import Image from "next/image";
+import Image from "@/components/images/LibraryImage";
 import type { UserProfile } from "@/types/social";
 
 type Props = {

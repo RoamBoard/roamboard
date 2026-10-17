@@ -12,6 +12,36 @@ These instructions apply to `backend/`. Use `../layered-backend-demo1/` as the r
 - Keep `backend/.env` and credentials out of Git. Document new variables in `.env.example` and `README.md` without real secrets.
 - Team development uses a shared PostgreSQL container on Azure through SSH tunnels; the backend still runs locally. See `README.md` for onboarding and `deploy/README.md` for maintenance. Do not recreate the shared database or rerun applied migrations when onboarding. `npm run check:setup` checks auth configuration and database access without changing data. Backend `GOOGLE_CLIENT_ID` must match frontend `NEXT_PUBLIC_GOOGLE_CLIENT_ID`.
 
+## Editorial website image library
+
+See [the shared image workflow](../docs/IMAGE_WORKFLOW.md) for authoring, rendering and missing-file recovery.
+PostgreSQL stores references, not Cloudinary bytes: do not delete image rows or change cover/order links when a provider
+file is missing. Preserve the configured Cloudinary account and authenticated assets across teammate setups. Delivery
+404s return `IMAGE_ASSET_MISSING`; restoring original storage keys must preserve protected delivery and existing IDs.
+
+`src/features/image-library/` and migration `005_image_library.sql` implement public editorial image records separately
+from protected user uploads. Cloudinary files use `roamboard/editorial/`; keep them out of uploaded-image cleanup.
+`GET /api/v1/image-library` remains available after Labs removal. Upload/Unsplash mutations require development mode,
+a signed-in session and exact frontend Origin. See [the image contract](../contracts/image-library.md) for shapes.
+Never expose credentials or turn this feature into an arbitrary URL fetcher. New Unsplash selections fetch canonical
+metadata and trigger the download-equivalent request through shared quota management; rendering/searching do not.
+
+From `backend/`, `npm.cmd run images:inventory` writes a no-write source inventory; review metadata, then run
+`npm.cmd run images:import`. Add `-- --apply-schema` only for a database missing migration 005. The shared database
+already has 005 applied on 2026-10-17; do not recreate it. Reruns preserve existing revisions and merge source usages.
+Original frontend files/URLs remain rollback fallbacks. Removing development Labs must preserve public delivery,
+catalog records, stable references, revision history and developer import tooling.
+
+## Agent image registration and lookup
+
+Agents adding individual frontend images should run `npm.cmd run images:add -- --key <stable-key>` with exactly one
+of `--file`, `--unsplash` (photo page or ID), or `--url` (direct public HTTPS raster URL). Files/ordinary links also need
+`--alt` and `--credit`; preserve provenance with `--source-url`. Unsplash CDN links stay external, not rehosted.
+The command uses the configured backend environment without browser authentication and returns a verified reference;
+never expose credentials or create an unauthenticated upload endpoint for agents. Existing keys require an explicitly
+authorized replacement with `--expected-revision`. `GET /api/v1/image-library/:assetKey` and the `?keys=a,b` list filter
+provide public database lookups (maximum 50 batch keys). Keep these reads available after Labs is removed.
+
 ## Formatting
 
 Use the repository root [`../.prettierrc`](../.prettierrc) for all supported backend files, including `.ts`. Use four spaces, no tabs, double quotes in JavaScript and TypeScript, no trailing commas, and LF line endings with a final newline. The configured print width is 120 to keep longer imports, type declarations, and function signatures together where Prettier allows. Do not add a backend-specific Prettier configuration. SQL migrations are excluded from Prettier; preserve their existing formatting.

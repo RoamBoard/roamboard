@@ -25,6 +25,7 @@ function draft(): BoardCreatorPayload {
 function savedBoard(status: BoardStatus = "draft"): BoardDocument {
     return {
         ...toBoardWrite(draft(), [], new Set()),
+        author: { username: "test-author", bio: "", photo: null },
         status,
         boardId: 35,
         revision: 4,

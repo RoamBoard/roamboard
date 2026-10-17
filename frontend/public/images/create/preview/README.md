@@ -1,5 +1,9 @@
 # Creator preview annotation assets
 
+## Image workflow for coding agents
+
+Read [the supported image workflow](../../../../../docs/IMAGE_WORKFLOW.md) before adding or changing images. Raster page photography now uses database-backed `library:` references through the shared image components. These original files remain migration/rollback fallbacks and retain the source credits below. SVG icons and masks stay local. Register new supplied images with `images:add`, verify the saved record, and wire the returned key into the page; do not introduce unregistered image URLs. Protected Board/activity uploads keep their separate authenticated upload and ordering flow.
+
 Original SVG exports from Roamboard Figma file `4hUe6aKuQnp7zotBG7qqug`, editor frame `625:4006`.
 
 - `line44`–`line60` (the exported subset): the orthogonal annotation segments at nodes `625:4175`–`625:4191`.

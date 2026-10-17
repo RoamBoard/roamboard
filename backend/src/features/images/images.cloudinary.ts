@@ -121,8 +121,11 @@ export function createCloudinaryProvider(quota?: QuotaService): ImageProvider {
                     : inspect())) as Record<string, unknown>;
                 return parseAsset(raw);
             } catch (error) {
-                if (typeof error === "object" && error !== null && "http_code" in error && error.http_code === 404)
-                    return null;
+                const metadata =
+                    typeof error === "object" && error !== null
+                        ? (error as { http_code?: number; error?: { http_code?: number } })
+                        : {};
+                if ((metadata.http_code ?? metadata.error?.http_code) === 404) return null;
                 throw error;
             }
         },
@@ -137,6 +140,14 @@ export function createCloudinaryProvider(quota?: QuotaService): ImageProvider {
                 format: "jpg"
             });
             const response = await fetch(url, { redirect: "error", signal: AbortSignal.timeout(15000) });
+            if (response.status === 404) {
+                await response.body?.cancel();
+                throw new AppError(
+                    404,
+                    "The saved image file is missing from storage. Restore or re-upload the original image.",
+                    "IMAGE_ASSET_MISSING"
+                );
+            }
             if (!response.ok || !response.body || !response.headers.get("content-type")?.startsWith("image/jpeg")) {
                 throw new AppError(502, "Image delivery failed", "IMAGE_DELIVERY_FAILED");
             }

@@ -1,5 +1,5 @@
 /* eslint-disable @next/next/no-img-element */
-import Image from "next/image";
+import Image from "@/components/images/LibraryImage";
 import { ImagePlus } from "lucide-react";
 
 type Props = {
@@ -20,7 +20,7 @@ export default function BoardCoverHero({ coverUrl, disabled, loading = false, on
                     <img src={coverUrl} alt="Board cover" className="absolute inset-0 size-full object-cover" />
                 ) : (
                     <Image
-                        src="/images/destinations/bamboo.webp"
+                        src="library:frontend.images.destinations.bamboo"
                         alt="Sunlight filtering through a green bamboo forest"
                         fill
                         loading="eager"

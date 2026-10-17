@@ -1,6 +1,6 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
+import { LibraryImg } from "@/components/images/LibraryImage";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -111,7 +111,7 @@ export function ImageDetailDialog({ images: imagesProp, image, initialIndex = 0,
                                 key={img.url + i}
                                 className="flex h-full min-w-full items-center justify-center p-4 sm:p-6"
                             >
-                                <img
+                                <LibraryImg
                                     src={img.url}
                                     alt={img.alt}
                                     className="max-h-full max-w-full object-contain select-none"
@@ -336,7 +336,7 @@ export default function PublishedBoardView({
                                 className="group focus:ring-foreground block w-full cursor-pointer text-left transition-opacity hover:opacity-90 focus:ring-2 focus:outline-none"
                                 aria-label={`View cover image of ${board.title || "Untitled Board"} in detail`}
                             >
-                                <img
+                                <LibraryImg
                                     src={cover.url}
                                     alt={`Cover of ${board.title || "Untitled Board"}`}
                                     className="aspect-[4/3] w-full object-cover"
@@ -461,7 +461,7 @@ export default function PublishedBoardView({
                                                                                     : `View photo for ${pin.title} in detail`
                                                                             }
                                                                         >
-                                                                            <img
+                                                                            <LibraryImg
                                                                                 src={image.thumbnailUrl}
                                                                                 alt={`${pin.title} photo`}
                                                                                 className="size-full object-cover"

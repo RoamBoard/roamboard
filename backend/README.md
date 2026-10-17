@@ -1,11 +1,52 @@
 # Roamboard backend
 
+## Image workflow for coding agents
+
+Follow [the shared image workflow](../docs/IMAGE_WORKFLOW.md) and the applicable `AGENTS.md` whenever a teammate supplies images or image links. Coding agents must register them with the backend `images:add` command, verify persistence, and use the returned `library:` reference on the requested frontend page. Editorial files use public Cloudinary storage; Unsplash references retain provider delivery. User Board/activity/profile uploads remain authenticated, with saved image order and cover selections. Do not expose credentials or replace protected image URLs with public editorial URLs.
+
+## Website image library
+
+Development Labs at `/dev/images` manages public website images independently of protected Board/profile uploads.
+The database stores reusable keys, provider IDs, credits and immutable replacement revisions. Cloudinary hosts eligible
+files; Unsplash references keep Unsplash delivery. See [the image contract](../contracts/image-library.md).
+
+From `backend/`, run `npm.cmd run images:inventory` to generate a reviewable source manifest, then
+`npm.cmd run images:import` to import missing records. For a new database only, add `-- --apply-schema` to apply
+migration 005 if absent. Migration 005 is already applied to the team's shared database; do not rerun older migrations.
+The importer uses existing `DATABASE_URL`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
+and, for new Labs Unsplash selections, `UNSPLASH_ACCESS_KEY`. No new secrets are needed. Preserve originals for rollback.
+Labs uploads/selection require a real signed-in session, exact `CLIENT_ORIGIN` and backend development mode.
+Remove the Labs page/navigation and development mutations before deployment; preserve public catalog reads and tooling.
+
+## Existing API features
+
+### Add one image from a coding agent
+
+Run from `backend/` with its existing `.env`:
+
+```powershell
+npm.cmd run images:add -- --key home.hero --file "C:\path\photo.jpg" --alt "Mountain lake" --credit "User-provided image"
+npm.cmd run images:add -- --key discover.kyoto.hero --unsplash "https://unsplash.com/photos/AiC8MRukmBg"
+npm.cmd run images:add -- --key home.banner --url "https://example.com/photo.jpg" --alt "Coastal town" --credit "Photographer" --source-url "https://example.com/source"
+```
+
+The JSON result includes the saved record and `library:<assetKey>` reference for the frontend image component.
+This command does not edit a page; the agent must wire the reference into the requested page afterward. Unsplash
+pages/IDs fetch provider attribution; direct CDN links require supplied metadata and stay external. Other HTTPS
+links must return a raster image up to 10 MB. The downloader rejects private/reserved addresses, pins DNS per redirect,
+limits redirects and time, and never accepts a gallery/web page. Use files/links the teammate supplied for the task.
+To replace an existing key intentionally, add `--expected-revision <current revision>`. A stale revision returns a conflict.
+No new image is written by looking it up: `GET /api/v1/image-library/home.hero` returns one record; the query
+`GET /api/v1/image-library?keys=home.hero,home.banner` returns found records for up to 50 keys. Both work in production.
+
+### Existing surfaces
+
 Existing frontend provider, destination, profile, developer Board browser and
 public search features run here. See
 [API_FEATURES_CONTRACT.md](API_FEATURES_CONTRACT.md) for routes, permissions,
 budgets and errors; the creator uses [BOARD_API_CONTRACT.md](BOARD_API_CONTRACT.md).
 
-Apply unapplied migrations through `004_api_features.sql` in order through
+Apply unapplied migrations through `005_image_library.sql` in order through
 the team's database maintenance workflow. The shared Azure database already matches
 the consolidated 004 schema; do not rerun it or rebuild the shared database.
 Integration tests apply the files only inside temporary test schemas.

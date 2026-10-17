@@ -1,5 +1,9 @@
 # Shared development database on Azure
 
+## Image workflow for coding agents
+
+Follow [the shared image workflow](../../docs/IMAGE_WORKFLOW.md) and the applicable `AGENTS.md` whenever a teammate supplies images or image links. Coding agents must register them with the backend `images:add` command, verify persistence, and use the returned `library:` reference on the requested frontend page. Editorial files use public Cloudinary storage; Unsplash references retain provider delivery. User Board/activity/profile uploads remain authenticated, with saved image order and cover selections. Do not expose credentials or replace protected image URLs with public editorial URLs.
+
 This deploys PostgreSQL in Docker on one Azure Linux VM. Each developer keeps running
 `npm run dev` in `backend/` and connects to the same database through SSH. Express
 deployment is a separate, later step; this setup alone does not complete the hosted-server requirement.
@@ -144,8 +148,11 @@ including previous-window fields. With user approval, the former local migration
 005 and 006 were consolidated into 004 on 2026-10-15. The shared Azure database
 already has that final schema; do not rerun 004 or rebuild it. See the
 [migration log](../db/MIGRATION_LOG.md) for reconciliation and verification.
-Fresh databases apply 001 through 004 once, in order. Future schema changes use
-new migrations starting at 005.
+Fresh databases apply 001 through 005 once, in order. Migration 005 adds the editorial image catalog and revision
+history and is already applied to the shared database. Future schema changes use new migrations starting at 006.
+PostgreSQL backups contain image references, not Cloudinary files. Preserve the same Cloudinary account and its public
+editorial/authenticated user assets, or migrate those files separately before changing credentials. See the
+[image recovery workflow](../../docs/IMAGE_WORKFLOW.md#missing-files-and-recovery).
 
 Useful commands from the same directory:
 

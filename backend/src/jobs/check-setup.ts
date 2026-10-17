@@ -38,6 +38,9 @@ try {
     await getPool().query("SELECT policy_id, window_name FROM api_quota_usage LIMIT 0");
     await getPool().query("SELECT user_id, place_id FROM google_place_reference LIMIT 0");
     report(true, "Board and API feature migrations 003 and 004 exist.");
+    await getPool().query("SELECT asset_key, revision, asset, aliases, usages FROM editorial_image LIMIT 0");
+    await getPool().query("SELECT asset_key, revision, asset FROM editorial_image_revision LIMIT 0");
+    report(true, "Image library migration 005 exists.");
     const quotaKey = await getPool().query<{ compact: boolean }>(
         `SELECT EXISTS (
             SELECT 1 FROM pg_constraint

@@ -5,6 +5,10 @@ import { renderToStaticMarkup } from "react-dom/server";
 import ProfileAvatarEditor, { validateAvatarUrl } from "../src/components/features/settings/ProfileAvatarEditor";
 
 test("validateAvatarUrl accepts empty string and valid Unsplash URLs", () => {
+    assert.deepEqual(validateAvatarUrl("library:frontend.images.boards.author"), {
+        isValid: true,
+        normalizedUrl: "library:frontend.images.boards.author"
+    });
     assert.deepEqual(validateAvatarUrl(""), {
         isValid: true,
         normalizedUrl: ""

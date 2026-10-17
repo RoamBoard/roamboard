@@ -1,4 +1,4 @@
-import Image from "next/image";
+import Image from "@/components/images/LibraryImage";
 import Link from "next/link";
 import TagIcon from "@/components/ui/TagIcon";
 import { getBoardTag, boardTagHref, type BoardTagId } from "@/data/board-tags";

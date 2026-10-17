@@ -1,4 +1,4 @@
-import Image from "next/image";
+import Image from "@/components/images/LibraryImage";
 import type { DiscoverPhoto as Photo } from "@/data/discover-preview";
 
 type Props = {
@@ -9,12 +9,12 @@ type Props = {
 };
 
 export default function DiscoverPhoto({ photo, eager = false, width = 1000, position = "center" }: Props) {
-    const url = new URL(photo.src);
-    url.searchParams.set("w", String(width));
+    const url = photo.src.startsWith("https:") ? new URL(photo.src) : null;
+    url?.searchParams.set("w", String(width));
 
     return (
         <Image
-            src={url.toString()}
+            src={url?.toString() ?? photo.src}
             alt={photo.alt}
             fill
             unoptimized

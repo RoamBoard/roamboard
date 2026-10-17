@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import Image from "@/components/images/LibraryImage";
 import { useState } from "react";
 import type { AtlasImage } from "@/data/destination-atlas";
 

@@ -1,5 +1,9 @@
 # Roamboard frontend
 
+## Image workflow for coding agents
+
+Follow [the shared image workflow](../docs/IMAGE_WORKFLOW.md) and the applicable `AGENTS.md` whenever a teammate supplies images or image links. Coding agents must register them with the backend `images:add` command, verify persistence, and use the returned `library:` reference on the requested frontend page. Editorial files use public Cloudinary storage; Unsplash references retain provider delivery. User Board/activity/profile uploads remain authenticated, with saved image order and cover selections. Do not expose credentials or replace protected image URLs with public editorial URLs.
+
 This is the Next.js App Router frontend. Use pnpm in this directory.
 
 ## Local development
@@ -29,8 +33,8 @@ and `pnpm build`.
 The existing `/dev/providers`, Home destination search, `/dev/profile`,
 `/dev/boards` and Board creator use the new backend and the same
 `NEXT_PUBLIC_API_URL` with session cookies. Start the backend with `npm run dev`
-and sign in before using developer management tools. Apply backend migration 004
-through the team workflow and configure provider keys; see
+and sign in before using developer management tools. The shared database already has migrations 001–005;
+do not rerun them. For a new database, follow the backend migration workflow and configure provider keys; see
 [the API feature contract](../backend/API_FEATURES_CONTRACT.md). Provider lab
 uploads remain separate from persisted Board uploads. Profile pictures accept
 an owned uploaded image ID from the normal upload flow.

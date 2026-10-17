@@ -1,3 +1,4 @@
+import { editorialImage } from "../lib/image-library";
 // Visual preview fixtures, not a Discover API contract or live popularity data.
 // URLs come from the user's Unsplash list; collection alternatives were approved.
 export type DiscoverPhoto = {
@@ -11,7 +12,7 @@ export type DiscoverPhoto = {
 function photo(image: string, alt: string, page?: string, photographer?: string, username?: string): DiscoverPhoto {
     const src = `https://images.unsplash.com/photo-${image}?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D`;
     return {
-        src,
+        src: editorialImage(src),
         alt,
         sourceUrl: page ? `https://unsplash.com/photos/${page}?utm_source=roamboard&utm_medium=referral` : src,
         photographer,

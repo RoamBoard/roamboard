@@ -1,3 +1,4 @@
+import { LibraryCredit } from "@/components/images/LibraryImage";
 import VibeMarqueeGallery from "./VibeMarqueeGallery";
 import { boardTags } from "@/data/board-tags";
 
@@ -22,14 +23,16 @@ export default function VibeGrid() {
                 <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                     {boardTags.map((tag) => (
                         <li key={tag.id}>
-                            <a
-                                href={tag.gridImage.sourceUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="underline underline-offset-4"
-                            >
-                                {tag.name}: {tag.gridImage.photographer} / {tag.gridImage.provider}
-                            </a>
+                            <LibraryCredit source={tag.gridImage.url}>
+                                <a
+                                    href={tag.gridImage.sourceUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="underline underline-offset-4"
+                                >
+                                    {tag.name}: {tag.gridImage.photographer} / {tag.gridImage.provider}
+                                </a>
+                            </LibraryCredit>
                         </li>
                     ))}
                 </ul>

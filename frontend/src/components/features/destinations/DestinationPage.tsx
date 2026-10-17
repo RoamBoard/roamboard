@@ -1,7 +1,8 @@
 "use client";
 
+import { LibraryCredit } from "@/components/images/LibraryImage";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/images/LibraryImage";
 import { useState } from "react";
 import { motion, MotionConfig, useReducedMotion } from "motion/react";
 import { ArrowUpRight } from "lucide-react";
@@ -132,15 +133,20 @@ export function DestinationPage({ destination }: { destination: DestinationPageD
                                             photos.findIndex((other) => other.src === photo.src) === index
                                     )
                                     .map((photo) => (
-                                        <a
+                                        <LibraryCredit
                                             key={photo.src}
-                                            href={photo.sourceUrl}
-                                            target="_blank"
-                                            rel="noreferrer"
+                                            source={photo.src}
                                             className="py-2 underline underline-offset-4"
                                         >
-                                            {photo.credit}
-                                        </a>
+                                            <a
+                                                href={photo.sourceUrl}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="py-2 underline underline-offset-4"
+                                            >
+                                                {photo.credit}
+                                            </a>
+                                        </LibraryCredit>
                                     ))}
                             </div>
                         </div>

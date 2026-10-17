@@ -1,4 +1,4 @@
-import Image from "next/image";
+import Image from "@/components/images/LibraryImage";
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
 import type { BoardCardActions, BoardCardImage, BoardCardSummary } from "@/types/board-card";

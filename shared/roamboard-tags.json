@@ -4,7 +4,7 @@
     "description": "Shared source of truth for Create Board tag selection, Roam by Vibe grid, and /discover/vibes/:id pages.",
     "assetNotes": {
         "icons": "All icons are from Lucide and use one consistent outline style. SVG URLs are pinned to lucide-static 1.55.0. For a React app, preferably render the corresponding named component from lucide-react instead of loading SVGs from a CDN.",
-        "images": "Grid photo references now use individual Unsplash photo pages. gridImage.url uses the Unsplash photo download redirect; consider downloading/optimizing assets locally for production reliability. Verify rendering of redirects in Next.js and use local cached images if necessary. Some tags intentionally share photography.",
+        "images": "gridImage.url is a database-backed library reference. Render it with the shared LibraryImage component and LibraryCredit. Original URLs are retained in shared/editorial-images.json only as migration fallbacks.",
         "gridRendering": "Render image and tag label as separate layers; apply CSS gradient/overlay, aspect ratio and object-fit: cover in the UI. Never bake text into cover images.",
         "matching": "Match boards to tags by the stable id field (not by display name). Keep ids unchanged after users begin saving boards.",
         "license": "Check source licenses before redistribution. Unsplash: https://unsplash.com/license ; Lucide: https://lucide.dev/license"
@@ -21,7 +21,7 @@
                 "sourceUrl": "https://lucide.dev/icons/mountain"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/1fXeZpfVw8A/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.09cb52646eed940f",
                 "alt": "Spectacular alpine road leading to snow-capped mountains",
                 "sourceUrl": "https://unsplash.com/photos/1fXeZpfVw8A",
                 "photographer": "Ahmet Yüksek",
@@ -40,7 +40,7 @@
                 "sourceUrl": "https://lucide.dev/icons/flower-2"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/nPBdPEpL1Ts/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.a9da6b1dfeeb4338",
                 "alt": "Palm trees beside turquoise tropical water",
                 "sourceUrl": "https://unsplash.com/photos/nPBdPEpL1Ts",
                 "photographer": "Michelangelo Azzariti",
@@ -59,7 +59,7 @@
                 "sourceUrl": "https://lucide.dev/icons/landmark"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/PdSbBEN0zW4/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.80bab3e2def7cb43",
                 "alt": "Traditional Japanese temple in Kyoto",
                 "sourceUrl": "https://unsplash.com/photos/PdSbBEN0zW4",
                 "photographer": "Joris Beugels",
@@ -78,7 +78,7 @@
                 "sourceUrl": "https://lucide.dev/icons/utensils-crossed"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/ddZYOtZUnBk/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.7ad46cd064833862",
                 "alt": "Freshly prepared pasta served on a white plate",
                 "sourceUrl": "https://unsplash.com/photos/ddZYOtZUnBk",
                 "photographer": "Eaters Collective",
@@ -97,7 +97,7 @@
                 "sourceUrl": "https://lucide.dev/icons/trees"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/xXkBBnxgshQ/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.7d7f3019397a50cc",
                 "alt": "Clear alpine lake framed by forest and rocky cliffs",
                 "sourceUrl": "https://unsplash.com/photos/xXkBBnxgshQ",
                 "photographer": "Erik Fabian",
@@ -116,7 +116,7 @@
                 "sourceUrl": "https://lucide.dev/icons/heart"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/g86airJZ4Gs/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.19a2a065dc19aec3",
                 "alt": "Two warm coffee mugs shared across a table",
                 "sourceUrl": "https://unsplash.com/photos/g86airJZ4Gs",
                 "photographer": "Priscilla Du Preez",
@@ -135,7 +135,7 @@
                 "sourceUrl": "https://lucide.dev/icons/wallet"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/s3dnyKSC6UA/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.1475bc4d0b670853",
                 "alt": "Open coastal highway with cars under dramatic clouds",
                 "sourceUrl": "https://unsplash.com/photos/s3dnyKSC6UA",
                 "photographer": "Zoshua Colah",
@@ -154,7 +154,7 @@
                 "sourceUrl": "https://lucide.dev/icons/gem"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/I_XRy-z8m8k/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.7df7ef41053db653",
                 "alt": "Secluded mountain lake and forest",
                 "sourceUrl": "https://unsplash.com/photos/I_XRy-z8m8k",
                 "photographer": "Rafael Peier",
@@ -173,7 +173,7 @@
                 "sourceUrl": "https://lucide.dev/icons/building-2"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/4Y_f_LvAu3U/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.4659f8cd5f5399bf",
                 "alt": "City skyline glowing at golden hour",
                 "sourceUrl": "https://unsplash.com/photos/4Y_f_LvAu3U",
                 "photographer": "Jeff Brown",
@@ -192,7 +192,7 @@
                 "sourceUrl": "https://lucide.dev/icons/sunrise"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/lLlcEFXeF28/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.45c8f9919c45f695",
                 "alt": "Breakfast pastry and coffee on a tabletop",
                 "sourceUrl": "https://unsplash.com/photos/lLlcEFXeF28",
                 "photographer": "Jonathan Chng",
@@ -211,7 +211,7 @@
                 "sourceUrl": "https://lucide.dev/icons/moon-star"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/7z_TmCWC5C0/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.2c4d056fa4ed2218",
                 "alt": "Neon-lit Hong Kong street at night",
                 "sourceUrl": "https://unsplash.com/photos/7z_TmCWC5C0",
                 "photographer": "Chi Hung Wong",
@@ -230,7 +230,7 @@
                 "sourceUrl": "https://lucide.dev/icons/waves"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/BCyLllh0L1A/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.f339da3f17738c57",
                 "alt": "Small boats on the shore of an alpine lake",
                 "sourceUrl": "https://unsplash.com/photos/BCyLllh0L1A",
                 "photographer": "Hans-Joachim Kaiser",
@@ -249,7 +249,7 @@
                 "sourceUrl": "https://lucide.dev/icons/footprints"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/Cg9oyiQ29dE/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.56d3c4f20ec6ef5c",
                 "alt": "Hikers crossing a misty mountain ridge",
                 "sourceUrl": "https://unsplash.com/photos/Cg9oyiQ29dE",
                 "photographer": "Tim Oun",
@@ -268,7 +268,7 @@
                 "sourceUrl": "https://lucide.dev/icons/mountain-snow"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/qptqseaThDM/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.39d28e3a07c9c0ca",
                 "alt": "Expansive cloud-covered mountain peaks",
                 "sourceUrl": "https://unsplash.com/photos/qptqseaThDM",
                 "photographer": "Kyle Loftus",
@@ -287,7 +287,7 @@
                 "sourceUrl": "https://lucide.dev/icons/umbrella"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/xCP0tbQBPXU/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.531500bcdd96de9e",
                 "alt": "Blue tropical ocean rolling onto a sandy shore",
                 "sourceUrl": "https://unsplash.com/photos/xCP0tbQBPXU",
                 "photographer": "Unsplash contributor",
@@ -306,7 +306,7 @@
                 "sourceUrl": "https://lucide.dev/icons/ship"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/qy6sTSqbcP0/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.712eea1c9fc42960",
                 "alt": "Boats in a secluded island harbor",
                 "sourceUrl": "https://unsplash.com/photos/qy6sTSqbcP0",
                 "photographer": "Tim Oun",
@@ -325,7 +325,7 @@
                 "sourceUrl": "https://lucide.dev/icons/car-front"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/Wy1v96cp0mg/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.3179f402beafeaac",
                 "alt": "A winding road through a green mountain forest",
                 "sourceUrl": "https://unsplash.com/photos/Wy1v96cp0mg",
                 "photographer": "jason hu",
@@ -344,7 +344,7 @@
                 "sourceUrl": "https://lucide.dev/icons/house"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/piG9Ye_oHrI/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.19485e067b4dcdbc",
                 "alt": "Quiet lakeside cabin beneath misty mountains",
                 "sourceUrl": "https://unsplash.com/photos/piG9Ye_oHrI",
                 "photographer": "Unsplash contributor",
@@ -363,7 +363,7 @@
                 "sourceUrl": "https://lucide.dev/icons/user-round"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/VetFkenqOlw/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.dcac062be6f90bc6",
                 "alt": "Single traveler exploring a quiet street after dark",
                 "sourceUrl": "https://unsplash.com/photos/VetFkenqOlw",
                 "photographer": "Jezael Melgoza",
@@ -382,7 +382,7 @@
                 "sourceUrl": "https://lucide.dev/icons/users-round"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/t35c4P2A20s/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.d8b1a5fa71531d22",
                 "alt": "Friends spending sunset at the beach",
                 "sourceUrl": "https://unsplash.com/photos/t35c4P2A20s",
                 "photographer": "Arka Dutta",
@@ -401,7 +401,7 @@
                 "sourceUrl": "https://lucide.dev/icons/users"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/nM7FedNjFKM/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.5caf702bdc7a999b",
                 "alt": "People enjoying a sunny day by the water",
                 "sourceUrl": "https://unsplash.com/photos/nM7FedNjFKM",
                 "photographer": "Rohan Gangopadhyay",
@@ -420,7 +420,7 @@
                 "sourceUrl": "https://lucide.dev/icons/leaf"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/COuz8XUXDc8/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.762f2a8b09f0799b",
                 "alt": "Quiet tropical shore with palm trees and clear sea",
                 "sourceUrl": "https://unsplash.com/photos/COuz8XUXDc8",
                 "photographer": "Hugh Whyte",
@@ -439,7 +439,7 @@
                 "sourceUrl": "https://lucide.dev/icons/crown"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/7Gd07IjiO7s/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.54ae7e560feb174c",
                 "alt": "Infinity pool at a luxurious tropical resort at sunset",
                 "sourceUrl": "https://unsplash.com/photos/7Gd07IjiO7s",
                 "photographer": "Aalo Lens",
@@ -458,7 +458,7 @@
                 "sourceUrl": "https://lucide.dev/icons/palette"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/7gruYeIsDD0/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.af070e763cb740c6",
                 "alt": "Minimalist art gallery with paintings and displays",
                 "sourceUrl": "https://unsplash.com/photos/7gruYeIsDD0",
                 "photographer": "Cansu Sarp",
@@ -477,7 +477,7 @@
                 "sourceUrl": "https://lucide.dev/icons/columns-3"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/Txl-GLHnKYg/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.32389d4bc21b0bce",
                 "alt": "Modern and historic architectural facades in a city",
                 "sourceUrl": "https://unsplash.com/photos/Txl-GLHnKYg",
                 "photographer": "Alex Lvrs",
@@ -496,7 +496,7 @@
                 "sourceUrl": "https://lucide.dev/icons/hourglass"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/TfZHT-lTbL4/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.6a096a4891fe44c5",
                 "alt": "Ancient Roman columns and ruins",
                 "sourceUrl": "https://unsplash.com/photos/TfZHT-lTbL4",
                 "photographer": "Ludovic Delot",
@@ -515,7 +515,7 @@
                 "sourceUrl": "https://lucide.dev/icons/store"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/BO3UsWmpBoQ/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.0d1b2bf6f8c59c6f",
                 "alt": "Busy illuminated market street after dark",
                 "sourceUrl": "https://unsplash.com/photos/BO3UsWmpBoQ",
                 "photographer": "Mateusz Prowans",
@@ -534,7 +534,7 @@
                 "sourceUrl": "https://lucide.dev/icons/shopping-basket"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/881CTPcaGXg/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.576010fe5228e4de",
                 "alt": "Crowded Asian street market",
                 "sourceUrl": "https://unsplash.com/photos/881CTPcaGXg",
                 "photographer": "Sergio Kian",
@@ -553,7 +553,7 @@
                 "sourceUrl": "https://lucide.dev/icons/coffee"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/JLPoB3Gahcc/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.f2e0060b044762bd",
                 "alt": "Fresh coffee served on a café table",
                 "sourceUrl": "https://unsplash.com/photos/JLPoB3Gahcc",
                 "photographer": "Nathan Dumlao",
@@ -572,7 +572,7 @@
                 "sourceUrl": "https://lucide.dev/icons/wine"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/nTMHlJ7CgLo/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.2bcd77572802fc67",
                 "alt": "Candlelit table set for an elegant dinner",
                 "sourceUrl": "https://unsplash.com/photos/nTMHlJ7CgLo",
                 "photographer": "Siednji Leon",
@@ -591,7 +591,7 @@
                 "sourceUrl": "https://lucide.dev/icons/cooking-pot"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/LA9O_rB_-Xg/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.e809092bca519b75",
                 "alt": "Street food chef preparing Japanese takoyaki",
                 "sourceUrl": "https://unsplash.com/photos/LA9O_rB_-Xg",
                 "photographer": "Perry Merrity II",
@@ -610,7 +610,7 @@
                 "sourceUrl": "https://lucide.dev/icons/party-popper"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/WIIsxb2J6lY/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.d34bf38c8c60e9a4",
                 "alt": "Illuminated paper lantern at a festival",
                 "sourceUrl": "https://unsplash.com/photos/WIIsxb2J6lY",
                 "photographer": "Jessica Kantak Bailey",
@@ -629,7 +629,7 @@
                 "sourceUrl": "https://lucide.dev/icons/paw-print"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/tjrSyOPax4s/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.380e11769c88c7e2",
                 "alt": "Elephant crossing a dirt road in Kruger National Park",
                 "sourceUrl": "https://unsplash.com/photos/tjrSyOPax4s",
                 "photographer": "Mario Scheibl",
@@ -648,7 +648,7 @@
                 "sourceUrl": "https://lucide.dev/icons/tent"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/XvgtPNWCQcw/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.91556fa6dd8a055b",
                 "alt": "Tent glowing under the stars at night",
                 "sourceUrl": "https://unsplash.com/photos/XvgtPNWCQcw",
                 "photographer": "Pablo García Saldaña",
@@ -667,7 +667,7 @@
                 "sourceUrl": "https://lucide.dev/icons/snowflake"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/CUA2U4eT-Ys/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.346609ed91957e29",
                 "alt": "Warm-lit cabin nestled in a snowy forest",
                 "sourceUrl": "https://unsplash.com/photos/CUA2U4eT-Ys",
                 "photographer": "Greta Falk",
@@ -686,7 +686,7 @@
                 "sourceUrl": "https://lucide.dev/icons/sun"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/0lG-wadk7pw/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.006f963f65fe60c4",
                 "alt": "Rows of beach parasols on a sunny Italian shore",
                 "sourceUrl": "https://unsplash.com/photos/0lG-wadk7pw",
                 "photographer": "Chloe Frost-Smith",
@@ -705,7 +705,7 @@
                 "sourceUrl": "https://lucide.dev/icons/wifi-off"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/wxqzNzzvNEU/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.6ea3ea9568bcdd56",
                 "alt": "Remote cabin tucked away in a winter forest",
                 "sourceUrl": "https://unsplash.com/photos/wxqzNzzvNEU",
                 "photographer": "Natalie Su",
@@ -724,7 +724,7 @@
                 "sourceUrl": "https://lucide.dev/icons/camera"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/FVHNmbXYhYs/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.62168c4542077b9b",
                 "alt": "Photographer adjusting tripod by the coast at sunset",
                 "sourceUrl": "https://unsplash.com/photos/FVHNmbXYhYs",
                 "photographer": "Garrett Patz",
@@ -743,7 +743,7 @@
                 "sourceUrl": "https://lucide.dev/icons/sunset"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/P6etxyQ41uI/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.d71bf2a79a273404",
                 "alt": "Ocean and coastal cliffs glowing at golden hour",
                 "sourceUrl": "https://unsplash.com/photos/P6etxyQ41uI",
                 "photographer": "Neil Soni",
@@ -762,7 +762,7 @@
                 "sourceUrl": "https://lucide.dev/icons/route"
             },
             "gridImage": {
-                "url": "https://unsplash.com/photos/OofG_09hRmA/download?force=true&w=1200",
+                "url": "library:frontend.unsplash.4838eddb0448dd8b",
                 "alt": "Winding mountain road through green rolling hills",
                 "sourceUrl": "https://unsplash.com/photos/OofG_09hRmA",
                 "photographer": "Robert Nagy",

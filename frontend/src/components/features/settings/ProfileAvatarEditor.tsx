@@ -1,24 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
+import Image from "@/components/images/LibraryImage";
 
 export const AVATAR_PRESETS = [
     {
         label: "Rowan (Default)",
-        url: "https://images.unsplash.com/photo-1769786186317-272d062fcf93?auto=format&fit=crop&w=400&q=80"
+        url: "library:frontend.unsplash.41db7fb4311d2054"
     },
     {
         label: "Balkans Backpacking",
-        url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80"
+        url: "library:frontend.unsplash.1e0682702f03d917"
     },
     {
         label: "Mountain Wanderer",
-        url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80"
+        url: "library:frontend.unsplash.8e4805e5126c3924"
     },
     {
         label: "Urban Explorer",
-        url: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=400&q=80"
+        url: "library:frontend.unsplash.abf7e6da4e88742f"
     }
 ];
 
@@ -30,6 +30,9 @@ export function validateAvatarUrl(url: string): {
     const trimmed = url.trim();
     if (!trimmed) {
         return { isValid: true, normalizedUrl: "" };
+    }
+    if (/^library:[a-z0-9][a-z0-9._-]{0,159}$/.test(trimmed)) {
+        return { isValid: true, normalizedUrl: trimmed };
     }
 
     if (trimmed.startsWith("//")) {

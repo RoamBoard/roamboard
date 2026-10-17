@@ -8,6 +8,7 @@ import PhotoBoardCard from "../src/components/features/boards/cards/PhotoBoardCa
 import { photoBoardExamples } from "../src/data/board-card-examples";
 import { roamFlowBoards, roamFlowInitialPage } from "../src/data/roamflow-boards";
 import { appendRoamFlowBoards, loadRoamFlowPage } from "../src/lib/roamflow";
+import { editorialFallback } from "../src/lib/image-library";
 
 test("RoamFlow starts small, pages through unique stories, and ends without looping", async () => {
     const state = { boards: [...roamFlowInitialPage.boards], cursor: roamFlowInitialPage.nextCursor, pages: 1 };
@@ -62,8 +63,10 @@ test("RoamFlow supports cancellation and rejects malformed preview cursors", asy
 test("RoamFlow samples reference existing images and never link to fake Board details", async () => {
     await Promise.all(
         roamFlowBoards.map(async (board) => {
-            assert.ok(board.image.src.startsWith("/"));
-            await access(path.join(process.cwd(), "public", board.image.src));
+            assert.ok(board.image.src.startsWith("library:"));
+            const fallback = editorialFallback(board.image.src);
+            assert.ok(fallback);
+            await access(path.join(process.cwd(), "public", fallback));
             assert.equal(board.href, undefined);
             const markup = renderToStaticMarkup(createElement(PhotoBoardCard, { board, href: board.href }));
             assert.doesNotMatch(markup, /href=/);
@@ -75,7 +78,7 @@ test("the shared V4 references retain their proportions, image crops, and option
     photoBoardExamples.forEach((board) => {
         const markup = renderToStaticMarkup(createElement(PhotoBoardCard, { board }));
         assert.ok(markup.includes("aspect-ratio:400 / 500"));
-        assert.ok(markup.includes(board.image.src));
+        assert.ok(markup.includes(editorialFallback(board.image.src)!));
         assert.ok(markup.includes(board.author));
         assert.ok(!markup.includes("href="));
         if (board.image.crop) assert.ok(markup.includes(`width:${board.image.crop.width}%`));
