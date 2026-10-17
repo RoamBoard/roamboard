@@ -10,10 +10,20 @@ import {
     type LibraryImage as LibraryRecord
 } from "@/lib/image-library";
 
-const Catalog = createContext<LibraryRecord[]>([]);
+export const ImageCatalogContext = createContext<LibraryRecord[]>([]);
+export const ImageDeliveryContext = createContext<{
+    failed: ReadonlySet<string>;
+    markFailed: (identity: string) => void;
+}>({ failed: new Set(), markFailed: () => {} });
+
+const deliveryIdentity = (image: LibraryRecord) => JSON.stringify([image.assetKey, image.revision, image.asset.url]);
 
 export function ImageLibraryProvider({ children }: { children: ReactNode }) {
     const [images, setImages] = useState<LibraryRecord[]>([]);
+    const [failed, setFailed] = useState<ReadonlySet<string>>(new Set());
+    const markFailed = (identity: string) => {
+        setFailed((previous) => (previous.has(identity) ? previous : new Set([...previous, identity])));
+    };
     useEffect(() => {
         const controller = new AbortController();
         const refresh = () => {
@@ -30,25 +40,34 @@ export function ImageLibraryProvider({ children }: { children: ReactNode }) {
             window.removeEventListener("image-library-updated", refresh);
         };
     }, []);
-    return <Catalog.Provider value={images}>{children}</Catalog.Provider>;
+    return (
+        <ImageCatalogContext.Provider value={images}>
+            <ImageDeliveryContext.Provider value={{ failed, markFailed }}>{children}</ImageDeliveryContext.Provider>
+        </ImageCatalogContext.Provider>
+    );
 }
 
 export function useLibraryImage(source: string) {
-    return findLibraryImage(useContext(Catalog), source);
+    return findLibraryImage(useContext(ImageCatalogContext), source);
 }
 
-function useSource(original: string) {
+function useSource(original: string, sourceWidth?: number) {
     const image = useLibraryImage(original);
-    const fallbackSource = editorialFallback(original) ?? original;
-    const selected = librarySource(image, fallbackSource);
+    const delivery = useContext(ImageDeliveryContext);
+    const originalFallback = editorialFallback(original) ?? original;
+    const fallbackSource = librarySource(undefined, originalFallback, sourceWidth);
+    const selected = librarySource(image, originalFallback, sourceWidth);
+    const attempt = JSON.stringify([selected, image ? deliveryIdentity(image) : null]);
     const [failed, setFailed] = useState<string | null>(null);
-    const source = failed === selected ? fallbackSource : selected;
+    const usingFallback = failed === attempt || (image && delivery.failed.has(deliveryIdentity(image)));
+    const source = usingFallback ? fallbackSource : selected;
     return {
         source,
-        image,
+        image: usingFallback ? undefined : image,
         fallback: () => {
             if (source !== fallbackSource) {
-                setFailed(selected);
+                setFailed(attempt);
+                if (image) delivery.markFailed(deliveryIdentity(image));
                 return true;
             }
             return false;
@@ -56,8 +75,8 @@ function useSource(original: string) {
     };
 }
 
-export default function LibraryImage({ src, onError, ...props }: ImageProps) {
-    const { source, image, fallback } = useSource(typeof src === "string" ? src : "");
+export default function LibraryImage({ src, onError, sourceWidth, ...props }: ImageProps & { sourceWidth?: number }) {
+    const { source, image, fallback } = useSource(typeof src === "string" ? src : "", sourceWidth);
     if (typeof src === "string" && source.startsWith("library:")) {
         return <span role="img" aria-label={`${props.alt} — image unavailable`} className={props.className} />;
     }
@@ -107,8 +126,10 @@ export function LibraryCredit({
     className?: string;
 }) {
     const image = useLibraryImage(source);
+    const delivery = useContext(ImageDeliveryContext);
     if (
         !image ||
+        delivery.failed.has(deliveryIdentity(image)) ||
         (children && image.revision === 1) ||
         image.asset.credit.startsWith("Existing Roamboard frontend asset")
     )

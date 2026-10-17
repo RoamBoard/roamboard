@@ -62,7 +62,8 @@ async function inventory(): Promise<Entry[]> {
     function add(source: string, usage?: string, meta?: Record<string, unknown>) {
         if (source.startsWith("library:")) {
             const original = fallbackImages.find((image) => image.assetKey === source.slice(8));
-            if (!original) throw new Error(`Unknown editorial image reference: ${source}`);
+            // Newly registered catalog keys have no migration source to inventory or import.
+            if (!original) return;
             source = original.source;
         }
         const remote =

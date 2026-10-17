@@ -9,12 +9,10 @@ type Props = {
 };
 
 export default function DiscoverPhoto({ photo, eager = false, width = 1000, position = "center" }: Props) {
-    const url = photo.src.startsWith("https:") ? new URL(photo.src) : null;
-    url?.searchParams.set("w", String(width));
-
     return (
         <Image
-            src={url?.toString() ?? photo.src}
+            src={photo.src}
+            sourceWidth={width}
             alt={photo.alt}
             fill
             unoptimized

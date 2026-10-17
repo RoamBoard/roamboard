@@ -1,4 +1,4 @@
-import Image from "@/components/images/LibraryImage";
+import Image, { LibraryCredit } from "@/components/images/LibraryImage";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 
@@ -21,24 +21,26 @@ export default function BoardsLanding() {
                         />
                     </div>
                     <figcaption className="text-muted-foreground/65 mt-2 text-center text-[10px]">
-                        Photography by{" "}
-                        <a
-                            href="https://unsplash.com/@nejc_soklic"
-                            target="_blank"
-                            rel="noreferrer"
-                            className="hover:text-foreground underline underline-offset-4"
-                        >
-                            Nejc Soklič
-                        </a>{" "}
-                        /{" "}
-                        <a
-                            href="https://unsplash.com/photos/YXFw9L-0DKo"
-                            target="_blank"
-                            rel="noreferrer"
-                            className="hover:text-foreground underline underline-offset-4"
-                        >
-                            Unsplash
-                        </a>
+                        <LibraryCredit source="library:frontend.images.create.desert">
+                            Photography by{" "}
+                            <a
+                                href="https://unsplash.com/@nejc_soklic"
+                                target="_blank"
+                                rel="noreferrer"
+                                className="hover:text-foreground underline underline-offset-4"
+                            >
+                                Nejc Soklič
+                            </a>{" "}
+                            /{" "}
+                            <a
+                                href="https://unsplash.com/photos/YXFw9L-0DKo"
+                                target="_blank"
+                                rel="noreferrer"
+                                className="hover:text-foreground underline underline-offset-4"
+                            >
+                                Unsplash
+                            </a>
+                        </LibraryCredit>
                     </figcaption>
                 </figure>
 

@@ -70,7 +70,15 @@ export function findLibraryImage(images: LibraryImage[], source: string): Librar
     return images.find((image) => image.aliases.some((alias) => sourceIdentity(alias) === identity));
 }
 
-export function librarySource(image: LibraryImage | undefined, original: string): string {
+export function librarySource(image: LibraryImage | undefined, original: string, sourceWidth?: number): string {
+    const resolved = resolveLibrarySource(image, original);
+    if (sourceWidth === undefined || !resolved.startsWith("https://images.unsplash.com/")) return resolved;
+    const url = new URL(resolved);
+    url.searchParams.set("w", String(sourceWidth));
+    return url.toString();
+}
+
+function resolveLibrarySource(image: LibraryImage | undefined, original: string): string {
     if (!image) return original;
     if (image.asset.provider !== "unsplash" || !/^https:\/\/(images\.unsplash\.com|unsplash\.com)\//.test(original))
         return image.asset.url;

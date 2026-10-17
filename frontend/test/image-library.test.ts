@@ -11,11 +11,17 @@ import {
 } from "../src/lib/image-library";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import Image, { LibraryImg } from "../src/components/images/LibraryImage";
+import Image, {
+    LibraryImg,
+    LibraryCredit,
+    ImageCatalogContext,
+    ImageDeliveryContext
+} from "../src/components/images/LibraryImage";
 import { destinationPages } from "../src/data/destination-atlas";
 import { roamFlowBoards } from "../src/data/roamflow-boards";
 import { discoverPhotos } from "../src/data/discover-preview";
 import tagCatalog from "../../shared/roamboard-tags.json";
+import DiscoverPhoto from "../src/components/features/discover/DiscoverPhoto";
 
 const original = "https://images.unsplash.com/photo-original?w=400&fit=crop&ixid=original";
 
@@ -123,4 +129,51 @@ test("images render their working original sources before the catalog arrives, w
     assert.match(missing, /role="img"/);
     assert.match(missing, /Mountain — image unavailable/);
     assert.doesNotMatch(missing, /<img/);
+});
+
+test("Discover requests placement widths for migrated photos and catalog replacements", () => {
+    for (const width of [800, 1600]) {
+        const markup = renderToStaticMarkup(createElement(DiscoverPhoto, { photo: discoverPhotos.kyoto, width }));
+        const src = /<img[^>]* src="([^"]+)"/.exec(markup)?.[1];
+        assert.ok(src);
+        assert.equal(new URL(src.replaceAll("&amp;", "&")).searchParams.get("w"), String(width));
+        const replacement = new URL(librarySource(image, original, width));
+        assert.equal(replacement.pathname, "/photo-replacement");
+        assert.equal(replacement.searchParams.get("w"), String(width));
+        assert.equal(replacement.searchParams.get("ixid"), "replacement");
+        assert.equal(replacement.searchParams.get("fit"), "crop");
+    }
+    assert.equal(librarySource(undefined, "/images/create/desert.jpg", 800), "/images/create/desert.jpg");
+});
+
+test("failed catalog photos and their credits return to the original together, while new revisions retry", () => {
+    const source = discoverPhotos.kyoto.src;
+    const replacement = { ...image, assetKey: source.slice(8), revision: 2 };
+    const failed = new Set([JSON.stringify([replacement.assetKey, replacement.revision, replacement.asset.url])]);
+    function render(record: LibraryImage, failures: ReadonlySet<string>) {
+        return renderToStaticMarkup(
+            createElement(
+                ImageCatalogContext.Provider,
+                { value: [record] },
+                createElement(
+                    ImageDeliveryContext.Provider,
+                    { value: { failed: failures, markFailed: () => {} } },
+                    createElement(DiscoverPhoto, { photo: discoverPhotos.kyoto, width: 800 }),
+                    createElement(LibraryImg, { src: source, alt: "Kyoto" }),
+                    createElement(LibraryCredit, { source }, "Original photographer")
+                )
+            )
+        );
+    }
+    const selected = render(replacement, new Set());
+    assert.match(selected, /photo-replacement/);
+    assert.match(selected, /https:\/\/unsplash.com\/@photographer/);
+    assert.doesNotMatch(selected, /Original photographer/);
+    const fallback = render(replacement, failed);
+    assert.doesNotMatch(fallback, /photo-replacement|https:\/\/unsplash.com\/@photographer|title="Photographer/);
+    assert.match(fallback, /Original photographer/);
+    assert.ok(fallback.includes(new URL(editorialFallback(source)!).pathname));
+    const retried = render({ ...replacement, revision: 3 }, failed);
+    assert.match(retried, /photo-replacement/);
+    assert.match(retried, /https:\/\/unsplash.com\/@photographer/);
 });
