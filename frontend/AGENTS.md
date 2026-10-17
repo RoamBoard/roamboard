@@ -41,6 +41,13 @@ The developer Board browser (/dev/boards) lists paginated accessible Boards and 
 
 The provider lab (/dev/providers) uses current backend Mapbox, Geoapify, Unsplash, Google Places, Cloudinary routes, plus PostgreSQL-backed Board search. Cloudinary lab uploads are separate from Board media and restricted to the lab prefix/tag. Cloudinary/Google management tools and developer Board listing require a signed-in session with the backend in development mode. Provider credentials stay server-side; only an intentionally public Mapbox pk. token is returned after a map-load reservation. PostgreSQL persists shared provider budgets across restarts. Search reads only real public, published Boards from PostgreSQL and checks fresh database visibility before returning records or suggestions. Activities and locations are not standalone search results. The separate Mapbox search uses Search Box for POIs, restaurants and landmarks with its own quota; Home retains city geocoding, and persistent Board locations still use Geoapify. Backend setup, limitations and response shapes are documented in [API_FEATURES_CONTRACT.md](../backend/API_FEATURES_CONTRACT.md).
 
+The `/create` landing follows Figma 3.0–3.1 with a local, credited Unsplash photograph, a curved hero, and circular
+creation choices. `BoardCreationChoices` owns only the New Board expansion state; Motion respects reduced motion,
+and Escape collapses the choices and restores trigger focus. Smart Create opens `/boards/new`; Scratch opens
+`/boards/new?mode=scratch`, retaining the entry choice for the next editor milestone. The editor currently renders
+the same existing experience for both URLs. Draft and My Boards navigation remain available; remixing remains
+explicitly deferred. Discover links to `/discover`. The shared sidebar is unchanged.
+
 ## Project purpose and requirements
 
 Country codes in application data, mock/discovery data, provider responses and

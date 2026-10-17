@@ -1,71 +1,97 @@
+import Image from "next/image";
 import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
 
-import BoardPathOption from "@/components/features/boards/BoardPathOption";
+import BoardCreationChoices from "@/components/features/boards/BoardCreationChoices";
 import ScrollCue from "@/components/ui/ScrollCue";
 
 export default function BoardsLanding() {
     return (
-        <article className="bg-background text-foreground relative min-h-[100rem] w-full min-w-0 overflow-hidden sm:min-h-[112rem]">
-            <section className="flex flex-col items-center px-5 text-center sm:px-10" aria-labelledby="boards-heading">
-                <div
-                    role="img"
-                    aria-label="Stylized rock formations at sunset"
-                    className="h-[clamp(11rem,31vw,23rem)] w-full max-w-5xl shrink-0 rounded-b-[50%] bg-[url('/boards-create-cover.svg')] bg-cover bg-center"
-                />
+        <article className="font-body bg-background text-foreground relative w-full min-w-0 overflow-x-clip">
+            <header className="relative flex flex-col items-center text-center">
+                <figure className="bg-faint relative aspect-[2.42] w-[92%] max-w-[78rem] overflow-hidden rounded-b-[50%_100%] sm:w-[80%]">
+                    <Image
+                        src="/images/create/desert.jpg"
+                        alt="Golden evening light falling across the dunes of the Dubai desert"
+                        fill
+                        preload
+                        sizes="(max-width: 640px) 92vw, (max-width: 1700px) 80vw, 1248px"
+                        className="object-cover object-[center_58%]"
+                    />
+                </figure>
+
+                <Link
+                    href="/boards/mine"
+                    className="text-muted-foreground hover:text-foreground focus-visible:outline-foreground mt-6 inline-flex min-h-11 items-center gap-2 text-[11px] tracking-[0.08em] uppercase underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 sm:absolute sm:top-5 sm:right-5 sm:mt-0 lg:top-8 lg:right-8"
+                >
+                    My Boards <ArrowUpRight aria-hidden="true" size={14} strokeWidth={1.25} />
+                </Link>
 
                 <h1
                     id="boards-heading"
-                    className="font-display text-48 sm:text-72 lg:text-96 mt-10 max-w-full leading-none font-bold tracking-tight sm:mt-12"
+                    className="font-display mt-5 text-[clamp(4rem,8.34vw,9rem)] leading-[1.02] font-bold tracking-[-0.045em] sm:mt-12 lg:mt-14"
                 >
                     CREATE
                 </h1>
 
-                <Link
-                    href="/boards/mine"
-                    className="border-foreground bg-foreground text-background hover:bg-background hover:text-foreground focus-visible:outline-foreground text-12 mt-7 inline-flex min-h-12 items-center border px-7 font-bold tracking-wide uppercase transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 motion-reduce:transition-none"
-                >
-                    My Boards{" "}
-                    <span aria-hidden="true" className="ml-3">
-                        →
-                    </span>
-                </Link>
-
-                <ScrollCue targetId="board-paths" label="Scroll to Board creation options" className="mt-5" />
-
-                <div className="text-10 text-stone pointer-events-none absolute top-[27%] right-4 left-4 hidden items-center justify-between lg:flex">
-                    <span>the world is your canvas</span>
-                    <span>paint it with memories</span>
+                <div className="relative mt-7 flex w-full justify-center">
+                    <ScrollCue
+                        targetId="board-paths"
+                        label="Explore ways to create a Board"
+                        className="h-[clamp(15rem,27vw,29rem)] [&>span:nth-child(1)]:flex-1 [&>span:nth-child(2)]:size-11 [&>span:nth-child(3)]:flex-1"
+                    />
+                    <div className="text-muted-foreground/55 pointer-events-none absolute right-6 bottom-[22%] left-6 hidden justify-between text-[clamp(0.75rem,1.15vw,1.25rem)] lg:flex">
+                        <span>the world is your canvas</span>
+                        <span>paint it with memories</span>
+                    </div>
                 </div>
-            </section>
+            </header>
 
-            <section id="board-paths" aria-labelledby="board-paths-heading" className="scroll-mt-8 px-5 text-center">
-                <h2 id="board-paths-heading" className="sr-only">
-                    Choose how to create a Board
-                </h2>
+            <BoardCreationChoices />
 
-                <ol className="flex flex-col items-center">
-                    <li>
-                        <BoardPathOption href="/boards/new" title="new board" description="build your journey" />
-                    </li>
-                    <li aria-label="Remix saved Board, coming later" className="flex flex-col items-center">
-                        <span aria-hidden="true" className="bg-line h-16 w-px sm:h-20" />
-                        <BoardPathOption title="remix saved board" description="inspired by others, made your own" />
-                    </li>
-                    <li className="flex flex-col items-center">
-                        <span aria-hidden="true" className="bg-line h-16 w-px sm:h-20" />
-                        <BoardPathOption
-                            href="/boards/drafts"
-                            title="edit draft"
-                            description="continue where you left off"
+            <section
+                aria-labelledby="create-discover-heading"
+                className="flex flex-col items-center px-4 pb-24 text-center sm:pb-48 lg:pb-72"
+            >
+                <span aria-hidden="true" className="bg-line h-[clamp(14rem,24vw,26rem)] w-px" />
+                <p className="text-muted-foreground/65 mt-8 text-[clamp(1.125rem,2.3vw,2.5rem)] leading-tight font-bold">
+                    need more inspiration?
+                </p>
+                <h2
+                    id="create-discover-heading"
+                    className="font-display mt-8 text-[clamp(2.75rem,8.34vw,9rem)] leading-[1.02] font-bold tracking-[-0.045em]"
+                >
+                    <Link
+                        href="/discover"
+                        className="group focus-visible:outline-foreground relative inline-block focus-visible:outline-2 focus-visible:outline-offset-8"
+                    >
+                        DISCOVER
+                        <ArrowUpRight
+                            aria-hidden="true"
+                            className="absolute -top-2 -right-6 size-5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none sm:-right-9 sm:size-7"
+                            strokeWidth={1}
                         />
-                    </li>
-                </ol>
-
-                <div aria-hidden="true" className="bg-line mx-auto h-44 w-px sm:h-52" />
-
-                <p className="font-body text-16 text-line sm:text-20 font-bold">need more inspiration?</p>
-                <p className="font-display text-48 sm:text-72 lg:text-96 mt-6 max-w-full leading-none font-bold tracking-tight">
-                    DISCOVER
+                    </Link>
+                </h2>
+                <p className="text-muted-foreground mt-16 text-[10px]">
+                    Photography by{" "}
+                    <a
+                        href="https://unsplash.com/@nejc_soklic"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="hover:text-foreground underline underline-offset-4"
+                    >
+                        Nejc Soklič
+                    </a>{" "}
+                    /{" "}
+                    <a
+                        href="https://unsplash.com/photos/YXFw9L-0DKo"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="hover:text-foreground underline underline-offset-4"
+                    >
+                        Unsplash
+                    </a>
                 </p>
             </section>
         </article>
