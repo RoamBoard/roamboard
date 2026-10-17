@@ -81,7 +81,7 @@ export default function DestinationExplorer() {
 
     return (
         <section
-            className="flex min-h-dvh items-start justify-center px-6 pt-56 pb-32 sm:px-10 md:pt-[calc(13.75rem+clamp(40px,6.4vw,96px))]"
+            className="font-body flex min-h-dvh min-w-0 items-start justify-center px-5 pt-56 pb-32 md:px-10 md:pt-[calc(13.75rem+clamp(40px,6.4vw,96px))]"
             aria-labelledby="roamboard-heading"
         >
             <motion.div animate={controls} className="relative w-full max-w-[550px]" inert={leaving}>
@@ -106,6 +106,8 @@ export default function DestinationExplorer() {
                     </Link>
                 </h1>
                 <form
+                    role="search"
+                    aria-label="Destination search"
                     onSubmit={submit}
                     className="relative"
                     onBlur={(event) => {
@@ -132,6 +134,7 @@ export default function DestinationExplorer() {
                                 showSuggestions && results[active] ? `destination-option-${active}` : undefined
                             }
                             autoComplete="off"
+                            maxLength={100}
                             spellCheck={false}
                             value={query}
                             placeholder="where would you like to go?"
@@ -201,13 +204,11 @@ export default function DestinationExplorer() {
                                     aria-busy={loading}
                                 >
                                     {results.map((destination, index) => (
-                                        <li
-                                            key={destination.id}
-                                            id={`destination-option-${index}`}
-                                            role="option"
-                                            aria-selected={active === index}
-                                        >
+                                        <li key={destination.id} role="presentation">
                                             <button
+                                                id={`destination-option-${index}`}
+                                                role="option"
+                                                aria-selected={active === index}
                                                 type="button"
                                                 tabIndex={-1}
                                                 onMouseDown={(event) => event.preventDefault()}
@@ -215,11 +216,11 @@ export default function DestinationExplorer() {
                                                 className="group flex min-h-11 w-full items-baseline justify-between gap-4 px-2 py-3 text-left focus-visible:outline-2"
                                             >
                                                 <span
-                                                    className={`text-sm underline-offset-4 group-hover:underline ${active === index ? "underline" : ""}`}
+                                                    className={`text-14 min-w-0 leading-5 break-words underline-offset-4 group-hover:underline ${active === index ? "underline" : ""}`}
                                                 >
                                                     {destination.name}
                                                 </span>
-                                                <span className="text-muted-foreground text-xs">
+                                                <span className="text-muted-foreground text-12 max-w-[45%] shrink-0 text-right leading-4">
                                                     {destination.placeType === "country"
                                                         ? "Country"
                                                         : destination.country}
@@ -229,7 +230,7 @@ export default function DestinationExplorer() {
                                     ))}
                                 </ul>
                                 {(error || (!loading && searched && !results.length)) && (
-                                    <p role="status" className="text-muted-foreground px-2 py-3 text-xs">
+                                    <p className="text-muted-foreground text-12 px-2 py-3 leading-4">
                                         {error || "No destinations found."}
                                     </p>
                                 )}
@@ -237,13 +238,11 @@ export default function DestinationExplorer() {
                         )}
                     </AnimatePresence>
                     {error && query.trim().length < 2 && (
-                        <p role="alert" className="text-muted-foreground mt-3 text-center text-xs">
-                            {error}
-                        </p>
+                        <p className="text-muted-foreground text-12 mt-3 text-center leading-4">{error}</p>
                     )}
                 </form>
                 <nav
-                    className={`absolute inset-x-0 top-full mt-7 flex flex-wrap justify-center gap-x-6 gap-y-1 text-xs ${showSuggestions ? "invisible" : ""}`}
+                    className={`text-12 absolute inset-x-0 top-full mt-7 flex flex-wrap justify-center gap-x-6 gap-y-1 leading-4 ${showSuggestions ? "invisible" : ""}`}
                     aria-label="Suggested destinations"
                     inert={showSuggestions}
                 >
@@ -275,9 +274,11 @@ export default function DestinationExplorer() {
                     ? "Opening destination."
                     : loading
                       ? "Searching destinations."
-                      : searched
-                        ? `${results.length} destinations found.`
-                        : ""}
+                      : error
+                        ? error
+                        : searched
+                          ? `${results.length} destinations found.`
+                          : ""}
             </p>
         </section>
     );
