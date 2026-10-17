@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import LibraryImage from "@/components/images/LibraryImage";
 import { useState } from "react";
 import type { BoardImage } from "@/types/board";
 
@@ -39,6 +40,7 @@ export default function BoardPhoto({
     insetCredit = false
 }: Props) {
     const [failedUrl, setFailedUrl] = useState<string | null>(null);
+    const Photo = image?.url.startsWith("library:") ? LibraryImage : Image;
     if (!image?.url || failedUrl === image.url) {
         if (!placeholderLabel) return null;
         return (
@@ -48,7 +50,10 @@ export default function BoardPhoto({
                 className={`bg-faint text-muted-foreground relative overflow-hidden ${className}`}
             >
                 <div className="absolute inset-0 grid place-items-center p-5 text-center">
-                    <span className="text-12 max-w-full break-words">{placeholderLabel}</span>
+                    <span className="text-12 max-w-full break-words">
+                        {placeholderLabel}
+                        {image?.source === "upload" && failedUrl === image.url ? " — saved image unavailable" : ""}
+                    </span>
                 </div>
             </div>
         );
@@ -57,7 +62,7 @@ export default function BoardPhoto({
     return (
         // The wrapper sets the size; fill makes the image fit inside it.
         <div className={`relative overflow-hidden ${className}`}>
-            <Image
+            <Photo
                 src={image.url}
                 alt={image.alt}
                 fill

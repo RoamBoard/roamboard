@@ -1,5 +1,6 @@
 "use client";
 
+import { LibraryCredit } from "@/components/images/LibraryImage";
 import { useEffect, useId, useRef } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
@@ -157,14 +158,19 @@ export function PlaceDetail({
                                 Create your own Board <ArrowUpRight size={22} strokeWidth={1} />
                             </Link>
                         </div>
-                        <a
-                            href={place.image.sourceUrl}
-                            target="_blank"
-                            rel="noreferrer"
+                        <LibraryCredit
+                            source={place.image.src}
                             className="text-muted-foreground mt-8 w-fit py-2 text-[11px] underline underline-offset-4"
                         >
-                            Photography: {place.image.credit}
-                        </a>
+                            <a
+                                href={place.image.sourceUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-muted-foreground mt-8 w-fit py-2 text-[11px] underline underline-offset-4"
+                            >
+                                Photography: {place.image.credit}
+                            </a>
+                        </LibraryCredit>
                     </motion.div>
                 </div>
                 {onNavigate && (

@@ -1,4 +1,4 @@
-import Image from "next/image";
+import Image, { LibraryCredit } from "@/components/images/LibraryImage";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 
@@ -12,7 +12,7 @@ export default function BoardsLanding() {
                 <figure className="w-[92%] max-w-[78rem] sm:w-[80%]">
                     <div className="bg-faint relative aspect-[2.42] overflow-hidden rounded-b-[50%_100%]">
                         <Image
-                            src="/images/create/desert.jpg"
+                            src="library:frontend.images.create.desert"
                             alt="Golden evening light falling across the dunes of the Dubai desert"
                             fill
                             preload
@@ -21,24 +21,26 @@ export default function BoardsLanding() {
                         />
                     </div>
                     <figcaption className="text-muted-foreground/65 mt-2 text-center text-[10px]">
-                        Photography by{" "}
-                        <a
-                            href="https://unsplash.com/@nejc_soklic"
-                            target="_blank"
-                            rel="noreferrer"
-                            className="hover:text-foreground underline underline-offset-4"
-                        >
-                            Nejc Soklič
-                        </a>{" "}
-                        /{" "}
-                        <a
-                            href="https://unsplash.com/photos/YXFw9L-0DKo"
-                            target="_blank"
-                            rel="noreferrer"
-                            className="hover:text-foreground underline underline-offset-4"
-                        >
-                            Unsplash
-                        </a>
+                        <LibraryCredit source="library:frontend.images.create.desert">
+                            Photography by{" "}
+                            <a
+                                href="https://unsplash.com/@nejc_soklic"
+                                target="_blank"
+                                rel="noreferrer"
+                                className="hover:text-foreground underline underline-offset-4"
+                            >
+                                Nejc Soklič
+                            </a>{" "}
+                            /{" "}
+                            <a
+                                href="https://unsplash.com/photos/YXFw9L-0DKo"
+                                target="_blank"
+                                rel="noreferrer"
+                                className="hover:text-foreground underline underline-offset-4"
+                            >
+                                Unsplash
+                            </a>
+                        </LibraryCredit>
                     </figcaption>
                 </figure>
 

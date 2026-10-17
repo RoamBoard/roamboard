@@ -1,0 +1,2089 @@
+[
+    {
+        "assetKey": "frontend.images.board.cards.v1.bangkok.frame40",
+        "source": "/images/board-cards/v1-bangkok-frame40.png",
+        "aliases": ["/images/board-cards/v1-bangkok-frame40.png"],
+        "usages": [
+            "frontend/src/components/features/boards/cards/BoardCardParts.tsx",
+            "frontend/src/data/board-card-examples.ts"
+        ],
+        "alt": "v1 bangkok frame40 png",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.board.cards.v1.bangkok.frame41",
+        "source": "/images/board-cards/v1-bangkok-frame41.png",
+        "aliases": ["/images/board-cards/v1-bangkok-frame41.png"],
+        "usages": [
+            "frontend/src/components/features/boards/cards/BoardCardParts.tsx",
+            "frontend/src/data/board-card-examples.ts"
+        ],
+        "alt": "v1 bangkok frame41 png",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.board.cards.v1.bangkok.frame42",
+        "source": "/images/board-cards/v1-bangkok-frame42.png",
+        "aliases": ["/images/board-cards/v1-bangkok-frame42.png"],
+        "usages": [
+            "frontend/src/components/features/boards/cards/BoardCardParts.tsx",
+            "frontend/src/data/board-card-examples.ts"
+        ],
+        "alt": "v1 bangkok frame42 png",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.board.cards.v1.bangkok.frame43",
+        "source": "/images/board-cards/v1-bangkok-frame43.png",
+        "aliases": ["/images/board-cards/v1-bangkok-frame43.png"],
+        "usages": [
+            "frontend/src/components/features/boards/cards/BoardCardParts.tsx",
+            "frontend/src/data/board-card-examples.ts"
+        ],
+        "alt": "v1 bangkok frame43 png",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.board.cards.v1.bangkok.frame44",
+        "source": "/images/board-cards/v1-bangkok-frame44.png",
+        "aliases": ["/images/board-cards/v1-bangkok-frame44.png"],
+        "usages": [
+            "frontend/src/components/features/boards/cards/BoardCardParts.tsx",
+            "frontend/src/data/board-card-examples.ts"
+        ],
+        "alt": "v1 bangkok frame44 png",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.board.cards.v1.bangkok.frame45",
+        "source": "/images/board-cards/v1-bangkok-frame45.png",
+        "aliases": ["/images/board-cards/v1-bangkok-frame45.png"],
+        "usages": [
+            "frontend/src/components/features/boards/cards/BoardCardParts.tsx",
+            "frontend/src/data/board-card-examples.ts"
+        ],
+        "alt": "v1 bangkok frame45 png",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.board.cards.v1.paris.frame40",
+        "source": "/images/board-cards/v1-paris-frame40.png",
+        "aliases": ["/images/board-cards/v1-paris-frame40.png"],
+        "usages": [
+            "frontend/src/components/features/boards/cards/BoardCardParts.tsx",
+            "frontend/src/data/board-card-examples.ts"
+        ],
+        "alt": "v1 paris frame40 png",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.board.cards.v1.paris.frame41",
+        "source": "/images/board-cards/v1-paris-frame41.png",
+        "aliases": ["/images/board-cards/v1-paris-frame41.png"],
+        "usages": [
+            "frontend/src/components/features/boards/cards/BoardCardParts.tsx",
+            "frontend/src/data/board-card-examples.ts"
+        ],
+        "alt": "v1 paris frame41 png",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.board.cards.v1.paris.frame42",
+        "source": "/images/board-cards/v1-paris-frame42.png",
+        "aliases": ["/images/board-cards/v1-paris-frame42.png"],
+        "usages": [
+            "frontend/src/components/features/boards/cards/BoardCardParts.tsx",
+            "frontend/src/data/board-card-examples.ts"
+        ],
+        "alt": "v1 paris frame42 png",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.board.cards.v1.paris.frame43",
+        "source": "/images/board-cards/v1-paris-frame43.png",
+        "aliases": ["/images/board-cards/v1-paris-frame43.png"],
+        "usages": [
+            "frontend/src/components/features/boards/cards/BoardCardParts.tsx",
+            "frontend/src/data/board-card-examples.ts"
+        ],
+        "alt": "v1 paris frame43 png",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.board.cards.v1.paris.frame44",
+        "source": "/images/board-cards/v1-paris-frame44.png",
+        "aliases": ["/images/board-cards/v1-paris-frame44.png"],
+        "usages": [
+            "frontend/src/components/features/boards/cards/BoardCardParts.tsx",
+            "frontend/src/data/board-card-examples.ts"
+        ],
+        "alt": "v1 paris frame44 png",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.board.cards.v1.paris.frame45",
+        "source": "/images/board-cards/v1-paris-frame45.png",
+        "aliases": ["/images/board-cards/v1-paris-frame45.png"],
+        "usages": [
+            "frontend/src/components/features/boards/cards/BoardCardParts.tsx",
+            "frontend/src/data/board-card-examples.ts"
+        ],
+        "alt": "v1 paris frame45 png",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.board.cards.v1.tokyo.frame40",
+        "source": "/images/board-cards/v1-tokyo-frame40.png",
+        "aliases": ["/images/board-cards/v1-tokyo-frame40.png"],
+        "usages": [
+            "frontend/src/components/features/boards/cards/BoardCardParts.tsx",
+            "frontend/src/data/board-card-examples.ts"
+        ],
+        "alt": "v1 tokyo frame40 png",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.board.cards.v1.tokyo.frame41",
+        "source": "/images/board-cards/v1-tokyo-frame41.png",
+        "aliases": ["/images/board-cards/v1-tokyo-frame41.png"],
+        "usages": [
+            "frontend/src/components/features/boards/cards/BoardCardParts.tsx",
+            "frontend/src/data/board-card-examples.ts"
+        ],
+        "alt": "v1 tokyo frame41 png",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.board.cards.v1.tokyo.frame42",
+        "source": "/images/board-cards/v1-tokyo-frame42.png",
+        "aliases": ["/images/board-cards/v1-tokyo-frame42.png"],
+        "usages": [
+            "frontend/src/components/features/boards/cards/BoardCardParts.tsx",
+            "frontend/src/data/board-card-examples.ts"
+        ],
+        "alt": "v1 tokyo frame42 png",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.board.cards.v1.tokyo.frame43",
+        "source": "/images/board-cards/v1-tokyo-frame43.png",
+        "aliases": ["/images/board-cards/v1-tokyo-frame43.png"],
+        "usages": [
+            "frontend/src/components/features/boards/cards/BoardCardParts.tsx",
+            "frontend/src/data/board-card-examples.ts"
+        ],
+        "alt": "v1 tokyo frame43 png",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.board.cards.v1.tokyo.frame44",
+        "source": "/images/board-cards/v1-tokyo-frame44.png",
+        "aliases": ["/images/board-cards/v1-tokyo-frame44.png"],
+        "usages": [
+            "frontend/src/components/features/boards/cards/BoardCardParts.tsx",
+            "frontend/src/data/board-card-examples.ts"
+        ],
+        "alt": "v1 tokyo frame44 png",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.board.cards.v1.tokyo.frame45",
+        "source": "/images/board-cards/v1-tokyo-frame45.png",
+        "aliases": ["/images/board-cards/v1-tokyo-frame45.png"],
+        "usages": [
+            "frontend/src/components/features/boards/cards/BoardCardParts.tsx",
+            "frontend/src/data/board-card-examples.ts"
+        ],
+        "alt": "v1 tokyo frame45 png",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.board.cards.v2.bangkok.ellipse1",
+        "source": "/images/board-cards/v2-bangkok-ellipse1.png",
+        "aliases": ["/images/board-cards/v2-bangkok-ellipse1.png"],
+        "usages": [
+            "frontend/src/components/features/boards/cards/BoardCardParts.tsx",
+            "frontend/src/data/board-card-examples.ts"
+        ],
+        "alt": "v2 bangkok ellipse1 png",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.board.cards.v2.paris.ellipse1",
+        "source": "/images/board-cards/v2-paris-ellipse1.png",
+        "aliases": ["/images/board-cards/v2-paris-ellipse1.png"],
+        "usages": [
+            "frontend/src/components/features/boards/cards/BoardCardParts.tsx",
+            "frontend/src/data/board-card-examples.ts"
+        ],
+        "alt": "v2 paris ellipse1 png",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.board.cards.v2.tokyo.ellipse1",
+        "source": "/images/board-cards/v2-tokyo-ellipse1.png",
+        "aliases": ["/images/board-cards/v2-tokyo-ellipse1.png"],
+        "usages": [
+            "frontend/src/components/features/boards/cards/BoardCardParts.tsx",
+            "frontend/src/data/board-card-examples.ts"
+        ],
+        "alt": "v2 tokyo ellipse1 png",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.board.cards.v3.buenos.aires.frame169",
+        "source": "/images/board-cards/v3-buenos-aires-frame169.png",
+        "aliases": ["/images/board-cards/v3-buenos-aires-frame169.png"],
+        "usages": [
+            "frontend/src/components/features/boards/cards/BoardCardParts.tsx",
+            "frontend/src/data/board-card-examples.ts"
+        ],
+        "alt": "v3 buenos aires frame169 png",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.board.cards.v3.marrakech.frame169",
+        "source": "/images/board-cards/v3-marrakech-frame169.png",
+        "aliases": ["/images/board-cards/v3-marrakech-frame169.png"],
+        "usages": [
+            "frontend/src/components/features/boards/cards/BoardCardParts.tsx",
+            "frontend/src/data/board-card-examples.ts"
+        ],
+        "alt": "v3 marrakech frame169 png",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.board.cards.v3.odda.frame169",
+        "source": "/images/board-cards/v3-odda-frame169.png",
+        "aliases": ["/images/board-cards/v3-odda-frame169.png"],
+        "usages": [
+            "frontend/src/components/features/boards/cards/BoardCardParts.tsx",
+            "frontend/src/data/board-card-examples.ts"
+        ],
+        "alt": "v3 odda frame169 png",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.board.cards.v4.barcelona.frame172",
+        "source": "/images/board-cards/v4-barcelona-frame172.png",
+        "aliases": ["/images/board-cards/v4-barcelona-frame172.png"],
+        "usages": [
+            "frontend/src/components/features/boards/cards/BoardCardParts.tsx",
+            "frontend/src/data/board-card-examples.ts"
+        ],
+        "alt": "v4 barcelona frame172 png",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.board.cards.v4.lofoten.frame172",
+        "source": "/images/board-cards/v4-lofoten-frame172.png",
+        "aliases": ["/images/board-cards/v4-lofoten-frame172.png"],
+        "usages": [
+            "frontend/src/components/features/boards/cards/BoardCardParts.tsx",
+            "frontend/src/data/board-card-examples.ts"
+        ],
+        "alt": "v4 lofoten frame172 png",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.board.cards.v4.porto.frame172",
+        "source": "/images/board-cards/v4-porto-frame172.png",
+        "aliases": ["/images/board-cards/v4-porto-frame172.png"],
+        "usages": [
+            "frontend/src/components/features/boards/cards/BoardCardParts.tsx",
+            "frontend/src/data/board-card-examples.ts"
+        ],
+        "alt": "v4 porto frame172 png",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.boards.author",
+        "source": "/images/boards/author.jpg",
+        "aliases": ["/images/boards/author.jpg"],
+        "usages": [],
+        "alt": "author jpg",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.boards.cafe",
+        "source": "/images/boards/cafe.jpg",
+        "aliases": ["/images/boards/cafe.jpg"],
+        "usages": ["frontend/src/data/roamflow-boards.ts"],
+        "alt": "cafe jpg",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.boards.cover",
+        "source": "/images/boards/cover.jpg",
+        "aliases": ["/images/boards/cover.jpg"],
+        "usages": [],
+        "alt": "cover jpg",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.boards.neighbourhood",
+        "source": "/images/boards/neighbourhood.jpg",
+        "aliases": ["/images/boards/neighbourhood.jpg"],
+        "usages": ["frontend/src/data/roamflow-boards.ts"],
+        "alt": "neighbourhood jpg",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.boards.night.street",
+        "source": "/images/boards/night-street.jpg",
+        "aliases": ["/images/boards/night-street.jpg"],
+        "usages": [],
+        "alt": "night street jpg",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.boards.ramen",
+        "source": "/images/boards/ramen.jpg",
+        "aliases": ["/images/boards/ramen.jpg"],
+        "usages": [],
+        "alt": "ramen jpg",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.boards.temple",
+        "source": "/images/boards/temple.jpg",
+        "aliases": ["/images/boards/temple.jpg"],
+        "usages": ["frontend/src/data/roamflow-boards.ts"],
+        "alt": "temple jpg",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.create.desert",
+        "source": "/images/create/desert.jpg",
+        "aliases": ["/images/create/desert.jpg"],
+        "usages": [
+            "frontend/src/components/features/boards/BoardPreviewDiagram.tsx",
+            "frontend/src/components/features/boards/BoardsLanding.tsx",
+            "frontend/src/components/features/boards/CreatorDetailIcon.tsx",
+            "frontend/src/components/features/boards/CreatorUploadArtwork.tsx"
+        ],
+        "alt": "desert jpg",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.destinations.bamboo",
+        "source": "/images/destinations/bamboo.webp",
+        "aliases": ["/images/destinations/bamboo.webp"],
+        "usages": [
+            "frontend/src/data/destination-atlas.ts",
+            "frontend/src/components/features/boards/BoardCoverHero.tsx",
+            "frontend/src/components/features/destinations/DestinationPage.tsx"
+        ],
+        "alt": "A path between tall green bamboo in Arashiyama",
+        "credit": "Karen Chew",
+        "sourceUrl": "https://unsplash.com/photos/EvsuNMbZNJw",
+        "photographerUrl": "",
+        "photoId": "EvsuNMbZNJw"
+    },
+    {
+        "assetKey": "frontend.images.destinations.inari",
+        "source": "/images/destinations/inari.webp",
+        "aliases": ["/images/destinations/inari.webp"],
+        "usages": [
+            "frontend/src/data/destination-atlas.ts",
+            "frontend/src/components/features/destinations/DestinationPage.tsx"
+        ],
+        "alt": "Vermilion torii gates on a wooded path at Fushimi Inari",
+        "credit": "Jeremy Goldberg",
+        "sourceUrl": "https://unsplash.com/photos/AiC8MRukmBg",
+        "photographerUrl": "",
+        "photoId": "AiC8MRukmBg"
+    },
+    {
+        "assetKey": "frontend.images.destinations.kyoto.closing",
+        "source": "/images/destinations/kyoto-closing.webp",
+        "aliases": ["/images/destinations/kyoto-closing.webp"],
+        "usages": [
+            "frontend/src/data/destination-atlas.ts",
+            "frontend/src/components/features/destinations/DestinationPage.tsx"
+        ],
+        "alt": "A lantern-lit Kyoto street within a circular composition",
+        "credit": "Roamboard Figma reference",
+        "sourceUrl": "https://www.figma.com/design/4hUe6aKuQnp7zotBG7qqug/ROAMBOARD?node-id=740-1953",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.destinations.kyoto.hero",
+        "source": "/images/destinations/kyoto-hero.webp",
+        "aliases": ["/images/destinations/kyoto-hero.webp"],
+        "usages": [
+            "frontend/src/data/destination-atlas.ts",
+            "frontend/src/components/features/destinations/DestinationPage.tsx"
+        ],
+        "alt": "The pagoda of Kiyomizu-dera above Kyoto, framed by a circle",
+        "credit": "Roamboard Figma reference",
+        "sourceUrl": "https://www.figma.com/design/4hUe6aKuQnp7zotBG7qqug/ROAMBOARD?node-id=55-1082",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.destinations.market",
+        "source": "/images/destinations/market.webp",
+        "aliases": ["/images/destinations/market.webp"],
+        "usages": [
+            "frontend/src/data/destination-atlas.ts",
+            "frontend/src/components/features/destinations/DestinationPage.tsx"
+        ],
+        "alt": "Fresh vegetables at Copenhagen’s Torvehallerne market",
+        "credit": "Simone Pellegrini",
+        "sourceUrl": "https://unsplash.com/photos/ZFkrPuz6EdI",
+        "photographerUrl": "",
+        "photoId": "ZFkrPuz6EdI"
+    },
+    {
+        "assetKey": "frontend.images.destinations.montmartre",
+        "source": "/images/destinations/montmartre.webp",
+        "aliases": ["/images/destinations/montmartre.webp"],
+        "usages": [
+            "frontend/src/data/destination-atlas.ts",
+            "frontend/src/components/features/destinations/DestinationPage.tsx"
+        ],
+        "alt": "A Parisian apartment building above a grassy slope in Montmartre",
+        "credit": "Francesco Zivoli",
+        "sourceUrl": "https://unsplash.com/photos/Qe5oPbc7pAo",
+        "photographerUrl": "",
+        "photoId": "Qe5oPbc7pAo"
+    },
+    {
+        "assetKey": "frontend.images.destinations.nishiki",
+        "source": "/images/destinations/nishiki.webp",
+        "aliases": ["/images/destinations/nishiki.webp"],
+        "usages": [
+            "frontend/src/data/destination-atlas.ts",
+            "frontend/src/components/features/destinations/DestinationPage.tsx"
+        ],
+        "alt": "Colorful signs and shopfronts at Nishiki Market",
+        "credit": "KJ Gonzales",
+        "sourceUrl": "https://unsplash.com/photos/Mz_rFI4oq4I",
+        "photographerUrl": "",
+        "photoId": "Mz_rFI4oq4I"
+    },
+    {
+        "assetKey": "frontend.images.destinations.nyhavn",
+        "source": "/images/destinations/nyhavn.webp",
+        "aliases": ["/images/destinations/nyhavn.webp"],
+        "usages": [
+            "frontend/src/data/destination-atlas.ts",
+            "frontend/src/components/features/destinations/DestinationPage.tsx"
+        ],
+        "alt": "Colorful Copenhagen houses and boats along Nyhavn",
+        "credit": "Nick Karvounis",
+        "sourceUrl": "https://unsplash.com/photos/z9omP7AT_2s",
+        "photographerUrl": "",
+        "photoId": "z9omP7AT_2s"
+    },
+    {
+        "assetKey": "frontend.images.destinations.palais",
+        "source": "/images/destinations/palais.webp",
+        "aliases": ["/images/destinations/palais.webp"],
+        "usages": [
+            "frontend/src/data/destination-atlas.ts",
+            "frontend/src/components/features/destinations/DestinationPage.tsx"
+        ],
+        "alt": "Historic architecture and a fountain at Palais-Royal",
+        "credit": "Anthony DELANOIX",
+        "sourceUrl": "https://unsplash.com/photos/V5QILBs4jxA",
+        "photographerUrl": "",
+        "photoId": "V5QILBs4jxA"
+    },
+    {
+        "assetKey": "frontend.images.destinations.palms",
+        "source": "/images/destinations/palms.webp",
+        "aliases": ["/images/destinations/palms.webp"],
+        "usages": [
+            "frontend/src/data/destination-atlas.ts",
+            "frontend/src/components/features/destinations/DestinationPage.tsx"
+        ],
+        "alt": "Palms beside a white stairway in Copenhagen’s Palm House",
+        "credit": "Mykola Kolya Korzh",
+        "sourceUrl": "https://unsplash.com/photos/3C3EYGhWr9Q",
+        "photographerUrl": "",
+        "photoId": "3C3EYGhWr9Q"
+    },
+    {
+        "assetKey": "frontend.images.destinations.paris.hero",
+        "source": "/images/destinations/paris-hero.webp",
+        "aliases": ["/images/destinations/paris-hero.webp"],
+        "usages": [
+            "frontend/src/data/destination-atlas.ts",
+            "frontend/src/components/features/destinations/DestinationPage.tsx"
+        ],
+        "alt": "The Eiffel Tower at the end of a Parisian street",
+        "credit": "Diogo Fagundes",
+        "sourceUrl": "https://unsplash.com/photos/dbBKeN1s8GY",
+        "photographerUrl": "",
+        "photoId": "dbBKeN1s8GY"
+    },
+    {
+        "assetKey": "frontend.images.destinations.pontocho",
+        "source": "/images/destinations/pontocho.webp",
+        "aliases": ["/images/destinations/pontocho.webp"],
+        "usages": [
+            "frontend/src/data/destination-atlas.ts",
+            "frontend/src/components/features/destinations/DestinationPage.tsx"
+        ],
+        "alt": "Lanterns above a narrow lane in Pontocho after dark",
+        "credit": "Stefan Szankowski",
+        "sourceUrl": "https://unsplash.com/photos/gUg3rDj81ck",
+        "photographerUrl": "",
+        "photoId": "gUg3rDj81ck"
+    },
+    {
+        "assetKey": "frontend.images.destinations.seine",
+        "source": "/images/destinations/seine.webp",
+        "aliases": ["/images/destinations/seine.webp"],
+        "usages": [
+            "frontend/src/data/destination-atlas.ts",
+            "frontend/src/components/features/destinations/DestinationPage.tsx"
+        ],
+        "alt": "Boats on the Seine with the Grand Palais beyond",
+        "credit": "Meina Yin",
+        "sourceUrl": "https://unsplash.com/photos/xwPoexRGsXA",
+        "photographerUrl": "",
+        "photoId": "xwPoexRGsXA"
+    },
+    {
+        "assetKey": "frontend.images.destinations.superkilen",
+        "source": "/images/destinations/superkilen.webp",
+        "aliases": ["/images/destinations/superkilen.webp"],
+        "usages": [
+            "frontend/src/data/destination-atlas.ts",
+            "frontend/src/components/features/destinations/DestinationPage.tsx"
+        ],
+        "alt": "A child on the graphic white lines of Superkilen park",
+        "credit": "Sam Poullain",
+        "sourceUrl": "https://unsplash.com/photos/TuAZPj1uaZs",
+        "photographerUrl": "",
+        "photoId": "TuAZPj1uaZs"
+    },
+    {
+        "assetKey": "frontend.images.roamflow.v1.bangkok.frame40",
+        "source": "/images/roamflow/v1-bangkok-frame40.webp",
+        "aliases": ["/images/roamflow/v1-bangkok-frame40.webp"],
+        "usages": ["frontend/src/data/roamflow-boards.ts"],
+        "alt": "v1 bangkok frame40 webp",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.roamflow.v1.bangkok.frame41",
+        "source": "/images/roamflow/v1-bangkok-frame41.webp",
+        "aliases": ["/images/roamflow/v1-bangkok-frame41.webp"],
+        "usages": ["frontend/src/data/roamflow-boards.ts"],
+        "alt": "v1 bangkok frame41 webp",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.roamflow.v1.bangkok.frame42",
+        "source": "/images/roamflow/v1-bangkok-frame42.webp",
+        "aliases": ["/images/roamflow/v1-bangkok-frame42.webp"],
+        "usages": ["frontend/src/data/roamflow-boards.ts"],
+        "alt": "v1 bangkok frame42 webp",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.roamflow.v1.bangkok.frame43",
+        "source": "/images/roamflow/v1-bangkok-frame43.webp",
+        "aliases": ["/images/roamflow/v1-bangkok-frame43.webp"],
+        "usages": ["frontend/src/data/roamflow-boards.ts"],
+        "alt": "v1 bangkok frame43 webp",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.roamflow.v1.bangkok.frame44",
+        "source": "/images/roamflow/v1-bangkok-frame44.webp",
+        "aliases": ["/images/roamflow/v1-bangkok-frame44.webp"],
+        "usages": ["frontend/src/data/roamflow-boards.ts"],
+        "alt": "v1 bangkok frame44 webp",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.roamflow.v1.bangkok.frame45",
+        "source": "/images/roamflow/v1-bangkok-frame45.webp",
+        "aliases": ["/images/roamflow/v1-bangkok-frame45.webp"],
+        "usages": ["frontend/src/data/roamflow-boards.ts"],
+        "alt": "v1 bangkok frame45 webp",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.roamflow.v1.paris.frame40",
+        "source": "/images/roamflow/v1-paris-frame40.webp",
+        "aliases": ["/images/roamflow/v1-paris-frame40.webp"],
+        "usages": ["frontend/src/data/roamflow-boards.ts"],
+        "alt": "v1 paris frame40 webp",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.roamflow.v1.paris.frame41",
+        "source": "/images/roamflow/v1-paris-frame41.webp",
+        "aliases": ["/images/roamflow/v1-paris-frame41.webp"],
+        "usages": ["frontend/src/data/roamflow-boards.ts"],
+        "alt": "v1 paris frame41 webp",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.roamflow.v1.paris.frame42",
+        "source": "/images/roamflow/v1-paris-frame42.webp",
+        "aliases": ["/images/roamflow/v1-paris-frame42.webp"],
+        "usages": ["frontend/src/data/roamflow-boards.ts"],
+        "alt": "v1 paris frame42 webp",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.roamflow.v1.paris.frame43",
+        "source": "/images/roamflow/v1-paris-frame43.webp",
+        "aliases": ["/images/roamflow/v1-paris-frame43.webp"],
+        "usages": ["frontend/src/data/roamflow-boards.ts"],
+        "alt": "v1 paris frame43 webp",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.roamflow.v1.paris.frame44",
+        "source": "/images/roamflow/v1-paris-frame44.webp",
+        "aliases": ["/images/roamflow/v1-paris-frame44.webp"],
+        "usages": ["frontend/src/data/roamflow-boards.ts"],
+        "alt": "v1 paris frame44 webp",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.roamflow.v1.paris.frame45",
+        "source": "/images/roamflow/v1-paris-frame45.webp",
+        "aliases": ["/images/roamflow/v1-paris-frame45.webp"],
+        "usages": ["frontend/src/data/roamflow-boards.ts"],
+        "alt": "v1 paris frame45 webp",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.roamflow.v1.tokyo.frame40",
+        "source": "/images/roamflow/v1-tokyo-frame40.webp",
+        "aliases": ["/images/roamflow/v1-tokyo-frame40.webp"],
+        "usages": ["frontend/src/data/roamflow-boards.ts"],
+        "alt": "v1 tokyo frame40 webp",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.roamflow.v1.tokyo.frame41",
+        "source": "/images/roamflow/v1-tokyo-frame41.webp",
+        "aliases": ["/images/roamflow/v1-tokyo-frame41.webp"],
+        "usages": ["frontend/src/data/roamflow-boards.ts"],
+        "alt": "v1 tokyo frame41 webp",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.roamflow.v1.tokyo.frame42",
+        "source": "/images/roamflow/v1-tokyo-frame42.webp",
+        "aliases": ["/images/roamflow/v1-tokyo-frame42.webp"],
+        "usages": ["frontend/src/data/roamflow-boards.ts"],
+        "alt": "v1 tokyo frame42 webp",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.roamflow.v1.tokyo.frame43",
+        "source": "/images/roamflow/v1-tokyo-frame43.webp",
+        "aliases": ["/images/roamflow/v1-tokyo-frame43.webp"],
+        "usages": ["frontend/src/data/roamflow-boards.ts"],
+        "alt": "v1 tokyo frame43 webp",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.roamflow.v1.tokyo.frame44",
+        "source": "/images/roamflow/v1-tokyo-frame44.webp",
+        "aliases": ["/images/roamflow/v1-tokyo-frame44.webp"],
+        "usages": ["frontend/src/data/roamflow-boards.ts"],
+        "alt": "v1 tokyo frame44 webp",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.roamflow.v1.tokyo.frame45",
+        "source": "/images/roamflow/v1-tokyo-frame45.webp",
+        "aliases": ["/images/roamflow/v1-tokyo-frame45.webp"],
+        "usages": ["frontend/src/data/roamflow-boards.ts"],
+        "alt": "v1 tokyo frame45 webp",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.welcome.blossoms",
+        "source": "/images/welcome/blossoms.jpg",
+        "aliases": ["/images/welcome/blossoms.jpg"],
+        "usages": ["frontend/src/components/features/welcome/WelcomeScreen.tsx"],
+        "alt": "blossoms jpg",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.welcome.flowers",
+        "source": "/images/welcome/flowers.jpg",
+        "aliases": ["/images/welcome/flowers.jpg"],
+        "usages": ["frontend/src/components/features/welcome/WelcomeScreen.tsx"],
+        "alt": "flowers jpg",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.images.welcome.water",
+        "source": "/images/welcome/water.jpg",
+        "aliases": ["/images/welcome/water.jpg"],
+        "usages": ["frontend/src/components/features/welcome/WelcomeScreen.tsx"],
+        "alt": "water jpg",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.006f963f65fe60c4",
+        "source": "https://unsplash.com/photos/0lG-wadk7pw/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/0lG-wadk7pw/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Rows of beach parasols on a sunny Italian shore",
+        "credit": "Chloe Frost-Smith",
+        "sourceUrl": "https://unsplash.com/photos/0lG-wadk7pw",
+        "photographerUrl": "",
+        "photoId": "0lG-wadk7pw"
+    },
+    {
+        "assetKey": "frontend.unsplash.00aa9be6ccf5f8b1",
+        "source": "https://images.unsplash.com/photo-1578469645742-46cae010e5d4?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "aliases": [
+            "https://images.unsplash.com/photo-1578469645742-46cae010e5d4?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
+        ],
+        "usages": ["frontend/src/data/discover-preview.ts"],
+        "alt": "Kiyomizu-dera pagoda above the trees and rooftops of Kyoto",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "https://images.unsplash.com/photo-1578469645742-46cae010e5d4?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.02b27364c3bddcec",
+        "source": "https://images.unsplash.com/photo-1559664135-17e2817d1cdb?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "aliases": [
+            "https://images.unsplash.com/photo-1559664135-17e2817d1cdb?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
+        ],
+        "usages": ["frontend/src/data/discover-preview.ts"],
+        "alt": "A Moroccan city at sunset",
+        "credit": "Miltiadis Fragkidis",
+        "sourceUrl": "https://unsplash.com/photos/-jXBD4xogXE?utm_source=roamboard&utm_medium=referral",
+        "photographerUrl": "https://unsplash.com/@_miltiadis_?utm_source=roamboard&utm_medium=referral",
+        "photoId": "-jXBD4xogXE"
+    },
+    {
+        "assetKey": "frontend.unsplash.06a5d645225f842c",
+        "source": "https://images.unsplash.com/photo-1612025344470-df9818c785a4?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "aliases": [
+            "https://images.unsplash.com/photo-1612025344470-df9818c785a4?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
+        ],
+        "usages": ["frontend/src/data/discover-preview.ts"],
+        "alt": "Surfers waiting in a blue sea at dusk",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "https://images.unsplash.com/photo-1612025344470-df9818c785a4?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.09cb52646eed940f",
+        "source": "https://unsplash.com/photos/1fXeZpfVw8A/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/1fXeZpfVw8A/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Spectacular alpine road leading to snow-capped mountains",
+        "credit": "Ahmet Yüksek",
+        "sourceUrl": "https://unsplash.com/photos/1fXeZpfVw8A",
+        "photographerUrl": "",
+        "photoId": "1fXeZpfVw8A"
+    },
+    {
+        "assetKey": "frontend.unsplash.0d1b2bf6f8c59c6f",
+        "source": "https://unsplash.com/photos/BO3UsWmpBoQ/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/BO3UsWmpBoQ/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Busy illuminated market street after dark",
+        "credit": "Mateusz Prowans",
+        "sourceUrl": "https://unsplash.com/photos/BO3UsWmpBoQ",
+        "photographerUrl": "",
+        "photoId": "BO3UsWmpBoQ"
+    },
+    {
+        "assetKey": "frontend.unsplash.1475bc4d0b670853",
+        "source": "https://unsplash.com/photos/s3dnyKSC6UA/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/s3dnyKSC6UA/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Open coastal highway with cars under dramatic clouds",
+        "credit": "Zoshua Colah",
+        "sourceUrl": "https://unsplash.com/photos/s3dnyKSC6UA",
+        "photographerUrl": "",
+        "photoId": "s3dnyKSC6UA"
+    },
+    {
+        "assetKey": "frontend.unsplash.1682d9969d7ef24c",
+        "source": "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=400&q=80",
+        "aliases": [
+            "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=400&q=80",
+            "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=300&q=80"
+        ],
+        "usages": ["frontend/src/data/mock-social.ts"],
+        "alt": "photo 1493976040374 85c8e12f0c0e",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.183ce167c753aa6b",
+        "source": "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=300&q=80",
+        "aliases": ["https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=300&q=80"],
+        "usages": ["frontend/src/data/mock-social.ts"],
+        "alt": "photo 1509316975850 ff9c5deb0cd9",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.19485e067b4dcdbc",
+        "source": "https://unsplash.com/photos/piG9Ye_oHrI/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/piG9Ye_oHrI/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Quiet lakeside cabin beneath misty mountains",
+        "credit": "Unsplash contributor",
+        "sourceUrl": "https://unsplash.com/photos/piG9Ye_oHrI",
+        "photographerUrl": "",
+        "photoId": "piG9Ye_oHrI"
+    },
+    {
+        "assetKey": "frontend.unsplash.19a2a065dc19aec3",
+        "source": "https://unsplash.com/photos/g86airJZ4Gs/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/g86airJZ4Gs/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Two warm coffee mugs shared across a table",
+        "credit": "Priscilla Du Preez",
+        "sourceUrl": "https://unsplash.com/photos/g86airJZ4Gs",
+        "photographerUrl": "",
+        "photoId": "g86airJZ4Gs"
+    },
+    {
+        "assetKey": "frontend.unsplash.1c753fdb75bc8a55",
+        "source": "https://images.unsplash.com/photo-1542051841857-5f90071e7989?auto=format&fit=crop&w=400&q=80",
+        "aliases": [
+            "https://images.unsplash.com/photo-1542051841857-5f90071e7989?auto=format&fit=crop&w=400&q=80",
+            "https://images.unsplash.com/photo-1542051841857-5f90071e7989?auto=format&fit=crop&w=300&q=80"
+        ],
+        "usages": ["frontend/src/data/mock-social.ts"],
+        "alt": "photo 1542051841857 5f90071e7989",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.1c8bf4a17631f166",
+        "source": "https://images.unsplash.com/photo-1698759087677-15695e656630?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "aliases": [
+            "https://images.unsplash.com/photo-1698759087677-15695e656630?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
+        ],
+        "usages": ["frontend/src/data/discover-preview.ts"],
+        "alt": "A camel rider crossing sunlit desert dunes",
+        "credit": "Shreyas Sane",
+        "sourceUrl": "https://unsplash.com/photos/HQaZKCDaax0?utm_source=roamboard&utm_medium=referral",
+        "photographerUrl": "https://unsplash.com/@shreyasdbz?utm_source=roamboard&utm_medium=referral",
+        "photoId": "HQaZKCDaax0"
+    },
+    {
+        "assetKey": "frontend.unsplash.1e0682702f03d917",
+        "source": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80",
+        "aliases": ["https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80"],
+        "usages": ["frontend/src/components/features/settings/ProfileAvatarEditor.tsx"],
+        "alt": "photo 1534528741775 53994a69daeb",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.20f3e52a23a6eac2",
+        "source": "https://images.unsplash.com/photo-1704129661536-3897d38550a0?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "aliases": [
+            "https://images.unsplash.com/photo-1704129661536-3897d38550a0?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
+        ],
+        "usages": ["frontend/src/data/discover-preview.ts"],
+        "alt": "A hiker disappearing into mountain mist",
+        "credit": "Martin Marek",
+        "sourceUrl": "https://unsplash.com/photos/b258hHqfGAY?utm_source=roamboard&utm_medium=referral",
+        "photographerUrl": "https://unsplash.com/@martys111?utm_source=roamboard&utm_medium=referral",
+        "photoId": "b258hHqfGAY"
+    },
+    {
+        "assetKey": "frontend.unsplash.2562d7f7fde71946",
+        "source": "https://images.unsplash.com/photo-1609971757431-439cf7b4141b?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "aliases": [
+            "https://images.unsplash.com/photo-1609971757431-439cf7b4141b?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
+        ],
+        "usages": ["frontend/src/data/discover-preview.ts"],
+        "alt": "The Eiffel Tower seen from a Parisian street",
+        "credit": "Diogo Fagundes",
+        "sourceUrl": "https://unsplash.com/photos/dbBKeN1s8GY?utm_source=roamboard&utm_medium=referral",
+        "photographerUrl": "",
+        "photoId": "dbBKeN1s8GY"
+    },
+    {
+        "assetKey": "frontend.unsplash.26e5387122aacb78",
+        "source": "https://images.unsplash.com/photo-1550340499-a6c60fc8287c?auto=format&fit=crop&w=400&q=80",
+        "aliases": ["https://images.unsplash.com/photo-1550340499-a6c60fc8287c?auto=format&fit=crop&w=400&q=80"],
+        "usages": ["frontend/src/data/mock-social.ts"],
+        "alt": "photo 1550340499 a6c60fc8287c",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.2970e3fb0a72cedf",
+        "source": "https://images.unsplash.com/photo-1598842582612-ea95bca731f9?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "aliases": [
+            "https://images.unsplash.com/photo-1598842582612-ea95bca731f9?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
+        ],
+        "usages": ["frontend/src/data/discover-preview.ts"],
+        "alt": "Friends silhouetted against an orange sunset",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "https://images.unsplash.com/photo-1598842582612-ea95bca731f9?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.2bcd77572802fc67",
+        "source": "https://unsplash.com/photos/nTMHlJ7CgLo/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/nTMHlJ7CgLo/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Candlelit table set for an elegant dinner",
+        "credit": "Siednji Leon",
+        "sourceUrl": "https://unsplash.com/photos/nTMHlJ7CgLo",
+        "photographerUrl": "",
+        "photoId": "nTMHlJ7CgLo"
+    },
+    {
+        "assetKey": "frontend.unsplash.2c1a66675d280a15",
+        "source": "https://images.unsplash.com/photo-1542372147193-a7aca54189cd?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "aliases": [
+            "https://images.unsplash.com/photo-1542372147193-a7aca54189cd?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
+        ],
+        "usages": ["frontend/src/data/discover-preview.ts"],
+        "alt": "Coffee, a croissant and a book at a quiet café",
+        "credit": "Rizky Subagja",
+        "sourceUrl": "https://unsplash.com/photos/1k7TnX5GAww?utm_source=roamboard&utm_medium=referral",
+        "photographerUrl": "",
+        "photoId": "1k7TnX5GAww"
+    },
+    {
+        "assetKey": "frontend.unsplash.2c4d056fa4ed2218",
+        "source": "https://unsplash.com/photos/7z_TmCWC5C0/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/7z_TmCWC5C0/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Neon-lit Hong Kong street at night",
+        "credit": "Chi Hung Wong",
+        "sourceUrl": "https://unsplash.com/photos/7z_TmCWC5C0",
+        "photographerUrl": "",
+        "photoId": "7z_TmCWC5C0"
+    },
+    {
+        "assetKey": "frontend.unsplash.3179f402beafeaac",
+        "source": "https://unsplash.com/photos/Wy1v96cp0mg/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/Wy1v96cp0mg/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "A winding road through a green mountain forest",
+        "credit": "jason hu",
+        "sourceUrl": "https://unsplash.com/photos/Wy1v96cp0mg",
+        "photographerUrl": "",
+        "photoId": "Wy1v96cp0mg"
+    },
+    {
+        "assetKey": "frontend.unsplash.32389d4bc21b0bce",
+        "source": "https://unsplash.com/photos/Txl-GLHnKYg/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/Txl-GLHnKYg/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Modern and historic architectural facades in a city",
+        "credit": "Alex Lvrs",
+        "sourceUrl": "https://unsplash.com/photos/Txl-GLHnKYg",
+        "photographerUrl": "",
+        "photoId": "Txl-GLHnKYg"
+    },
+    {
+        "assetKey": "frontend.unsplash.32dfc058cb81cbea",
+        "source": "https://images.unsplash.com/photo-1575573330964-db3dad170190?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "aliases": [
+            "https://images.unsplash.com/photo-1575573330964-db3dad170190?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
+        ],
+        "usages": ["frontend/src/data/discover-preview.ts"],
+        "alt": "A traveller between the gates of Lempuyang Temple",
+        "credit": "Khamkéo",
+        "sourceUrl": "https://unsplash.com/photos/oVvs_K4Bja4?utm_source=roamboard&utm_medium=referral",
+        "photographerUrl": "https://unsplash.com/@mahkeo?utm_source=roamboard&utm_medium=referral",
+        "photoId": "oVvs_K4Bja4"
+    },
+    {
+        "assetKey": "frontend.unsplash.346609ed91957e29",
+        "source": "https://unsplash.com/photos/CUA2U4eT-Ys/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/CUA2U4eT-Ys/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Warm-lit cabin nestled in a snowy forest",
+        "credit": "Greta Falk",
+        "sourceUrl": "https://unsplash.com/photos/CUA2U4eT-Ys",
+        "photographerUrl": "",
+        "photoId": "CUA2U4eT-Ys"
+    },
+    {
+        "assetKey": "frontend.unsplash.3796701050527694",
+        "source": "https://images.unsplash.com/photo-1757916797439-f001c3b20716?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "aliases": [
+            "https://images.unsplash.com/photo-1757916797439-f001c3b20716?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
+        ],
+        "usages": ["frontend/src/data/discover-preview.ts"],
+        "alt": "Sunbeams falling across an empty forest road",
+        "credit": "Pascal Debrunner",
+        "sourceUrl": "https://unsplash.com/photos/MTJkXs1DfCw?utm_source=roamboard&utm_medium=referral",
+        "photographerUrl": "",
+        "photoId": "MTJkXs1DfCw"
+    },
+    {
+        "assetKey": "frontend.unsplash.380e11769c88c7e2",
+        "source": "https://unsplash.com/photos/tjrSyOPax4s/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/tjrSyOPax4s/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Elephant crossing a dirt road in Kruger National Park",
+        "credit": "Mario Scheibl",
+        "sourceUrl": "https://unsplash.com/photos/tjrSyOPax4s",
+        "photographerUrl": "",
+        "photoId": "tjrSyOPax4s"
+    },
+    {
+        "assetKey": "frontend.unsplash.39ce2a6bfb993c6c",
+        "source": "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=400&q=80",
+        "aliases": [
+            "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=400&q=80",
+            "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=300&q=80"
+        ],
+        "usages": ["frontend/src/data/mock-social.ts"],
+        "alt": "photo 1503899036084 c55cdd92da26",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.39d28e3a07c9c0ca",
+        "source": "https://unsplash.com/photos/qptqseaThDM/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/qptqseaThDM/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Expansive cloud-covered mountain peaks",
+        "credit": "Kyle Loftus",
+        "sourceUrl": "https://unsplash.com/photos/qptqseaThDM",
+        "photographerUrl": "",
+        "photoId": "qptqseaThDM"
+    },
+    {
+        "assetKey": "frontend.unsplash.3fb382c06baa35be",
+        "source": "https://images.unsplash.com/photo-1734545503371-9a45282044d8?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "aliases": [
+            "https://images.unsplash.com/photo-1734545503371-9a45282044d8?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
+        ],
+        "usages": ["frontend/src/data/discover-preview.ts"],
+        "alt": "A hiker under a sky filled with stars",
+        "credit": "Filip Kvasnak",
+        "sourceUrl": "https://unsplash.com/photos/LUrr8X4RDw4?utm_source=roamboard&utm_medium=referral",
+        "photographerUrl": "https://unsplash.com/@filipkvasnak?utm_source=roamboard&utm_medium=referral",
+        "photoId": "LUrr8X4RDw4"
+    },
+    {
+        "assetKey": "frontend.unsplash.404afb9d1ff39c80",
+        "source": "https://images.unsplash.com/photo-1601823984263-b87b59798b70?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "aliases": [
+            "https://images.unsplash.com/photo-1601823984263-b87b59798b70?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
+        ],
+        "usages": ["frontend/src/data/discover-preview.ts"],
+        "alt": "A red torii gate along a forest path in Hakone",
+        "credit": "Syuhei Inoue",
+        "sourceUrl": "https://unsplash.com/photos/kaoHI0iHJPM?utm_source=roamboard&utm_medium=referral",
+        "photographerUrl": "https://unsplash.com/@_______life_?utm_source=roamboard&utm_medium=referral",
+        "photoId": "kaoHI0iHJPM"
+    },
+    {
+        "assetKey": "frontend.unsplash.41db7fb4311d2054",
+        "source": "https://images.unsplash.com/photo-1769786186317-272d062fcf93?auto=format&fit=crop&w=400&q=80",
+        "aliases": ["https://images.unsplash.com/photo-1769786186317-272d062fcf93?auto=format&fit=crop&w=400&q=80"],
+        "usages": [
+            "frontend/src/components/features/settings/ProfileAvatarEditor.tsx",
+            "frontend/src/data/mock-social.ts"
+        ],
+        "alt": "photo 1769786186317 272d062fcf93",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.45c8f9919c45f695",
+        "source": "https://unsplash.com/photos/lLlcEFXeF28/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/lLlcEFXeF28/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Breakfast pastry and coffee on a tabletop",
+        "credit": "Jonathan Chng",
+        "sourceUrl": "https://unsplash.com/photos/lLlcEFXeF28",
+        "photographerUrl": "",
+        "photoId": "lLlcEFXeF28"
+    },
+    {
+        "assetKey": "frontend.unsplash.4659f8cd5f5399bf",
+        "source": "https://unsplash.com/photos/4Y_f_LvAu3U/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/4Y_f_LvAu3U/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "City skyline glowing at golden hour",
+        "credit": "Jeff Brown",
+        "sourceUrl": "https://unsplash.com/photos/4Y_f_LvAu3U",
+        "photographerUrl": "",
+        "photoId": "4Y_f_LvAu3U"
+    },
+    {
+        "assetKey": "frontend.unsplash.4838eddb0448dd8b",
+        "source": "https://unsplash.com/photos/OofG_09hRmA/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/OofG_09hRmA/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Winding mountain road through green rolling hills",
+        "credit": "Robert Nagy",
+        "sourceUrl": "https://unsplash.com/photos/OofG_09hRmA",
+        "photographerUrl": "",
+        "photoId": "OofG_09hRmA"
+    },
+    {
+        "assetKey": "frontend.unsplash.4b9afeaddd6f486a",
+        "source": "https://images.unsplash.com/photo-1528181304800-259b08848526?auto=format&fit=crop&w=400&q=80",
+        "aliases": [
+            "https://images.unsplash.com/photo-1528181304800-259b08848526?auto=format&fit=crop&w=400&q=80",
+            "https://images.unsplash.com/photo-1528181304800-259b08848526?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
+        ],
+        "usages": ["frontend/src/data/discover-preview.ts", "frontend/src/data/mock-social.ts"],
+        "alt": "Ornate temples and statues in northern Thailand",
+        "credit": "Mathew Schwartz",
+        "sourceUrl": "https://unsplash.com/photos/gsllxmVO4HQ?utm_source=roamboard&utm_medium=referral",
+        "photographerUrl": "https://unsplash.com/@cadop?utm_source=roamboard&utm_medium=referral",
+        "photoId": "gsllxmVO4HQ"
+    },
+    {
+        "assetKey": "frontend.unsplash.4c23ca0ab61443cd",
+        "source": "https://images.unsplash.com/photo-1735845735730-88451aaea9f1?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "aliases": [
+            "https://images.unsplash.com/photo-1735845735730-88451aaea9f1?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
+        ],
+        "usages": ["frontend/src/data/discover-preview.ts"],
+        "alt": "Friends watching green fireworks from a hillside",
+        "credit": "Jahanzeb Ahsan",
+        "sourceUrl": "https://unsplash.com/photos/wYIPMppRSr0?utm_source=roamboard&utm_medium=referral",
+        "photographerUrl": "https://unsplash.com/@jahan_photobox?utm_source=roamboard&utm_medium=referral",
+        "photoId": "wYIPMppRSr0"
+    },
+    {
+        "assetKey": "frontend.unsplash.4c9518b691c46948",
+        "source": "https://images.unsplash.com/photo-1536098561742-ca998e48cbcc?auto=format&fit=crop&w=400&q=80",
+        "aliases": ["https://images.unsplash.com/photo-1536098561742-ca998e48cbcc?auto=format&fit=crop&w=400&q=80"],
+        "usages": ["frontend/src/data/mock-social.ts"],
+        "alt": "photo 1536098561742 ca998e48cbcc",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.4e8e202f374c9982",
+        "source": "https://images.unsplash.com/photo-1512753360435-329c4535a9a7?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "aliases": [
+            "https://images.unsplash.com/photo-1512753360435-329c4535a9a7?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
+        ],
+        "usages": ["frontend/src/data/discover-preview.ts"],
+        "alt": "The warm evening light over Málaga",
+        "credit": "Willian Justen de Vasconcellos",
+        "sourceUrl": "https://unsplash.com/photos/7vKP5BAm8wg?utm_source=roamboard&utm_medium=referral",
+        "photographerUrl": "https://unsplash.com/@willianjusten?utm_source=roamboard&utm_medium=referral",
+        "photoId": "7vKP5BAm8wg"
+    },
+    {
+        "assetKey": "frontend.unsplash.531500bcdd96de9e",
+        "source": "https://unsplash.com/photos/xCP0tbQBPXU/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/xCP0tbQBPXU/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Blue tropical ocean rolling onto a sandy shore",
+        "credit": "Unsplash contributor",
+        "sourceUrl": "https://unsplash.com/photos/xCP0tbQBPXU",
+        "photographerUrl": "",
+        "photoId": "xCP0tbQBPXU"
+    },
+    {
+        "assetKey": "frontend.unsplash.547d3ac98a3c7f7e",
+        "source": "https://images.unsplash.com/photo-1763867641433-e7d2c0f62361?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "aliases": [
+            "https://images.unsplash.com/photo-1763867641433-e7d2c0f62361?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
+        ],
+        "usages": ["frontend/src/data/discover-preview.ts"],
+        "alt": "Colourful dishes shared around a restaurant table",
+        "credit": "Neon Wang",
+        "sourceUrl": "https://unsplash.com/photos/rlClfxPYxQM?utm_source=roamboard&utm_medium=referral",
+        "photographerUrl": "https://unsplash.com/@neonwangphotography?utm_source=roamboard&utm_medium=referral",
+        "photoId": "rlClfxPYxQM"
+    },
+    {
+        "assetKey": "frontend.unsplash.54ae7e560feb174c",
+        "source": "https://unsplash.com/photos/7Gd07IjiO7s/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/7Gd07IjiO7s/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Infinity pool at a luxurious tropical resort at sunset",
+        "credit": "Aalo Lens",
+        "sourceUrl": "https://unsplash.com/photos/7Gd07IjiO7s",
+        "photographerUrl": "",
+        "photoId": "7Gd07IjiO7s"
+    },
+    {
+        "assetKey": "frontend.unsplash.56d3c4f20ec6ef5c",
+        "source": "https://unsplash.com/photos/Cg9oyiQ29dE/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/Cg9oyiQ29dE/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Hikers crossing a misty mountain ridge",
+        "credit": "Tim Oun",
+        "sourceUrl": "https://unsplash.com/photos/Cg9oyiQ29dE",
+        "photographerUrl": "",
+        "photoId": "Cg9oyiQ29dE"
+    },
+    {
+        "assetKey": "frontend.unsplash.576010fe5228e4de",
+        "source": "https://unsplash.com/photos/881CTPcaGXg/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/881CTPcaGXg/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Crowded Asian street market",
+        "credit": "Sergio Kian",
+        "sourceUrl": "https://unsplash.com/photos/881CTPcaGXg",
+        "photographerUrl": "",
+        "photoId": "881CTPcaGXg"
+    },
+    {
+        "assetKey": "frontend.unsplash.5ab37360c57936bb",
+        "source": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=300&q=80",
+        "aliases": ["https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=300&q=80"],
+        "usages": ["frontend/src/data/mock-social.ts"],
+        "alt": "photo 1464822759023 fed622ff2c3b",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.5caf702bdc7a999b",
+        "source": "https://unsplash.com/photos/nM7FedNjFKM/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/nM7FedNjFKM/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "People enjoying a sunny day by the water",
+        "credit": "Rohan Gangopadhyay",
+        "sourceUrl": "https://unsplash.com/photos/nM7FedNjFKM",
+        "photographerUrl": "",
+        "photoId": "nM7FedNjFKM"
+    },
+    {
+        "assetKey": "frontend.unsplash.5e72887d0d3f7f08",
+        "source": "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=400&q=80",
+        "aliases": ["https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=400&q=80"],
+        "usages": ["frontend/src/data/mock-social.ts"],
+        "alt": "photo 1509042239860 f550ce710b93",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.61df19d8fd13a97b",
+        "source": "https://images.unsplash.com/photo-1772331250367-ebfca0ae9f75?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "aliases": [
+            "https://images.unsplash.com/photo-1772331250367-ebfca0ae9f75?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
+        ],
+        "usages": ["frontend/src/data/discover-preview.ts"],
+        "alt": "A pine-framed path beside the Adriatic Sea",
+        "credit": "Riley Crawford",
+        "sourceUrl": "https://unsplash.com/photos/KG3UUwvhpAs?utm_source=roamboard&utm_medium=referral",
+        "photographerUrl": "https://unsplash.com/@ricrawfo?utm_source=roamboard&utm_medium=referral",
+        "photoId": "KG3UUwvhpAs"
+    },
+    {
+        "assetKey": "frontend.unsplash.61f3293fb7023724",
+        "source": "https://images.unsplash.com/photo-1551740994-7af69385a217?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "aliases": [
+            "https://images.unsplash.com/photo-1551740994-7af69385a217?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
+        ],
+        "usages": ["frontend/src/data/discover-preview.ts"],
+        "alt": "A traveller on a rocky summit beneath the evening sky",
+        "credit": "David Billings",
+        "sourceUrl": "https://unsplash.com/photos/__I-gX-cnd8?utm_source=roamboard&utm_medium=referral",
+        "photographerUrl": "https://unsplash.com/@dav_billings?utm_source=roamboard&utm_medium=referral",
+        "photoId": "__I-gX-cnd8"
+    },
+    {
+        "assetKey": "frontend.unsplash.62168c4542077b9b",
+        "source": "https://unsplash.com/photos/FVHNmbXYhYs/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/FVHNmbXYhYs/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Photographer adjusting tripod by the coast at sunset",
+        "credit": "Garrett Patz",
+        "sourceUrl": "https://unsplash.com/photos/FVHNmbXYhYs",
+        "photographerUrl": "",
+        "photoId": "FVHNmbXYhYs"
+    },
+    {
+        "assetKey": "frontend.unsplash.6231787db47b8bbd",
+        "source": "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&w=400&q=80",
+        "aliases": ["https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&w=400&q=80"],
+        "usages": ["frontend/src/data/mock-social.ts"],
+        "alt": "photo 1499856871958 5b9627545d1a",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.65e3de1264b6fa5b",
+        "source": "https://images.unsplash.com/photo-1563492065599-3520f775eeed?auto=format&fit=crop&w=400&q=80",
+        "aliases": ["https://images.unsplash.com/photo-1563492065599-3520f775eeed?auto=format&fit=crop&w=400&q=80"],
+        "usages": ["frontend/src/data/mock-social.ts"],
+        "alt": "photo 1563492065599 3520f775eeed",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.6a096a4891fe44c5",
+        "source": "https://unsplash.com/photos/TfZHT-lTbL4/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/TfZHT-lTbL4/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Ancient Roman columns and ruins",
+        "credit": "Ludovic Delot",
+        "sourceUrl": "https://unsplash.com/photos/TfZHT-lTbL4",
+        "photographerUrl": "",
+        "photoId": "TfZHT-lTbL4"
+    },
+    {
+        "assetKey": "frontend.unsplash.6ea3ea9568bcdd56",
+        "source": "https://unsplash.com/photos/wxqzNzzvNEU/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/wxqzNzzvNEU/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Remote cabin tucked away in a winter forest",
+        "credit": "Natalie Su",
+        "sourceUrl": "https://unsplash.com/photos/wxqzNzzvNEU",
+        "photographerUrl": "",
+        "photoId": "wxqzNzzvNEU"
+    },
+    {
+        "assetKey": "frontend.unsplash.6ee43a65bb6b0e07",
+        "source": "https://images.unsplash.com/photo-1519451241324-20b4ea2c4220?auto=format&fit=crop&w=400&q=80",
+        "aliases": ["https://images.unsplash.com/photo-1519451241324-20b4ea2c4220?auto=format&fit=crop&w=400&q=80"],
+        "usages": ["frontend/src/data/mock-social.ts"],
+        "alt": "photo 1519451241324 20b4ea2c4220",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.6f388dc88faf20d8",
+        "source": "https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?auto=format&fit=crop&w=300&q=80",
+        "aliases": ["https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?auto=format&fit=crop&w=300&q=80"],
+        "usages": ["frontend/src/data/mock-social.ts"],
+        "alt": "photo 1570077188670 e3a8d69ac5ff",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.712eea1c9fc42960",
+        "source": "https://unsplash.com/photos/qy6sTSqbcP0/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/qy6sTSqbcP0/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Boats in a secluded island harbor",
+        "credit": "Tim Oun",
+        "sourceUrl": "https://unsplash.com/photos/qy6sTSqbcP0",
+        "photographerUrl": "",
+        "photoId": "qy6sTSqbcP0"
+    },
+    {
+        "assetKey": "frontend.unsplash.762650babd59b726",
+        "source": "https://images.unsplash.com/photo-1640263408299-8972236d0590?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "aliases": [
+            "https://images.unsplash.com/photo-1640263408299-8972236d0590?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
+        ],
+        "usages": ["frontend/src/data/discover-preview.ts"],
+        "alt": "The Koutoubia mosque in Marrakech",
+        "credit": "Mehdi El marouazi",
+        "sourceUrl": "https://unsplash.com/photos/OZXMG7bQ-Kc?utm_source=roamboard&utm_medium=referral",
+        "photographerUrl": "",
+        "photoId": "OZXMG7bQ-Kc"
+    },
+    {
+        "assetKey": "frontend.unsplash.762f2a8b09f0799b",
+        "source": "https://unsplash.com/photos/COuz8XUXDc8/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/COuz8XUXDc8/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Quiet tropical shore with palm trees and clear sea",
+        "credit": "Hugh Whyte",
+        "sourceUrl": "https://unsplash.com/photos/COuz8XUXDc8",
+        "photographerUrl": "",
+        "photoId": "COuz8XUXDc8"
+    },
+    {
+        "assetKey": "frontend.unsplash.7ad46cd064833862",
+        "source": "https://unsplash.com/photos/ddZYOtZUnBk/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/ddZYOtZUnBk/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Freshly prepared pasta served on a white plate",
+        "credit": "Eaters Collective",
+        "sourceUrl": "https://unsplash.com/photos/ddZYOtZUnBk",
+        "photographerUrl": "",
+        "photoId": "ddZYOtZUnBk"
+    },
+    {
+        "assetKey": "frontend.unsplash.7d7f3019397a50cc",
+        "source": "https://unsplash.com/photos/xXkBBnxgshQ/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/xXkBBnxgshQ/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Clear alpine lake framed by forest and rocky cliffs",
+        "credit": "Erik Fabian",
+        "sourceUrl": "https://unsplash.com/photos/xXkBBnxgshQ",
+        "photographerUrl": "",
+        "photoId": "xXkBBnxgshQ"
+    },
+    {
+        "assetKey": "frontend.unsplash.7df7ef41053db653",
+        "source": "https://unsplash.com/photos/I_XRy-z8m8k/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/I_XRy-z8m8k/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Secluded mountain lake and forest",
+        "credit": "Rafael Peier",
+        "sourceUrl": "https://unsplash.com/photos/I_XRy-z8m8k",
+        "photographerUrl": "",
+        "photoId": "I_XRy-z8m8k"
+    },
+    {
+        "assetKey": "frontend.unsplash.80bab3e2def7cb43",
+        "source": "https://unsplash.com/photos/PdSbBEN0zW4/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/PdSbBEN0zW4/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Traditional Japanese temple in Kyoto",
+        "credit": "Joris Beugels",
+        "sourceUrl": "https://unsplash.com/photos/PdSbBEN0zW4",
+        "photographerUrl": "",
+        "photoId": "PdSbBEN0zW4"
+    },
+    {
+        "assetKey": "frontend.unsplash.843eb666abba6b2e",
+        "source": "https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?auto=format&fit=crop&w=400&q=80",
+        "aliases": ["https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?auto=format&fit=crop&w=400&q=80"],
+        "usages": ["frontend/src/data/mock-social.ts"],
+        "alt": "photo 1511739001486 6bfe10ce785f",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.87702fad7958d19c",
+        "source": "https://images.unsplash.com/photo-1512553353614-82a7370096dc?auto=format&fit=crop&w=400&q=80",
+        "aliases": ["https://images.unsplash.com/photo-1512553353614-82a7370096dc?auto=format&fit=crop&w=400&q=80"],
+        "usages": ["frontend/src/data/mock-social.ts"],
+        "alt": "photo 1512553353614 82a7370096dc",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.88b20a03ea301466",
+        "source": "https://images.unsplash.com/photo-1599033769063-fcd3ef816810?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "aliases": [
+            "https://images.unsplash.com/photo-1599033769063-fcd3ef816810?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
+        ],
+        "usages": ["frontend/src/data/discover-preview.ts"],
+        "alt": "The ornate eaves of Gyeongbokgung Palace",
+        "credit": "Alexandre Trouvé",
+        "sourceUrl": "https://unsplash.com/photos/Via0Hy2rYIc?utm_source=roamboard&utm_medium=referral",
+        "photographerUrl": "https://unsplash.com/@alexandretrouve?utm_source=roamboard&utm_medium=referral",
+        "photoId": "Via0Hy2rYIc"
+    },
+    {
+        "assetKey": "frontend.unsplash.8af634962a6d50bc",
+        "source": "https://images.unsplash.com/photo-1538688525198-9b88f6f53126?auto=format&fit=crop&w=400&q=80",
+        "aliases": ["https://images.unsplash.com/photo-1538688525198-9b88f6f53126?auto=format&fit=crop&w=400&q=80"],
+        "usages": ["frontend/src/data/mock-social.ts"],
+        "alt": "photo 1538688525198 9b88f6f53126",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.8e4805e5126c3924",
+        "source": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80",
+        "aliases": ["https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80"],
+        "usages": ["frontend/src/components/features/settings/ProfileAvatarEditor.tsx"],
+        "alt": "photo 1507003211169 0a1dd7228f2d",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.8e7291bd4a66c4b3",
+        "source": "https://images.unsplash.com/photo-1536152470836-b943b246224c?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "aliases": [
+            "https://images.unsplash.com/photo-1536152470836-b943b246224c?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
+        ],
+        "usages": ["frontend/src/data/discover-preview.ts"],
+        "alt": "A moonlit mountain beyond a forest in Bali",
+        "credit": "Aron Visuals",
+        "sourceUrl": "https://unsplash.com/photos/LSFuPFE9vKE?utm_source=roamboard&utm_medium=referral",
+        "photographerUrl": "https://unsplash.com/@aronvisuals?utm_source=roamboard&utm_medium=referral",
+        "photoId": "LSFuPFE9vKE"
+    },
+    {
+        "assetKey": "frontend.unsplash.90b56882e15fd567",
+        "source": "https://images.unsplash.com/photo-1777236912305-19854c4f0592?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "aliases": [
+            "https://images.unsplash.com/photo-1777236912305-19854c4f0592?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
+        ],
+        "usages": ["frontend/src/data/discover-preview.ts"],
+        "alt": "A person watching the sunset from the ocean shore",
+        "credit": "Liosha Shyp",
+        "sourceUrl": "https://unsplash.com/photos/6tw06nqC5M0?utm_source=roamboard&utm_medium=referral",
+        "photographerUrl": "https://unsplash.com/@liosha_shyp?utm_source=roamboard&utm_medium=referral",
+        "photoId": "6tw06nqC5M0"
+    },
+    {
+        "assetKey": "frontend.unsplash.91556fa6dd8a055b",
+        "source": "https://unsplash.com/photos/XvgtPNWCQcw/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/XvgtPNWCQcw/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Tent glowing under the stars at night",
+        "credit": "Pablo García Saldaña",
+        "sourceUrl": "https://unsplash.com/photos/XvgtPNWCQcw",
+        "photographerUrl": "",
+        "photoId": "XvgtPNWCQcw"
+    },
+    {
+        "assetKey": "frontend.unsplash.959e8a3f7e6d3a64",
+        "source": "https://images.unsplash.com/photo-1597056161974-458b172dac56?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "aliases": [
+            "https://images.unsplash.com/photo-1597056161974-458b172dac56?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
+        ],
+        "usages": ["frontend/src/data/discover-preview.ts"],
+        "alt": "Friends beside a forest overlooking the sunset",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "https://images.unsplash.com/photo-1597056161974-458b172dac56?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.9a2e4c3d730c1c81",
+        "source": "https://images.unsplash.com/photo-1516483638261-f4dbaf036963?auto=format&fit=crop&w=300&q=80",
+        "aliases": ["https://images.unsplash.com/photo-1516483638261-f4dbaf036963?auto=format&fit=crop&w=300&q=80"],
+        "usages": ["frontend/src/data/mock-social.ts"],
+        "alt": "photo 1516483638261 f4dbaf036963",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.a1630a73793b3a28",
+        "source": "https://images.unsplash.com/photo-1509299349698-dd22323b5963?auto=format&fit=crop&w=400&q=80",
+        "aliases": ["https://images.unsplash.com/photo-1509299349698-dd22323b5963?auto=format&fit=crop&w=400&q=80"],
+        "usages": ["frontend/src/data/mock-social.ts"],
+        "alt": "photo 1509299349698 dd22323b5963",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.a311f0fde0295dad",
+        "source": "https://images.unsplash.com/photo-1517411032315-54ef2cb783bb?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "aliases": [
+            "https://images.unsplash.com/photo-1517411032315-54ef2cb783bb?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
+        ],
+        "usages": ["frontend/src/data/discover-preview.ts"],
+        "alt": "Green northern lights above a quiet shoreline",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "https://images.unsplash.com/photo-1517411032315-54ef2cb783bb?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.a5647514c52e0cab",
+        "source": "https://images.unsplash.com/photo-1572181330858-13fd026f94a9?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "aliases": [
+            "https://images.unsplash.com/photo-1572181330858-13fd026f94a9?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
+        ],
+        "usages": ["frontend/src/data/discover-preview.ts"],
+        "alt": "The domed Congress building in Buenos Aires",
+        "credit": "Manuel Cortina",
+        "sourceUrl": "https://unsplash.com/photos/Atc4GkwqifA?utm_source=roamboard&utm_medium=referral",
+        "photographerUrl": "https://unsplash.com/@mct1997?utm_source=roamboard&utm_medium=referral",
+        "photoId": "Atc4GkwqifA"
+    },
+    {
+        "assetKey": "frontend.unsplash.a8e4b61fb56ec7d3",
+        "source": "https://images.unsplash.com/photo-1705937565504-212dd419fda3?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "aliases": [
+            "https://images.unsplash.com/photo-1705937565504-212dd419fda3?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
+        ],
+        "usages": ["frontend/src/data/discover-preview.ts"],
+        "alt": "Christ the Redeemer overlooking Rio de Janeiro",
+        "credit": "Daniel de Paola",
+        "sourceUrl": "https://unsplash.com/photos/btMkMSJQxMc?utm_source=roamboard&utm_medium=referral",
+        "photographerUrl": "https://unsplash.com/@dpaola?utm_source=roamboard&utm_medium=referral",
+        "photoId": "btMkMSJQxMc"
+    },
+    {
+        "assetKey": "frontend.unsplash.a9da6b1dfeeb4338",
+        "source": "https://unsplash.com/photos/nPBdPEpL1Ts/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/nPBdPEpL1Ts/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Palm trees beside turquoise tropical water",
+        "credit": "Michelangelo Azzariti",
+        "sourceUrl": "https://unsplash.com/photos/nPBdPEpL1Ts",
+        "photographerUrl": "",
+        "photoId": "nPBdPEpL1Ts"
+    },
+    {
+        "assetKey": "frontend.unsplash.abf7e6da4e88742f",
+        "source": "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=400&q=80",
+        "aliases": ["https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=400&q=80"],
+        "usages": ["frontend/src/components/features/settings/ProfileAvatarEditor.tsx"],
+        "alt": "photo 1517841905240 472988babdf9",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.af070e763cb740c6",
+        "source": "https://unsplash.com/photos/7gruYeIsDD0/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/7gruYeIsDD0/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Minimalist art gallery with paintings and displays",
+        "credit": "Cansu Sarp",
+        "sourceUrl": "https://unsplash.com/photos/7gruYeIsDD0",
+        "photographerUrl": "",
+        "photoId": "7gruYeIsDD0"
+    },
+    {
+        "assetKey": "frontend.unsplash.b00a5a12b1e0519d",
+        "source": "https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=300&q=80",
+        "aliases": ["https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=300&q=80"],
+        "usages": ["frontend/src/data/mock-social.ts"],
+        "alt": "photo 1533105079780 92b9be482077",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.b065c01728ef8e04",
+        "source": "https://images.unsplash.com/photo-1789014538596-16dc5e095fef?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "aliases": [
+            "https://images.unsplash.com/photo-1789014538596-16dc5e095fef?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
+        ],
+        "usages": ["frontend/src/data/discover-preview.ts"],
+        "alt": "A surfer riding golden waves in the evening light",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "https://images.unsplash.com/photo-1789014538596-16dc5e095fef?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.b5ce6529ed7492d4",
+        "source": "https://images.unsplash.com/photo-1521033719794-41049d18b8d4?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "aliases": [
+            "https://images.unsplash.com/photo-1521033719794-41049d18b8d4?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
+        ],
+        "usages": ["frontend/src/data/discover-preview.ts"],
+        "alt": "Two people embracing against an orange sky",
+        "credit": "Abdul Gani M",
+        "sourceUrl": "https://unsplash.com/photos/DJ_kZaITX78?utm_source=roamboard&utm_medium=referral",
+        "photographerUrl": "https://unsplash.com/@abdu27?utm_source=roamboard&utm_medium=referral",
+        "photoId": "DJ_kZaITX78"
+    },
+    {
+        "assetKey": "frontend.unsplash.bb3f01d3bdc6eb40",
+        "source": "https://images.unsplash.com/photo-1520175480921-4edfa2983e0f?auto=format&fit=crop&w=300&q=80",
+        "aliases": ["https://images.unsplash.com/photo-1520175480921-4edfa2983e0f?auto=format&fit=crop&w=300&q=80"],
+        "usages": ["frontend/src/data/mock-social.ts"],
+        "alt": "photo 1520175480921 4edfa2983e0f",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.c295709664de669f",
+        "source": "https://images.unsplash.com/photo-1555993539-1732b0258235?auto=format&fit=crop&w=300&q=80",
+        "aliases": ["https://images.unsplash.com/photo-1555993539-1732b0258235?auto=format&fit=crop&w=300&q=80"],
+        "usages": ["frontend/src/data/mock-social.ts"],
+        "alt": "photo 1555993539 1732b0258235",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.d34bf38c8c60e9a4",
+        "source": "https://unsplash.com/photos/WIIsxb2J6lY/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/WIIsxb2J6lY/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Illuminated paper lantern at a festival",
+        "credit": "Jessica Kantak Bailey",
+        "sourceUrl": "https://unsplash.com/photos/WIIsxb2J6lY",
+        "photographerUrl": "",
+        "photoId": "WIIsxb2J6lY"
+    },
+    {
+        "assetKey": "frontend.unsplash.d492b9ab9906412d",
+        "source": "https://images.unsplash.com/photo-1485871981521-5b1fd3805eee?auto=format&fit=crop&w=300&q=80",
+        "aliases": ["https://images.unsplash.com/photo-1485871981521-5b1fd3805eee?auto=format&fit=crop&w=300&q=80"],
+        "usages": ["frontend/src/data/mock-social.ts"],
+        "alt": "photo 1485871981521 5b1fd3805eee",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.d71bf2a79a273404",
+        "source": "https://unsplash.com/photos/P6etxyQ41uI/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/P6etxyQ41uI/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Ocean and coastal cliffs glowing at golden hour",
+        "credit": "Neil Soni",
+        "sourceUrl": "https://unsplash.com/photos/P6etxyQ41uI",
+        "photographerUrl": "",
+        "photoId": "P6etxyQ41uI"
+    },
+    {
+        "assetKey": "frontend.unsplash.d8b1a5fa71531d22",
+        "source": "https://unsplash.com/photos/t35c4P2A20s/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/t35c4P2A20s/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Friends spending sunset at the beach",
+        "credit": "Arka Dutta",
+        "sourceUrl": "https://unsplash.com/photos/t35c4P2A20s",
+        "photographerUrl": "",
+        "photoId": "t35c4P2A20s"
+    },
+    {
+        "assetKey": "frontend.unsplash.db3b89353cdd9188",
+        "source": "https://images.unsplash.com/photo-1713450605007-814dd58d6a6f?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "aliases": [
+            "https://images.unsplash.com/photo-1713450605007-814dd58d6a6f?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
+        ],
+        "usages": ["frontend/src/data/discover-preview.ts"],
+        "alt": "A night out illuminated by red and blue lights",
+        "credit": "Nereid Ndreu",
+        "sourceUrl": "https://unsplash.com/photos/oGPDjgouwoA?utm_source=roamboard&utm_medium=referral",
+        "photographerUrl": "https://unsplash.com/@nereiq?utm_source=roamboard&utm_medium=referral",
+        "photoId": "oGPDjgouwoA"
+    },
+    {
+        "assetKey": "frontend.unsplash.dcac062be6f90bc6",
+        "source": "https://unsplash.com/photos/VetFkenqOlw/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/VetFkenqOlw/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Single traveler exploring a quiet street after dark",
+        "credit": "Jezael Melgoza",
+        "sourceUrl": "https://unsplash.com/photos/VetFkenqOlw",
+        "photographerUrl": "",
+        "photoId": "VetFkenqOlw"
+    },
+    {
+        "assetKey": "frontend.unsplash.dcce23d57eb981e6",
+        "source": "https://images.unsplash.com/photo-1617819617162-aefecdc0b3f4?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "aliases": [
+            "https://images.unsplash.com/photo-1617819617162-aefecdc0b3f4?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
+        ],
+        "usages": ["frontend/src/data/discover-preview.ts"],
+        "alt": "Friends walking together at sunset",
+        "credit": "Hester Qiang",
+        "sourceUrl": "https://unsplash.com/photos/LhY8gh5_u_g?utm_source=roamboard&utm_medium=referral",
+        "photographerUrl": "",
+        "photoId": "LhY8gh5_u_g"
+    },
+    {
+        "assetKey": "frontend.unsplash.dd2b1465d6d1ab51",
+        "source": "https://images.unsplash.com/photo-1508009603885-50cf7c579365?auto=format&fit=crop&w=400&q=80",
+        "aliases": ["https://images.unsplash.com/photo-1508009603885-50cf7c579365?auto=format&fit=crop&w=400&q=80"],
+        "usages": ["frontend/src/data/mock-social.ts"],
+        "alt": "photo 1508009603885 50cf7c579365",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.dda0b892d390e60e",
+        "source": "https://images.unsplash.com/photo-1464809142576-df63ca4ed7f0?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "aliases": [
+            "https://images.unsplash.com/photo-1464809142576-df63ca4ed7f0?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
+        ],
+        "usages": ["frontend/src/data/discover-preview.ts"],
+        "alt": "Sunlight entering a moss-covered cave",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "https://images.unsplash.com/photo-1464809142576-df63ca4ed7f0?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.e2a41519d15792c9",
+        "source": "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?auto=format&fit=crop&w=400&q=80",
+        "aliases": ["https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?auto=format&fit=crop&w=400&q=80"],
+        "usages": ["frontend/src/data/mock-social.ts"],
+        "alt": "photo 1552465011 b4e21bf6e79a",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.e809092bca519b75",
+        "source": "https://unsplash.com/photos/LA9O_rB_-Xg/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/LA9O_rB_-Xg/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Street food chef preparing Japanese takoyaki",
+        "credit": "Perry Merrity II",
+        "sourceUrl": "https://unsplash.com/photos/LA9O_rB_-Xg",
+        "photographerUrl": "",
+        "photoId": "LA9O_rB_-Xg"
+    },
+    {
+        "assetKey": "frontend.unsplash.f058865b59d2e7e3",
+        "source": "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=400&q=80",
+        "aliases": ["https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=400&q=80"],
+        "usages": ["frontend/src/data/mock-social.ts"],
+        "alt": "photo 1502602898657 3e91760cbb34",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    },
+    {
+        "assetKey": "frontend.unsplash.f2c8ae872a671670",
+        "source": "https://images.unsplash.com/photo-1582920771007-0a1080b99a31?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+        "aliases": [
+            "https://images.unsplash.com/photo-1582920771007-0a1080b99a31?auto=format&fit=crop&w=1200&q=80&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
+        ],
+        "usages": ["frontend/src/data/discover-preview.ts"],
+        "alt": "Snow-covered Odda beside a Norwegian fjord",
+        "credit": "Lachlan Gowen",
+        "sourceUrl": "https://unsplash.com/photos/aOpfB0kGNNk?utm_source=roamboard&utm_medium=referral",
+        "photographerUrl": "https://unsplash.com/@lachlangowen?utm_source=roamboard&utm_medium=referral",
+        "photoId": "aOpfB0kGNNk"
+    },
+    {
+        "assetKey": "frontend.unsplash.f2e0060b044762bd",
+        "source": "https://unsplash.com/photos/JLPoB3Gahcc/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/JLPoB3Gahcc/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Fresh coffee served on a café table",
+        "credit": "Nathan Dumlao",
+        "sourceUrl": "https://unsplash.com/photos/JLPoB3Gahcc",
+        "photographerUrl": "",
+        "photoId": "JLPoB3Gahcc"
+    },
+    {
+        "assetKey": "frontend.unsplash.f339da3f17738c57",
+        "source": "https://unsplash.com/photos/BCyLllh0L1A/download?force=true&w=1200",
+        "aliases": ["https://unsplash.com/photos/BCyLllh0L1A/download?force=true&w=1200"],
+        "usages": ["shared/roamboard-tags.json"],
+        "alt": "Small boats on the shore of an alpine lake",
+        "credit": "Hans-Joachim Kaiser",
+        "sourceUrl": "https://unsplash.com/photos/BCyLllh0L1A",
+        "photographerUrl": "",
+        "photoId": "BCyLllh0L1A"
+    },
+    {
+        "assetKey": "frontend.unsplash.f9f6f9e599ddd3e2",
+        "source": "https://images.unsplash.com/photo-1549144511-f099e773c147?auto=format&fit=crop&w=400&q=80",
+        "aliases": ["https://images.unsplash.com/photo-1549144511-f099e773c147?auto=format&fit=crop&w=400&q=80"],
+        "usages": ["frontend/src/data/mock-social.ts"],
+        "alt": "photo 1549144511 f099e773c147",
+        "credit": "Existing Roamboard frontend asset — see source documentation",
+        "sourceUrl": "",
+        "photographerUrl": "",
+        "photoId": null
+    }
+]

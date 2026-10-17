@@ -1,5 +1,9 @@
 # Shared development database on Azure
 
+## Image workflow for coding agents
+
+Follow [the shared image workflow](../../docs/IMAGE_WORKFLOW.md) and the applicable `AGENTS.md` whenever a teammate supplies images or image links. Coding agents must register them with the backend `images:add` command, verify persistence, and use the returned `library:` reference on the requested frontend page. Editorial files use public Cloudinary storage; Unsplash references retain provider delivery. User Board/activity/profile uploads remain authenticated, with saved image order and cover selections. Do not expose credentials or replace protected image URLs with public editorial URLs.
+
 This deploys PostgreSQL in Docker on one Azure Linux VM. Each developer keeps running
 `npm run dev` in `backend/` and connects to the same database through SSH. Express
 deployment is a separate, later step; this setup alone does not complete the hosted-server requirement.
@@ -144,12 +148,13 @@ including previous-window fields. With user approval, the former local migration
 005 and 006 were consolidated into 004 on 2026-10-15. The shared Azure database
 already has that final schema; do not rerun 004 or rebuild it. See the
 [migration log](../db/MIGRATION_LOG.md) for reconciliation and verification.
-Fresh databases apply the available migrations in numeric order once. Apply the
-image-library 005 from main before profile 006 and tag-catalog 007 when it is present.
-The shared database was reconciled with the profile changes in 006 on 2026-10-17;
-do not rerun it there. See the migration log
-for its verification and remaining column-length difference. Migration 007 is
-pending there until a fresh backup is confirmed.
+Fresh databases apply 001 through 007 once, in numeric order. Migration 005 adds the editorial image catalog and
+revision history and is already applied to the shared database. The shared database was reconciled with the profile
+changes in 006 on 2026-10-17; do not rerun it there. See the migration log for verification and the remaining
+column-length difference. Migration 007 is pending there until a fresh backup is confirmed.
+PostgreSQL backups contain image references, not Cloudinary files. Preserve the same Cloudinary account and its public
+editorial/authenticated user assets, or migrate those files separately before changing credentials. See the
+[image recovery workflow](../../docs/IMAGE_WORKFLOW.md#missing-files-and-recovery).
 
 Useful commands from the same directory:
 

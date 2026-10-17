@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import Image from "@/components/images/LibraryImage";
 import Link from "next/link";
 import { Pause, Play } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";

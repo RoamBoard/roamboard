@@ -1,5 +1,9 @@
 # Collapsed Board reference assets
 
+## Image workflow for coding agents
+
+Read [the supported image workflow](../../../../docs/IMAGE_WORKFLOW.md) before adding or changing images. Raster page photography now uses database-backed `library:` references through the shared image components. These original files remain migration/rollback fallbacks and retain the source credits below. SVG icons and masks stay local. Register new supplied images with `images:add`, verify the saved record, and wire the returned key into the page; do not introduce unregistered image URLs. Protected Board/activity uploads keep their separate authenticated upload and ordering flow.
+
 Original image and SVG assets from [ROAMBOARD · Project Components](https://www.figma.com/design/4hUe6aKuQnp7zotBG7qqug/ROAMBOARD?node-id=259-436).
 These files are image fills and vector assets, not screenshots of complete cards. The components render the text,
 layout, overlays, and borders in HTML/CSS.

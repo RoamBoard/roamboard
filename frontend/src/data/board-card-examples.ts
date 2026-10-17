@@ -1,3 +1,4 @@
+import { editorialImage } from "../lib/image-library";
 import type {
     CollageBoardCardData,
     CompactBoardCardData,
@@ -6,7 +7,7 @@ import type {
 } from "@/types/board-card";
 
 // Visual fixtures from Figma Project Components; these are not persisted Boards.
-const asset = (name: string, alt: string) => ({ src: `/images/board-cards/${name}.png`, alt });
+const asset = (name: string, alt: string) => ({ src: editorialImage(`/images/board-cards/${name}.png`), alt });
 
 export const collageBoardExamples: readonly CollageBoardCardData[] = [
     {

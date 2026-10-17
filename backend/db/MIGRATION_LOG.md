@@ -1,5 +1,16 @@
 # Shared development database migration log
 
+## Editorial image library — 2026-10-17
+
+Applied additive migration `005_image_library.sql` through the guarded image importer after checking database access
+and confirming the tables were absent. Existing product tables and migrations were not rerun or modified. A failed
+upload of the oversized welcome photograph was resumed after optimizing only the migration copy. All original
+frontend files remain intact. Completed records were retained on a second import without increasing their revisions.
+Cloudinary image responses and stored provider IDs were checked for all 70 uploaded raster files. Unsplash references
+retain their original delivery URLs; known source credits/page IDs were preserved and missing credits remain marked.
+See `frontend-image-inventory.json` and [the image contract](../../contracts/image-library.md) for the current inventory
+and authoring workflow. No destructive cleanup or database recreation was performed.
+
 This is a manual maintenance record, not an automatic migration ledger. Verify
 the target database schema before applying a migration; do not rerun recorded files.
 

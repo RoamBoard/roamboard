@@ -10,6 +10,87 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # Roamboard frontend instructions
 
+## Website image library
+
+The cross-repository reference is [docs/IMAGE_WORKFLOW.md](../docs/IMAGE_WORKFLOW.md). Existing editorial page data now
+uses explicit `library:` keys. `shared/editorial-images.json` retains only imported key/source aliases for initial-render
+and failure fallbacks; it is not database delivery state. Helper-built old sources can use `editorialImage(source)` to
+resolve a registered key. Do not feed a `library:` key into CSS, a link or plain `next/image`/native `img`; use the shared
+renderer or fetch the saved asset URL. Protected product images and live provider results keep their own delivery.
+
+Editorial raster imagery uses the database-backed library described in [the image contract](../contracts/image-library.md).
+Open development Labs at `/dev/images` to upload an owned file or select an Unsplash photo, then copy its
+`library:<assetKey>` reference. Replacing an existing key updates its catalog usages; other tabs reload to see changes.
+Use the existing signed-in session. Never expose provider secrets or use the provider lab as this catalog.
+
+For new page imagery, use the default image import and named credit import:
+
+```tsx
+import Image, { LibraryCredit } from "@/components/images/LibraryImage";
+
+<Image src="library:destinations.kyoto.cover" alt="Torii gates in Kyoto" width={1200} height={800} />
+<LibraryCredit source="library:destinations.kyoto.cover" />
+```
+
+Keep placement alt text/crops in the component. Include source credits, especially for Unsplash. Eligible owned/curated
+files live on Cloudinary; API Unsplash photographs retain provider URLs and attribution. Do not rehost live Unsplash
+results. Use plain `next/image` or native images for live provider results and protected Board/profile media; those
+keep their existing authorization and delivery behavior. SVG icons, masks and fonts remain local code assets.
+
+### Automatic image handling by coding agents
+
+When a teammate supplies an image file or image link as part of a frontend task, register it in the image database and
+wire the resulting reference into the requested page as part of that task. Do not tell the teammate to upload it in Labs
+or run commands themselves when the agent can do it. Do not leave new editorial imagery as hardcoded remote URLs,
+base64 blobs or unregistered local files. Choose a descriptive stable key based on the placement, such as `home.hero`.
+Look up that key first; reuse a matching existing record rather than importing duplicates. Never replace an existing key
+with unrelated content unless replacement is part of the teammate's request.
+
+Run these commands from `backend/` using the configured server-side environment (no browser/session-cookie access):
+
+```powershell
+npm.cmd run images:add -- --key home.hero --file "C:\path\supplied-photo.jpg" --alt "Mountain lake" --credit "User-provided image"
+npm.cmd run images:add -- --key discover.kyoto.hero --unsplash "https://unsplash.com/photos/AiC8MRukmBg"
+npm.cmd run images:add -- --key home.banner --url "https://example.com/photo.jpg" --alt "Coastal town" --credit "Supplied photographer" --source-url "https://example.com/source"
+```
+
+On Linux/macOS use `npm`. The command returns JSON containing `reference` and the saved database record. Use that
+returned reference in the shared image component and include `LibraryCredit`, as shown above. Infer useful placement
+alt text from the task/image. Preserve supplied photographer/source details; do not invent ownership or credit. A
+user-supplied file can be labelled "User-provided image" when no photographer was supplied. For third-party links with
+unknown attribution, request only the missing source/credit while continuing independent work.
+
+Unsplash photo pages/IDs obtain canonical metadata and stay on Unsplash. Direct `images.unsplash.com` links can use
+`--url` with supplied alt/credit/source metadata; they remain external references and are never copied to Cloudinary.
+Other public HTTPS raster links are downloaded with size/time/network limits and uploaded to Cloudinary. Supply direct
+image links, not gallery/webpage URLs. Local files are uploaded directly without adding a new file to Git. Credentials
+stay in `backend/.env`; never print them or add them to frontend code. If configuration/access is missing, report the
+specific blocker and preserve existing imagery; never fabricate a saved ID or claim persistence.
+
+New keys default to creation only. For an explicitly requested replacement, read the current revision and pass
+`--expected-revision <revision>`. A conflict means reload and reassess; do not force-overwrite another teammate's edit.
+Confirm the command succeeded, fetch the saved key through the API, update the actual page/data model to use its
+`library:` reference, then run the required checks. Registering alone does not add an image to a page.
+
+### Fetching saved images
+
+- `GET /api/v1/image-library/<assetKey>` returns one saved record, or 404.
+- `GET /api/v1/image-library?keys=home.hero,home.banner` returns only found records for up to 50 keys.
+- Frontend helpers `getLibraryImage(key)` and `getLibraryImages(keys)` live in `@/lib/image-library` and use
+  `NEXT_PUBLIC_API_URL`. The shared image component resolves `library:<assetKey>` through the catalog automatically.
+- Use the returned asset URL/metadata for CSS backgrounds or other custom renderers; retain the key in page data and
+  handle loading/missing/error states. Do not query PostgreSQL or embed Cloudinary account details in frontend code.
+
+Bulk migration remains available through `npm.cmd run images:inventory` and `npm.cmd run images:import`; use
+`images:add` for individual supplied images. Migration 005 is already applied to the shared database; never rerun old
+migrations. New references in source are not automatically added to imported usage lists; search by stable key when
+reviewing replacement impact.
+
+Keep original imported files and URLs as rollback fallbacks. Catalog or image failures must not remove working old
+photography. Labs is development-only and must be removed before deployment; retain catalog reads, image components,
+data and import tooling after its removal. New references added to source code are not automatically included in the
+imported usage list. Run page checks in both themes and smaller layouts when adding or replacing imagery.
+
 These instructions apply to work inside `frontend/`. Roamboard is a student project. Keep code simple, readable, and easy for the team to explain.
 
 This is a living project guide. Agents may and should update `AGENTS.md` when the frontend architecture, backend contract, design system, testing process, dependencies, or supported features change. Keep updates factual, concise, and consistent with the code that actually exists. Clearly label planned work, mocks, and placeholders so future agents do not mistake them for implemented behavior.

@@ -1,3 +1,4 @@
+import { LibraryCredit } from "@/components/images/LibraryImage";
 import DiscoverPhoto from "./DiscoverPhoto";
 import VibeGrid from "./VibeGrid";
 import DiscoverSearch from "./DiscoverSearch";
@@ -206,32 +207,34 @@ export function DiscoverFeed() {
                     <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                         {Object.entries(discoverPhotos).map(([key, photo]) => (
                             <li key={key}>
-                                <a
-                                    className="underline underline-offset-4 focus-visible:outline-2"
-                                    href={photo.sourceUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                >
-                                    {photo.alt}
-                                </a>
-                                {photo.photographer && (
-                                    <span>
-                                        {" "}
-                                        —{" "}
-                                        {photo.photographerUrl ? (
-                                            <a
-                                                href={photo.photographerUrl}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="underline underline-offset-4"
-                                            >
-                                                {photo.photographer}
-                                            </a>
-                                        ) : (
-                                            photo.photographer
-                                        )}
-                                    </span>
-                                )}
+                                <LibraryCredit source={photo.src}>
+                                    <a
+                                        className="underline underline-offset-4 focus-visible:outline-2"
+                                        href={photo.sourceUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                    >
+                                        {photo.alt}
+                                    </a>
+                                    {photo.photographer && (
+                                        <span>
+                                            {" "}
+                                            —{" "}
+                                            {photo.photographerUrl ? (
+                                                <a
+                                                    href={photo.photographerUrl}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="underline underline-offset-4"
+                                                >
+                                                    {photo.photographer}
+                                                </a>
+                                            ) : (
+                                                photo.photographer
+                                            )}
+                                        </span>
+                                    )}
+                                </LibraryCredit>
                             </li>
                         ))}
                     </ul>

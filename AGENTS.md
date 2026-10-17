@@ -17,6 +17,16 @@ When the user says **"enter contract mode"** (or explicitly asks for a joint fro
 Instructions in `frontend/AGENTS.md` and `backend/AGENTS.md`, when present on the current branch, still apply to implementation work in those directories. The user's current decisions take precedence over older drafts and project documents.
 When instructions differ from architectural design, notify team and ask for approval.
 
+## Supplied frontend images
+
+[docs/IMAGE_WORKFLOW.md](docs/IMAGE_WORKFLOW.md) is the cross-repository image authoring, delivery and recovery guide.
+
+When a teammate supplies images or image links for a frontend task, follow the automatic image registration workflow
+in [`frontend/AGENTS.md`](frontend/AGENTS.md). Register images through the backend tooling, verify the saved reference,
+and wire it into the requested page as part of the task. Do not ask teammates to perform Labs uploads or commands that
+their coding agent can perform with the configured environment. Missing credentials or attribution must be reported
+honestly; never invent persisted IDs. See [`contracts/image-library.md`](contracts/image-library.md).
+
 ## Formatting
 
 Use the root [`.prettierrc`](.prettierrc) as the single source of truth for frontend and backend formatting. Do not add nested Prettier configurations or override its rules manually. This includes TypeScript, TSX, JavaScript, JSON, CSS, and Markdown. The configured print width is 120 to keep longer imports, type declarations, and function signatures together where Prettier allows. SQL files are excluded from Prettier; preserve their existing formatting.

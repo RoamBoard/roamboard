@@ -1,3 +1,4 @@
+import { editorialImage } from "../lib/image-library";
 import type { CollageBoardCardData } from "@/types/board-card";
 
 export type AtlasCategory = "Culture" | "Nature" | "Neighborhoods" | "Food";
@@ -42,7 +43,7 @@ export type DestinationPageData = {
 };
 
 const image = (file: string, alt: string, credit: string, photoId: string): AtlasImage => ({
-    src: `/images/destinations/${file}.webp`,
+    src: editorialImage(`/images/destinations/${file}.webp`),
     alt,
     credit,
     sourceUrl: `https://unsplash.com/photos/${photoId}`
@@ -51,7 +52,7 @@ const kyotoSource = "https://kyoto.travel/en/";
 const parisSource = "https://parisjetaime.com/eng/";
 const copenhagenSource = "https://www.visitcopenhagen.com/";
 const kyotoHero: AtlasImage = {
-    src: "/images/destinations/kyoto-hero.webp",
+    src: "library:frontend.images.destinations.kyoto.hero",
     alt: "The pagoda of Kiyomizu-dera above Kyoto, framed by a circle",
     credit: "Roamboard Figma reference",
     sourceUrl: "https://www.figma.com/design/4hUe6aKuQnp7zotBG7qqug/ROAMBOARD?node-id=55-1082"
@@ -125,7 +126,7 @@ const editorialGuides: DestinationPageData[] = [
         hero: kyotoHero,
         closingImage: {
             ...kyotoHero,
-            src: "/images/destinations/kyoto-closing.webp",
+            src: "library:frontend.images.destinations.kyoto.closing",
             alt: "A lantern-lit Kyoto street within a circular composition",
             sourceUrl: "https://www.figma.com/design/4hUe6aKuQnp7zotBG7qqug/ROAMBOARD?node-id=740-1953"
         },

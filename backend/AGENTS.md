@@ -8,10 +8,40 @@ These instructions apply to `backend/`. Use `../layered-backend-demo1/` as the r
 - Board search reads canonical public, published PostgreSQL Boards on each request and ranks matches in application code; no separate search store or synchronization is needed. Geoapify supplies permanent activity location lookups; confirmed locations are stored in PostgreSQL. Mapbox serves maps, routes and temporary discovery.
 - Board documents include a safe current-author summary for the published viewer: username, biography and optional profile photo. Author-photo image URLs carry the Board ID; each request checks Board read access and the owner's current photo linkage. See `BOARD_API_CONTRACT.md`.
 - Public handle profiles use `GET /api/v1/users/by-handle/:handle`. The users repository filters public published Boards and completed travel data in SQL. Public profile photo URLs carry `profileHandle`; the image service checks the current photo association. `/me` remains owner-only.
-- PostgreSQL schema lives in ordered files under `db/migrations/`: 001 is the baseline, 002 adds sessions, 003 adds canonical Board content/uploads, 004 adds compact shared provider counters with previous-bucket fields for conservative rolling guards, caller-owned place references and profile timestamps, 006 adds profile revision, default visibility, and saved Board ordering, and 007 adds the remaining names from the shared editorial tag catalog without deleting legacy tags. Number 005 is reserved for the image-library migration on main, which is not yet in this branch. Migration 004 was consolidated with user approval on 2026-10-15. The shared Azure database was reconciled with the profile changes now numbered 006 on 2026-10-17; its preexisting default-visibility column has a wider type than the migration specifies. See `db/MIGRATION_LOG.md` for verification and do not rerun 004 or 006 on that database. Migration 007 is pending on Azure until a fresh backup is confirmed. Treat migrations as the database source of truth. Do not treat the demo's in-memory Todo model or the frontend's mock data as persistent Roamboard behavior.
+- PostgreSQL schema lives in ordered files under `db/migrations/`: 001 is the baseline, 002 adds sessions, 003 adds canonical Board content/uploads, 004 adds compact shared provider counters with previous-bucket fields for conservative rolling guards, caller-owned place references and profile timestamps, 005 adds the editorial image library, 006 adds profile revision, default visibility, and saved Board ordering, and 007 adds the remaining names from the shared editorial tag catalog without deleting legacy tags. Migration 004 was consolidated with user approval on 2026-10-15. The shared Azure database has 005 and was reconciled with the profile changes now numbered 006 on 2026-10-17; its preexisting default-visibility column has a wider type than the migration specifies. See `db/MIGRATION_LOG.md` for verification and do not rerun 004, 005, or 006 on that database. Migration 007 is pending on Azure until a fresh backup is confirmed. Treat migrations as the database source of truth. Do not treat the demo's in-memory Todo model or the frontend's mock data as persistent Roamboard behavior.
 - Check the relevant schema, `../frontend/REQUIREMENTS.md`, and `../frontend/src/types/` before defining a feature's contract. Preserve the product decisions already represented in the schema; ask about genuinely unresolved behavior instead of silently substituting the demo's choices.
 - Keep `backend/.env` and credentials out of Git. Document new variables in `.env.example` and `README.md` without real secrets.
 - Team development uses a shared PostgreSQL container on Azure through SSH tunnels; the backend still runs locally. See `README.md` for onboarding and `deploy/README.md` for maintenance. Do not recreate the shared database or rerun applied migrations when onboarding. `npm run check:setup` checks auth configuration and database access without changing data. Backend `GOOGLE_CLIENT_ID` must match frontend `NEXT_PUBLIC_GOOGLE_CLIENT_ID`.
+
+## Editorial website image library
+
+See [the shared image workflow](../docs/IMAGE_WORKFLOW.md) for authoring, rendering and missing-file recovery.
+PostgreSQL stores references, not Cloudinary bytes: do not delete image rows or change cover/order links when a provider
+file is missing. Preserve the configured Cloudinary account and authenticated assets across teammate setups. Delivery
+404s return `IMAGE_ASSET_MISSING`; restoring original storage keys must preserve protected delivery and existing IDs.
+
+`src/features/image-library/` and migration `005_image_library.sql` implement public editorial image records separately
+from protected user uploads. Cloudinary files use `roamboard/editorial/`; keep them out of uploaded-image cleanup.
+`GET /api/v1/image-library` remains available after Labs removal. Upload/Unsplash mutations require development mode,
+a signed-in session and exact frontend Origin. See [the image contract](../contracts/image-library.md) for shapes.
+Never expose credentials or turn this feature into an arbitrary URL fetcher. New Unsplash selections fetch canonical
+metadata and trigger the download-equivalent request through shared quota management; rendering/searching do not.
+
+From `backend/`, `npm.cmd run images:inventory` writes a no-write source inventory; review metadata, then run
+`npm.cmd run images:import`. Add `-- --apply-schema` only for a database missing migration 005. The shared database
+already has 005 applied on 2026-10-17; do not recreate it. Reruns preserve existing revisions and merge source usages.
+Original frontend files/URLs remain rollback fallbacks. Removing development Labs must preserve public delivery,
+catalog records, stable references, revision history and developer import tooling.
+
+## Agent image registration and lookup
+
+Agents adding individual frontend images should run `npm.cmd run images:add -- --key <stable-key>` with exactly one
+of `--file`, `--unsplash` (photo page or ID), or `--url` (direct public HTTPS raster URL). Files/ordinary links also need
+`--alt` and `--credit`; preserve provenance with `--source-url`. Unsplash CDN links stay external, not rehosted.
+The command uses the configured backend environment without browser authentication and returns a verified reference;
+never expose credentials or create an unauthenticated upload endpoint for agents. Existing keys require an explicitly
+authorized replacement with `--expected-revision`. `GET /api/v1/image-library/:assetKey` and the `?keys=a,b` list filter
+provide public database lookups (maximum 50 batch keys). Keep these reads available after Labs is removed.
 
 ## Formatting
 

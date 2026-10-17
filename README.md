@@ -1,5 +1,9 @@
 # roamboard
 
+## Image workflow for coding agents
+
+Follow [the shared image workflow](docs/IMAGE_WORKFLOW.md) and the applicable `AGENTS.md` whenever a teammate supplies images or image links. Coding agents must register them with the backend `images:add` command, verify persistence, and use the returned `library:` reference on the requested frontend page. Editorial files use public Cloudinary storage; Unsplash references retain provider delivery. User Board/activity/profile uploads remain authenticated, with saved image order and cover selections. Do not expose credentials or replace protected image URLs with public editorial URLs.
+
 ## Where to develop
 
 Use [`frontend/`](frontend/README.md) for frontend work and [`backend/`](backend/README.md) for all backend development.

@@ -1,7 +1,8 @@
+import { editorialImage } from "../lib/image-library";
 import { collageBoardExamples, landscapeBoardExamples, photoBoardExamples } from "@/data/board-card-examples";
 import { roamFlowPageSize, type RoamFlowBoard, type RoamFlowPage } from "@/lib/roamflow";
 
-const image = (name: string, alt: string) => ({ src: `/images/roamflow/${name}.webp`, alt });
+const image = (name: string, alt: string) => ({ src: editorialImage(`/images/roamflow/${name}.webp`), alt });
 
 // Fictional editorial stories using existing photographs. No records are created or persisted.
 // The original V4 references lead the collection. Sample cards have no Board detail links.
@@ -84,7 +85,7 @@ export const roamFlowBoards: readonly RoamFlowBoard[] = [
         author: "Hana Mori",
         destination: "Asakusa, Japan",
         destinationLabel: "JPN",
-        image: { src: "/images/boards/temple.jpg", alt: "Visitors in the grounds of Senso-ji" }
+        image: { src: "library:frontend.images.boards.temple", alt: "Visitors in the grounds of Senso-ji" }
     },
     {
         id: "flow-seine",
@@ -102,7 +103,7 @@ export const roamFlowBoards: readonly RoamFlowBoard[] = [
         author: "Emi Watanabe",
         destination: "Tokyo, Japan",
         destinationLabel: "JPN",
-        image: { src: "/images/boards/cafe.jpg", alt: "A Tokyo café with wooden tables and warm light" }
+        image: { src: "library:frontend.images.boards.cafe", alt: "A Tokyo café with wooden tables and warm light" }
     },
     {
         id: "flow-bangkok-water",
@@ -174,7 +175,7 @@ export const roamFlowBoards: readonly RoamFlowBoard[] = [
         author: "Isabel Costa",
         destination: "Tokyo, Japan",
         destinationLabel: "JPN",
-        image: { src: "/images/boards/neighbourhood.jpg", alt: "A cyclist passing a Tokyo coffee shop" }
+        image: { src: "library:frontend.images.boards.neighbourhood", alt: "A cyclist passing a Tokyo coffee shop" }
     },
     {
         id: "flow-paris-art",
