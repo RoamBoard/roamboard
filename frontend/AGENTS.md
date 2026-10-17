@@ -61,8 +61,15 @@ catalog supplies matching icons only; it does not supply persisted tag IDs or ch
 retain owner-only changes and explain that draft access remains owner-only. Publication uses the large Cabinet
 typographic action and an underlined draft action; published editing offers Save changes and never a downgrade.
 Save status/errors appear beside these controls with review links, separately from upload/load feedback. All writes,
-revision checks, server ID reconciliation, and permission gates remain in `BoardCreator`. Preview redesign remains
-for a later milestone.
+revision checks, server ID reconciliation, and permission gates remain in `BoardCreator`.
+The creator preview reuses `CollageBoardCard` with an opt-in `preview` presentation that hides unsupported author,
+bookmark, saved-count, and Highlights content; default V1 cards retain their existing presentation. Its immutable
+adapter (`board-creation-preview.ts`) leads with the selected uploaded Board cover, de-duplicates collage URLs,
+and displays up to six photos without discarding other media records. Empty photo slots are neutral placeholders.
+Only confirmed locations contribute to destination/country lettering, and multi-country or unresolved country
+data produces no country watermark. Dates list actual recorded dates and identify undated days. Full title,
+description, tags, visibility, and source-edit links sit beside the collage; keyboard-accessible native disclosures
+retain every activity and photo, including source credits. This is a live local preview, not proof of persistence.
 Draft and My Boards navigation remain available; remixing remains
 explicitly deferred. Discover links to `/discover`. The shared sidebar is unchanged.
 

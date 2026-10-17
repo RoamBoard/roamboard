@@ -548,7 +548,7 @@ export default function BoardCreator({
                         description="A final look at the trip you’ve built, just to make sure everything feels exactly how you want it."
                     />
                     <div className="min-w-0 lg:self-center">
-                        <BoardCreationPreview board={payload} />
+                        <BoardCreationPreview board={payload} confirmedPhotoPins={confirmedPhotoPins} />
                     </div>
                 </section>
 

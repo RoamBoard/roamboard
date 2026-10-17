@@ -139,6 +139,7 @@ export default function BoardImageIntake({
 
     return (
         <section
+            id="board-images"
             aria-label="Board images"
             aria-busy={busy || loading}
             className="mx-auto w-[92%] max-w-[78rem] sm:w-[80%]"
