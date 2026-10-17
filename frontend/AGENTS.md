@@ -103,7 +103,15 @@ The `/dev` index links to the implemented frontend routes and explains how to op
 
 The Board creator now uses the versioned Board and image upload-intent endpoints with the session cookie. Existing drafts are listed at `/boards/drafts` and reopen at `/boards/drafts/[boardId]`; saving again sends the Board revision to the backend. `/create` contains the creation landing page and links to `/boards/mine`, which lists the signed-in owner's published Boards. Published Boards open for editing at `/boards/[boardId]/edit`; owners can edit content and visibility, while members with the editor role can edit content but not visibility. The creator has one selected Board cover and lets users attach several uploaded images to an activity, order them, and choose its activity cover. Unattached uploads can be assigned while editing an activity. The creator uses the backend's allowed tag list. Geoapify location search/reverse geocoding and Unsplash search are implemented in the current backend, with missing-key, quota and provider-failure states. Manual coordinates remain available. Vibe and Highlights controls are absent by agreement. The developer provider lab remains separate from persisted Board media.
 
-The Home destination explorer uses the current backend for Mapbox search, Open-Meteo weather, Wikipedia descriptions and Unsplash imagery, with partial-failure feedback. All API clients use NEXT_PUBLIC_API_URL and session cookies.
+Home is a minimal centered city input with smaller country labels in autocomplete and Kyoto, Paris and Copenhagen
+links. There are no large headings, decorative artwork, promotional copy or visible keyboard instructions.
+Debounced, cancellable search forwards city queries to Mapbox without a hardcoded city catalog or geographic bias.
+Mapbox controls ranking and namesake relevance. The backend keeps the highest-ranked result per normalized city name,
+removes duplicate provider IDs and non-city feature types, and guards against transport facility labels that Mapbox
+misclassifies as places. There is no population cutoff; country/region qualifiers can promote smaller namesakes.
+Home fades out over 320ms before navigating, respecting reduced motion. Search links use the existing
+`/discover/destinations/[slug]` convention; destination-page implementation belongs to its separate workstream.
+All API clients use NEXT_PUBLIC_API_URL and session cookies.
 
 `/discover/destinations/[slug]` renders the reusable Destination Atlas for Kyoto, Paris and Copenhagen from
 `src/data/destination-atlas.ts`. These are editorial mock guides with local, credited photography, destination-specific
@@ -113,7 +121,8 @@ Kyoto's opening copy, pins and tags are transcribed from Figma frame `55:1060`; 
 The compact Credits disclosure retains destination navigation and photography attribution without an extra full-height panel.
 Place details support map/visitor links and previous/next browsing. Existing country destination routes remain available.
 Home routes recognized city search results to guides (matching city identity, ISO alpha-3 country and provider place type);
-other search results retain their compact live briefs. Discover search and its Kyoto feature link to guides.
+other city results use a normalized city slug under the same destination route. General city detail-page support is
+handled separately and is not implemented by Home. Discover search and its Kyoto feature link to guides.
 The destination story gallery uses Motion to focus and rearrange unchanged V1 collage cards, with button, keyboard and drag selection. Its mock stories have no detail links or persistence; an optional real Board href is respected when supplied. Seasonal controls live in a separate white, ruled editorial interlude. The Trending destinations section uses a destination-specific asymmetric photo grid, a fixed near-black palette, animated filtering and shared-photo native-dialog details. The concluding Create panel returns to the page theme; Kyoto’s closing image rotation follows the Figma artwork. Create links open the existing
 blank `/boards/new` flow; destination prefill, activity saving and copying are future integrations. Editorial guide data
 does not create backend destination/location records. Photo sources and rights notes live in `public/images/destinations/README.md`.

@@ -1,4 +1,5 @@
 import { toCountryCode } from "../../shared/countries.js";
+import { destinationSuggestions } from "./destination.suggestions.js";
 import { observeProviderResponse } from "../quotas/quota.feedback.js";
 import type { QuotaObserver } from "../quotas/quota.types.js";
 import type {
@@ -52,7 +53,10 @@ async function requestMapbox(
     url.searchParams.set("q", options.query);
     url.searchParams.set("limit", String(limit));
     url.searchParams.set("language", "en");
-    if (!options.poi) url.searchParams.set("autocomplete", "false");
+    if (!options.poi) {
+        url.searchParams.set("autocomplete", "true");
+        url.searchParams.set("types", "place");
+    }
     url.searchParams.set("access_token", token);
     const response = await fetch(url, { signal: AbortSignal.timeout(8_000) });
     await observeProviderResponse(response, observe);
@@ -99,7 +103,9 @@ export function searchMapbox(
     token: string,
     observe?: QuotaObserver
 ): Promise<DestinationResult[]> {
-    return requestMapbox({ query, poi: false }, limit, token, observe);
+    return requestMapbox({ query, poi: false }, 10, token, observe).then((results) =>
+        destinationSuggestions(results, limit)
+    );
 }
 
 export function searchMapboxPlaces(

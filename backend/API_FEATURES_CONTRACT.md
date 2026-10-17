@@ -58,7 +58,17 @@ Missing keys return `503 PROVIDER_UNAVAILABLE`; upstream rejection/timeout retur
 files return `413 IMAGE_TOO_LARGE`; exhausted budgets return `429 PROVIDER_QUOTA_EXHAUSTED`
 before an upstream call.
 
-`GET /api/v1/destinations/search?q=...&limit=6` returns temporary Mapbox locations.
+`GET /api/v1/destinations/search?q=...&limit=6` returns temporary Mapbox city results.
+Search forwards the user's query unchanged to Geocoding v6 with `types=place`, autocomplete and no proximity,
+country or bounding-box restriction. There is no curated city catalog. Mapbox supplies relevance ranking and
+disambiguation; the API preserves its order, excludes non-city feature types, and keeps only the highest-ranked result
+per normalized city name (case, accents and punctuation are ignored) before applying the requested limit.
+Duplicate provider IDs are removed. A generic transport-facility label filter also excludes airports, airfields,
+aerodromes, heliports, railway/train/bus stations and bus/ferry terminals misclassified by Mapbox as places. This is
+a best-effort name safeguard, not an authoritative city classification. Mapbox v6 exposes neither a population field
+nor a configurable population/prominence weight; no population threshold or city allowlist is applied. Small cities
+remain searchable; adding a country or region lets Mapbox promote a specific namesake. Country labels remain visible.
+Provider results are never persisted.
 `GET /api/v1/destinations/context` accepts the selected `id`, `name`, `address`,
 `latitude`, `longitude`, `placeType`. It returns the selected destination,
 optional Open-Meteo weather, Wikipedia article and Unsplash image, plus
