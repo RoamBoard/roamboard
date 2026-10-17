@@ -29,6 +29,10 @@ function editable(profile: UserProfile) {
     };
 }
 
+function latestProfile(current: UserProfile | null, received: UserProfile) {
+    return current && current.revision > received.revision ? current : received;
+}
+
 export default function SettingsContent() {
     const [activeTab, setActiveTab] = useState<Tab>("PROFILE");
     const [saved, setSaved] = useState<UserProfile | null>(null);
@@ -123,10 +127,11 @@ export default function SettingsContent() {
                 interests: draft.interests
             });
             setLastSaved(saved);
-            setSaved(next);
-            setDraft((current) =>
-                current === draft ? next : current ? { ...current, revision: next.revision } : current
-            );
+            setSaved((current) => latestProfile(current, next));
+            setDraft((current) => {
+                if (!current || current.revision > next.revision) return current;
+                return current === draft ? next : { ...current, revision: next.revision };
+            });
             setToastKey((value) => value + 1);
             setShowSaveToast(true);
         } catch (caught) {
@@ -143,10 +148,11 @@ export default function SettingsContent() {
         setError("");
         try {
             const restored = await updateProfile({ ...editable(lastSaved), revision: saved.revision });
-            setSaved(restored);
-            setDraft((current) =>
-                current === draftBeforeUndo ? restored : current ? { ...current, revision: restored.revision } : current
-            );
+            setSaved((current) => latestProfile(current, restored));
+            setDraft((current) => {
+                if (!current || current.revision > restored.revision) return current;
+                return current === draftBeforeUndo ? restored : { ...current, revision: restored.revision };
+            });
             setLastSaved(null);
             setShowSaveToast(false);
         } catch (caught) {
@@ -157,9 +163,13 @@ export default function SettingsContent() {
     }
 
     function onPictureChange(profile: UserProfile) {
-        setSaved(profile);
+        setSaved((current) => latestProfile(current, profile));
         setDraft((current) =>
-            current ? { ...current, profilePicture: profile.profilePicture, revision: profile.revision } : profile
+            current && current.revision > profile.revision
+                ? current
+                : current
+                  ? { ...current, profilePicture: profile.profilePicture, revision: profile.revision }
+                  : profile
         );
     }
 
