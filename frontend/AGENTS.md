@@ -73,6 +73,15 @@ retain every activity and photo, including source credits. This is a live local 
 Draft and My Boards navigation remain available; remixing remains
 explicitly deferred. Discover links to `/discover`. The shared sidebar is unchanged.
 
+The Create draft selection page (`/boards/drafts`) uses an editorial heading and title search, an installed
+shadcn/Embla recent-drafts carousel, and a ruled compact library. Search covers loaded summary titles only;
+explicit pagination remains available while searching. Only the first page's five most recent drafts request full
+documents for honest collage previews; library tiles use summary covers and never infer destinations or authors.
+Drafts have no bookmark or Highlights controls. Preview failures retain all summary links and support targeted
+retries. `draft-boards-store.ts` owns page-local request guards, pagination de-duplication, and stale-response
+protection; it never substitutes sample data. Reopening still uses `/boards/drafts/[boardId]` and the shared
+`BoardCreator` document, permission, and revision handling. Draft-only access is labelled accurately.
+
 ## Project purpose and requirements
 
 Country codes in application data, mock/discovery data, provider responses and
