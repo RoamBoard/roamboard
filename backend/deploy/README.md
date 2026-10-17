@@ -144,8 +144,9 @@ including previous-window fields. With user approval, the former local migration
 005 and 006 were consolidated into 004 on 2026-10-15. The shared Azure database
 already has that final schema; do not rerun 004 or rebuild it. See the
 [migration log](../db/MIGRATION_LOG.md) for reconciliation and verification.
-Fresh databases apply 001 through 004 once, in order. Future schema changes use
-new migrations starting at 005.
+Fresh databases apply 001 through 005 once, in order. The shared database was
+reconciled with 005 on 2026-10-17; do not rerun it there. See the migration log
+for its verification and remaining column-length difference.
 
 Useful commands from the same directory:
 
