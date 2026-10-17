@@ -146,19 +146,6 @@ export default function BoardCreator({
     }, [loadTags]);
 
     useEffect(() => {
-        if (initialBoardId !== undefined) return;
-        void loadProfile()
-            .then((profile) => {
-                if (!visibilityTouched.current) setVisibility(profile.defaultBoardVisibility);
-            })
-            .catch((caught: unknown) => {
-                setPreferenceError(true);
-                setError(caught instanceof Error ? caught.message : "Board preferences could not be loaded.");
-            })
-            .finally(() => setPreferenceLoading(false));
-    }, [initialBoardId]);
-
-    useEffect(() => {
         if (initialBoardId === undefined) return;
         void loadBoardDocument(initialBoardId)
             .then((board) => {
@@ -219,7 +206,30 @@ export default function BoardCreator({
     );
 
     const fingerprint = boardEditorFingerprint(payload, confirmedPhotoPins);
-    const [initialFingerprint] = useState(fingerprint);
+    const initialPayload = useRef(payload);
+    const [initialFingerprint, setInitialFingerprint] = useState(fingerprint);
+    useEffect(() => {
+        if (initialBoardId !== undefined) return;
+        void loadProfile()
+            .then((profile) => {
+                if (!visibilityTouched.current) {
+                    setVisibility(profile.defaultBoardVisibility);
+                    setInitialFingerprint(
+                        boardEditorFingerprint(
+                            { ...initialPayload.current, visibility: profile.defaultBoardVisibility },
+                            new Set()
+                        )
+                    );
+                }
+            })
+            .catch((caught: unknown) => {
+                if (!visibilityTouched.current) {
+                    setPreferenceError(true);
+                    setError(caught instanceof Error ? caught.message : "Board preferences could not be loaded.");
+                }
+            })
+            .finally(() => setPreferenceLoading(false));
+    }, [initialBoardId]);
     const dirty = fingerprint !== (savedFingerprint ?? initialFingerprint);
     useBoardLeaveWarning((!editorDisabled && dirty) || saving !== null || uploading, setLeaveHref);
     useEffect(
@@ -372,8 +382,8 @@ export default function BoardCreator({
 
     async function save(status: BoardStatus) {
         if (saveInFlight.current || editorDisabled || uploading) return;
-        if (preferenceLoading || preferenceError) {
-            setSaveError("Board preferences are unavailable. Wait or reload this page.");
+        if ((preferenceLoading || preferenceError) && !visibilityTouched.current) {
+            setSaveError("Wait for Board preferences or choose a visibility option above before saving.");
             return;
         }
         const unconfirmedPhotoPin = days
@@ -643,6 +653,11 @@ export default function BoardCreator({
                                 onVisibilityChange={(value) => {
                                     visibilityTouched.current = true;
                                     setVisibility(value);
+                                    if (preferenceError) {
+                                        setPreferenceError(false);
+                                        setError("");
+                                    }
+                                    setSaveError("");
                                 }}
                             />
                         </div>

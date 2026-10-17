@@ -62,10 +62,12 @@ the updated backend; do not rerun 004 over existing tables.
 ## Profile migration reconciliation on 2026-10-17
 
 The shared Azure database already had `app_user.default_board_visibility` and
-`saved_boards.saved_at`, so running `005_profile.sql` directly failed on the
-duplicate column and rolled back. The user reports applying the remaining 005
-statements with the single-transaction command. Do not rerun the 005 file on this
-database. Fresh databases still apply 001 through 005 in order.
+`saved_boards.saved_at`, so running the then-named `005_profile.sql` directly failed on the
+duplicate column and rolled back. The user reports applying the remaining profile
+statements with the single-transaction command. The file was subsequently renamed
+to `006_profile.sql` to leave 005 for the image-library migration. Do not rerun the
+profile migration on this database. Fresh databases apply the available migrations
+in numeric order.
 
 Read-only verification through the SSH tunnel found the profile revision column and
 check constraint, both valid indexes, lowercase unique usernames, and all 26 seeded
@@ -75,7 +77,7 @@ unvalidated, and `npm run check:setup` passed against Azure. The database retain
 5 users, 6 Boards, and 20 image records at verification time.
 
 One schema difference remains: Azure's preexisting
-`app_user.default_board_visibility` is `VARCHAR(500)`, whereas the 005 file specifies
+`app_user.default_board_visibility` is `VARCHAR(500)`, whereas the profile migration specifies
 `VARCHAR(20)`. Its `NOT NULL` setting, `collaborators` default, and validated check
 constraint for `collaborators`, `friends`, and `public` match the migration. Align
 the column length separately if an exact schema match is required. Backup status

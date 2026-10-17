@@ -120,7 +120,7 @@ the application to create users with genuine Google identity IDs.
 Pull the reviewed code on the VM. From `backend/deploy`, apply each new migration once:
 
 ```bash
-sudo docker compose --env-file ../.env exec -T postgres psql -U roamboard_user -d roamboard_dev -v ON_ERROR_STOP=1 -f /roamboard-migrations/005_your_migration.sql
+sudo docker compose --env-file ../.env exec -T postgres psql -U roamboard_user -d roamboard_dev -v ON_ERROR_STOP=1 -f /roamboard-migrations/NNN_your_migration.sql
 ```
 
 The filename above is an example, not an existing migration. Coordinate one maintainer
@@ -144,9 +144,11 @@ including previous-window fields. With user approval, the former local migration
 005 and 006 were consolidated into 004 on 2026-10-15. The shared Azure database
 already has that final schema; do not rerun 004 or rebuild it. See the
 [migration log](../db/MIGRATION_LOG.md) for reconciliation and verification.
-Fresh databases apply 001 through 006 once, in order. The shared database was
-reconciled with 005 on 2026-10-17; do not rerun it there. See the migration log
-for its verification and remaining column-length difference. Migration 006 is
+Fresh databases apply the available migrations in numeric order once. Apply the
+image-library 005 from main before profile 006 and tag-catalog 007 when it is present.
+The shared database was reconciled with the profile changes in 006 on 2026-10-17;
+do not rerun it there. See the migration log
+for its verification and remaining column-length difference. Migration 007 is
 pending there until a fresh backup is confirmed.
 
 Useful commands from the same directory:

@@ -5,9 +5,9 @@ public search features run here. See
 [API_FEATURES_CONTRACT.md](API_FEATURES_CONTRACT.md) for routes, permissions,
 budgets and errors; the creator uses [BOARD_API_CONTRACT.md](BOARD_API_CONTRACT.md).
 
-Apply unapplied migrations through `006_profile_tag_catalog.sql` in order to an independent
+Apply unapplied migrations through `007_profile_tag_catalog.sql` in order to an independent
 local database. The shared Azure database has the consolidated 004 schema and was
-reconciled with 005; do not rerun either file there. Migration 006 is pending on Azure
+reconciled with the profile changes in 006; do not rerun either file there. Migration 007 is pending on Azure
 until a fresh backup is confirmed. See
 [the migration log](db/MIGRATION_LOG.md) for the remaining column-length difference.
 Integration tests apply the files only inside temporary test schemas.
@@ -137,24 +137,25 @@ follow [the shared database deployment guide](deploy/README.md). The existing
    password. The `.env` file is ignored by Git. If the password contains URL
    punctuation, URL-encode it in `DATABASE_URL`.
 3. Apply unapplied migrations in order: `001_initial.sql`, `002_auth_session.sql`,
-   `003_board_creator.sql`, `004_api_features.sql`, `005_profile.sql`,
-   `006_profile_tag_catalog.sql`. Apply only missing migrations.
+   `003_board_creator.sql`, `004_api_features.sql`, `006_profile.sql`,
+   `007_profile_tag_catalog.sql`. If `005_image_library.sql` is present after merging
+   main, apply it before 006. Apply only missing migrations.
    The shared Azure database already has the consolidated 004 schema and the
-   reconciled 005 changes; do not rerun either migration there. Apply 006 there
+   reconciled profile changes from 006; do not rerun either migration there. Apply 007 there
    only after a fresh backup is confirmed.
-   From `backend/`, for an independent database missing 005:
+   From `backend/`, for an independent database missing 006:
 
     ```powershell
-    psql -h localhost -U roamboard_user -d roamboard_dev -v ON_ERROR_STOP=1 -f db/migrations/005_profile.sql
+    psql -h localhost -U roamboard_user -d roamboard_dev -v ON_ERROR_STOP=1 -f db/migrations/006_profile.sql
     ```
 
     Use the database name and role from your own `DATABASE_URL`. Do not rerun an
     applied migration.
 
-    Check whether `app_user.profile_revision` exists before running 005. The API and
-    local integration tests require 005; do not apply it to the shared Azure database.
+    Check whether `app_user.profile_revision` exists before running 006. The API and
+    local integration tests require 006; do not apply it to the shared Azure database.
     `npm run test:db` creates isolated temporary schemas in the configured
-    database, applies 001 through 006 there, and removes those schemas after the tests.
+    database, applies the migrations listed by its integration fixtures, and removes those schemas after the tests.
 
 4. Set `GOOGLE_CLIENT_ID` in `.env` to your Google web application's client ID.
    Set `CLIENT_ORIGIN` to the exact frontend origin (locally,

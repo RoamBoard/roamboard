@@ -93,6 +93,8 @@ test("visibility uses the canonical three access values and stays controlled by 
     );
     for (const radio of radios) radio.onChange?.();
     assert.deepEqual(selected, ["collaborators", "friends", "public"]);
+    radios.find((radio) => radio.checked)?.onClick?.();
+    assert.deepEqual(selected, ["collaborators", "friends", "public", "friends"]);
     assert.deepEqual(
         controls(BoardDiscoveryDetails(props))
             .filter((control) => control.checked)

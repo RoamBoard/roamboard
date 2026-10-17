@@ -71,6 +71,10 @@ export default function BoardDiscoveryDetails({
                                 value={value}
                                 checked={visibility === value}
                                 disabled={disabled || !canChangeVisibility}
+                                onClick={() => {
+                                    if (visibility === value && !disabled && canChangeVisibility)
+                                        onVisibilityChange(value);
+                                }}
                                 onChange={() => {
                                     if (!disabled && canChangeVisibility) onVisibilityChange(value);
                                 }}

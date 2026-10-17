@@ -2,7 +2,6 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { boardTags, type BoardTagId } from "@/data/board-tags";
 import { listBoardTags } from "@/lib/board-creator-api";
 import { loadLanguages, loadProfile, ProfileApiError, updateProfile, type UserProfile } from "@/lib/profile";
 import VisibilitySelector from "@/components/features/boards/VisibilitySelector";
@@ -83,11 +82,6 @@ export default function SettingsContent() {
     }
 
     const isDirty = Boolean(saved && draft && JSON.stringify(editable(saved)) !== JSON.stringify(editable(draft)));
-    const selectedTags = (draft?.interests ?? []).flatMap((name) => {
-        const tag = boardTags.find((item) => item.name === name);
-        return tag ? [tag.id] : [];
-    }) as BoardTagId[];
-
     function change(field: keyof UserProfile, value: string | string[] | null) {
         setDraft((current) => (current ? { ...current, [field]: value } : current));
         setShowSaveToast(false);
@@ -130,7 +124,9 @@ export default function SettingsContent() {
             });
             setLastSaved(saved);
             setSaved(next);
-            setDraft(next);
+            setDraft((current) =>
+                current === draft ? next : current ? { ...current, revision: next.revision } : current
+            );
             setToastKey((value) => value + 1);
             setShowSaveToast(true);
         } catch (caught) {
@@ -142,12 +138,15 @@ export default function SettingsContent() {
 
     async function undo() {
         if (!lastSaved || !saved || saving) return;
+        const draftBeforeUndo = draft;
         setSaving(true);
         setError("");
         try {
             const restored = await updateProfile({ ...editable(lastSaved), revision: saved.revision });
             setSaved(restored);
-            setDraft(restored);
+            setDraft((current) =>
+                current === draftBeforeUndo ? restored : current ? { ...current, revision: restored.revision } : current
+            );
             setLastSaved(null);
             setShowSaveToast(false);
         } catch (caught) {
@@ -233,13 +232,8 @@ export default function SettingsContent() {
                             />
                             <div className="border-line bg-background rounded-[2px] border p-6">
                                 <ProfileTagSelector
-                                    selectedTagIds={selectedTags}
-                                    onChange={(ids) =>
-                                        change(
-                                            "interests",
-                                            ids.map((id) => boardTags.find((tag) => tag.id === id)!.name)
-                                        )
-                                    }
+                                    selectedTags={draft.interests}
+                                    onChange={(tags) => change("interests", tags)}
                                     maxTags={10}
                                 />
                             </div>
