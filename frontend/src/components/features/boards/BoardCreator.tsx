@@ -1,13 +1,20 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { movePlannerPin, reorderPlannerPin } from "@/lib/board-planner";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 
-import BoardCreationPreview from "@/components/features/boards/BoardCreationPreview";
+import BoardPreviewSection from "@/components/features/boards/BoardPreviewSection";
+import BoardPublishPanel from "@/components/features/boards/BoardPublishPanel";
 import BoardDiscoveryDetails from "@/components/features/boards/BoardDiscoveryDetails";
 import BoardImageIntake, { type UploadedBoardImage } from "@/components/features/boards/BoardImageIntake";
 import CreatorSectionIntro from "@/components/features/boards/CreatorSectionIntro";
 import DayPlanner from "@/components/features/boards/DayPlanner";
+import CreatorNotifications, { creatorToastOptions } from "./CreatorNotifications";
+import CreatorProgress from "./CreatorProgress";
+import { toast } from "sonner";
+import CreatorLeaveDialog from "./CreatorLeaveDialog";
+import { boardEditorFingerprint } from "@/lib/board-editor-safety";
+import { useBoardLeaveWarning } from "@/lib/use-board-leave-warning";
 import {
     fromBoardDocument,
     listBoardTags,
@@ -27,14 +34,16 @@ import type {
 } from "@/types/board-creator";
 import { getMockSettings, restoreMockStore } from "@/data/mock-social";
 
+const chapterClasses =
+    "mx-auto grid w-full max-w-[96rem] scroll-mt-36 gap-8 px-5 pb-20 sm:gap-10 sm:px-8 lg:grid-cols-[21rem_minmax(0,1fr)] lg:gap-16 lg:px-12 lg:pb-28";
+const fullChapterClasses = `${chapterClasses} lg:min-h-[min(70rem,100svh)]`;
+
 function newDay(dayNumber: number, date: string | null = null): BoardDayDraft {
     return { id: crypto.randomUUID(), dayNumber, date, pins: [] };
 }
 
 function normalizePinOrder(pins: BoardPinDraft[]): BoardPinDraft[] {
-    return [...pins]
-        .sort((first, second) => first.time.localeCompare(second.time) || first.order - second.order)
-        .map((pin, order) => ({ ...pin, order }));
+    return pins.map((pin, order) => ({ ...pin, order }));
 }
 
 function addPhotoSuggestions(current: BoardDayDraft[], uploads: UploadedBoardImage[]): BoardDayDraft[] {
@@ -75,16 +84,23 @@ function getDefaultBoardCreatorVisibility(): BoardCreatorPayload["visibility"] {
 
 export default function BoardCreator({
     initialBoardId,
-    expectedStatus = "draft"
+    expectedStatus = "draft",
+    initialMode = "smart"
 }: {
     initialBoardId?: number;
     expectedStatus?: BoardStatus;
+    initialMode?: "smart" | "scratch";
 }) {
+    const [leaveHref, setLeaveHref] = useState<string | null>(null);
+    const saveToastId = useId();
+    const saveInFlight = useRef(false);
+    const [mode, setMode] = useState(initialMode);
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [images, setImages] = useState<BoardImageDraft[]>([]);
     const [selectedCoverImageId, setSelectedCoverImageId] = useState<number | null>(null);
-    const [days, setDays] = useState<BoardDayDraft[]>(() => [newDay(1)]);
+    const initialDayId = useId();
+    const [days, setDays] = useState<BoardDayDraft[]>(() => [{ id: initialDayId, dayNumber: 1, date: null, pins: [] }]);
     const [tags, setTags] = useState<string[]>([]);
     const [allowedTags, setAllowedTags] = useState<Array<{ tagId: number; name: string }>>([]);
     const [visibility, setVisibility] = useState<BoardCreatorPayload["visibility"]>(() =>
@@ -92,20 +108,49 @@ export default function BoardCreator({
     );
     const [confirmedPhotoPins, setConfirmedPhotoPins] = useState<Set<string>>(() => new Set());
     const [saving, setSaving] = useState<BoardStatus | null>(null);
-    const [uploading, setUploading] = useState(false);
+    const [boardUploading, setBoardUploading] = useState(false);
+    const [activityUploading, setActivityUploading] = useState(false);
+    const uploading = boardUploading || activityUploading;
     const pendingUploadRef = useRef<Promise<unknown> | null>(null);
     const [draftLoading, setDraftLoading] = useState(initialBoardId !== undefined);
     const [error, setError] = useState("");
     const [message, setMessage] = useState("");
+    const [saveMessage, setSaveMessage] = useState("");
+    const [saveError, setSaveError] = useState("");
+    const [tagsLoading, setTagsLoading] = useState(true);
+    const [tagsError, setTagsError] = useState("");
+    const [savedFingerprint, setSavedFingerprint] = useState<string | null>(null);
     const [savedBoard, setSavedBoard] = useState<BoardDocument | null>(null);
+    const editorDisabled =
+        saving !== null ||
+        draftLoading ||
+        (initialBoardId !== undefined && !savedBoard) ||
+        (savedBoard?.status === "published" && expectedStatus !== "published");
+    const showSmartIntro = initialBoardId === undefined && mode === "smart";
+
+    function switchMode() {
+        const nextMode = mode === "smart" ? "scratch" : "smart";
+        setMode(nextMode);
+        const url = new URL(window.location.href);
+        if (nextMode === "scratch") url.searchParams.set("mode", "scratch");
+        else url.searchParams.delete("mode");
+        window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+    }
+
+    const loadTags = useCallback(
+        () =>
+            listBoardTags()
+                .then(setAllowedTags)
+                .catch((caught: unknown) =>
+                    setTagsError(caught instanceof Error ? caught.message : "Tags could not be loaded.")
+                )
+                .finally(() => setTagsLoading(false)),
+        []
+    );
 
     useEffect(() => {
-        void listBoardTags()
-            .then(setAllowedTags)
-            .catch((caught: unknown) =>
-                setError(caught instanceof Error ? caught.message : "Tags could not be loaded.")
-            );
-    }, []);
+        void loadTags();
+    }, [loadTags]);
 
     useEffect(() => {
         if (initialBoardId === undefined) return;
@@ -114,6 +159,24 @@ export default function BoardCreator({
                 if (board.status !== expectedStatus) throw new Error(`This Board is not ${expectedStatus}.`);
                 if (!board.permissions.canEditContent) throw new Error("You cannot edit this Board.");
                 const restored = fromBoardDocument(board);
+                setSavedFingerprint(
+                    boardEditorFingerprint(
+                        {
+                            title: board.title,
+                            description: board.description ?? "",
+                            status: board.status,
+                            visibility: board.visibility,
+                            coverImageId:
+                                board.coverImageId ??
+                                restored.images.find((image) => image.source === "upload")?.uploadedImageId ??
+                                null,
+                            tags: board.tags.map((tag) => tag.name),
+                            days: restored.days,
+                            images: restored.images
+                        },
+                        restored.confirmedPhotoPins
+                    )
+                );
                 setSavedBoard(board);
                 setTitle(board.title);
                 setDescription(board.description ?? "");
@@ -147,6 +210,17 @@ export default function BoardCreator({
             images
         }),
         [coverImageId, days, description, images, tags, title, visibility]
+    );
+
+    const fingerprint = boardEditorFingerprint(payload, confirmedPhotoPins);
+    const [initialFingerprint] = useState(fingerprint);
+    const dirty = fingerprint !== (savedFingerprint ?? initialFingerprint);
+    useBoardLeaveWarning((!editorDisabled && dirty) || saving !== null || uploading, setLeaveHref);
+    useEffect(
+        () => () => {
+            toast.dismiss(saveToastId);
+        },
+        [saveToastId]
     );
 
     function handleUploads(items: UploadedBoardImage[]) {
@@ -199,7 +273,7 @@ export default function BoardCreator({
         setDays((current) =>
             current.map((day) => ({
                 ...day,
-                pins: normalizePinOrder(day.pins.map((item) => (item.id === pin.id ? pin : item)))
+                pins: day.pins.map((item) => (item.id === pin.id ? pin : item))
             }))
         );
     }
@@ -286,40 +360,43 @@ export default function BoardCreator({
         });
     }
 
-    function movePin(pinId: string, dayId: string, time: string) {
-        const pin = days.flatMap((day) => day.pins).find((item) => item.id === pinId);
-        if (!pin) return;
-        setDays((current) =>
-            current.map((day) => {
-                const withoutPin = day.pins.filter((item) => item.id !== pinId);
-                return {
-                    ...day,
-                    pins: normalizePinOrder(day.id === dayId ? [...withoutPin, { ...pin, time }] : withoutPin)
-                };
-            })
-        );
+    function movePin(pinId: string, dayId: string, time: string, index?: number) {
+        setDays((current) => movePlannerPin(current, pinId, dayId, time, index));
     }
 
     async function save(status: BoardStatus) {
+        if (saveInFlight.current || editorDisabled || uploading) return;
         const unconfirmedPhotoPin = days
             .flatMap((day) => day.pins)
             .find((pin) => pin.source === "photo" && !confirmedPhotoPins.has(pin.id));
         if (status === "published" && unconfirmedPhotoPin) {
-            setError(`Confirm the photo location for “${unconfirmedPhotoPin.title}” before publishing.`);
-            setMessage("");
-            const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
-            document.getElementById("day-plan")?.scrollIntoView({ behavior, block: "start" });
+            const detail = `Confirm the photo location for “${unconfirmedPhotoPin.title}” before publishing.`;
+            setSaveError(detail);
+            toast.error("Review your Board before publishing", {
+                ...creatorToastOptions,
+                id: saveToastId,
+                description: detail
+            });
+            setSaveMessage("");
             return;
         }
-        if (pendingUploadRef.current) {
-            setMessage("Waiting for image uploads to finish...");
-            await pendingUploadRef.current;
-            pendingUploadRef.current = null;
-        }
+        saveInFlight.current = true;
         setSaving(status);
-        setError("");
-        setMessage("");
+        setSaveError("");
+        setSaveMessage("");
+        toast.loading(
+            status === "draft"
+                ? "Saving your draft…"
+                : expectedStatus === "published"
+                  ? "Saving your changes…"
+                  : "Publishing your Board…",
+            { ...creatorToastOptions, id: saveToastId }
+        );
         try {
+            if (pendingUploadRef.current) {
+                await pendingUploadRef.current;
+                pendingUploadRef.current = null;
+            }
             const currentPayload = {
                 title,
                 description,
@@ -340,9 +417,18 @@ export default function BoardCreator({
                 );
             }
             setSavedBoard(board);
+            setSavedFingerprint(boardEditorFingerprint(currentPayload, confirmedPhotoPins));
+            toast.success(
+                expectedStatus === "published"
+                    ? "Board changes saved"
+                    : status === "draft"
+                      ? "Draft saved"
+                      : "Board published",
+                { ...creatorToastOptions, id: saveToastId }
+            );
             setDays((current) => mergeServerIds(current, sentDays, board));
             setImages((current) => mergeServerImages(current, board));
-            setMessage(
+            setSaveMessage(
                 expectedStatus === "published"
                     ? "Board changes saved."
                     : status === "draft"
@@ -350,35 +436,74 @@ export default function BoardCreator({
                       : `“${board.title}” is published and ready to share.`
             );
         } catch (caught) {
-            setError(caught instanceof Error ? caught.message : "The Board could not be saved.");
+            const detail = caught instanceof Error ? caught.message : "The Board could not be saved.";
+            setSaveError(detail);
+            toast.error("Board could not be saved", {
+                ...creatorToastOptions,
+                id: saveToastId,
+                description: "Your edits are still here. Review the save details and try again.",
+                action: {
+                    label: "Review",
+                    onClick: () => {
+                        const feedback = document.getElementById("board-save-feedback");
+                        feedback?.scrollIntoView({ block: "center" });
+                        feedback?.focus({ preventScroll: true });
+                    }
+                }
+            });
         } finally {
+            saveInFlight.current = false;
             setSaving(null);
         }
     }
 
     return (
-        <article className="bg-background text-foreground min-w-0">
-            <header className="px-5 pt-14 pb-16 text-center sm:px-10 sm:pt-20">
-                <h1 className="font-display text-48 sm:text-72 lg:text-96 leading-none font-bold tracking-tight">
-                    SMART CREATE
+        <article className="font-body bg-background text-foreground relative min-w-0 overflow-x-clip">
+            <CreatorNotifications />
+            {leaveHref ? <CreatorLeaveDialog href={leaveHref} onClose={() => setLeaveHref(null)} /> : null}
+            <CreatorProgress
+                dirty={dirty}
+                saved={savedBoard !== null}
+                loading={draftLoading}
+                saving={saving}
+                uploading={uploading}
+            />
+            {showSmartIntro ? (
+                <header className="px-5 pt-16 pb-16 text-center sm:px-10 sm:pt-24 sm:pb-28">
+                    <h1 className="font-display text-[clamp(2.5rem,5.6vw,6rem)] leading-[1.02] font-bold tracking-[-0.035em]">
+                        SMART CREATE
+                    </h1>
+                    <p className="text-muted-foreground mx-auto mt-4 max-w-[38rem] text-xs leading-relaxed sm:text-sm">
+                        Drop in your photos and we’ll turn metadata into editable beginnings for a Board. Review every
+                        suggestion before anything is published.
+                    </p>
+                    <p className="text-muted-foreground/70 mt-6 text-[10px] sm:text-xs">
+                        Powered by Roamboard Intelligence Engine
+                    </p>
+                </header>
+            ) : (
+                <h1 className="sr-only">
+                    {initialBoardId === undefined
+                        ? "Create a new Board"
+                        : expectedStatus === "published"
+                          ? "Edit published Board"
+                          : "Edit Board draft"}
                 </h1>
-                <p className="text-12 text-graphite mx-auto mt-4 max-w-xl leading-5">
-                    Drop in your photos and we’ll turn metadata into editable beginnings for a Board. Review every
-                    suggestion before anything is published.
-                </p>
-                <p className="text-10 text-stone mt-6">Powered by Roamboard Intelligence Engine</p>
-            </header>
+            )}
 
-            <div className="px-4 sm:px-8 lg:px-16">
+            <div>
                 <fieldset
-                    disabled={saving !== null}
+                    disabled={editorDisabled}
+                    aria-busy={draftLoading}
                     className="m-0 min-w-0 border-0 p-0 disabled:pointer-events-none disabled:opacity-80"
                 >
                     <BoardImageIntake
                         images={images.filter((image) => image.source === "upload")}
                         coverImageId={coverImageId}
-                        disabled={saving !== null}
-                        onUploadingChange={setUploading}
+                        disabled={editorDisabled || activityUploading}
+                        loading={draftLoading}
+                        showDropZone={showSmartIntro}
+                        onUploadingChange={setBoardUploading}
                         onUploadPromise={(promise) => {
                             pendingUploadRef.current = promise;
                         }}
@@ -387,17 +512,34 @@ export default function BoardCreator({
                         onRemove={removeImage}
                     />
 
-                    <div className="mx-auto mt-8 max-w-4xl text-center">
-                        <label htmlFor="board-title" className="text-10 tracking-label text-stone uppercase">
-                            Board creator
+                    <div className="mx-auto mt-10 max-w-4xl px-5 text-center sm:mt-12">
+                        <p className="font-display text-muted-foreground text-xs uppercase sm:text-sm lg:text-base">
+                            {initialBoardId === undefined
+                                ? "Board creator"
+                                : expectedStatus === "published"
+                                  ? "Board editor"
+                                  : "Board draft"}
+                        </p>
+                        <label htmlFor="board-title" className="sr-only">
+                            Board title
                         </label>
                         <input
                             id="board-title"
+                            style={{ scrollMarginTop: "9rem" }}
                             value={title}
                             onChange={(event) => setTitle(event.target.value)}
-                            placeholder="BOARD TITLE"
-                            className="font-display text-36 placeholder:text-foreground sm:text-48 mt-2 w-full bg-transparent text-center leading-none font-bold uppercase outline-none focus:placeholder:text-transparent"
+                            placeholder={draftLoading ? "LOADING BOARD…" : "BOARD TITLE"}
+                            className="font-display placeholder:text-foreground focus-visible:outline-foreground mt-3 min-h-12 w-full min-w-0 bg-transparent py-1 text-center text-[clamp(1.75rem,3.8vw,4rem)] leading-[1.02] font-bold tracking-[-0.035em] uppercase focus-visible:outline-1 focus-visible:outline-offset-4"
                         />
+                        {initialBoardId === undefined ? (
+                            <button
+                                type="button"
+                                onClick={switchMode}
+                                className="text-muted-foreground hover:text-foreground mt-4 min-h-11 cursor-pointer px-3 text-xs underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4"
+                            >
+                                {mode === "smart" ? "Switch to Start from Scratch" : "Switch to Smart Create"}
+                            </button>
+                        ) : null}
                     </div>
 
                     {message ? (
@@ -416,31 +558,25 @@ export default function BoardCreator({
                         </p>
                     ) : null}
 
-                    <section
-                        id="board-basics"
-                        className="mx-auto mt-24 grid max-w-7xl scroll-mt-8 gap-10 lg:grid-cols-[15rem_1fr] lg:gap-16"
-                    >
+                    <section id="board-basics" className={`${chapterClasses} mt-20 sm:mt-28 lg:mt-36 lg:min-h-[22rem]`}>
                         <CreatorSectionIntro
                             number="01"
                             title="BOARD BASICS"
                             description="Let’s start with the essentials to set the scene for everything you’re about to plan."
                         />
-                        <label className="font-display text-20 block max-w-3xl font-bold">
+                        <label className="text-foreground/80 text-20 sm:text-24 block max-w-3xl min-w-0 font-bold">
                             Description
                             <textarea
                                 value={description}
                                 onChange={(event) => setDescription(event.target.value)}
                                 placeholder="type here..."
                                 rows={7}
-                                className="border-line font-body text-14 placeholder:text-stone focus:border-foreground mt-3 w-full resize-y border-0 border-b bg-transparent py-3 leading-6 font-normal outline-none"
+                                className="border-line text-foreground font-body text-14 placeholder:text-muted-foreground focus:border-foreground focus-visible:outline-foreground mt-3 w-full resize-y border-0 border-b bg-transparent py-3 leading-6 font-normal focus-visible:outline-1 focus-visible:outline-offset-4 sm:text-base"
                             />
                         </label>
                     </section>
 
-                    <section
-                        id="day-plan"
-                        className="mx-auto mt-28 grid max-w-7xl scroll-mt-8 gap-10 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-16"
-                    >
+                    <section id="day-plan" className={fullChapterClasses}>
                         <CreatorSectionIntro
                             number="02"
                             title="BUILD YOUR DAY PLAN"
@@ -448,7 +584,8 @@ export default function BoardCreator({
                         />
                         <div className="min-w-0">
                             <DayPlanner
-                                disabled={saving !== null}
+                                disabled={editorDisabled || boardUploading}
+                                onActivityUploadingChange={setActivityUploading}
                                 days={days}
                                 images={images}
                                 onAddDay={() => setDays((current) => [...current, newDay(current.length + 1)])}
@@ -456,6 +593,9 @@ export default function BoardCreator({
                                 onAddPin={addPin}
                                 onUpdatePin={updatePin}
                                 onMovePin={movePin}
+                                onReorderPin={(pinId, direction) =>
+                                    setDays((current) => reorderPlannerPin(current, pinId, direction))
+                                }
                                 onRemovePin={removePin}
                                 onAddActivityImage={addActivityImage}
                                 onAssignActivityImage={assignActivityImage}
@@ -469,96 +609,52 @@ export default function BoardCreator({
                         </div>
                     </section>
 
-                    <section
-                        id="details-discovery"
-                        className="mx-auto mt-28 grid max-w-7xl scroll-mt-8 gap-10 lg:grid-cols-[15rem_1fr] lg:gap-16"
-                    >
+                    <section id="details-discovery" className={fullChapterClasses}>
                         <CreatorSectionIntro
                             number="03"
                             title="DETAILS & DISCOVERY"
                             description="Give your Board more context to keep plans organized and make it easier for others to discover."
                         />
-                        <BoardDiscoveryDetails
-                            tags={tags}
-                            allowedTags={allowedTags.map((tag) => tag.name)}
-                            visibility={visibility}
-                            canChangeVisibility={savedBoard?.permissions.canManageBoard ?? true}
-                            onTagsChange={setTags}
-                            onVisibilityChange={setVisibility}
-                        />
+                        <div className="min-w-0 lg:self-center">
+                            <BoardDiscoveryDetails
+                                tags={tags}
+                                allowedTags={allowedTags.map((tag) => tag.name)}
+                                visibility={visibility}
+                                canChangeVisibility={savedBoard?.permissions.canManageBoard ?? true}
+                                disabled={editorDisabled}
+                                tagsLoading={tagsLoading}
+                                tagsError={tagsError}
+                                onRetryTags={() => {
+                                    setTagsLoading(true);
+                                    setTagsError("");
+                                    void loadTags();
+                                }}
+                                onTagsChange={setTags}
+                                onVisibilityChange={setVisibility}
+                            />
+                        </div>
                     </section>
                 </fieldset>
 
-                <section
-                    id="board-preview"
-                    className="mx-auto mt-28 grid max-w-7xl scroll-mt-8 gap-10 lg:grid-cols-[15rem_1fr] lg:gap-16"
-                >
-                    <CreatorSectionIntro
-                        number="04"
-                        title="BOARD PREVIEW"
-                        description="A final look at the trip you’ve built, just to make sure everything feels exactly how you want it."
-                    />
-                    <BoardCreationPreview board={payload} />
-                </section>
+                <BoardPreviewSection board={payload} confirmedPhotoPins={confirmedPhotoPins} />
 
-                <section className="mx-auto mt-28 mb-32 grid max-w-7xl gap-10 lg:grid-cols-[15rem_1fr] lg:gap-16">
+                <section id="publish" className={`${fullChapterClasses} mb-20 sm:mb-32`}>
                     <CreatorSectionIntro
                         number="05"
                         title="PUBLISH"
                         description="Save it for yourself, or share it if you feel like it."
                     />
-                    <div>
-                        <h2 className="font-display text-36 font-bold">Ready when you are.</h2>
-                        <p className="text-14 text-graphite mt-3 max-w-xl leading-6">
-                            Drafts can stay incomplete. Publishing requires a title and at least one pin with a
-                            confirmed location.
-                        </p>
-                        <div className="mt-7 flex flex-wrap gap-3">
-                            {expectedStatus !== "published" ? (
-                                <button
-                                    type="button"
-                                    disabled={
-                                        draftLoading ||
-                                        saving !== null ||
-                                        uploading ||
-                                        (initialBoardId !== undefined && !savedBoard) ||
-                                        savedBoard?.status === "published"
-                                    }
-                                    onClick={() => void save("draft")}
-                                    className="border-foreground text-14 border px-6 py-4 disabled:opacity-40"
-                                >
-                                    {saving === "draft" ? "Saving draft..." : "Save as draft"}
-                                </button>
-                            ) : null}
-                            <button
-                                type="button"
-                                disabled={
-                                    draftLoading ||
-                                    saving !== null ||
-                                    uploading ||
-                                    (initialBoardId !== undefined && !savedBoard) ||
-                                    (savedBoard?.status === "published" && expectedStatus !== "published")
-                                }
-                                onClick={() => void save("published")}
-                                className="border-foreground bg-foreground text-14 text-background border px-6 py-4 disabled:opacity-40"
-                            >
-                                {saving === "published"
-                                    ? expectedStatus === "published"
-                                        ? "Saving changes..."
-                                        : "Publishing..."
-                                    : expectedStatus === "published"
-                                      ? "Save changes"
-                                      : "Publish Board"}
-                            </button>
-                            {savedBoard ? (
-                                <Link
-                                    href={`/boards/${savedBoard.boardId}`}
-                                    className="border-foreground text-14 border-b px-2 py-4"
-                                >
-                                    View saved Board →
-                                </Link>
-                            ) : null}
-                        </div>
+                    <div className="min-w-0 lg:-translate-x-[19.25%] lg:translate-y-16 lg:self-center">
+                        <BoardPublishPanel
+                            expectedStatus={expectedStatus}
+                            savedBoard={savedBoard}
+                            disabled={editorDisabled}
+                            saving={saving}
+                            uploading={uploading}
+                            message={saveMessage}
+                            error={saveError}
+                            onSave={(status) => void save(status)}
+                        />
                     </div>
                 </section>
             </div>

@@ -23,9 +23,11 @@ export default function PhotoBoardCard({ board, href }: Props) {
                 board={board}
                 className="font-body absolute top-[5.75cqw] left-[6.5cqw] text-[10cqw] leading-none font-bold"
             />
-            <p className="font-body absolute top-[28.25cqw] left-[6.5cqw] text-[3.5cqw] leading-none">
-                by {board.author}
-            </p>
+            {board.author && (
+                <p className="font-body absolute top-[28.25cqw] left-[6.5cqw] text-[3.5cqw] leading-none">
+                    by {board.author}
+                </p>
+            )}
             <span
                 aria-hidden="true"
                 className="font-body absolute top-[98.75cqw] text-[32cqw] leading-[1.02] font-bold whitespace-nowrap text-[#ebebeb]"

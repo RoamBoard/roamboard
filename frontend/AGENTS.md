@@ -41,6 +41,80 @@ The developer Board browser (/dev/boards) lists paginated accessible Boards and 
 
 The provider lab (/dev/providers) uses current backend Mapbox, Geoapify, Unsplash, Google Places, Cloudinary routes, plus PostgreSQL-backed Board search. Cloudinary lab uploads are separate from Board media and restricted to the lab prefix/tag. Cloudinary/Google management tools and developer Board listing require a signed-in session with the backend in development mode. Provider credentials stay server-side; only an intentionally public Mapbox pk. token is returned after a map-load reservation. PostgreSQL persists shared provider budgets across restarts. Search reads only real public, published Boards from PostgreSQL and checks fresh database visibility before returning records or suggestions. Activities and locations are not standalone search results. The separate Mapbox search uses Search Box for POIs, restaurants and landmarks with its own quota; Home retains city geocoding, and persistent Board locations still use Geoapify. Backend setup, limitations and response shapes are documented in [API_FEATURES_CONTRACT.md](../backend/API_FEATURES_CONTRACT.md).
 
+The `/create` landing follows Figma 3.0–3.1 with a local, credited Unsplash photograph, a curved hero, and circular
+creation choices. `BoardCreationChoices` owns only the New Board expansion state; Motion respects reduced motion,
+and Escape collapses the choices and restores trigger focus. Smart Create opens `/boards/new`; Scratch opens
+`/boards/new?mode=scratch`. Smart includes the circuit upload introduction; Scratch, reopened drafts, and published
+edits begin at the shared curved cover. New Boards can switch modes without discarding local edits or remounting
+the upload controller. The shared editor uses spacious numbered chapters, Cabinet display titles, and Satoshi
+supporting text. Existing Boards lock editing while loading and remain locked after a failed load.
+The planner uses horizontally scrolling day columns with independent activity scrolling, compact photo cards,
+and circular category controls. Category menus reuse the existing activity vocabulary and shadcn/Radix radio
+menus with typeahead; they do not use Board discovery tags or introduce new backend categories. Pointer drops
+retain 30-minute time placement. Activity move menus provide keyboard/touch reordering and cross-day moves
+without changing times, with focus restoration and live announcements. Explicit order is retained through edits,
+additions, and removals; new activities append to their day. `board-planner.ts` owns immutable move calculations,
+while `BoardCreator` remains the state/save owner.
+Details & Discovery uses removable tag chips and the installed Command search over backend-provided names,
+with a maximum of three selections and explicit catalog loading/error/retry states. The shared editorial tag
+catalog supplies matching icons only; it does not supply persisted tag IDs or choices. Native visibility radios
+retain owner-only changes and explain that draft access remains owner-only. Publication uses the large Cabinet
+typographic action and an underlined draft action; published editing offers Save changes and never a downgrade.
+Save status/errors appear beside these controls with review links, separately from upload/load feedback. All writes,
+revision checks, server ID reconciliation, and permission gates remain in `BoardCreator`.
+The creator preview reuses `CollageBoardCard` with an opt-in `preview` presentation that hides unsupported author,
+bookmark, saved-count, and Highlights content; default V1 cards retain their existing presentation. Its immutable
+adapter (`board-creation-preview.ts`) leads with the selected uploaded Board cover, de-duplicates collage URLs,
+and displays up to six photos without discarding other media records. The creator's opt-in quiet empty slots use
+faint outlines. `BoardPreviewSection` and the stateless `BoardPreviewDiagram` place the compact V1 card and floating
+annotations on one proportional desktop canvas, with original Figma connector masks. Below a 1100px container,
+annotations follow a readable flow without connectors. Motion respects reduced-motion preferences.
+Only confirmed locations contribute to destination/country lettering, and multi-country or unresolved country
+data produces no country watermark. Dates list actual recorded dates and identify undated days. Full title,
+description, tags, visibility, and source-edit links surround the collage; keyboard-accessible native disclosures
+retain every activity and photo, including source credits. This is a live local preview, not proof of persistence.
+Draft and My Boards navigation remain available; remixing remains
+explicitly deferred. Discover links to `/discover`. The shared sidebar is unchanged.
+
+The Create draft selection page (`/boards/drafts`) uses an editorial heading and title search, an installed
+shadcn/Embla recent-drafts carousel, and a ruled compact library. Search covers loaded summary titles only;
+explicit pagination remains available while searching. Only the first page's five most recent drafts request full
+documents for honest collage previews; library tiles use summary covers and never infer destinations or authors.
+Drafts have no bookmark or Highlights controls. Preview failures retain all summary links and support targeted
+retries. `draft-boards-store.ts` owns page-local request guards, pagination de-duplication, and stale-response
+protection; it never substitutes sample data. Reopening still uses `/boards/drafts/[boardId]` and the shared
+`BoardCreator` document, permission, and revision handling. Draft-only access is labelled accurately.
+
+The Create entry now links to `/create/continue` and `/create/remix`. Continue combines the production
+owner-draft and owner-published list endpoints, with independent pagination, partial-error retries, and explicit
+loaded-title search scope. `board-selection-store.ts` clears cached documents on refresh, rejects stale responses,
+and checks fresh document identity and `canEditContent` before showing an editor link. Drafts reopen at
+`/boards/drafts/[boardId]`; published Boards reopen at `/boards/[boardId]/edit`, preserving ID, revision, and status.
+Production APIs cannot enumerate shared editable Boards; a shared-link/ID lookup checks the canonical document
+permission instead. No developer listing endpoint is used. The shared presentation uses a Motion V1 collage
+focus gallery and a photo-card collection that promotes selected Boards into the same gallery, without duplicates.
+The naming transition is V1=`collage`, future V2=`landscape` (old V3), future V3=`photo` (old V4). The old `compact`
+variant is retired for these new pages; existing identifiers, assets, fixtures, and unrelated pages remain compatible.
+The Remix page is an honest unavailable state: there is no production account-saved Board list or remix-creation
+endpoint. Session preview bookmarks and My Boards sample saves are not an account collection. Completing remix
+requires an approved saved-list contract with ownership/source metadata and independent-copy/media rules; no
+original Board update or fake remix is performed. Photo cards omit the author line when author data is absent.
+
+The creator's ruled sticky chapter navigation also shows its real loading/uploading/saving and unsaved state.
+`board-editor-safety.ts` compares persisted content, excluding transient IDs and protected-image URL refreshes.
+The baseline changes only after document loading or a confirmed save. A synchronous save latch rejects duplicate
+submissions. After publishing from the draft flow, the finished editor locks; published editing remains a separate route.
+Unsaved content or active operations register a native refresh/close warning and intercept same-window internal links
+with the existing confirmation dialog. Hash links, mode switches, new tabs and downloads remain usable. Same-document
+browser Back/Forward and arbitrary programmatic routing are not blocked; no history entries are fabricated and there
+is no autosave/recovery store. The publication panel explicitly advises saving before using browser history controls.
+Activity dialogs confirm discarding unfinished fields, preserve focus, and pause the outer focus trap during confirmation.
+Activity uploads prevent dialog dismissal and Board saving until finished; previously attached images remain available.
+The user-approved `sonner` dependency powers a Create-scoped, theme-aware notification host. Each save/upload operation
+updates one notification from loading to confirmed success or failure. Frequent local edits use planner announcements
+instead of toasts; persistent inline error details remain available. Board image batches use `Promise.allSettled` so a
+failed upload never discards successful files, and failure details identify which files need retrying.
+
 ## Project purpose and requirements
 
 Country codes in application data, mock/discovery data, provider responses and

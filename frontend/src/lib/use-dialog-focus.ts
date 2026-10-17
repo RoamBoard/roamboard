@@ -3,13 +3,18 @@ import { useEffect, useRef, type RefObject } from "react";
 const focusableSelector =
     'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-export function useDialogFocus<T extends HTMLElement>(containerRef: RefObject<T | null>, onClose?: () => void) {
+export function useDialogFocus<T extends HTMLElement>(
+    containerRef: RefObject<T | null>,
+    onClose?: () => void,
+    active = true
+) {
     const onCloseRef = useRef(onClose);
     useEffect(() => {
         onCloseRef.current = onClose;
     }, [onClose]);
 
     useEffect(() => {
+        if (!active) return;
         const previousActive = document.activeElement as HTMLElement | null;
 
         const focusInitial = () => {
@@ -71,5 +76,5 @@ export function useDialogFocus<T extends HTMLElement>(containerRef: RefObject<T 
                 previousActive.focus();
             }
         };
-    }, [containerRef]);
+    }, [containerRef, active]);
 }

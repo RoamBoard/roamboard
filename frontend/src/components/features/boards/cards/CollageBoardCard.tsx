@@ -8,7 +8,12 @@ import {
     cardMeasure
 } from "./BoardCardParts";
 
-type Props = BoardCardActions & { board: CollageBoardCardData };
+type Props = BoardCardActions & {
+    board: CollageBoardCardData;
+    preview?: boolean;
+    annotatedPreview?: boolean;
+    hideBookmark?: boolean;
+};
 
 const photoSlots = [
     "left-[1.136cqw] top-[30.455cqw] h-[29.773cqw] w-[14.545cqw]",
@@ -19,7 +24,15 @@ const photoSlots = [
     "left-[16.591cqw] top-[70cqw] h-[22.045cqw] w-[14.545cqw]"
 ];
 
-export default function CollageBoardCard({ board, href, bookmarked, onBookmark }: Props) {
+export default function CollageBoardCard({
+    board,
+    href,
+    bookmarked,
+    onBookmark,
+    preview = false,
+    annotatedPreview = false,
+    hideBookmark = false
+}: Props) {
     return (
         <BoardCardFrame board={board} width={440} height={560} href={href}>
             {/* cqw measurements scale the complete 440 × 560 Figma composition together. */}
@@ -33,40 +46,58 @@ export default function CollageBoardCard({ board, href, bookmarked, onBookmark }
                 </span>
                 <BoardCardTitle
                     board={board}
-                    className="font-display text-card-title absolute top-[2.5cqw] left-[1.066cqw] max-w-[80cqw] text-[8.182cqw] leading-[.9] font-bold"
+                    className={`font-display text-card-title absolute top-[2.5cqw] left-[1.066cqw] text-[8.182cqw] leading-[.9] font-bold ${annotatedPreview ? "line-clamp-2 max-w-[40cqw] break-words" : "max-w-[80cqw]"}`}
                 />
-                <p className="font-display text-card-subtle absolute top-[17.955cqw] left-[1.066cqw] text-[2.273cqw] leading-[1.1] font-bold">
-                    by {board.author}
-                </p>
+                {!preview && (
+                    <p className="font-display text-card-subtle absolute top-[17.955cqw] left-[1.066cqw] text-[2.273cqw] leading-[1.1] font-bold">
+                        by {board.author}
+                    </p>
+                )}
                 <p className="font-display text-card-title absolute top-[22.273cqw] right-[2.291cqw] text-right text-[3.182cqw] leading-[1.1] font-bold">
                     {board.durationDays} {board.durationDays === 1 ? "day" : "days"}
                 </p>
                 <p
-                    className="text-card-description absolute top-[27.045cqw] right-[2.291cqw] text-right text-[3.182cqw] leading-[1.1] font-medium whitespace-pre-line"
+                    className={`text-card-description absolute top-[27.045cqw] right-[2.291cqw] text-right text-[3.182cqw] leading-[1.1] font-medium whitespace-pre-line ${preview ? "line-clamp-6 break-words" : ""}`}
                     style={cardMeasure(board.descriptionWidth ?? 186, 440)}
                 >
-                    {board.description}
+                    {board.description || (preview && !annotatedPreview ? "Add a description to set the scene." : "")}
                 </p>
-                <ul className="text-card-subtle absolute top-[48.636cqw] right-[2.291cqw] text-right text-[2.727cqw] leading-[1.3] font-medium">
+                <ul
+                    className={`text-card-subtle absolute top-[48.636cqw] right-[2.291cqw] text-right text-[2.727cqw] leading-[1.3] font-medium ${preview ? "max-w-[40cqw] [&>li]:truncate" : ""}`}
+                >
                     {board.themes.map((theme) => (
                         <li key={theme}>- {theme}</li>
                     ))}
                 </ul>
-                <p className="text-card-description absolute top-[64.091cqw] right-[2.291cqw] text-[2.273cqw] leading-[1.2] font-medium">
-                    Highlights:
-                </p>
-                <p className="text-card-subtle absolute top-[67.727cqw] right-[2.291cqw] max-w-[25cqw] text-right text-[2.273cqw] leading-[1.2]">
-                    {board.highlights.map((highlight, index) => (
-                        <span key={`${index}-${highlight}`} className="block">
-                            {highlight}
-                        </span>
-                    ))}
-                </p>
-                {board.savedCount !== undefined && (
+                {!preview && (
+                    <p className="text-card-description absolute top-[64.091cqw] right-[2.291cqw] text-[2.273cqw] leading-[1.2] font-medium">
+                        Highlights:
+                    </p>
+                )}
+                {!preview && (
+                    <p className="text-card-subtle absolute top-[67.727cqw] right-[2.291cqw] max-w-[25cqw] text-right text-[2.273cqw] leading-[1.2]">
+                        {board.highlights.map((highlight, index) => (
+                            <span key={`${index}-${highlight}`} className="block">
+                                {highlight}
+                            </span>
+                        ))}
+                    </p>
+                )}
+                {!preview && board.savedCount !== undefined && (
                     <p className="text-card-subtle absolute top-[89.545cqw] right-[2.291cqw] text-[2.273cqw] leading-[1.02] font-bold">
                         Saved by {new Intl.NumberFormat("en-US").format(board.savedCount)} travelers
                     </p>
                 )}
+                {preview &&
+                    photoSlots.map((slot, index) =>
+                        !board.images[index] ? (
+                            <div
+                                key={index}
+                                aria-hidden="true"
+                                className={`absolute border ${annotatedPreview ? "border-line/35" : "bg-faint/60 border-line/60 border-dashed"} ${slot}`}
+                            />
+                        ) : null
+                    )}
                 {board.images.slice(0, 6).map((image, index) => (
                     <div key={`${index}-${image.src}`} className={`absolute ${photoSlots[index]}`}>
                         <BoardCardPhoto image={image} sizes="(max-width: 440px) 15vw, 64px" className="h-full w-full" />
@@ -77,13 +108,15 @@ export default function CollageBoardCard({ board, href, bookmarked, onBookmark }
                     className="bg-card-divider absolute top-[92.614cqw] left-[48.566cqw] h-[.114cqw] w-[32.273cqw]"
                 />
             </div>
-            <BoardCardBookmark
-                title={board.title}
-                appearance="collage"
-                bookmarked={bookmarked}
-                onBookmark={onBookmark}
-                className="top-[2.432cqw] left-[84.79cqw] h-[3.958cqw] w-[2.85cqw] [--bookmark-height:3.958cqw] [--bookmark-width:2.85cqw]"
-            />
+            {!preview && !hideBookmark && (
+                <BoardCardBookmark
+                    title={board.title}
+                    appearance="collage"
+                    bookmarked={bookmarked}
+                    onBookmark={onBookmark}
+                    className="top-[2.432cqw] left-[84.79cqw] h-[3.958cqw] w-[2.85cqw] [--bookmark-height:3.958cqw] [--bookmark-width:2.85cqw]"
+                />
+            )}
             <BoardCardGraphic
                 asset="v1-tokyo-line29.svg"
                 className="bg-card-line absolute top-[88.72%] left-[28.74%] h-[.227cqw] w-[71.26%]"

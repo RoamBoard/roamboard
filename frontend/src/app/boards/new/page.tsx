@@ -8,10 +8,11 @@ export const metadata: Metadata = {
     description: "Build and preview a travel Board from photos, places, and activities."
 };
 
-export default function NewBoardPage() {
+export default async function NewBoardPage({ searchParams }: { searchParams: Promise<{ mode?: string | string[] }> }) {
+    const { mode } = await searchParams;
     return (
         <AppShell activeHref="/create">
-            <BoardCreator />
+            <BoardCreator initialMode={mode === "scratch" ? "scratch" : "smart"} />
         </AppShell>
     );
 }

@@ -1,9 +1,14 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
+import BoardCoverHero from "@/components/features/boards/BoardCoverHero";
+import CreatorUploadArtwork from "@/components/features/boards/CreatorUploadArtwork";
 import { uploadBoardImage } from "@/lib/board-creator-api";
+import { uploadBoardImageBatch } from "@/lib/board-image-upload";
+import { toast } from "sonner";
+import { creatorToastOptions } from "./CreatorNotifications";
 import type { BoardImageDraft, BoardPinDraft } from "@/types/board-creator";
 
 const MAX_IMAGES = 10;
@@ -18,6 +23,8 @@ type Props = {
     images: BoardImageDraft[];
     coverImageId: number | null;
     disabled?: boolean;
+    loading?: boolean;
+    showDropZone?: boolean;
     onUploadingChange?: (uploading: boolean) => void;
     onUploadPromise?: (promise: Promise<unknown>) => void;
     onSelectCover: (imageId: number) => void;
@@ -93,6 +100,8 @@ export default function BoardImageIntake({
     images,
     coverImageId,
     disabled = false,
+    loading = false,
+    showDropZone = true,
     onUploadingChange,
     onUploadPromise,
     onSelectCover,
@@ -100,28 +109,60 @@ export default function BoardImageIntake({
     onRemove
 }: Props) {
     const inputRef = useRef<HTMLInputElement>(null);
+    const uploadId = useId();
+    const uploadLock = useRef(false);
+    useEffect(
+        () => () => {
+            toast.dismiss(uploadId);
+        },
+        [uploadId]
+    );
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState("");
     const remaining = MAX_IMAGES - images.length;
     const cover = images.find((image) => image.uploadedImageId === coverImageId);
 
     async function upload(files: File[]) {
-        if (disabled || busy || files.length === 0) return;
+        if (disabled || uploadLock.current || files.length === 0) return;
         if (files.length > remaining) {
             setError(`Choose no more than ${remaining} additional image${remaining === 1 ? "" : "s"}.`);
             return;
         }
+        uploadLock.current = true;
+        toast.loading("Uploading Board images…", { ...creatorToastOptions, id: uploadId });
         setBusy(true);
         onUploadingChange?.(true);
         setError("");
         const uploadTask = (async () => {
             try {
-                const assets = await Promise.all(files.map((file) => uploadBoardImage(file)));
+                const { assets, failures } = await uploadBoardImageBatch(files);
                 const prepared = assets.map((asset, index) => prepareUpload(asset, images.length + index));
-                onUploaded(prepared);
+                if (prepared.length) onUploaded(prepared);
+                if (failures.length) {
+                    const detail = `${assets.length} uploaded; ${failures.length} failed. Retry only the failed files. ${failures.join(" ")}`;
+                    setError(detail);
+                    toast.error("Some images could not be uploaded", {
+                        ...creatorToastOptions,
+                        id: uploadId,
+                        description: `${assets.length} uploaded; ${failures.length} failed. Details are beside your images.`
+                    });
+                } else {
+                    toast.success(`${assets.length} ${assets.length === 1 ? "image" : "images"} uploaded`, {
+                        ...creatorToastOptions,
+                        id: uploadId,
+                        description: "Save your Board to keep these changes."
+                    });
+                }
             } catch (caught) {
-                setError(caught instanceof Error ? caught.message : "The images could not be uploaded.");
+                const detail = caught instanceof Error ? caught.message : "The images could not be uploaded.";
+                setError(detail);
+                toast.error("Images could not be uploaded", {
+                    ...creatorToastOptions,
+                    id: uploadId,
+                    description: detail
+                });
             } finally {
+                uploadLock.current = false;
                 setBusy(false);
                 onUploadingChange?.(false);
                 if (inputRef.current) inputRef.current.value = "";
@@ -132,81 +173,74 @@ export default function BoardImageIntake({
     }
 
     return (
-        <section aria-labelledby="image-intake-heading" className="mx-auto w-full max-w-5xl">
-            <div
-                className="border-line relative grid min-h-80 place-items-center overflow-hidden border-x px-8 text-center sm:min-h-96"
-                onDragOver={(event) => {
-                    if (!disabled && !busy) event.preventDefault();
-                }}
-                onDrop={(event) => {
-                    event.preventDefault();
-                    if (!disabled && !busy) {
-                        void upload(Array.from(event.dataTransfer.files));
-                    }
-                }}
-            >
-                <div aria-hidden="true" className="absolute inset-x-[6%] top-20 bottom-0 opacity-70">
-                    {Array.from({ length: 24 }, (_, index) => (
-                        <span
-                            key={index}
-                            className="bg-line absolute bottom-0 w-px"
-                            style={{
-                                left: `${(index / 23) * 100}%`,
-                                height: `${34 + Math.abs(index - 11.5) * 4.5}%`
-                            }}
-                        >
-                            <span className="border-line bg-background absolute top-0 -left-1 size-2 rounded-full border" />
-                        </span>
-                    ))}
-                </div>
-                <div className="relative z-10">
-                    <h2 id="image-intake-heading" className="font-display text-24 text-line sm:text-30 leading-none">
-                        drop your
-                        <br />
-                        images
-                        <br />
-                        here
-                    </h2>
-                    <p className="text-12 text-graphite mt-5">
-                        Up to 10 images. GPS and capture time become suggestions you can edit.
-                    </p>
-                    <button
-                        type="button"
-                        disabled={disabled || busy || remaining === 0}
-                        onClick={() => inputRef.current?.click()}
-                        className="border-foreground bg-background text-12 text-foreground hover:bg-foreground hover:text-background mt-5 border px-5 py-3 transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none"
-                    >
-                        {busy ? "Reading images..." : remaining === 0 ? "10 images added" : "choose images"}
-                    </button>
-                    <input
-                        ref={inputRef}
-                        type="file"
-                        accept="image/*,.heic,.heif"
-                        multiple
-                        className="sr-only"
-                        disabled={disabled || busy || remaining === 0}
-                        onChange={(event) => void upload(Array.from(event.target.files ?? []))}
-                    />
-                </div>
-            </div>
-
-            <div className="relative min-h-52 overflow-hidden rounded-b-[50%] bg-[url('/boards-create-cover.svg')] bg-cover bg-center sm:min-h-72">
-                {cover ? (
-                    <img src={cover.url} alt="Board cover" className="absolute inset-0 size-full object-cover" />
-                ) : null}
-                <button
-                    type="button"
-                    disabled={disabled || busy || remaining === 0}
-                    onClick={() => inputRef.current?.click()}
-                    className="absolute bottom-10 left-1/2 grid size-10 -translate-x-1/2 place-items-center border border-white bg-black/45 text-white backdrop-blur-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white disabled:opacity-40"
-                    aria-label="Choose Board images"
+        <section
+            id="board-images"
+            aria-label="Board images"
+            aria-busy={busy || loading}
+            className="mx-auto w-[92%] max-w-[78rem] scroll-mt-36 sm:w-[80%]"
+        >
+            <input
+                ref={inputRef}
+                type="file"
+                accept="image/*,.heic,.heif"
+                multiple
+                className="hidden"
+                aria-label="Upload Board images"
+                disabled={disabled || busy || remaining === 0}
+                onChange={(event) => void upload(Array.from(event.target.files ?? []))}
+            />
+            {showDropZone ? (
+                <div
+                    className="relative aspect-[1254/706] min-h-[22rem] w-full text-center sm:min-h-0"
+                    onDragOver={(event) => {
+                        if (!disabled && !busy) event.preventDefault();
+                    }}
+                    onDrop={(event) => {
+                        event.preventDefault();
+                        if (!disabled && !busy) void upload(Array.from(event.dataTransfer.files));
+                    }}
                 >
-                    +
-                </button>
-            </div>
+                    <CreatorUploadArtwork />
+                    <div className="absolute inset-x-4 top-[9%] z-10 sm:top-[12%]">
+                        <h2
+                            id="image-intake-heading"
+                            className="text-muted-foreground text-24 sm:text-30 leading-[1.2] font-normal"
+                        >
+                            drop your
+                            <br />
+                            images
+                            <br />
+                            here
+                        </h2>
+                        <p className="text-muted-foreground mx-auto mt-4 max-w-64 text-[11px] leading-relaxed sm:text-xs">
+                            Up to 10 images. Review the suggested places and capture times before publishing.
+                        </p>
+                        <button
+                            type="button"
+                            disabled={disabled || busy || remaining === 0}
+                            onClick={() => inputRef.current?.click()}
+                            className="border-line bg-background/90 text-foreground hover:border-foreground mt-4 min-h-11 cursor-pointer border px-5 py-2 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none"
+                        >
+                            {busy ? "Uploading images..." : remaining === 0 ? "10 images added" : "choose images"}
+                        </button>
+                    </div>
+                </div>
+            ) : null}
+
+            <BoardCoverHero
+                coverUrl={cover?.url}
+                loading={loading}
+                disabled={disabled || busy || remaining === 0}
+                onChooseImages={() => inputRef.current?.click()}
+            />
+            {busy ? (
+                <p role="status" className="text-muted-foreground mt-4 text-center text-xs">
+                    Uploading images…
+                </p>
+            ) : null}
 
             {error ? (
-                <p className="text-14 mt-4 text-center" role="alert">
+                <p className="text-14 mt-4 text-center break-words" role="alert">
                     {error}
                 </p>
             ) : null}

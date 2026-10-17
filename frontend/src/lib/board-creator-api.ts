@@ -1,7 +1,7 @@
 import type { BoardCreatorPayload, BoardDayDraft, BoardImageDraft, BoardPinDraft } from "@/types/board-creator";
 import { findCountry } from "@/lib/countries";
 
-const apiOrigin = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+const apiOrigin = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001").replace(/\/+$/, "");
 
 type ApiError = { error?: { code?: string; message?: string } };
 
