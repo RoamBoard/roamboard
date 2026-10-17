@@ -15,13 +15,13 @@ export function ProfileRedirect() {
     const [retry, setRetry] = useState(0);
 
     useEffect(() => {
-        let active = true;
+        const request = { active: true };
         void loadProfile()
             .then((profile) => {
-                if (active) router.replace(`/profile/${encodeURIComponent(profile.username)}`);
+                if (request.active) router.replace(`/profile/${encodeURIComponent(profile.username)}`);
             })
             .catch((caught: unknown) => {
-                if (active)
+                if (request.active)
                     setError(
                         caught instanceof ProfileApiError && caught.status === 401
                             ? "Sign in to see your profile."
@@ -29,7 +29,7 @@ export function ProfileRedirect() {
                     );
             });
         return () => {
-            active = false;
+            request.active = false;
         };
     }, [router, retry]);
 
@@ -65,13 +65,13 @@ export default function HandleProfileContent({ handle }: { handle: string }) {
     const [retry, setRetry] = useState(0);
 
     useEffect(() => {
-        let active = true;
+        const request = { active: true };
         void loadPublicProfile(handle)
             .then((result) => {
-                if (active) setView(result);
+                if (request.active) setView(result);
             })
             .catch((caught: unknown) => {
-                if (active)
+                if (request.active)
                     setError(
                         caught instanceof ProfileApiError && caught.status === 404
                             ? "Profile not found."
@@ -79,7 +79,7 @@ export default function HandleProfileContent({ handle }: { handle: string }) {
                     );
             });
         return () => {
-            active = false;
+            request.active = false;
         };
     }, [handle, retry]);
 
