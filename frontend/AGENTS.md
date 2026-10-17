@@ -47,8 +47,15 @@ and Escape collapses the choices and restores trigger focus. Smart Create opens 
 `/boards/new?mode=scratch`. Smart includes the circuit upload introduction; Scratch, reopened drafts, and published
 edits begin at the shared curved cover. New Boards can switch modes without discarding local edits or remounting
 the upload controller. The shared editor uses spacious numbered chapters, Cabinet display titles, and Satoshi
-supporting text. Existing Boards lock editing while loading and remain locked after a failed load. Planner,
-discovery controls, preview, and publication retain their existing functionality pending later redesign milestones.
+supporting text. Existing Boards lock editing while loading and remain locked after a failed load.
+The planner uses horizontally scrolling day columns with independent activity scrolling, compact photo cards,
+and circular category controls. Category menus reuse the existing activity vocabulary and shadcn/Radix radio
+menus with typeahead; they do not use Board discovery tags or introduce new backend categories. Pointer drops
+retain 30-minute time placement. Activity move menus provide keyboard/touch reordering and cross-day moves
+without changing times, with focus restoration and live announcements. Explicit order is retained through edits,
+additions, and removals; new activities append to their day. `board-planner.ts` owns immutable move calculations,
+while `BoardCreator` remains the state/save owner. Discovery controls, preview, and publication retain their
+existing functionality pending later redesign milestones.
 Draft and My Boards navigation remain available; remixing remains
 explicitly deferred. Discover links to `/discover`. The shared sidebar is unchanged.
 

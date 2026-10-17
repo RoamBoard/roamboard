@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { movePlannerPin, reorderPlannerPin } from "@/lib/board-planner";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import BoardCreationPreview from "@/components/features/boards/BoardCreationPreview";
@@ -36,9 +37,7 @@ function newDay(dayNumber: number, date: string | null = null): BoardDayDraft {
 }
 
 function normalizePinOrder(pins: BoardPinDraft[]): BoardPinDraft[] {
-    return [...pins]
-        .sort((first, second) => first.time.localeCompare(second.time) || first.order - second.order)
-        .map((pin, order) => ({ ...pin, order }));
+    return pins.map((pin, order) => ({ ...pin, order }));
 }
 
 function addPhotoSuggestions(current: BoardDayDraft[], uploads: UploadedBoardImage[]): BoardDayDraft[] {
@@ -218,7 +217,7 @@ export default function BoardCreator({
         setDays((current) =>
             current.map((day) => ({
                 ...day,
-                pins: normalizePinOrder(day.pins.map((item) => (item.id === pin.id ? pin : item)))
+                pins: day.pins.map((item) => (item.id === pin.id ? pin : item))
             }))
         );
     }
@@ -305,18 +304,8 @@ export default function BoardCreator({
         });
     }
 
-    function movePin(pinId: string, dayId: string, time: string) {
-        const pin = days.flatMap((day) => day.pins).find((item) => item.id === pinId);
-        if (!pin) return;
-        setDays((current) =>
-            current.map((day) => {
-                const withoutPin = day.pins.filter((item) => item.id !== pinId);
-                return {
-                    ...day,
-                    pins: normalizePinOrder(day.id === dayId ? [...withoutPin, { ...pin, time }] : withoutPin)
-                };
-            })
-        );
+    function movePin(pinId: string, dayId: string, time: string, index?: number) {
+        setDays((current) => movePlannerPin(current, pinId, dayId, time, index));
     }
 
     async function save(status: BoardStatus) {
@@ -500,6 +489,9 @@ export default function BoardCreator({
                                 onAddPin={addPin}
                                 onUpdatePin={updatePin}
                                 onMovePin={movePin}
+                                onReorderPin={(pinId, direction) =>
+                                    setDays((current) => reorderPlannerPin(current, pinId, direction))
+                                }
                                 onRemovePin={removePin}
                                 onAddActivityImage={addActivityImage}
                                 onAssignActivityImage={assignActivityImage}
