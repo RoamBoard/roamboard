@@ -4,16 +4,19 @@ export interface UserProfile {
     displayName: string;
     description: string;
     location: string | null;
+    occupation: string | null;
+    languages: string[];
     interests: string[];
     profilePicture: { imageId: number; url: string; storageKey: null } | null;
-    settings: Record<string, unknown>;
+    defaultBoardVisibility: "collaborators" | "friends" | "public";
+    revision: number;
     createdAt: string;
     updatedAt: string;
 }
 
 export interface MapDestination {
     id: string;
-    boardId?: string;
+    boardId?: number;
     boardTitle?: string;
     country: string;
     countryCode: string | null;
@@ -36,11 +39,33 @@ export interface ProfileBoard {
     updatedAt: string;
 }
 
-export type ProfileChanges = Pick<UserProfile, "displayName" | "description" | "location" | "interests">;
+export type ProfileChanges = Pick<
+    UserProfile,
+    | "username"
+    | "displayName"
+    | "description"
+    | "location"
+    | "occupation"
+    | "languages"
+    | "interests"
+    | "defaultBoardVisibility"
+    | "revision"
+>;
+export interface SavedBoard {
+    boardId: number;
+    title: string;
+    description: string;
+    owner: { id: string; username: string; displayName: string };
+    coverImageUrl: string | null;
+    savedAt: string;
+}
 export interface UsersRepository {
     read(userId: string): Promise<UserProfile | null>;
     update(userId: string, input: ProfileChanges): Promise<void>;
     setPicture(userId: string, imageId: number | null): Promise<void>;
     listBoards(userId: string, recent: boolean): Promise<ProfileBoard[]>;
     stats(userId: string): Promise<Record<string, number>>;
+    listSavedBoards(userId: string, page: number, limit: number): Promise<{ items: SavedBoard[]; hasMore: boolean }>;
+    saveBoard(userId: string, boardId: number): Promise<boolean>;
+    unsaveBoard(userId: string, boardId: number): Promise<void>;
 }

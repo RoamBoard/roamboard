@@ -159,17 +159,23 @@ export default function ProfilePrototype() {
 
     async function saveProfile(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
+        if (!profile) return;
         const data = new FormData(event.currentTarget);
         await run(
             () =>
                 updateProfile({
+                    revision: profile.revision,
+                    username: profile.username,
                     displayName: String(data.get("displayName") ?? ""),
                     description: String(data.get("description") ?? ""),
                     location: String(data.get("location") ?? "").trim() || null,
+                    occupation: profile.occupation,
+                    languages: profile.languages,
                     interests: String(data.get("interests") ?? "")
                         .split(",")
                         .map((item) => item.trim())
-                        .filter(Boolean)
+                        .filter(Boolean),
+                    defaultBoardVisibility: profile.defaultBoardVisibility
                 }),
             "Profile saved and read back from the API."
         );

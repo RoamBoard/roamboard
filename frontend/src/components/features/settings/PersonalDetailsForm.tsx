@@ -7,8 +7,6 @@ type Props = {
     onChangeOccupation: (occupation: string) => void;
     location: string;
     onChangeLocation: (location: string) => void;
-    headline: string;
-    onChangeHeadline: (headline: string) => void;
     bio: string;
     onChangeBio: (bio: string) => void;
 };
@@ -22,8 +20,6 @@ export default function PersonalDetailsForm({
     onChangeOccupation,
     location,
     onChangeLocation,
-    headline,
-    onChangeHeadline,
     bio,
     onChangeBio
 }: Props) {
@@ -48,6 +44,7 @@ export default function PersonalDetailsForm({
                         id="name-input"
                         type="text"
                         required
+                        maxLength={500}
                         value={name}
                         onChange={(e) => onChangeName(e.target.value)}
                         placeholder="e.g. ROWAN MERCER"
@@ -66,6 +63,7 @@ export default function PersonalDetailsForm({
                         id="handle-input"
                         type="text"
                         value={handle}
+                        maxLength={65}
                         onChange={(e) => onChangeHandle(e.target.value)}
                         placeholder="@rowan.mercer"
                         className="border-line bg-background text-14 text-foreground placeholder:text-muted-foreground font-body focus:border-foreground mt-1 w-full rounded-[2px] border px-3 py-2 transition-colors focus-visible:outline-none"
@@ -83,6 +81,7 @@ export default function PersonalDetailsForm({
                         id="occupation-input"
                         type="text"
                         value={occupation}
+                        maxLength={500}
                         onChange={(e) => onChangeOccupation(e.target.value)}
                         placeholder="e.g. Travel Writer & Photographer"
                         className="border-line bg-background text-14 text-foreground placeholder:text-muted-foreground font-body focus:border-foreground mt-1 w-full rounded-[2px] border px-3 py-2 transition-colors focus-visible:outline-none"
@@ -100,25 +99,9 @@ export default function PersonalDetailsForm({
                         id="location-input"
                         type="text"
                         value={location}
+                        maxLength={500}
                         onChange={(e) => onChangeLocation(e.target.value)}
                         placeholder="e.g. San Francisco, USA"
-                        className="border-line bg-background text-14 text-foreground placeholder:text-muted-foreground font-body focus:border-foreground mt-1 w-full rounded-[2px] border px-3 py-2 transition-colors focus-visible:outline-none"
-                    />
-                </div>
-
-                <div className="sm:col-span-2">
-                    <label
-                        htmlFor="headline-input"
-                        className="text-10 tracking-label text-muted-foreground block font-bold uppercase"
-                    >
-                        Profile Headline
-                    </label>
-                    <input
-                        id="headline-input"
-                        type="text"
-                        value={headline}
-                        onChange={(e) => onChangeHeadline(e.target.value)}
-                        placeholder="e.g. Chasing places, collecting stories."
                         className="border-line bg-background text-14 text-foreground placeholder:text-muted-foreground font-body focus:border-foreground mt-1 w-full rounded-[2px] border px-3 py-2 transition-colors focus-visible:outline-none"
                     />
                 </div>
@@ -133,6 +116,7 @@ export default function PersonalDetailsForm({
                     <textarea
                         id="bio-input"
                         rows={4}
+                        maxLength={500}
                         value={bio}
                         onChange={(e) => onChangeBio(e.target.value)}
                         placeholder="Write about your travel philosophy, memorable adventures, and plans..."

@@ -338,6 +338,7 @@ test("canonical save-and-reopen mapping preserves the content fingerprint despit
     const saved: BoardDocument = {
         ...write,
         boardId: 40,
+        author: { username: "owner", bio: "", photo: null },
         revision: 2,
         tags,
         permissions: { canEditContent: true, canManageBoard: true },

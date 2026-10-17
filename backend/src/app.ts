@@ -76,6 +76,7 @@ export function createApp(options: AppOptions = {}): Express {
     app.use("/api/v1/providers", providers.router);
     app.use("/api/v1/destinations", destinations.router);
     app.use("/api/v1/users", users.router);
+    app.use("/api/v1", users.publicRouter);
     app.use("/api/v1/search", search.router);
     app.use("/api/v1", boards.router);
     app.use("/api/v1", images.router);

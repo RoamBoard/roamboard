@@ -26,6 +26,7 @@ function summary(boardId: number, title = `Draft journey ${boardId}`): DraftSumm
 function document(boardId: number): BoardDocument {
     return {
         boardId,
+        author: { username: "owner", bio: "", photo: null },
         revision: 8,
         status: "draft",
         title: `Draft journey ${boardId}`,

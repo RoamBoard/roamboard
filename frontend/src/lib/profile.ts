@@ -6,19 +6,41 @@ export type UserProfile = {
     displayName: string;
     description: string;
     location: string | null;
+    occupation: string | null;
+    languages: string[];
     interests: string[];
     profilePicture: { imageId: number; url: string; storageKey: string | null } | null;
-    settings: Record<string, unknown>;
+    defaultBoardVisibility: "collaborators" | "friends" | "public";
+    revision: number;
     createdAt: string;
     updatedAt: string;
 };
 
 export type ProfileStats = {
     countriesVisited: number;
+    citiesExplored: number;
+    continentsCovered: number;
+    photosUploaded: number;
     boardsCreated: number;
     friends: number;
-    placesSaved: number;
+    activitiesSaved: number;
     boardsSaved: number;
+};
+
+export type PublishedBoardSummary = {
+    boardId: number;
+    title: string;
+    coverImageUrl: string | null;
+    updatedAt: string;
+};
+
+export type SavedBoardSummary = {
+    boardId: number;
+    title: string;
+    description: string;
+    owner: { id: string; username: string; displayName: string };
+    coverImageUrl: string | null;
+    savedAt: string;
 };
 
 export type ProfileBoard = {
@@ -36,7 +58,7 @@ export type ProfileBoard = {
 
 export type MapDestination = {
     id: string;
-    boardId?: string;
+    boardId?: number;
     boardTitle?: string;
     country: string;
     countryCode: string | null;
@@ -46,47 +68,87 @@ export type MapDestination = {
     isCompleted?: boolean;
 };
 
-const apiOrigin = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+export const apiOrigin = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
-async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+export class ProfileApiError extends Error {
+    constructor(
+        public status: number,
+        public code: string,
+        message: string
+    ) {
+        super(message);
+    }
+}
+
+async function apiRequestEnvelope<T>(
+    path: string,
+    init?: RequestInit
+): Promise<{ data: T; meta?: { page: number; limit: number; hasMore: boolean } }> {
     const response = await fetch(`${apiOrigin}${path}`, {
         ...init,
         credentials: "include",
+        cache: "no-store",
         headers: init?.body ? { "content-type": "application/json", ...init.headers } : init?.headers
+    }).catch(() => {
+        throw new Error("The Roamboard API is unavailable. Start the backend and try again.");
     });
-    if (response.status === 204) return undefined as T;
+    if (response.status === 204) return { data: undefined as T };
+    if (!response.headers.get("content-type")?.includes("application/json"))
+        throw new Error(`The Roamboard API returned ${response.status} instead of JSON.`);
     const body = (await response.json()) as {
         data?: T;
-        error?: { message?: string };
+        meta?: { page: number; limit: number; hasMore: boolean };
+        error?: { code?: string; message?: string };
     };
     if (!response.ok || body.data === undefined) {
-        throw new Error(body.error?.message ?? "The Roamboard API could not complete that request.");
+        throw new ProfileApiError(
+            response.status,
+            body.error?.code ?? "UNKNOWN",
+            body.error?.message ?? "The Roamboard API could not complete that request."
+        );
     }
-    return body.data;
+    return { data: body.data, meta: body.meta };
+}
+
+async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+    return (await apiRequestEnvelope<T>(path, init)).data;
 }
 
 export function loadProfile() {
     return apiRequest<UserProfile>("/api/v1/users/me").then(resolveProfilePicture);
 }
 
-export function updateProfile(changes: Pick<UserProfile, "displayName" | "description" | "location" | "interests">) {
+export function updateProfile(
+    changes: Pick<
+        UserProfile,
+        | "revision"
+        | "username"
+        | "displayName"
+        | "description"
+        | "location"
+        | "occupation"
+        | "languages"
+        | "interests"
+        | "defaultBoardVisibility"
+    >
+) {
     return apiRequest<UserProfile>("/api/v1/users/me", {
         method: "PATCH",
         body: JSON.stringify(changes)
-    });
+    }).then(resolveProfilePicture);
 }
 
 export function setProfilePicture(imageId: number) {
     return apiRequest<UserProfile>("/api/v1/users/me/profile-picture", {
         method: "PUT",
         body: JSON.stringify({ imageId })
-    });
+    }).then(resolveProfilePicture);
 }
 
 export function deleteProfilePicture() {
     return apiRequest<UserProfile>("/api/v1/users/me/profile-picture", {
         method: "DELETE"
-    });
+    }).then(resolveProfilePicture);
 }
 
 export function loadProfileStats() {
@@ -102,7 +164,31 @@ export function loadRecentBoards() {
 }
 
 export function loadMapDestinations() {
-    return apiRequest<MapDestination[]>("/api/v1/users/me/map-destinations");
+    return apiRequest<MapDestination[]>("/api/v1/users/me/map-destinations?scope=visited");
+}
+
+export function loadLanguages() {
+    return apiRequest<string[]>("/api/v1/languages");
+}
+
+export function loadPublishedBoards() {
+    return apiRequest<PublishedBoardSummary[]>("/api/v1/boards?scope=published&page=1&limit=3");
+}
+
+export function loadSavedBoards(page = 1, limit = 20) {
+    return apiRequest<SavedBoardSummary[]>(`/api/v1/users/me/saved-boards?page=${page}&limit=${limit}`);
+}
+
+export function loadSavedBoardsPage(page = 1, limit = 20) {
+    return apiRequestEnvelope<SavedBoardSummary[]>(`/api/v1/users/me/saved-boards?page=${page}&limit=${limit}`);
+}
+
+export function saveBoardBookmark(boardId: number) {
+    return apiRequest<{ boardId: number; saved: true }>(`/api/v1/boards/${boardId}/save`, { method: "PUT" });
+}
+
+export function unsaveBoardBookmark(boardId: number) {
+    return apiRequest<void>(`/api/v1/boards/${boardId}/save`, { method: "DELETE" });
 }
 
 export function createBoard(input: {

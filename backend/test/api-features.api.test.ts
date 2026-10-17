@@ -202,9 +202,12 @@ test("profile reads and writes use the session owner and reject forged identity"
         displayName: "Owner",
         description: "",
         location: null,
+        occupation: null,
+        languages: [],
         interests: [],
         profilePicture: null,
-        settings: {},
+        defaultBoardVisibility: "collaborators",
+        revision: 1,
         createdAt: "2026-10-14T00:00:00Z",
         updatedAt: "2026-10-14T00:00:00Z"
     };
@@ -216,7 +219,7 @@ test("profile reads and writes use the session owner and reject forged identity"
         },
         async update(id, changes) {
             seen.push(id);
-            profile = { ...profile, ...changes };
+            profile = { ...profile, ...changes, revision: profile.revision + 1 };
         },
         async setPicture() {
             throw new Error("must not be called");
@@ -226,6 +229,15 @@ test("profile reads and writes use the session owner and reject forged identity"
         },
         async stats() {
             return { boardsCreated: 0 };
+        },
+        async listSavedBoards() {
+            return { items: [], hasMore: false };
+        },
+        async saveBoard() {
+            return true;
+        },
+        async unsaveBoard() {
+            return;
         }
     };
     const app = createApp({
@@ -235,11 +247,33 @@ test("profile reads and writes use the session owner and reject forged identity"
             ...createBoardsRepository(),
             async listTags() {
                 return [];
+            },
+            async getAccess(boardId) {
+                if (boardId === 44) return null;
+                return {
+                    boardId,
+                    ownerUserId: boardId === 43 ? "owner" : "friend",
+                    status: "published",
+                    visibility: "public",
+                    revision: 1,
+                    memberRole: null,
+                    isFriend: false
+                };
             }
         }
     });
     assert.equal((await request(app).get("/api/v1/users/me").set("x-demo-user-id", "owner")).status, 401);
-    const changes = { displayName: "New name", description: "Traveller", location: "Stockholm", interests: [] };
+    const changes = {
+        revision: 1,
+        username: "owner",
+        displayName: "New name",
+        description: "Traveller",
+        location: "Stockholm",
+        occupation: null,
+        languages: [],
+        interests: [],
+        defaultBoardVisibility: "collaborators"
+    };
     assert.equal((await request(app).patch("/api/v1/users/me").set("Cookie", cookie).send(changes)).status, 403);
     const saved = await request(app)
         .patch("/api/v1/users/me")
@@ -250,6 +284,23 @@ test("profile reads and writes use the session owner and reject forged identity"
     assert.equal(saved.body.data.displayName, "New name");
     const loaded = await request(app).get("/api/v1/users/me").set("Cookie", cookie);
     assert.equal(loaded.body.data.description, "Traveller");
+    assert.equal((await request(app).get("/api/v1/languages")).status, 200);
+    assert.equal((await request(app).put("/api/v1/boards/42/save").set("Cookie", cookie)).status, 403);
+    const bookmark = await request(app).put("/api/v1/boards/42/save").set("Cookie", cookie).set("Origin", origin);
+    assert.equal(bookmark.status, 201);
+    assert.deepEqual(bookmark.body.data, { boardId: 42, saved: true });
+    assert.equal(
+        (await request(app).put("/api/v1/boards/43/save").set("Cookie", cookie).set("Origin", origin)).status,
+        403
+    );
+    assert.equal(
+        (await request(app).put("/api/v1/boards/44/save").set("Cookie", cookie).set("Origin", origin)).status,
+        404
+    );
+    assert.equal(
+        (await request(app).delete("/api/v1/boards/42/save").set("Cookie", cookie).set("Origin", origin)).status,
+        204
+    );
     assert.deepEqual(new Set(seen), new Set(["owner"]));
     assert.equal(
         (

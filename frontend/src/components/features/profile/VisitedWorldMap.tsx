@@ -79,7 +79,13 @@ function popupForSelection(event: MapLayerMouseEvent): void {
     if (cityFeature) popupForCity(event, cityFeature);
 }
 
-export default function VisitedWorldMap({ destinations }: { destinations: MapDestination[] }) {
+export default function VisitedWorldMap({
+    destinations,
+    embedded = false
+}: {
+    destinations: MapDestination[];
+    embedded?: boolean;
+}) {
     const containerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<MapboxMap | null>(null);
     const sessionRequestRef = useRef<ReturnType<typeof loadMapboxMapSession> | null>(null);
@@ -232,25 +238,29 @@ export default function VisitedWorldMap({ destinations }: { destinations: MapDes
     }, [destinationCities, mapReady, plannedCountryCodes, visitedCountryCodes]);
 
     return (
-        <section className="border-line mt-16 border-t pt-10">
-            <div className="flex flex-wrap items-end justify-between gap-4">
-                <div>
-                    <p className="text-10 tracking-label text-graphite font-bold uppercase">Travel footprint</p>
-                    <h2 className="font-display text-28 mt-2 font-bold">Places around the world</h2>
+        <section className={embedded ? "w-full" : "border-line mt-16 border-t pt-10"}>
+            {!embedded && (
+                <div className="flex flex-wrap items-end justify-between gap-4">
+                    <div>
+                        <p className="text-10 tracking-label text-graphite font-bold uppercase">Travel footprint</p>
+                        <h2 className="font-display text-28 mt-2 font-bold">Places around the world</h2>
+                    </div>
+                    <div className="text-12 text-graphite flex gap-4">
+                        <span className="flex items-center gap-2">
+                            <i className="size-3 rounded-full bg-[#e46f45]" /> Visited
+                        </span>
+                        <span className="flex items-center gap-2">
+                            <i className="size-3 rounded-full border border-[#e46f45] bg-[#e46f45]/25" /> Planned
+                        </span>
+                    </div>
                 </div>
-                <div className="text-12 text-graphite flex gap-4">
-                    <span className="flex items-center gap-2">
-                        <i className="size-3 rounded-full bg-[#e46f45]" /> Visited
-                    </span>
-                    <span className="flex items-center gap-2">
-                        <i className="size-3 rounded-full border border-[#e46f45] bg-[#e46f45]/25" /> Planned
-                    </span>
-                </div>
-            </div>
-            <p className="text-14 text-graphite mt-3 max-w-2xl leading-6">
-                Completed Boards fill countries as visited. Planned Board destinations stay light. Select a city marker
-                for its details.
-            </p>
+            )}
+            {!embedded && (
+                <p className="text-14 text-graphite mt-3 max-w-2xl leading-6">
+                    Completed Boards fill countries as visited. Planned Board destinations stay light. Select a city
+                    marker for its details.
+                </p>
+            )}
             {error ? (
                 <div
                     className="border-line bg-faint text-14 text-graphite mt-6 grid aspect-[2/1] place-items-center border px-6 text-center"

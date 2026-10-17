@@ -27,6 +27,7 @@ function savedBoard(status: BoardStatus = "draft"): BoardDocument {
         ...toBoardWrite(draft(), [], new Set()),
         status,
         boardId: 35,
+        author: { username: "owner", bio: "", photo: null },
         revision: 4,
         permissions: { canEditContent: true, canManageBoard: true },
         tags: [],

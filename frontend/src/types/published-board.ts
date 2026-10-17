@@ -14,6 +14,8 @@ export type PublishedBoardData = {
     author: BoardAuthor;
     tagLabels?: string[];
     canEditContent?: boolean;
+    canManageBoard?: boolean;
+    savedByMe?: boolean;
 };
 
 export type PublishedBoardState = {

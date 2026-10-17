@@ -14,6 +14,7 @@ import { createPostgresGooglePlaceReferenceRepository } from "../src/features/pr
 import { createPostgresQuotaRepository } from "../src/features/quotas/quota.postgres-repository.js";
 import { createSearchRepository } from "../src/features/search/search.repository.js";
 import type { BoardWrite } from "../src/features/boards/boards.schemas.js";
+import { spokenLanguages } from "../src/shared/spoken-languages.js";
 
 const databaseUrl = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL;
 
@@ -37,10 +38,18 @@ test(
                 "001_initial.sql",
                 "002_auth_session.sql",
                 "003_board_creator.sql",
-                "004_api_features.sql"
+                "004_api_features.sql",
+                "005_profile.sql"
             ]) {
                 await pool.query(await readFile(new URL(`../db/migrations/${name}`, import.meta.url), "utf8"));
             }
+            const seededLanguages = await pool.query<{ language_name: string }>(
+                "SELECT language_name FROM language ORDER BY language_name"
+            );
+            assert.deepEqual(
+                seededLanguages.rows.map((row) => row.language_name),
+                spokenLanguages
+            );
             await pool.query(`INSERT INTO app_user (user_id, username, display_name)
                          VALUES ('owner','owner','Owner'), ('friend','friend','Friend'), ('editor','editor','Editor'), ('stranger','stranger','Stranger');
                          INSERT INTO friendship (status, requester_user_id, recipient_user_id) VALUES ('accepted','owner','friend');`);
@@ -108,16 +117,36 @@ test(
             assert.equal((await service.listAccessible("owner", 1, 2)).hasMore, true);
             const profiles = createUsersRepository();
             const users = createUsersService(profiles, createImagesRepository(), boards);
-            await users.update("owner", {
+            const profileChanges = {
+                username: "owner",
                 displayName: "Updated owner",
                 description: "Traveller",
                 location: "Stockholm",
-                interests: ["Food"]
+                occupation: null,
+                languages: ["English"],
+                interests: ["Food"],
+                defaultBoardVisibility: "collaborators" as const
+            };
+            await users.update("owner", {
+                ...profileChanges,
+                revision: 1
             });
             assert.equal((await users.read("owner")).displayName, "Updated owner");
             assert.deepEqual((await users.read("owner")).interests, ["Food"]);
+            assert.deepEqual((await users.read("owner")).languages, ["English"]);
+            await assert.rejects(
+                () => users.update("owner", { ...profileChanges, revision: 1 }),
+                (error: { code?: string }) => error.code === "STALE_PROFILE"
+            );
+            await assert.rejects(
+                () => users.update("owner", { ...profileChanges, revision: 2, username: "friend" }),
+                (error: { code?: string }) => error.code === "USERNAME_TAKEN"
+            );
             await assert.rejects(() =>
-                users.update("owner", { displayName: "Bad", description: "", location: null, interests: ["Unknown"] })
+                users.update("owner", { ...profileChanges, revision: 2, languages: ["Unknown"] })
+            );
+            await assert.rejects(() =>
+                users.update("owner", { ...profileChanges, revision: 2, interests: ["Unknown"] })
             );
             assert.equal((await users.read("owner")).displayName, "Updated owner");
             const image = await pool.query<{ uploaded_image_id: number }>(
@@ -140,8 +169,25 @@ test(
             await users.setPicture("owner", null);
             assert.equal((await users.read("owner")).profilePicture, null);
             assert.equal((await users.stats("owner")).countriesVisited, 1);
+            assert.equal((await users.stats("owner")).citiesExplored, 1);
+            assert.equal((await users.stats("owner")).continentsCovered, 1);
+            assert.equal((await users.stats("owner")).boardsCreated, 3);
+            assert.equal((await users.stats("owner")).photosUploaded, 0);
             assert.equal((await users.mapDestinations("owner")).length, 3);
+            assert.equal((await users.mapDestinations("owner", true)).length, 3);
             assert.equal((await users.mapDestinations("owner"))[0]?.countryCode, "JPN");
+            assert.equal(await users.saveBoard("stranger", publicBoard.boardId), true);
+            assert.equal(await users.saveBoard("stranger", publicBoard.boardId), false);
+            assert.equal((await users.listSavedBoards("stranger", 1, 20)).items[0]?.boardId, publicBoard.boardId);
+            assert.equal((await users.stats("stranger")).boardsSaved, 1);
+            await assert.rejects(() => users.saveBoard("owner", publicBoard.boardId));
+            await assert.rejects(() => users.saveBoard("stranger", friendsBoard.boardId));
+            assert.equal(await users.saveBoard("friend", friendsBoard.boardId), true);
+            await pool.query("DELETE FROM friendship WHERE requester_user_id='owner' AND recipient_user_id='friend'");
+            assert.equal((await users.listSavedBoards("friend", 1, 20)).items.length, 0);
+            assert.equal((await users.stats("friend")).boardsSaved, 0);
+            await users.unsaveBoard("friend", friendsBoard.boardId);
+            await users.unsaveBoard("friend", friendsBoard.boardId);
             const { isCompleted: _completed, ...withoutCompletion } = input;
             assert.equal(_completed, true);
             const changed = await service.replace("owner", publicBoard.boardId, publicBoard.revision, {
