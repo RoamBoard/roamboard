@@ -20,6 +20,14 @@ export const profileChangesSchema = z
     })
     .strict();
 export const pictureSchema = z.object({ imageId: z.number().int().positive() }).strict();
+export const publicProfileParamsSchema = z.object({
+    handle: z
+        .string()
+        .toLowerCase()
+        .min(1)
+        .max(64)
+        .regex(/^(?:[a-z0-9]|[a-z0-9][a-z0-9._]*[a-z0-9])$/)
+});
 export const savedBoardsQuerySchema = z.object({
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(20)

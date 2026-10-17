@@ -24,7 +24,7 @@ import VisitedWorldMap from "./VisitedWorldMap";
 
 type BoardCard = { boardId: number; title: string; coverImageUrl: string | null; author?: string };
 
-function LiveBoardCard({ board }: { board: BoardCard }) {
+export function LiveBoardCard({ board }: { board: BoardCard }) {
     return (
         <Link
             href={`/boards/${board.boardId}`}

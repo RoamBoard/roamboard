@@ -202,3 +202,9 @@ First `PUT /api/v1/boards/42/save` returns `201 { "data": { "boardId": 42, "save
 **Agreed implementation details:** the username character/length rule, starter language names, `revision` and saved-list response shapes, three-card preview size, immediate profile photo changes, and static country-to-continent mapping.
 
 **Approval record:** Backend-side product decisions recorded from Teoma on 2026-10-16. Teoma reported frontend-team approval and requested backend implementation on 2026-10-16.
+
+## Public handle profiles (2026-10-17)
+
+Teoma approved public profile pages at `/profile/{handle}`. `/profile` resolves the signed-in user's handle and redirects to that path. A visitor, including a signed-out visitor, sees the profile fields, current profile photo, public published Boards, and travel data derived only from completed public published Boards. The visitor cannot see saved Boards, private Board counts or locations, account preferences, or edit controls. The owner continues to see the existing `/me` profile data at their handle path.
+
+`GET /api/v1/users/by-handle/{handle}` returns `{ data: { profile, isOwner, stats, boards, destinations } }` without requiring a session. Its `profile` contains only `username`, `displayName`, `description`, `location`, `occupation`, `languages`, `interests`, and `profilePicture`; it excludes the account ID, revision, and default Board visibility. `stats` contains public country, city, continent, photo, and Board counts. Unknown handles return `404 NOT_FOUND`. Public profile photo URLs carry `profileHandle`; image content is served only while that image remains the handle owner's current profile photo. Board links retain their normal read authorization.

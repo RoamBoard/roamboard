@@ -4,6 +4,10 @@ import { createUsersService } from "./users.service.js";
 
 export function createUsersController(service: ReturnType<typeof createUsersService>) {
     return {
+        publicRead: async (_request, response) => {
+            const { handle } = response.locals.params as { handle: string };
+            response.json({ data: await service.publicProfile(handle, response.locals.user?.userId ?? null) });
+        },
         languages: async (_request, response) => {
             response.json({ data: service.languages() });
         },

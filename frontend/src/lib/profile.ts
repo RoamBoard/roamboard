@@ -16,6 +16,29 @@ export type UserProfile = {
     updatedAt: string;
 };
 
+export type PublicProfile = Pick<
+    UserProfile,
+    | "username"
+    | "displayName"
+    | "description"
+    | "location"
+    | "occupation"
+    | "languages"
+    | "interests"
+    | "profilePicture"
+>;
+
+export type PublicProfileView = {
+    profile: PublicProfile;
+    isOwner: boolean;
+    stats: Pick<
+        ProfileStats,
+        "countriesVisited" | "citiesExplored" | "continentsCovered" | "photosUploaded" | "boardsCreated"
+    >;
+    boards: PublishedBoardSummary[];
+    destinations: MapDestination[];
+};
+
 export type ProfileStats = {
     countriesVisited: number;
     citiesExplored: number;
@@ -116,6 +139,13 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
 
 export function loadProfile() {
     return apiRequest<UserProfile>("/api/v1/users/me").then(resolveProfilePicture);
+}
+
+export function loadPublicProfile(handle: string) {
+    return apiRequest<PublicProfileView>(`/api/v1/users/by-handle/${encodeURIComponent(handle)}`).then((view) => ({
+        ...view,
+        profile: resolveProfilePicture(view.profile)
+    }));
 }
 
 export function updateProfile(
@@ -241,7 +271,7 @@ export function createBoard(input: {
     });
 }
 
-function resolveProfilePicture(profile: UserProfile): UserProfile {
+function resolveProfilePicture<T extends { profilePicture: UserProfile["profilePicture"] }>(profile: T): T {
     if (!profile.profilePicture?.url) return profile;
     // Image paths belong to the API, which can run on a different origin from the frontend.
     return {

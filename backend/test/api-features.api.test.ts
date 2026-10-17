@@ -217,6 +217,9 @@ test("profile reads and writes use the session owner and reject forged identity"
             seen.push(id);
             return structuredClone(profile);
         },
+        async findIdByHandle(handle) {
+            return handle === profile.username ? "owner" : null;
+        },
         async update(id, changes) {
             seen.push(id);
             profile = { ...profile, ...changes, revision: profile.revision + 1 };
@@ -226,6 +229,9 @@ test("profile reads and writes use the session owner and reject forged identity"
         },
         async listBoards() {
             return [];
+        },
+        async countPublicPhotos() {
+            return 0;
         },
         async stats() {
             return { boardsCreated: 0 };
@@ -262,6 +268,17 @@ test("profile reads and writes use the session owner and reject forged identity"
             }
         }
     });
+    const publicProfile = await request(app).get("/api/v1/users/by-handle/owner");
+    assert.equal(publicProfile.status, 200);
+    assert.equal(publicProfile.body.data.profile.username, "owner");
+    assert.equal(publicProfile.body.data.isOwner, false);
+    assert.equal("revision" in publicProfile.body.data.profile, false);
+    assert.equal("defaultBoardVisibility" in publicProfile.body.data.profile, false);
+    assert.equal(
+        (await request(app).get("/api/v1/users/by-handle/owner").set("Cookie", cookie)).body.data.isOwner,
+        true
+    );
+    assert.equal((await request(app).get("/api/v1/users/by-handle/missing")).status, 404);
     assert.equal((await request(app).get("/api/v1/users/me").set("x-demo-user-id", "owner")).status, 401);
     const changes = {
         revision: 1,

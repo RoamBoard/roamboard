@@ -54,6 +54,13 @@ export function createUsersRepository(): UsersRepository {
             };
             return profile;
         },
+        async findIdByHandle(handle) {
+            const result = await getPool().query<{ user_id: string }>(
+                "SELECT user_id FROM app_user WHERE username=$1",
+                [handle]
+            );
+            return result.rows[0]?.user_id ?? null;
+        },
         async update(userId, input) {
             const client = await getPool().connect();
             try {
@@ -150,7 +157,7 @@ export function createUsersRepository(): UsersRepository {
                 client.release();
             }
         },
-        async listBoards(userId, recent) {
+        async listBoards(userId, recent, publicOnly = false) {
             const result = await getPool().query<{
                 board_id: number;
                 owner_user_id: string;
@@ -161,6 +168,7 @@ export function createUsersRepository(): UsersRepository {
                 is_completed: boolean;
                 created_at: Date;
                 updated_at: Date;
+                cover_image_id: number | null;
                 destinations: MapDestination[];
             }>(
                 `SELECT b.*, COALESCE((SELECT jsonb_agg(d) FROM (
@@ -168,7 +176,9 @@ export function createUsersRepository(): UsersRepository {
                     FROM activity a JOIN location l ON l.location_id=a.location_id WHERE a.board_id=b.board_id
                         AND a.location_confirmed AND l.country IS NOT NULL
                 ) d), '[]') AS destinations
-                 FROM board b WHERE b.owner_user_id=$1 ORDER BY b.updated_at DESC, b.board_id DESC ${recent ? "LIMIT 6" : ""}`,
+                 FROM board b WHERE b.owner_user_id=$1
+                 ${publicOnly ? "AND b.status='published' AND b.visibility='public'" : ""}
+                 ORDER BY b.updated_at DESC, b.board_id DESC ${recent ? "LIMIT 6" : ""}`,
                 [userId]
             );
             return result.rows.map((row) => ({
@@ -184,8 +194,21 @@ export function createUsersRepository(): UsersRepository {
                     countryCode: countryCodeForName(place.country)
                 })),
                 createdAt: row.created_at.toISOString(),
-                updatedAt: row.updated_at.toISOString()
+                updatedAt: row.updated_at.toISOString(),
+                coverImageUrl:
+                    row.cover_image_id === null
+                        ? null
+                        : `/api/v1/images/${row.cover_image_id}/content?variant=thumbnail`
             }));
+        },
+        async countPublicPhotos(userId) {
+            const result = await getPool().query<{ count: number }>(
+                `SELECT COUNT(DISTINCT bi.uploaded_image_id)::int AS count
+                 FROM board_image bi JOIN board b ON b.board_id=bi.board_id
+                 WHERE b.owner_user_id=$1 AND b.status='published' AND b.visibility='public' AND b.is_completed`,
+                [userId]
+            );
+            return result.rows[0]?.count ?? 0;
         },
         async stats(userId) {
             const [locations, counts] = await Promise.all([

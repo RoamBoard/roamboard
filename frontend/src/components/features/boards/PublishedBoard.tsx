@@ -126,14 +126,16 @@ export default function PublishedBoard({
                     />
                     <div className="relative mx-auto -mt-7 w-fit">
                         {/* Keep the avatar circle when there is no profile photo, so the name stays below the cover. */}
-                        <div
-                            role={author.photo ? undefined : "img"}
-                            aria-label={author.photo ? undefined : `Profile photo placeholder for ${author.name}`}
-                            className="border-background bg-faint mx-auto size-16 overflow-hidden rounded-full border-4"
-                        >
-                            <BoardPhoto image={author.photo} className="h-full w-full" sizes="64px" />
-                        </div>
-                        <p className="text-12 mt-2">{author.name}</p>
+                        <Link href={`/profile/${encodeURIComponent(author.id)}`} className="block hover:underline">
+                            <div
+                                role={author.photo ? undefined : "img"}
+                                aria-label={author.photo ? undefined : `Profile photo placeholder for ${author.name}`}
+                                className="border-background bg-faint mx-auto size-16 overflow-hidden rounded-full border-4"
+                            >
+                                <BoardPhoto image={author.photo} className="h-full w-full" sizes="64px" />
+                            </div>
+                            <p className="text-12 mt-2">{author.name}</p>
+                        </Link>
                         <p className="text-muted-foreground text-10">presents</p>
                     </div>
                     <h1 className="font-display mx-auto mt-7 max-w-6xl px-5 text-[clamp(2.75rem,7vw,8rem)] leading-[0.95] font-bold tracking-tight break-words uppercase">

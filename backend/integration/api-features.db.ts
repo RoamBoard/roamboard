@@ -156,6 +156,18 @@ test(
             await assert.rejects(() => users.setPicture("friend", imageId));
             await users.setPicture("owner", imageId);
             assert.equal((await users.read("owner")).profilePicture?.imageId, imageId);
+            const publicProfile = await users.publicProfile("owner", null);
+            assert.equal(publicProfile.isOwner, false);
+            assert.equal(publicProfile.profile.displayName, "Updated owner");
+            assert.equal(publicProfile.profile.profilePicture?.url.includes("profileHandle=owner"), true);
+            assert.deepEqual(
+                publicProfile.boards.map((board) => board.boardId),
+                [publicBoard.boardId]
+            );
+            assert.equal(publicProfile.stats.boardsCreated, 1);
+            assert.equal(publicProfile.destinations.length, 1);
+            assert.equal(publicProfile.destinations[0]?.boardId, publicBoard.boardId);
+            await assert.rejects(() => users.publicProfile("unknown", null), { code: "NOT_FOUND" });
             await pool.query(
                 "UPDATE uploaded_image SET orphaned_at=NOW()-INTERVAL '25 hours' WHERE uploaded_image_id=$1",
                 [imageId]

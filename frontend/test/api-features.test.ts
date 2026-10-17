@@ -135,6 +135,38 @@ test("API-backed feature boundaries use the configured backend and signed-in ses
             response.status = 200;
         });
 
+        await t.test("public profile reads by handle and resolves its photo from the API", async () => {
+            response.data = {
+                data: {
+                    profile: {
+                        username: "rowan.mercer",
+                        displayName: "Rowan",
+                        description: "Hello",
+                        location: null,
+                        occupation: null,
+                        languages: [],
+                        interests: [],
+                        profilePicture: {
+                            imageId: 17,
+                            url: "/api/v1/images/17/content?variant=thumbnail&profileHandle=rowan.mercer",
+                            storageKey: null
+                        }
+                    },
+                    isOwner: false,
+                    stats: {},
+                    boards: [],
+                    destinations: []
+                }
+            };
+            const view = await profile.loadPublicProfile("rowan.mercer");
+            assert.equal(calls.at(-1)?.url.pathname, "/api/v1/users/by-handle/rowan.mercer");
+            assert.equal(calls.at(-1)?.init?.credentials, "include");
+            assert.equal(
+                view.profile.profilePicture?.url.startsWith("https://api.roamboard.test/api/v1/images/17"),
+                true
+            );
+        });
+
         await t.test("profile Board creation persists a canonical published Board with city activities", async () => {
             response.data = { data: { boardId: 53 } };
             await profile.createBoard({

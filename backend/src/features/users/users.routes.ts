@@ -2,7 +2,13 @@ import { Router, type RequestHandler } from "express";
 import { requireSessionUser } from "../../middleware/session-user.js";
 import { requireFrontendOrigin } from "../../middleware/require-origin.js";
 import { validateBody, validateQuery } from "../../middleware/validate.js";
-import { pictureSchema, profileChangesSchema, savedBoardsQuerySchema, mapQuerySchema } from "./users.schemas.js";
+import {
+    pictureSchema,
+    profileChangesSchema,
+    publicProfileParamsSchema,
+    savedBoardsQuerySchema,
+    mapQuerySchema
+} from "./users.schemas.js";
 import { createUsersController } from "./users.controller.js";
 import { boardIdParamsSchema } from "../boards/boards.schemas.js";
 import { validateParams } from "../../middleware/validate.js";
@@ -12,6 +18,7 @@ export function createUsersRouter(
     attachUser: RequestHandler
 ): Router {
     const router = Router();
+    router.get("/by-handle/:handle", validateParams(publicProfileParamsSchema), attachUser, controller.publicRead);
     router.use(attachUser, requireSessionUser);
     router.get("/me", controller.read);
     router.patch("/me", requireFrontendOrigin, validateBody(profileChangesSchema), controller.update);

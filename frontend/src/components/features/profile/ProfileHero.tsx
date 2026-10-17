@@ -1,12 +1,14 @@
+import { Fragment } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { apiOrigin, type UserProfile, type ProfileStats } from "@/lib/profile";
+import { apiOrigin, type PublicProfile, type ProfileStats } from "@/lib/profile";
 import { boardTags, boardTagHref } from "@/data/board-tags";
 import TagIcon from "@/components/ui/TagIcon";
 
 type Props = {
-    profile: UserProfile;
+    profile: PublicProfile;
     stats: ProfileStats | null;
+    isOwner?: boolean;
 };
 
 function getNameStyle(nameStr: string): string {
@@ -23,7 +25,7 @@ function getNameStyle(nameStr: string): string {
     return "text-48 sm:text-60 leading-[0.85] -mt-8 sm:-mt-12";
 }
 
-export default function ProfileHero({ profile, stats }: Props) {
+export default function ProfileHero({ profile, stats, isOwner = true }: Props) {
     const portraitUrl = profile.profilePicture ? new URL(profile.profilePicture.url, apiOrigin) : null;
     portraitUrl?.searchParams.set("variant", "display");
     const occupation = profile.occupation;
@@ -102,20 +104,27 @@ export default function ProfileHero({ profile, stats }: Props) {
                         </div>
 
                         {/* Top right button: [ edit profile ] */}
-                        <div className="flex items-center gap-2">
-                            <Link
-                                href="/settings"
-                                className="border-line text-12 text-muted-foreground hover:text-foreground hover:border-foreground font-body cursor-pointer rounded-[2px] border px-3.5 py-1 font-medium transition-colors"
-                            >
-                                edit profile
-                            </Link>
-                        </div>
+                        {isOwner && (
+                            <div className="flex items-center gap-2">
+                                <Link
+                                    href="/settings"
+                                    className="border-line text-12 text-muted-foreground hover:text-foreground hover:border-foreground font-body cursor-pointer rounded-[2px] border px-3.5 py-1 font-medium transition-colors"
+                                >
+                                    edit profile
+                                </Link>
+                            </div>
+                        )}
                     </div>
 
                     {/* Biography */}
                     <div className="mt-8">
-                        <p className="text-13 text-muted-foreground mt-3 max-w-xl leading-relaxed whitespace-pre-line">
-                            {profile.description}{" "}
+                        <p className="text-13 text-muted-foreground mt-3 max-w-xl leading-relaxed">
+                            {profile.description.split(/\r\n?|\n/).map((line, index) => (
+                                <Fragment key={index}>
+                                    {index > 0 && <br />}
+                                    {line}
+                                </Fragment>
+                            ))}{" "}
                             <span
                                 className="text-muted-foreground/30 pointer-events-none animate-pulse font-normal select-none motion-reduce:animate-none"
                                 aria-hidden="true"

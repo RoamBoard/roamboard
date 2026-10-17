@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import AppShell from "@/components/layout/AppShell";
-import ProfilePageContent from "@/components/features/profile/ProfilePageContent";
+import { ProfileRedirect } from "@/components/features/profile/HandleProfileContent";
 
 export const metadata: Metadata = {
     title: "Profile | Roamboard",
@@ -19,7 +19,7 @@ export default function ProfilePage() {
             <div className="relative h-full w-full overflow-hidden">
                 {/* Profile content scroll container */}
                 <div className="h-full w-full overflow-y-auto px-4 pt-6 pb-20 sm:px-8 sm:pt-8 md:px-12 md:pt-10 lg:px-16">
-                    <ProfilePageContent />
+                    <ProfileRedirect />
                 </div>
             </div>
         </AppShell>
