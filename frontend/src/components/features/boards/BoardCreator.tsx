@@ -644,7 +644,7 @@ export default function BoardCreator({
                         title="PUBLISH"
                         description="Save it for yourself, or share it if you feel like it."
                     />
-                    <div className="min-w-0 lg:self-center">
+                    <div className="min-w-0 lg:-translate-x-[19.25%] lg:translate-y-16 lg:self-center">
                         <BoardPublishPanel
                             expectedStatus={expectedStatus}
                             savedBoard={savedBoard}

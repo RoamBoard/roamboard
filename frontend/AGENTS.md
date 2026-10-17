@@ -85,6 +85,21 @@ retries. `draft-boards-store.ts` owns page-local request guards, pagination de-d
 protection; it never substitutes sample data. Reopening still uses `/boards/drafts/[boardId]` and the shared
 `BoardCreator` document, permission, and revision handling. Draft-only access is labelled accurately.
 
+The Create entry now links to `/create/continue` and `/create/remix`. Continue combines the production
+owner-draft and owner-published list endpoints, with independent pagination, partial-error retries, and explicit
+loaded-title search scope. `board-selection-store.ts` clears cached documents on refresh, rejects stale responses,
+and checks fresh document identity and `canEditContent` before showing an editor link. Drafts reopen at
+`/boards/drafts/[boardId]`; published Boards reopen at `/boards/[boardId]/edit`, preserving ID, revision, and status.
+Production APIs cannot enumerate shared editable Boards; a shared-link/ID lookup checks the canonical document
+permission instead. No developer listing endpoint is used. The shared presentation uses a Motion V1 collage
+focus gallery and a photo-card collection that promotes selected Boards into the same gallery, without duplicates.
+The naming transition is V1=`collage`, future V2=`landscape` (old V3), future V3=`photo` (old V4). The old `compact`
+variant is retired for these new pages; existing identifiers, assets, fixtures, and unrelated pages remain compatible.
+The Remix page is an honest unavailable state: there is no production account-saved Board list or remix-creation
+endpoint. Session preview bookmarks and My Boards sample saves are not an account collection. Completing remix
+requires an approved saved-list contract with ownership/source metadata and independent-copy/media rules; no
+original Board update or fake remix is performed. Photo cards omit the author line when author data is absent.
+
 The creator's ruled sticky chapter navigation also shows its real loading/uploading/saving and unsaved state.
 `board-editor-safety.ts` compares persisted content, excluding transient IDs and protected-image URL refreshes.
 The baseline changes only after document loading or a confirmed save. A synchronous save latch rejects duplicate

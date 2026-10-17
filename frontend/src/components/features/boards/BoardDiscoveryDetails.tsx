@@ -41,14 +41,25 @@ export default function BoardDiscoveryDetails({
                 onRetry={onRetryTags}
             />
             <fieldset disabled={disabled || !canChangeVisibility} aria-describedby="board-visibility-help">
-                <legend className="text-foreground/80 text-20 font-bold">Visibility</legend>
-                <p id="board-visibility-help" className="text-muted-foreground mt-3 max-w-lg text-xs leading-relaxed">
-                    Choose who can see the published Board. Drafts remain visible only to you.
+                <legend className="text-foreground/80 text-20 flex items-center gap-3 font-bold">
+                    <span>Visibility</span>
+                    <button
+                        type="button"
+                        title="Drafts stay visible only to you. Published private Boards can also be read by invited members."
+                        aria-label="Visibility information"
+                        aria-describedby="board-visibility-help"
+                        className="focus-visible:outline-foreground inline-flex rounded-full focus-visible:outline-2 focus-visible:outline-offset-2"
+                    >
+                        <CreatorDetailIcon name="information" />
+                    </button>
+                </legend>
+                <p id="board-visibility-help" className="sr-only">
+                    Drafts stay visible only to you. Published private Boards can also be read by invited members.
                 </p>
-                <div className="mt-6 grid gap-4 sm:grid-cols-3 sm:gap-5">
+                <div className="mt-6 grid gap-4 sm:grid-cols-3 sm:gap-0">
                     {(
                         [
-                            ["collaborators", "Collaborators", "You and invited Board members"],
+                            ["collaborators", "Private", "You and invited Board members"],
                             ["friends", "Friends", "You, Board members, and your friends"],
                             ["public", "Public", "Discoverable by everyone"]
                         ] as const
@@ -65,11 +76,11 @@ export default function BoardDiscoveryDetails({
                                 }}
                                 className="peer sr-only"
                             />
-                            <span className="border-line text-muted-foreground peer-checked:border-foreground/60 peer-checked:text-foreground/80 peer-focus-visible:outline-foreground flex min-h-20 w-full items-center gap-3 border-l px-4 py-3 transition-colors peer-checked:border-y peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4 peer-disabled:cursor-not-allowed peer-disabled:opacity-60 motion-reduce:transition-none">
+                            <span className="border-line text-muted-foreground peer-checked:border-foreground/60 peer-checked:text-foreground/80 peer-focus-visible:outline-foreground flex min-h-[88px] w-full items-center gap-4 border-l px-6 py-4 transition-colors peer-checked:border-y peer-checked:border-r peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4 peer-disabled:cursor-not-allowed peer-disabled:opacity-60 motion-reduce:transition-none sm:px-6">
                                 <CreatorDetailIcon name={value} />
                                 <span className="min-w-0">
-                                    <strong className="block text-xs font-medium">{label}</strong>
-                                    <span className="text-muted-foreground mt-1 block text-[10px] leading-relaxed">
+                                    <strong className="block text-sm font-medium">{label}</strong>
+                                    <span className="text-muted-foreground mt-0.5 block text-xs leading-snug">
                                         {description}
                                     </span>
                                 </span>

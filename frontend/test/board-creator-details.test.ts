@@ -99,7 +99,7 @@ test("visibility uses the canonical three access values and stays controlled by 
         ["friends"]
     );
     const markup = renderToStaticMarkup(createElement(BoardDiscoveryDetails, props));
-    assert.match(markup, /Collaborators/);
+    assert.match(markup, /Private/);
     assert.match(markup, /Friends/);
     assert.match(markup, /Public/);
     assert.match(markup, /Drafts[\s\S]*only to you/i);

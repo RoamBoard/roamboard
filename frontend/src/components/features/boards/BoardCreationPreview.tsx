@@ -28,7 +28,7 @@ export default function BoardCreationPreview({ board, confirmedPhotoPins }: Prop
                     {uploadedCount === 1 ? "photo" : "photos"}
                 </p>
             </div>
-            <details className="border-line mt-12 border-t pt-3">
+            <details className="border-line mt-12 border-t pt-3 @min-[1100px]:ml-[22%]">
                 <summary className="text-foreground/80 cursor-pointer py-4 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-4">
                     Review full itinerary · {pins.length} {pins.length === 1 ? "activity" : "activities"}
                 </summary>
@@ -103,7 +103,7 @@ export default function BoardCreationPreview({ board, confirmedPhotoPins }: Prop
                     Back to day plan
                 </a>
             </details>
-            <details className="border-line mt-5 border-t pt-3">
+            <details className="border-line mt-5 border-t pt-3 @min-[1100px]:ml-[22%]">
                 <summary className="text-foreground/80 cursor-pointer py-4 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-4">
                     Review all photos · {board.images.length}
                 </summary>

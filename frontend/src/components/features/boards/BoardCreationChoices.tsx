@@ -134,15 +134,16 @@ export default function BoardCreationChoices() {
                 <span aria-hidden="true" className="bg-line h-20 w-px sm:h-24" />
                 <BoardPathOption
                     compact={expanded}
-                    title="remix saved board"
-                    description="inspired by others, made your own"
+                    href="/create/continue"
+                    title="continue a board"
+                    description="pick up wherever you left off"
                 />
                 <span aria-hidden="true" className="bg-line h-20 w-px sm:h-24" />
                 <BoardPathOption
                     compact={expanded}
-                    href="/boards/drafts"
-                    title="edit draft"
-                    description="continue where you left off"
+                    href="/create/remix"
+                    title="remix a saved board"
+                    description="their inspiration, your adventure"
                 />
             </motion.div>
         </section>

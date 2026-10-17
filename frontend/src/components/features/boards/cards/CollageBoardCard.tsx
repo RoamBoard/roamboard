@@ -8,7 +8,12 @@ import {
     cardMeasure
 } from "./BoardCardParts";
 
-type Props = BoardCardActions & { board: CollageBoardCardData; preview?: boolean; annotatedPreview?: boolean };
+type Props = BoardCardActions & {
+    board: CollageBoardCardData;
+    preview?: boolean;
+    annotatedPreview?: boolean;
+    hideBookmark?: boolean;
+};
 
 const photoSlots = [
     "left-[1.136cqw] top-[30.455cqw] h-[29.773cqw] w-[14.545cqw]",
@@ -25,7 +30,8 @@ export default function CollageBoardCard({
     bookmarked,
     onBookmark,
     preview = false,
-    annotatedPreview = false
+    annotatedPreview = false,
+    hideBookmark = false
 }: Props) {
     return (
         <BoardCardFrame board={board} width={440} height={560} href={href}>
@@ -102,7 +108,7 @@ export default function CollageBoardCard({
                     className="bg-card-divider absolute top-[92.614cqw] left-[48.566cqw] h-[.114cqw] w-[32.273cqw]"
                 />
             </div>
-            {!preview && (
+            {!preview && !hideBookmark && (
                 <BoardCardBookmark
                     title={board.title}
                     appearance="collage"

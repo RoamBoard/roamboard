@@ -9,15 +9,37 @@ export default function BoardsLanding() {
     return (
         <article className="font-body bg-background text-foreground relative w-full min-w-0 overflow-x-clip">
             <header className="relative flex flex-col items-center text-center">
-                <figure className="bg-faint relative aspect-[2.42] w-[92%] max-w-[78rem] overflow-hidden rounded-b-[50%_100%] sm:w-[80%]">
-                    <Image
-                        src="/images/create/desert.jpg"
-                        alt="Golden evening light falling across the dunes of the Dubai desert"
-                        fill
-                        preload
-                        sizes="(max-width: 640px) 92vw, (max-width: 1700px) 80vw, 1248px"
-                        className="object-cover object-[center_58%]"
-                    />
+                <figure className="w-[92%] max-w-[78rem] sm:w-[80%]">
+                    <div className="bg-faint relative aspect-[2.42] overflow-hidden rounded-b-[50%_100%]">
+                        <Image
+                            src="/images/create/desert.jpg"
+                            alt="Golden evening light falling across the dunes of the Dubai desert"
+                            fill
+                            preload
+                            sizes="(max-width: 640px) 92vw, (max-width: 1700px) 80vw, 1248px"
+                            className="object-cover object-[center_58%]"
+                        />
+                    </div>
+                    <figcaption className="text-muted-foreground/65 mt-2 text-center text-[10px]">
+                        Photography by{" "}
+                        <a
+                            href="https://unsplash.com/@nejc_soklic"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="hover:text-foreground underline underline-offset-4"
+                        >
+                            Nejc Soklič
+                        </a>{" "}
+                        /{" "}
+                        <a
+                            href="https://unsplash.com/photos/YXFw9L-0DKo"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="hover:text-foreground underline underline-offset-4"
+                        >
+                            Unsplash
+                        </a>
+                    </figcaption>
                 </figure>
 
                 <Link
@@ -73,26 +95,6 @@ export default function BoardsLanding() {
                         />
                     </Link>
                 </h2>
-                <p className="text-muted-foreground mt-16 text-[10px]">
-                    Photography by{" "}
-                    <a
-                        href="https://unsplash.com/@nejc_soklic"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="hover:text-foreground underline underline-offset-4"
-                    >
-                        Nejc Soklič
-                    </a>{" "}
-                    /{" "}
-                    <a
-                        href="https://unsplash.com/photos/YXFw9L-0DKo"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="hover:text-foreground underline underline-offset-4"
-                    >
-                        Unsplash
-                    </a>
-                </p>
             </section>
         </article>
     );
