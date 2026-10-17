@@ -65,10 +65,13 @@ revision checks, server ID reconciliation, and permission gates remain in `Board
 The creator preview reuses `CollageBoardCard` with an opt-in `preview` presentation that hides unsupported author,
 bookmark, saved-count, and Highlights content; default V1 cards retain their existing presentation. Its immutable
 adapter (`board-creation-preview.ts`) leads with the selected uploaded Board cover, de-duplicates collage URLs,
-and displays up to six photos without discarding other media records. Empty photo slots are neutral placeholders.
+and displays up to six photos without discarding other media records. The creator's opt-in quiet empty slots use
+faint outlines. `BoardPreviewSection` and the stateless `BoardPreviewDiagram` place the compact V1 card and floating
+annotations on one proportional desktop canvas, with original Figma connector masks. Below a 1100px container,
+annotations follow a readable flow without connectors. Motion respects reduced-motion preferences.
 Only confirmed locations contribute to destination/country lettering, and multi-country or unresolved country
 data produces no country watermark. Dates list actual recorded dates and identify undated days. Full title,
-description, tags, visibility, and source-edit links sit beside the collage; keyboard-accessible native disclosures
+description, tags, visibility, and source-edit links surround the collage; keyboard-accessible native disclosures
 retain every activity and photo, including source credits. This is a live local preview, not proof of persistence.
 Draft and My Boards navigation remain available; remixing remains
 explicitly deferred. Discover links to `/discover`. The shared sidebar is unchanged.

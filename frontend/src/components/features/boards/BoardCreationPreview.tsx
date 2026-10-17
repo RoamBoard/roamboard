@@ -1,8 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
-import CollageBoardCard from "@/components/features/boards/cards/CollageBoardCard";
+import BoardPreviewDiagram from "./BoardPreviewDiagram";
 import { createBoardPreview } from "@/lib/board-creation-preview";
 import { dayColors, type BoardCreatorPayload } from "@/types/board-creator";
 
@@ -11,9 +10,6 @@ type Props = {
     confirmedPhotoPins?: ReadonlySet<string>;
 };
 
-const visibilityLabels = { collaborators: "Collaborators", friends: "Friends", public: "Public" };
-const noteHeading = "text-foreground/80 text-sm font-bold";
-const noteText = "text-muted-foreground mt-2 text-xs leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]";
 const editLink =
     "text-muted-foreground hover:text-foreground mt-2 inline-flex min-h-11 items-center text-[11px] underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4";
 
@@ -21,103 +17,16 @@ export default function BoardCreationPreview({ board, confirmedPhotoPins }: Prop
     const preview = createBoardPreview(board, confirmedPhotoPins);
     const pins = board.days.flatMap((day) => day.pins);
     const uploadedCount = board.images.filter((image) => image.source === "upload").length;
-    const reducedMotion = useReducedMotion();
     return (
-        <article aria-label="Board preview" className="min-w-0">
-            <div className="border-line mb-12 flex flex-wrap items-center justify-between gap-4 border-b pb-4 text-[11px] leading-relaxed">
-                <p className="text-muted-foreground">Live preview · updates as you edit</p>
-                <p className="text-muted-foreground">
+        <article aria-label="Board preview" className="@container min-w-0">
+            <BoardPreviewDiagram board={board} preview={preview} />
+            <div className="text-muted-foreground mt-8 flex flex-wrap justify-between gap-x-6 gap-y-2 text-[11px] leading-relaxed @min-[1100px]:ml-[22%]">
+                <p>Live preview · updates as you edit</p>
+                <p>
                     {board.days.length} {board.days.length === 1 ? "day" : "days"} · {pins.length}{" "}
                     {pins.length === 1 ? "activity" : "activities"} · {uploadedCount} uploaded{" "}
                     {uploadedCount === 1 ? "photo" : "photos"}
                 </p>
-            </div>
-            <div className="grid min-w-0 gap-x-6 gap-y-10 xl:grid-cols-[minmax(0,1fr)_minmax(0,2.2fr)_minmax(0,1fr)] xl:items-start">
-                <dl className="order-2 grid min-w-0 gap-8 sm:grid-cols-2 xl:order-1 xl:block xl:pt-5 xl:[&>div+div]:mt-16">
-                    <div className="border-line border-l pl-4">
-                        <dt className={noteHeading}>Title</dt>
-                        <dd className={noteText}>{preview.card.title}</dd>
-                        <dd>
-                            <a href="#board-title" className={editLink}>
-                                Edit title
-                            </a>
-                        </dd>
-                    </div>
-                    <div className="border-line border-l pl-4">
-                        <dt className={noteHeading}>Board cover</dt>
-                        <dd className={noteText}>
-                            {preview.cover
-                                ? "Selected photo · first in the collage"
-                                : "Default cover · no photo selected"}
-                        </dd>
-                        <dd>
-                            <a href="#board-images" className={editLink}>
-                                Manage photos
-                            </a>
-                        </dd>
-                    </div>
-                    <div className="border-line border-l pl-4">
-                        <dt className={noteHeading}>Destination</dt>
-                        <dd className={noteText}>{preview.destination}</dd>
-                        <dd className="text-muted-foreground mt-2 text-[10px] leading-relaxed">
-                            From confirmed places in your day plan.
-                        </dd>
-                    </div>
-                </dl>
-                <motion.figure
-                    layout={reducedMotion ? false : "position"}
-                    initial={false}
-                    transition={{ duration: reducedMotion ? 0 : 0.2 }}
-                    className="order-1 mx-auto w-full max-w-[27.5rem] min-w-0 xl:order-2"
-                >
-                    <CollageBoardCard board={preview.card} preview />
-                    <figcaption className="text-muted-foreground mx-auto mt-5 max-w-xs text-center text-[11px] leading-relaxed">
-                        {preview.card.images.length === 0
-                            ? "Add your photos to shape the collage. Empty slots are placeholders."
-                            : `Showing ${preview.card.images.length} ${preview.card.images.length === 1 ? "photo" : "photos"} in the collage. All Board photos remain available below.`}
-                    </figcaption>
-                </motion.figure>
-                <dl className="order-3 grid min-w-0 gap-8 sm:grid-cols-2 xl:block xl:pt-12 xl:[&>div+div]:mt-8">
-                    <div className="border-line border-l pl-4">
-                        <dt className={noteHeading}>Description</dt>
-                        <dd className={noteText}>{board.description.trim() || "No description yet."}</dd>
-                        <dd>
-                            <a href="#board-basics" className={editLink}>
-                                Edit description
-                            </a>
-                        </dd>
-                    </div>
-                    <div className="border-line border-l pl-4">
-                        <dt className={noteHeading}>Visibility</dt>
-                        <dd className={noteText}>{visibilityLabels[board.visibility]} when published</dd>
-                        <dd className="text-muted-foreground mt-2 text-[10px] leading-relaxed">
-                            Drafts are visible only to you.
-                        </dd>
-                    </div>
-                    <div className="border-line border-l pl-4">
-                        <dt className={noteHeading}>Dates</dt>
-                        <dd className={noteText}>{preview.dateLabel}</dd>
-                    </div>
-                    <div className="border-line border-l pl-4">
-                        <dt className={noteHeading}>Tags</dt>
-                        <dd className={noteText}>
-                            {board.tags.length ? (
-                                <ul className="grid gap-2">
-                                    {board.tags.map((tag) => (
-                                        <li key={tag}>{tag}</li>
-                                    ))}
-                                </ul>
-                            ) : (
-                                "None selected"
-                            )}
-                        </dd>
-                        <dd>
-                            <a href="#details-discovery" className={editLink}>
-                                Edit details
-                            </a>
-                        </dd>
-                    </div>
-                </dl>
             </div>
             <details className="border-line mt-12 border-t pt-3">
                 <summary className="text-foreground/80 cursor-pointer py-4 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-4">

@@ -3,7 +3,7 @@
 import { movePlannerPin, reorderPlannerPin } from "@/lib/board-planner";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 
-import BoardCreationPreview from "@/components/features/boards/BoardCreationPreview";
+import BoardPreviewSection from "@/components/features/boards/BoardPreviewSection";
 import BoardPublishPanel from "@/components/features/boards/BoardPublishPanel";
 import BoardDiscoveryDetails from "@/components/features/boards/BoardDiscoveryDetails";
 import BoardImageIntake, { type UploadedBoardImage } from "@/components/features/boards/BoardImageIntake";
@@ -636,16 +636,7 @@ export default function BoardCreator({
                     </section>
                 </fieldset>
 
-                <section id="board-preview" className={fullChapterClasses}>
-                    <CreatorSectionIntro
-                        number="04"
-                        title="BOARD PREVIEW"
-                        description="A final look at the trip you’ve built, just to make sure everything feels exactly how you want it."
-                    />
-                    <div className="min-w-0 lg:self-center">
-                        <BoardCreationPreview board={payload} confirmedPhotoPins={confirmedPhotoPins} />
-                    </div>
-                </section>
+                <BoardPreviewSection board={payload} confirmedPhotoPins={confirmedPhotoPins} />
 
                 <section id="publish" className={`${fullChapterClasses} mb-20 sm:mb-32`}>
                     <CreatorSectionIntro

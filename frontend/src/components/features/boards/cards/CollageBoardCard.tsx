@@ -8,7 +8,7 @@ import {
     cardMeasure
 } from "./BoardCardParts";
 
-type Props = BoardCardActions & { board: CollageBoardCardData; preview?: boolean };
+type Props = BoardCardActions & { board: CollageBoardCardData; preview?: boolean; annotatedPreview?: boolean };
 
 const photoSlots = [
     "left-[1.136cqw] top-[30.455cqw] h-[29.773cqw] w-[14.545cqw]",
@@ -19,7 +19,14 @@ const photoSlots = [
     "left-[16.591cqw] top-[70cqw] h-[22.045cqw] w-[14.545cqw]"
 ];
 
-export default function CollageBoardCard({ board, href, bookmarked, onBookmark, preview = false }: Props) {
+export default function CollageBoardCard({
+    board,
+    href,
+    bookmarked,
+    onBookmark,
+    preview = false,
+    annotatedPreview = false
+}: Props) {
     return (
         <BoardCardFrame board={board} width={440} height={560} href={href}>
             {/* cqw measurements scale the complete 440 × 560 Figma composition together. */}
@@ -33,7 +40,7 @@ export default function CollageBoardCard({ board, href, bookmarked, onBookmark, 
                 </span>
                 <BoardCardTitle
                     board={board}
-                    className="font-display text-card-title absolute top-[2.5cqw] left-[1.066cqw] max-w-[80cqw] text-[8.182cqw] leading-[.9] font-bold"
+                    className={`font-display text-card-title absolute top-[2.5cqw] left-[1.066cqw] text-[8.182cqw] leading-[.9] font-bold ${annotatedPreview ? "line-clamp-2 max-w-[40cqw] break-words" : "max-w-[80cqw]"}`}
                 />
                 {!preview && (
                     <p className="font-display text-card-subtle absolute top-[17.955cqw] left-[1.066cqw] text-[2.273cqw] leading-[1.1] font-bold">
@@ -47,7 +54,7 @@ export default function CollageBoardCard({ board, href, bookmarked, onBookmark, 
                     className={`text-card-description absolute top-[27.045cqw] right-[2.291cqw] text-right text-[3.182cqw] leading-[1.1] font-medium whitespace-pre-line ${preview ? "line-clamp-6 break-words" : ""}`}
                     style={cardMeasure(board.descriptionWidth ?? 186, 440)}
                 >
-                    {board.description || (preview ? "Add a description to set the scene." : "")}
+                    {board.description || (preview && !annotatedPreview ? "Add a description to set the scene." : "")}
                 </p>
                 <ul
                     className={`text-card-subtle absolute top-[48.636cqw] right-[2.291cqw] text-right text-[2.727cqw] leading-[1.3] font-medium ${preview ? "max-w-[40cqw] [&>li]:truncate" : ""}`}
@@ -81,7 +88,7 @@ export default function CollageBoardCard({ board, href, bookmarked, onBookmark, 
                             <div
                                 key={index}
                                 aria-hidden="true"
-                                className={`bg-faint/60 border-line/60 absolute border border-dashed ${slot}`}
+                                className={`absolute border ${annotatedPreview ? "border-line/35" : "bg-faint/60 border-line/60 border-dashed"} ${slot}`}
                             />
                         ) : null
                     )}
