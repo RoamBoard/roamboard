@@ -28,10 +28,17 @@ jobs:
               with:
                   node-version: 24
                   cache: pnpm
-                  cache-dependency-path: pnpm-lock.yaml
+                  cache-dependency-path: |
+                      pnpm-lock.yaml
+                      frontend/pnpm-lock.yaml
 
             - name: Install root formatting dependencies
               run: pnpm install --frozen-lockfile
+
+            # The Tailwind Prettier plugin resolves Tailwind from the formatted file.
+            # Match local development so class sorting uses the frontend's locked version.
+            - name: Install frontend dependencies for Tailwind class sorting
+              run: pnpm --dir frontend install --frozen-lockfile
 
             - name: Check repository formatting
               run: pnpm format:check
