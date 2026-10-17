@@ -95,7 +95,7 @@ export default function ProfileAvatarEditor({ profile, onChange }: Props) {
                 </div>
             </div>
             {error && (
-                <p role="alert" className="text-12 mt-3 text-red-600">
+                <p role="alert" className="text-12 text-foreground mt-3">
                     {error}
                 </p>
             )}
