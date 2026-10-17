@@ -29,6 +29,7 @@ export function createImagesController(service: ImagesService): ImagesController
             };
             const user = response.locals.user as AppUser | null;
             const { stream, contentType } = await service.openImage(imageId, variant, user?.userId ?? null, boardId);
+            // Do not cache protected content across later changes to Board access.
             response.set({
                 "Content-Type": contentType,
                 "Cache-Control": "private, no-store",

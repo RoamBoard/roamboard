@@ -8,8 +8,8 @@ import { DatabasePublishedBoardContent } from "../src/components/features/boards
 import PublishedBoard from "../src/components/features/boards/PublishedBoard";
 import type { BoardDocument } from "../src/lib/board-creator-api";
 import { getBoardDays } from "../src/lib/board-presentation";
-import { toPublishedBoardData } from "../src/lib/published-board-data";
-import { createPublishedBoardStore } from "../src/lib/published-board-store";
+import { loadPublishedBoard, toPublishedBoardData } from "../src/lib/published-board-data";
+import type { PublishedBoardState } from "../src/types/published-board";
 
 const apiOrigin = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
@@ -21,7 +21,7 @@ function replaceFetch(t: TestContext, replacement: typeof fetch) {
     });
 }
 
-function renderPage(state: ReturnType<ReturnType<typeof createPublishedBoardStore>["getSnapshot"]>) {
+function renderPage(state: PublishedBoardState) {
     const router = {
         back() {},
         forward() {},
@@ -49,6 +49,7 @@ function retryButton(node: ReactNode): (() => void) | undefined {
     })[0];
 }
 
+// Empty days and differently ordered photos make accidental data loss in the adapter visible.
 function document(): BoardDocument {
     return {
         boardId: 718,
@@ -155,9 +156,6 @@ test("database presentation keeps the stored author, cover, empty numbered days 
     assert.equal(result.author.name, "station_walker");
     assert.equal(result.author.bio, "I photograph railway stations.");
     assert.equal(result.author.photo?.url, `${apiOrigin}/api/v1/images/93/content?variant=display&boardId=718`);
-    assert.equal(result.author.countriesVisited, undefined);
-    assert.equal(result.author.boardsCreated, undefined);
-    assert.deepEqual(result.highlights, []);
     assert.deepEqual(result.tagLabels, ["Architecture"]);
     assert.equal(result.canEditContent, true);
     assert.deepEqual(
@@ -222,8 +220,29 @@ test("database viewer renders real content and identifies save and copy actions 
     assert.match(markup, /Architecture/);
     assert.match(markup, /Saved first, later in the day/);
     assert.match(markup, /(?:tab[^<]*preview|preview[^<]*tab|stay[^<]*tab)/i);
-    assert.doesNotMatch(markup, /sample board and author|countries visited|boards created|>Highlights</i);
+    assert.doesNotMatch(markup, /sample board and author/i);
     assert.match(markup, /href="\/boards\/718\/edit"/);
+});
+
+test("an author without a photo retains the header circle and footer portrait placeholders", () => {
+    const source = document();
+    source.author = { username: "station_walker", bio: "I photograph railway stations.", photo: null };
+    const markup = renderToStaticMarkup(createElement(PublishedBoard, toPublishedBoardData(source)));
+    const placeholders = Array.from(markup.matchAll(/<div\b[^>]*role="img"[^>]*>/g), (match) => match[0]).filter(
+        (tag) => /aria-label="[^"]*station_walker[^"]*"/.test(tag)
+    );
+    assert.equal(placeholders.length, 2);
+    assert.match(placeholders[0], /size-16/);
+    assert.match(placeholders[0], /rounded-full/);
+    assert.match(placeholders[1], /aspect-\[3\/4\]/);
+    assert.doesNotMatch(markup, /alt="station_walker"/);
+    assert.doesNotMatch(markup, /\/api\/v1\/images\/93\/content/);
+});
+
+test("a supplied author photo still renders in both author positions", () => {
+    const markup = renderToStaticMarkup(createElement(PublishedBoard, toPublishedBoardData(document())));
+    assert.equal((markup.match(/alt="station_walker"/g) ?? []).length, 2);
+    assert.equal((markup.match(/src="[^"]*\/api\/v1\/images\/93\/content[^"]*"/g) ?? []).length, 2);
 });
 
 test("activity details render Unsplash attribution with the saved photo and photographer links", () => {
@@ -246,7 +265,7 @@ test("activity details render Unsplash attribution with the saved photo and phot
     assert.match(markup, /href="https:\/\/unsplash\.com\/photos\/station-portrait"/);
 });
 
-test("store loads the actual Board endpoint with session credentials and suppresses concurrent requests", async (t) => {
+test("the published Board loader uses the real endpoint with session credentials and supplies the ready view", async (t) => {
     const calls: Array<{ input: string; init?: RequestInit }> = [];
     const pending: { resolve?: (response: Response) => void } = {};
     replaceFetch(t, (input, init) => {
@@ -255,31 +274,21 @@ test("store loads the actual Board endpoint with session credentials and suppres
             pending.resolve = resolve;
         });
     });
-    const store = createPublishedBoardStore("718");
-    assert.deepEqual(store.getSnapshot(), { status: "loading", data: null });
-    const loading = renderPage(store.getSnapshot());
+    const loading = renderPage({ status: "loading", data: null });
     assert.match(loading, /Loading/);
     assert.doesNotMatch(loading, /Railway weekend|Lost in Tokyo/i);
-    const seen: string[] = [];
-    const unsubscribe = store.subscribe(() => {
-        seen.push(store.getSnapshot().status);
-    });
-    const first = store.load();
-    const second = store.load();
-    assert.equal(store.getSnapshot().status, "loading");
+    const request = loadPublishedBoard("718");
     assert.equal(calls.length, 1);
     pending.resolve!(Response.json({ data: document() }));
-    await Promise.all([first, second]);
-    assert.equal(store.getSnapshot().status, "ready");
-    assert.equal(store.getSnapshot().data?.board.title, "Railway weekend");
+    const result = await request;
+    assert.equal(result.status, "ready");
+    assert.equal(result.data?.board.title, "Railway weekend");
     assert.equal(calls[0]?.input, `${apiOrigin}/api/v1/boards/718`);
     assert.equal(calls[0]?.init?.credentials, "include");
     assert.equal(calls[0]?.init?.cache, "no-store");
-    assert.ok(seen.includes("ready"));
-    const ready = renderPage(store.getSnapshot());
+    const ready = renderPage(result);
     assert.match(ready, /Railway weekend/);
     assert.match(ready, /station_walker/);
-    unsubscribe();
 });
 
 for (const [status, expected] of [
@@ -292,11 +301,10 @@ for (const [status, expected] of [
         replaceFetch(t, async () =>
             Response.json({ error: { code: "TEST_ERROR", message: "Unavailable" } }, { status })
         );
-        const store = createPublishedBoardStore("718");
-        await store.load();
-        assert.equal(store.getSnapshot().status, expected);
-        assert.equal(store.getSnapshot().data, null);
-        const markup = renderPage(store.getSnapshot());
+        const result = await loadPublishedBoard("718");
+        assert.equal(result.status, expected);
+        assert.equal(result.data, null);
+        const markup = renderPage(result);
         assert.match(
             markup,
             status === 401
@@ -313,42 +321,48 @@ for (const [status, expected] of [
 
 test("network failures remain retryable through a fresh real API request", async (t) => {
     const response = { fails: true };
-    replaceFetch(t, async () => {
+    const requests: string[] = [];
+    replaceFetch(t, async (input) => {
+        requests.push(String(input));
         if (response.fails) throw new TypeError("Network unavailable");
         return Response.json({ data: document() });
     });
-    const store = createPublishedBoardStore("718");
-    await store.load();
-    assert.equal(store.getSnapshot().status, "error");
-    assert.equal(store.getSnapshot().data, null);
+    const failed = await loadPublishedBoard("718");
+    assert.equal(failed.status, "error");
+    assert.equal(failed.data, null);
     response.fails = false;
+    const pending: { retry?: Promise<PublishedBoardState> } = {};
     const view = DatabasePublishedBoardContent({
-        state: store.getSnapshot(),
+        state: failed,
         onRetry: () => {
-            void store.load();
+            pending.retry = loadPublishedBoard("718");
         }
     });
     const handler = retryButton(view);
     assert.ok(handler);
-    const ready = new Promise<void>((resolve) => {
-        const unsubscribe = store.subscribe(() => {
-            if (store.getSnapshot().status === "ready") {
-                unsubscribe();
-                resolve();
-            }
-        });
-    });
     handler();
-    assert.equal(store.getSnapshot().status, "loading");
-    await ready;
-    assert.equal(store.getSnapshot().status, "ready");
-    assert.equal(store.getSnapshot().data?.author.name, "station_walker");
+    assert.ok(pending.retry);
+    const ready = await pending.retry;
+    assert.equal(ready.status, "ready");
+    assert.equal(ready.data?.author.name, "station_walker");
+    assert.match(renderPage(ready), /Railway weekend/);
+    assert.deepEqual(requests, [`${apiOrigin}/api/v1/boards/718`, `${apiOrigin}/api/v1/boards/718`]);
 });
 
 test("owner-readable drafts never render in the published viewer", async (t) => {
     replaceFetch(t, async () => Response.json({ data: { ...document(), status: "draft" } }));
-    const store = createPublishedBoardStore("718");
-    await store.load();
-    assert.equal(store.getSnapshot().status, "not-found");
-    assert.equal(store.getSnapshot().data, null);
+    const result = await loadPublishedBoard("718");
+    assert.deepEqual(result, { status: "not-found", data: null });
+});
+
+test("invalid database IDs never request a Board or display saved content", async (t) => {
+    const requests: string[] = [];
+    replaceFetch(t, async (input) => {
+        requests.push(String(input));
+        return Response.json({ data: document() });
+    });
+    for (const id of ["0", "-1", "1.5", "2147483648", "lost-in-tokyo"]) {
+        assert.deepEqual(await loadPublishedBoard(id), { status: "not-found", data: null });
+    }
+    assert.deepEqual(requests, []);
 });

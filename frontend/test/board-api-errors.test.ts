@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { loadBoardDocument } from "../src/lib/board-creator-api";
 
+// Simulated HTTP failures keep these checks independent of a running backend.
 for (const status of [401, 403, 404, 500]) {
     test(`Board reads preserve HTTP ${status} so the viewer can display the correct state`, async (t) => {
         const originalFetch = globalThis.fetch;

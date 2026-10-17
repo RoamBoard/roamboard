@@ -30,9 +30,7 @@ function getTagIcon(tag: string) {
 export default function PublishedBoard({
     board,
     author,
-    highlights,
     tagLabels = board.tags,
-    isSample = true,
     canEditContent = false
 }: PublishedBoardData) {
     const days = getBoardDays(board);
@@ -92,11 +90,14 @@ export default function PublishedBoard({
                         sizes="80vw"
                     />
                     <div className="relative mx-auto -mt-7 w-fit">
-                        <BoardPhoto
-                            image={author.photo}
-                            className="border-background mx-auto size-16 rounded-full border-4"
-                            sizes="64px"
-                        />
+                        {/* Keep the avatar circle when there is no profile photo, so the name stays below the cover. */}
+                        <div
+                            role={author.photo ? undefined : "img"}
+                            aria-label={author.photo ? undefined : `Profile photo placeholder for ${author.name}`}
+                            className="border-background bg-faint mx-auto size-16 overflow-hidden rounded-full border-4"
+                        >
+                            <BoardPhoto image={author.photo} className="h-full w-full" sizes="64px" />
+                        </div>
                         <p className="text-12 mt-2">{author.name}</p>
                         <p className="text-muted-foreground text-10">presents</p>
                     </div>
@@ -123,13 +124,6 @@ export default function PublishedBoard({
                         <Link href={`/boards/${board.id}/edit`} className={`${actionClasses} mt-5`}>
                             Edit Board
                         </Link>
-                    ) : null}
-                    {highlights.length ? (
-                        <ul className="border-line text-muted-foreground text-16 mx-auto mt-8 w-fit min-w-56 space-y-3 border-t px-6 pt-9">
-                            {highlights.map((highlight) => (
-                                <li key={highlight}>{highlight}</li>
-                            ))}
-                        </ul>
                     ) : null}
                     <dl className="border-line text-muted-foreground mx-auto mt-10 flex w-fit border-y px-8 py-6">
                         <div className="border-line flex items-baseline gap-1 border-r pr-8">
@@ -208,34 +202,17 @@ export default function PublishedBoard({
                         </p>
                         <div className="mt-6 grid gap-5 sm:grid-cols-[1fr_1.1fr]">
                             <div className="text-muted-foreground text-right">
-                                <dl className="mb-6 flex justify-end gap-7 sm:flex-col sm:gap-5">
-                                    {/* Zero is a valid count; only hide missing values. */}
-                                    {author.countriesVisited !== undefined ? (
-                                        <div>
-                                            <dt className="text-10">countries visited</dt>
-                                            <dd className="font-display text-30 font-semibold">
-                                                {author.countriesVisited}
-                                            </dd>
-                                        </div>
-                                    ) : null}
-                                    {author.boardsCreated !== undefined ? (
-                                        <div>
-                                            <dt className="text-10">boards created</dt>
-                                            <dd className="font-display text-30 font-semibold">
-                                                {author.boardsCreated}
-                                            </dd>
-                                        </div>
-                                    ) : null}
-                                </dl>
                                 <p className="text-14 leading-snug whitespace-pre-line">{author.bio}</p>
                             </div>
-                            <BoardPhoto image={author.photo} className="aspect-[3/4] min-h-72" />
+                            <BoardPhoto
+                                image={author.photo}
+                                placeholderLabel={`${author.name}'s profile photo`}
+                                className="aspect-[3/4] min-h-72"
+                            />
                         </div>
                     </section>
                     <p className="text-muted-foreground text-10">
-                        {isSample
-                            ? "Development preview: sample board and author. Saves and copies stay in this tab."
-                            : "Bookmarks and copies are previews saved in this tab."}
+                        Bookmarks and copies are previews saved in this tab.
                     </p>
                 </footer>
             </article>

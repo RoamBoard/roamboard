@@ -157,6 +157,7 @@ export function createBoard(input: {
 
 function resolveProfilePicture(profile: UserProfile): UserProfile {
     if (!profile.profilePicture?.url) return profile;
+    // Image paths belong to the API, which can run on a different origin from the frontend.
     return {
         ...profile,
         profilePicture: {

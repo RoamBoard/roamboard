@@ -19,6 +19,7 @@ export interface UploadedImage {
     storageKey: string;
     uploaderUserId: string;
     boardId: number | null;
+    // A profile image can be shown with a readable Board without being attached as Board media.
     profileOwnerUserId?: string | null;
     capturedAt: Date | null;
     latitude: number | null;

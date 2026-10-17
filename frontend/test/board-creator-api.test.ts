@@ -117,6 +117,7 @@ test("one Board cover is independent of multiple ordered images on an activity",
     const saved: BoardDocument = {
         ...write,
         boardId: 5,
+        author: { username: "test_owner", bio: "", photo: null },
         revision: 2,
         permissions: { canEditContent: true, canManageBoard: true },
         tags: [{ tagId: 3, name: "Food" }],
@@ -193,6 +194,7 @@ test("explicit null coverImageId preserves null to keep external image as activi
     const saved: BoardDocument = {
         ...write,
         boardId: 10,
+        author: { username: "test_owner", bio: "", photo: null },
         revision: 1,
         permissions: { canEditContent: true, canManageBoard: true },
         tags: [{ tagId: 3, name: "Food" }],
@@ -332,6 +334,7 @@ test("saved Board can be reopened with stable database IDs and image URLs", () =
     const board: BoardDocument = {
         ...write,
         boardId: 2,
+        author: { username: "test_owner", bio: "", photo: null },
         revision: 4,
         permissions: { canEditContent: true, canManageBoard: true },
         coverImageId: 12,
@@ -452,6 +455,7 @@ test("merging server IDs preserves local edits and newly added pins/images", () 
 
     const savedBoard: BoardDocument = {
         boardId: 42,
+        author: { username: "test_owner", bio: "", photo: null },
         revision: 2,
         status: "draft",
         title: "Test",

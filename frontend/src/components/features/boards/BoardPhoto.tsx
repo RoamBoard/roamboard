@@ -14,6 +14,8 @@ type Props = {
     insetCredit?: boolean;
 };
 
+// Unsplash credit links include referral parameters; photo URLs themselves are loaded as returned.
+// https://help.unsplash.com/en/articles/2511315-guideline-attribution
 function creditLink(value: string) {
     try {
         const url = new URL(value);

@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect } from "react";
 import BoardPageMessage from "@/components/features/boards/BoardPageMessage";
 import PublishedBoard from "@/components/features/boards/PublishedBoard";
 import PublishedBoardShell from "@/components/features/boards/PublishedBoardShell";
-import { createPublishedBoardStore, type PublishedBoardState } from "@/lib/published-board-store";
+import usePublishedBoard from "@/components/features/boards/usePublishedBoard";
+import type { PublishedBoardState } from "@/types/published-board";
 
+// Failed or restricted reads show a message instead of substituting a sample Board.
 export function DatabasePublishedBoardContent({ state, onRetry }: { state: PublishedBoardState; onRetry: () => void }) {
     if (state.status === "ready" && state.data) {
         return (
@@ -57,20 +59,9 @@ export function DatabasePublishedBoardContent({ state, onRetry }: { state: Publi
 }
 
 export default function DatabasePublishedBoard({ boardId }: { boardId: string }) {
-    const [store] = useState(() => createPublishedBoardStore(boardId));
-    const state = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
-    useEffect(() => {
-        void store.load();
-    }, [store]);
+    const { state, retry } = usePublishedBoard(boardId);
     useEffect(() => {
         if (state.status === "ready" && state.data) document.title = `${state.data.board.title} | Roamboard`;
     }, [state]);
-    return (
-        <DatabasePublishedBoardContent
-            state={state}
-            onRetry={() => {
-                void store.load();
-            }}
-        />
-    );
+    return <DatabasePublishedBoardContent state={state} onRetry={retry} />;
 }

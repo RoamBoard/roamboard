@@ -5,6 +5,7 @@ const apiOrigin = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 type ApiError = { error?: { code?: string; message?: string } };
 
+// Preserve the HTTP status so pages can distinguish sign-in, permission and missing-Board messages.
 export class BoardApiError extends Error {
     constructor(
         message: string,
@@ -98,7 +99,7 @@ export type BoardWriteRequest = {
 };
 
 export type BoardDocument = Omit<BoardWriteRequest, "days"> & {
-    author?: {
+    author: {
         username: string;
         bio: string;
         photo: { imageId: number; url: string } | null;

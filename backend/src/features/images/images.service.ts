@@ -84,6 +84,7 @@ export function createImagesService(
             const image = await repository.findImage(imageId);
             if (!image) throw new AppError(404, "Image not found", "NOT_FOUND");
             if (boardId !== undefined) {
+                // A readable Board exposes only its owner's current profile photo through this URL.
                 const access = await boards.getAccess(boardId, userId);
                 if (!access || !canReadBoard(access, userId) || image.profileOwnerUserId !== access.ownerUserId) {
                     throw new AppError(404, "Image not found", "NOT_FOUND");

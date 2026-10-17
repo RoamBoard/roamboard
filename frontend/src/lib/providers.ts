@@ -152,6 +152,7 @@ export const routeMapboxProvider = (
         })
     });
 
+// Automatic Board photos request one pool of candidates to share between the empty photo spaces.
 export const searchUnsplashProvider = (query: string, limit?: number) =>
     request<ProviderPhoto[]>(
         `/api/v1/providers/unsplash/search?q=${encodeURIComponent(query)}${limit === undefined ? "" : `&limit=${limit}`}`

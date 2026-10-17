@@ -4,19 +4,9 @@ import { roamFlowPageSize, type RoamFlowBoard, type RoamFlowPage } from "@/lib/r
 const image = (name: string, alt: string) => ({ src: `/images/roamflow/${name}.webp`, alt });
 
 // Fictional editorial stories using existing photographs. No records are created or persisted.
-// The original V4 references lead the collection; only the existing Tokyo viewer has a navigation target.
+// The original V4 references lead the collection. Sample cards have no Board detail links.
 export const roamFlowBoards: readonly RoamFlowBoard[] = [
     ...photoBoardExamples,
-    {
-        id: "lost-in-tokyo",
-        title: "Lost in Tokyo",
-        titleLines: ["Lost in", "Tokyo"],
-        author: "Maya",
-        destination: "Tokyo, Japan",
-        destinationLabel: "JPN",
-        image: { src: "/images/boards/night-street.jpg", alt: "A Tokyo street filled with people and neon signs" },
-        href: "/boards/lost-in-tokyo"
-    },
     { ...landscapeBoardExamples[2], id: "flow-marrakech" },
     {
         ...collageBoardExamples[1],

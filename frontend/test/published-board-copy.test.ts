@@ -4,6 +4,7 @@ import { getBoardDays } from "../src/lib/board-presentation";
 import { addActivityToPreviewCopy } from "../src/lib/board-preview";
 import type { Board, BoardActivity } from "../src/types/board";
 
+// A day-five activity catches preview copies that accidentally retain their source Board's empty days.
 function activity(): BoardActivity {
     return {
         id: "activity-55",

@@ -24,6 +24,7 @@ test(
         skip: databaseUrl ? undefined : "TEST_DATABASE_URL or DATABASE_URL is required"
     },
     async () => {
+        // Fixture writes use a temporary schema so this test cannot overwrite application Boards.
         const schema = `rb_test_${randomBytes(6).toString("hex")}`;
         const admin = new Client({ connectionString: databaseUrl });
         await admin.connect();

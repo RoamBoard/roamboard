@@ -36,9 +36,11 @@ export function createBoardPhotoSource(
             try {
                 const result = await search(query);
                 const photos = Array.isArray(result) ? result : [];
+                // Keep successful pools for an hour; revisit empty results sooner, after five minutes.
                 entry.expiresAt = now() + (photos.length ? 3_600_000 : 300_000);
                 return photos;
             } catch (error) {
+                // Briefly remember failures so several slots do not repeat the same failing request.
                 entry.expiresAt = now() + 30_000;
                 throw error;
             }
@@ -66,6 +68,7 @@ export function getBoardPhotoSlots(board: Board, tagLabels: string[] = []): Phot
     const tag = tagLabels[0] ?? "";
     function makeSlot(id: string, location?: BoardLocation, dayNumber?: number): PhotoSlot {
         const context = location ? locationContext(location) : overall;
+        // Search saved locations and tags. Board titles and private notes stay out of provider queries.
         const primary = cleanQuery([context.place, context.country].filter(Boolean).join(" "));
         const backup = cleanQuery([context.country, tag, ...(tag ? ["travel"] : [])].filter(Boolean).join(" "));
         const query = primary.length >= 2 ? primary : backup.length >= 2 ? backup : null;
@@ -84,6 +87,7 @@ export function getBoardPhotoSlots(board: Board, tagLabels: string[] = []): Phot
         ...getBoardDays(board).flatMap((day) => {
             const activities = day.items.filter((item) => item.type === "activity");
             if (!activities.length) return [];
+            // The desktop design has photo spaces beside the first and fourth activities.
             return [
                 makeSlot(`day-${day.number}-first`, activities[0].location, day.number),
                 ...(activities[3] ? [makeSlot(`day-${day.number}-second`, activities[3].location, day.number)] : [])
@@ -95,12 +99,14 @@ export function getBoardPhotoSlots(board: Board, tagLabels: string[] = []): Phot
 function imageIdentity(url: string): string | null {
     try {
         const parsed = new URL(url);
+        // Resizing parameters do not make two URLs for the same photo count as different photos.
         return parsed.protocol === "https:" ? `${parsed.origin}${parsed.pathname}` : null;
     } catch {
         return null;
     }
 }
 
+// Automatic illustrations stay in the viewer; they are never saved to the Board or its preview copies.
 export async function resolveBoardPhotos(
     board: Board,
     slots: PhotoSlot[],
@@ -118,6 +124,7 @@ export async function resolveBoardPhotos(
     const pools = new Map<string, ProviderPhoto[]>();
     const failedQueries = new Set<string>();
     async function fill(backup: boolean) {
+        // Broaden a successful search with too few photos, but never retry a failed provider request.
         const pending = slots.filter(
             (slot) =>
                 slot.enabled && !selected[slot.id] && !(backup && slot.query && failedQueries.has(queryKey(slot.query)))
@@ -133,12 +140,13 @@ export async function resolveBoardPhotos(
                     failedQueries.add(key);
                     return [];
                 });
-                pools.set(key, Array.isArray(photos) ? photos : []);
+                pools.set(key, photos);
             })
         );
         for (const slot of pending) {
             const query = backup ? slot.backupQuery : slot.query;
             if (!query) continue;
+            // Exclude saved photos and earlier selections so each automatic space gets a different image.
             const photo = pools.get(queryKey(query))?.find((candidate) => {
                 const identity = imageIdentity(candidate.url);
                 return candidate.id && identity && !usedIds.has(candidate.id) && !usedUrls.has(identity);

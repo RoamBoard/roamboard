@@ -21,6 +21,7 @@ test(
     "published viewer author details and profile photos respect real database access",
     { skip: databaseUrl ? undefined : "TEST_DATABASE_URL or DATABASE_URL is required" },
     async (t) => {
+        // Test real SQL and API permissions in an isolated schema, separate from application users and Boards.
         const schema = `rb_viewer_test_${randomBytes(6).toString("hex")}`;
         const admin = new Client({ connectionString: databaseUrl, connectionTimeoutMillis: 3000 });
         await admin.connect();

@@ -300,6 +300,7 @@ async function readBoardDocument(
     boardId: number,
     userId: string | null | undefined
 ): Promise<BoardDocument | null> {
+    // Read the current profile so changing a username or photo does not require re-saving the Board.
     const boardResult = await client.query<
         BoardRow & {
             author_username: string;

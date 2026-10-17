@@ -4,6 +4,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import BoardPhoto from "../src/components/features/boards/BoardPhoto";
 
+// Static rendering checks fallback geometry without downloading photos from a provider.
 test("a missing automatic photo keeps its space with an accessible location placeholder", () => {
     const markup = renderToStaticMarkup(
         createElement(BoardPhoto, { placeholderLabel: "Tokyo", className: "aspect-[1.8]" })

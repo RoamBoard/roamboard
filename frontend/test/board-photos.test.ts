@@ -12,6 +12,7 @@ import {
 import type { ProviderPhoto } from "../src/lib/providers";
 import type { Board, BoardActivity, BoardImage } from "../src/types/board";
 
+// Photo fixtures let selection and cache tests run without spending Unsplash requests.
 function photo(id: string, changes: Partial<ProviderPhoto> = {}): ProviderPhoto {
     return {
         id,

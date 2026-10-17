@@ -1,13 +1,33 @@
-import type { BoardDocument } from "./board-creator-api";
+import { BoardApiError, loadBoardDocument, type BoardDocument } from "./board-creator-api";
 import { findCountry } from "./countries";
 import type { BoardActivity, BoardImage } from "../types/board";
-import type { PublishedBoardData } from "../types/published-board";
+import type { PublishedBoardData, PublishedBoardState } from "../types/published-board";
 
 const apiOrigin = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 const imageUrl = (url: string) => new URL(url, apiOrigin).toString();
 
+export async function loadPublishedBoard(boardId: string): Promise<PublishedBoardState> {
+    const id = Number(boardId);
+    // Board IDs are positive PostgreSQL integers; reject other route values before requesting them.
+    if (!/^[1-9]\d*$/.test(boardId) || !Number.isSafeInteger(id) || id > 2147483647) {
+        return { status: "not-found", data: null };
+    }
+    try {
+        const document = await loadBoardDocument(id);
+        // Owners can read their drafts through the API, but drafts belong in the editor.
+        if (document.status !== "published") return { status: "not-found", data: null };
+        return { status: "ready", data: toPublishedBoardData(document) };
+    } catch (error) {
+        const status = error instanceof BoardApiError ? error.status : undefined;
+        if (status === 401) return { status: "unauthenticated", data: null };
+        if (status === 403) return { status: "forbidden", data: null };
+        if (status === 404) return { status: "not-found", data: null };
+        return { status: "error", data: null };
+    }
+}
+
+// Adapt saved content to the existing design without adding fictional author details or activities.
 export function toPublishedBoardData(document: BoardDocument): PublishedBoardData {
-    if (!document.author) throw new Error("Author details are unavailable. Restart the backend and try again.");
     const images = new Map<number, BoardImage>(
         document.images.map((image) => [
             image.imageId,
@@ -37,6 +57,7 @@ export function toPublishedBoardData(document: BoardDocument): PublishedBoardDat
                   ]
                 : [];
             const cover = uploaded.find((image) => image.id === String(activity.coverImageId));
+            // Put the chosen activity cover first and preserve the order of its remaining photos.
             const photos = cover
                 ? [cover, ...uploaded.filter((image) => image !== cover), ...externalImages]
                 : [...externalImages, ...uploaded];
@@ -52,6 +73,7 @@ export function toPublishedBoardData(document: BoardDocument): PublishedBoardDat
                 images: photos,
                 location: location
                     ? {
+                          // Repeated locations share an identity when the viewer counts places.
                           id: JSON.stringify([location.name, location.latitude, location.longitude]),
                           source: "manual",
                           name: location.name,
@@ -90,6 +112,7 @@ export function toPublishedBoardData(document: BoardDocument): PublishedBoardDat
             tags: document.tags.map((tag) => String(tag.tagId)),
             destinations: [...countries.values()],
             durationDays: document.days.length,
+            // Keep empty saved days too, rather than reconstructing days only from activities.
             dayNumbers: document.days.map((day) => day.dayNumber),
             startDate: dates[0],
             endDate: dates.at(-1),
@@ -111,9 +134,7 @@ export function toPublishedBoardData(document: BoardDocument): PublishedBoardDat
                   }
                 : undefined
         },
-        highlights: [],
         tagLabels: document.tags.map((tag) => tag.name),
-        canEditContent: document.permissions.canEditContent,
-        isSample: false
+        canEditContent: document.permissions.canEditContent
     };
 }

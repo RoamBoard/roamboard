@@ -120,6 +120,7 @@ export const boardListQuerySchema = z
 export const imageVariantQuerySchema = z
     .object({
         variant: z.enum(["display", "thumbnail"]).default("display"),
+        // Author photos carry Board context so the image service can enforce the same read permissions.
         boardId: z.coerce.number().int().positive().optional()
     })
     .strict();

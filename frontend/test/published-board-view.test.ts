@@ -10,6 +10,7 @@ import type { BoardDocument } from "../src/lib/board-creator-api";
 test("published board view renders all activities without 5-pin truncation and includes pin notes and location", () => {
     const sampleBoard: BoardDocument = {
         boardId: 42,
+        author: { username: "kyoto_traveller", bio: "", photo: null },
         revision: 1,
         title: "Kyoto Highlights",
         description: "A wonderful multi-day trip.",

@@ -114,6 +114,7 @@ export function createImagesRepository(): ImagesRepository {
                 storage_key: string;
                 uploaded_by_user_id: string;
                 board_id: number | null;
+                // The current profile link determines whose avatar this image is.
                 profile_owner_user_id: string | null;
                 captured_at: Date | null;
                 latitude: string | null;

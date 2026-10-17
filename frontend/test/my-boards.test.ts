@@ -26,7 +26,9 @@ test("live gallery cards use persisted content, cover ordering and a real Board 
         updatedAt: "2026-10-01",
         coverImageUrl: null
     };
+    // The chosen cover must win even when it is not first in the API's image array.
     const document = {
+        author: { username: "stockholm_traveller", bio: "", photo: null },
         coverImageId: 2,
         description: "An afternoon in the old town.",
         tags: [{ tagId: 1, name: "Architecture" }],
