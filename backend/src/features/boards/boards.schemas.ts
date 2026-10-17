@@ -121,9 +121,15 @@ export const imageVariantQuerySchema = z
     .object({
         variant: z.enum(["display", "thumbnail"]).default("display"),
         // Author photos carry Board context so the image service can enforce the same read permissions.
-        boardId: z.coerce.number().int().positive().optional()
+        boardId: z.coerce.number().int().positive().optional(),
+        profileHandle: z
+            .string()
+            .regex(/^(?:[a-z0-9]|[a-z0-9][a-z0-9._]*[a-z0-9])$/)
+            .max(64)
+            .optional()
     })
-    .strict();
+    .strict()
+    .refine((query) => !(query.boardId && query.profileHandle));
 
 export const uploadIntentSchema = z
     .object({

@@ -105,6 +105,7 @@ export type BoardDocument = Omit<BoardWriteRequest, "days"> & {
         photo: { imageId: number; url: string } | null;
     };
     boardId: number;
+    savedByMe?: boolean;
     revision: number;
     permissions: { canEditContent: boolean; canManageBoard: boolean };
     coverImageId: number | null;

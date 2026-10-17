@@ -275,6 +275,15 @@ test("photo upload intent, completion, idempotence, ownership and streaming acce
     assert.equal(fake.getOpened(), 1);
     assert.equal((await api.get("/api/v1/images/12/content?variant=original").set("Cookie", ownerCookie)).status, 400);
 
+    fake.images.get(12)!.profileOwnerUserId = "owner";
+    fake.images.get(12)!.profileOwnerUsername = "owner";
+    assert.equal((await api.get("/api/v1/images/12/content?profileHandle=owner")).status, 200);
+    assert.equal((await api.get("/api/v1/images/12/content?profileHandle=other")).status, 404);
+    assert.equal((await api.get("/api/v1/images/12/content?profileHandle=owner&boardId=1")).status, 400);
+    fake.images.get(12)!.profileOwnerUserId = null;
+    fake.images.get(12)!.profileOwnerUsername = null;
+    assert.equal((await api.get("/api/v1/images/12/content?profileHandle=owner")).status, 404);
+
     fake.images.get(12)!.boardId = 1;
     assert.equal((await api.get("/api/v1/images/12/content")).status, 404);
     assert.equal((await api.get("/api/v1/images/12/content").set("Cookie", otherCookie)).status, 404);

@@ -1,49 +1,163 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { getMockProfile, subscribeMockStore } from "@/data/mock-social";
-import type { AudienceFilter, UserProfile } from "@/types/social";
 import UnderlineTabs from "@/components/ui/UnderlineTabs";
+import {
+    apiOrigin,
+    loadMapDestinations,
+    loadProfile,
+    loadProfileStats,
+    loadPublishedBoards,
+    loadSavedBoards,
+    ProfileApiError,
+    type MapDestination,
+    type ProfileStats,
+    type PublishedBoardSummary,
+    type SavedBoardSummary,
+    type UserProfile
+} from "@/lib/profile";
 import ProfileHero from "./ProfileHero";
-import SocialBoardCard from "./SocialBoardCard";
 import TravelMapSection from "./TravelMapSection";
+import VisitedWorldMap from "./VisitedWorldMap";
 
-type Props = {
-    profile: UserProfile;
-};
+type BoardCard = { boardId: number; title: string; coverImageUrl: string | null; author?: string };
 
-export default function ProfilePageContent({ profile: initialProfile }: Props) {
-    const profile = useSyncExternalStore(subscribeMockStore, getMockProfile, () => initialProfile);
-    const [activeFilter, setActiveFilter] = useState<AudienceFilter>("ME");
+export function LiveBoardCard({ board }: { board: BoardCard }) {
+    return (
+        <Link
+            href={`/boards/${board.boardId}`}
+            className="border-line bg-background hover:border-foreground group block overflow-hidden rounded-[2px] border transition-colors"
+        >
+            <div className="bg-faint relative aspect-[4/3]">
+                {board.coverImageUrl ? (
+                    <Image
+                        src={new URL(board.coverImageUrl, apiOrigin).toString()}
+                        alt=""
+                        fill
+                        unoptimized
+                        sizes="(max-width: 1024px) 100vw, 33vw"
+                        className="object-cover"
+                    />
+                ) : (
+                    <div className="text-muted-foreground flex h-full items-center justify-center text-xs">
+                        No cover photo
+                    </div>
+                )}
+            </div>
+            <div className="p-4">
+                <h4 className="font-display text-foreground text-lg font-bold">{board.title}</h4>
+                {board.author && <p className="text-muted-foreground mt-1 text-xs">by {board.author}</p>}
+            </div>
+        </Link>
+    );
+}
 
-    const filters: AudienceFilter[] = ["ME", "FRIENDS", "EXPLORE"];
+export default function ProfilePageContent() {
+    const [activeFilter, setActiveFilter] = useState<"ME" | "FRIENDS" | "EXPLORE">("ME");
+    const [profile, setProfile] = useState<UserProfile | null>(null);
+    const [stats, setStats] = useState<ProfileStats | null>(null);
+    const [published, setPublished] = useState<PublishedBoardSummary[]>([]);
+    const [saved, setSaved] = useState<SavedBoardSummary[]>([]);
+    const [destinations, setDestinations] = useState<MapDestination[]>([]);
+    const [error, setError] = useState("");
+    const [sectionErrors, setSectionErrors] = useState<string[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [retry, setRetry] = useState(0);
+
+    useEffect(() => {
+        const request = { active: true };
+        void loadProfile()
+            .then(async (user) => {
+                if (!request.active) return;
+                setProfile(user);
+                const results = await Promise.allSettled([
+                    loadProfileStats(),
+                    loadPublishedBoards(),
+                    loadSavedBoards(1, 3),
+                    loadMapDestinations()
+                ]);
+                if (!request.active) return;
+                const failures: string[] = [];
+                if (results[0].status === "fulfilled") setStats(results[0].value);
+                else failures.push("Statistics could not be loaded.");
+                if (results[1].status === "fulfilled") setPublished(results[1].value);
+                else failures.push("My boards could not be loaded.");
+                if (results[2].status === "fulfilled") setSaved(results[2].value);
+                else failures.push("Saved boards could not be loaded.");
+                if (results[3].status === "fulfilled") setDestinations(results[3].value);
+                else failures.push("The visited map could not be loaded.");
+                setSectionErrors(failures);
+            })
+            .catch((caught: unknown) => {
+                if (request.active)
+                    setError(
+                        caught instanceof ProfileApiError && caught.status === 401
+                            ? "Sign in to see your profile."
+                            : caught instanceof Error
+                              ? caught.message
+                              : "Your profile could not be loaded."
+                    );
+            })
+            .finally(() => {
+                if (request.active) setLoading(false);
+            });
+        return () => {
+            request.active = false;
+        };
+    }, [retry]);
+
+    function reload() {
+        setLoading(true);
+        setError("");
+        setSectionErrors([]);
+        setRetry((value) => value + 1);
+    }
 
     return (
         <div className="mx-auto w-full max-w-6xl pb-20">
-            {/* Top Page Header */}
             <header className="mb-8">
                 <span className="text-10 tracking-label text-muted-foreground font-bold uppercase">SOCIAL</span>
                 <h1 className="font-display text-48 sm:text-60 text-foreground mt-1 font-bold tracking-tight uppercase">
                     {activeFilter}
                 </h1>
-
-                {/* Audience filter tabs */}
                 <UnderlineTabs
-                    tabs={filters}
+                    tabs={["ME", "FRIENDS", "EXPLORE"]}
                     activeTab={activeFilter}
                     onChange={setActiveFilter}
                     ariaLabel="Audience filter"
                 />
             </header>
-
-            {/* ME View (Profile & Personal Boards) */}
-            {activeFilter === "ME" && (
+            {loading && <p role="status">Loading profile…</p>}
+            {error && (
+                <div role="alert">
+                    <p>{error}</p>
+                    {error.startsWith("Sign in") ? (
+                        <Link href="/login" className="underline">
+                            Sign in
+                        </Link>
+                    ) : (
+                        <button type="button" onClick={reload} className="underline">
+                            Retry
+                        </button>
+                    )}
+                </div>
+            )}
+            {!loading && !error && activeFilter !== "ME" && (
+                <p className="text-muted-foreground">This section is coming soon.</p>
+            )}
+            {!loading && !error && profile && activeFilter === "ME" && (
                 <main className="flex flex-col">
-                    {/* Hero Section */}
-                    <ProfileHero profile={profile} />
-
-                    {/* Currently inspired by section */}
+                    {sectionErrors.length > 0 && (
+                        <div role="alert" className="text-muted-foreground mb-6 text-sm">
+                            {sectionErrors.join(" ")}{" "}
+                            <button type="button" className="underline" onClick={reload}>
+                                Retry
+                            </button>
+                        </div>
+                    )}
+                    <ProfileHero profile={profile} stats={stats} />
                     <section aria-label="Currently inspired by" className="border-line mt-12 border-t pt-8">
                         <div className="flex items-end justify-between">
                             <div>
@@ -56,20 +170,23 @@ export default function ProfilePageContent({ profile: initialProfile }: Props) {
                             </div>
                             <Link
                                 href="/boards"
-                                className="text-12 text-muted-foreground hover:text-foreground transition-colors hover:underline"
+                                className="text-12 text-muted-foreground hover:text-foreground hover:underline"
                             >
                                 view all →
                             </Link>
                         </div>
-
                         <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-3">
-                            {profile.inspiredBoards.map((board) => (
-                                <SocialBoardCard key={board.id} board={board} />
+                            {saved.map((board) => (
+                                <LiveBoardCard
+                                    key={board.boardId}
+                                    board={{ ...board, author: board.owner.displayName }}
+                                />
                             ))}
                         </div>
+                        {saved.length === 0 && !sectionErrors.some((message) => message.startsWith("Saved")) && (
+                            <p className="text-muted-foreground mt-6 text-sm">No saved boards yet.</p>
+                        )}
                     </section>
-
-                    {/* My boards section */}
                     <section aria-label="My boards" className="border-line mt-12 border-t pt-8">
                         <div className="flex items-end justify-between">
                             <div>
@@ -79,53 +196,36 @@ export default function ProfilePageContent({ profile: initialProfile }: Props) {
                                 </p>
                             </div>
                             <Link
-                                href="/boards"
-                                className="text-12 text-muted-foreground hover:text-foreground transition-colors hover:underline"
+                                href="/boards/mine"
+                                className="text-12 text-muted-foreground hover:text-foreground hover:underline"
                             >
                                 view all →
                             </Link>
                         </div>
-
                         <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-3">
-                            {profile.myBoards.map((board) => (
-                                <SocialBoardCard key={board.id} board={board} />
+                            {published.map((board) => (
+                                <LiveBoardCard key={board.boardId} board={board} />
                             ))}
                         </div>
+                        {published.length === 0 && !sectionErrors.some((message) => message.startsWith("My")) && (
+                            <p className="text-muted-foreground mt-6 text-sm">No published boards yet.</p>
+                        )}
                     </section>
-
-                    {/* Map & Highlights section */}
-                    <TravelMapSection profile={profile} />
+                    <TravelMapSection
+                        stats={stats}
+                        mapComponent={
+                            sectionErrors.some((message) => message.startsWith("The visited map")) ? (
+                                <p role="alert" className="text-muted-foreground">
+                                    The visited map could not be loaded.
+                                </p>
+                            ) : destinations.length ? (
+                                <VisitedWorldMap destinations={destinations} embedded />
+                            ) : (
+                                <p className="text-muted-foreground">No visited destinations yet.</p>
+                            )
+                        }
+                    />
                 </main>
-            )}
-
-            {/* FRIENDS View */}
-            {activeFilter === "FRIENDS" && (
-                <section aria-label="Friends feed" className="py-12 text-center">
-                    <h3 className="font-display text-24 text-foreground font-bold">Friends &amp; Shared Itineraries</h3>
-                    <p className="text-14 text-muted-foreground mx-auto mt-2 max-w-md">
-                        Connect with fellow wanderers and view trips shared by your friends on Roamboard.
-                    </p>
-                    <div className="mt-8 grid grid-cols-1 gap-6 text-left sm:grid-cols-2 lg:grid-cols-3">
-                        {profile.inspiredBoards.slice(0, 2).map((board) => (
-                            <SocialBoardCard key={board.id} board={board} />
-                        ))}
-                    </div>
-                </section>
-            )}
-
-            {/* EXPLORE View */}
-            {activeFilter === "EXPLORE" && (
-                <section aria-label="Community explore" className="py-12 text-center">
-                    <h3 className="font-display text-24 text-foreground font-bold">Explore Community Boards</h3>
-                    <p className="text-14 text-muted-foreground mx-auto mt-2 max-w-md">
-                        Discover public boards, trending destinations, and stories from travelers worldwide.
-                    </p>
-                    <div className="mt-8 grid grid-cols-1 gap-6 text-left sm:grid-cols-2 lg:grid-cols-3">
-                        {profile.inspiredBoards.map((board) => (
-                            <SocialBoardCard key={board.id} board={board} />
-                        ))}
-                    </div>
-                </section>
             )}
         </div>
     );

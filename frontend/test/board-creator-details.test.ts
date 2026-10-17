@@ -25,9 +25,9 @@ function draft(): BoardCreatorPayload {
 function savedBoard(status: BoardStatus = "draft"): BoardDocument {
     return {
         ...toBoardWrite(draft(), [], new Set()),
-        author: { username: "test-author", bio: "", photo: null },
         status,
         boardId: 35,
+        author: { username: "owner", bio: "", photo: null },
         revision: 4,
         permissions: { canEditContent: true, canManageBoard: true },
         tags: [],
@@ -93,6 +93,8 @@ test("visibility uses the canonical three access values and stays controlled by 
     );
     for (const radio of radios) radio.onChange?.();
     assert.deepEqual(selected, ["collaborators", "friends", "public"]);
+    radios.find((radio) => radio.checked)?.onClick?.();
+    assert.deepEqual(selected, ["collaborators", "friends", "public", "friends"]);
     assert.deepEqual(
         controls(BoardDiscoveryDetails(props))
             .filter((control) => control.checked)

@@ -11,6 +11,7 @@ type Props = {
     onUndo?: () => void;
     canUndo?: boolean;
     toastKey?: number | string;
+    saving?: boolean;
 };
 
 const AUTO_DISMISS_MS = 6000;
@@ -22,7 +23,8 @@ export default function SettingsSaveBar({
     onDismissToast,
     onUndo,
     canUndo = false,
-    toastKey = 0
+    toastKey = 0,
+    saving = false
 }: Props) {
     const remainingRef = useRef(AUTO_DISMISS_MS);
     const startRef = useRef<number>(0);
@@ -88,16 +90,17 @@ export default function SettingsSaveBar({
                 <div className="flex items-center gap-3">
                     <button
                         type="submit"
+                        disabled={saving}
                         className="bg-foreground text-background hover:bg-foreground/90 font-body text-12 cursor-pointer rounded-[2px] px-5 py-2.5 font-bold tracking-wider uppercase transition-colors focus-visible:outline-1 focus-visible:outline-offset-4"
                     >
-                        Save Changes
+                        {saving ? "Saving…" : "Save Changes"}
                     </button>
                     <button
                         type="button"
                         onClick={onReset}
                         className="border-line bg-background text-12 text-muted-foreground hover:text-foreground hover:border-foreground font-body cursor-pointer rounded-[2px] border px-4 py-2 font-medium transition-colors"
                     >
-                        Reset Defaults
+                        Reset
                     </button>
                 </div>
 
@@ -128,9 +131,7 @@ export default function SettingsSaveBar({
                 >
                     ✓
                 </span>
-                <span className="text-12 text-foreground font-medium whitespace-nowrap">
-                    Changes saved locally (demo)
-                </span>
+                <span className="text-12 text-foreground font-medium whitespace-nowrap">Changes saved</span>
 
                 {canUndo && onUndo && (
                     <button

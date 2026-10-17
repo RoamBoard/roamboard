@@ -80,10 +80,13 @@ export function createImagesService(
                 longitude: image.longitude
             };
         },
-        async openImage(imageId, variant, userId, boardId) {
+        async openImage(imageId, variant, userId, boardId, profileHandle) {
             const image = await repository.findImage(imageId);
             if (!image) throw new AppError(404, "Image not found", "NOT_FOUND");
-            if (boardId !== undefined) {
+            if (profileHandle !== undefined) {
+                if (!image.profileOwnerUserId || image.profileOwnerUsername !== profileHandle)
+                    throw new AppError(404, "Image not found", "NOT_FOUND");
+            } else if (boardId !== undefined) {
                 // A readable Board exposes only its owner's current profile photo through this URL.
                 const access = await boards.getAccess(boardId, userId);
                 if (!access || !canReadBoard(access, userId) || image.profileOwnerUserId !== access.ownerUserId) {

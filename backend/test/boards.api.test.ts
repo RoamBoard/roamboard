@@ -147,6 +147,7 @@ function fakeBoards(memberRole: "editor" | "viewer" | null = null): BoardReposit
                 ...structuredClone(input),
                 days,
                 boardId: id,
+                savedByMe: false,
                 author: { username: "owner", bio: "", photo: null },
                 revision: (existing?.revision ?? 0) + 1,
                 isCompleted: false,
