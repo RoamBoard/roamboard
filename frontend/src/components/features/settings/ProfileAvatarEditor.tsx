@@ -8,13 +8,17 @@ import { deleteProfilePicture, setProfilePicture, type UserProfile } from "@/lib
 type Props = {
     profile: UserProfile;
     onChange: (profile: UserProfile) => void;
+    disabled: boolean;
+    onBeginChange: () => boolean;
+    onEndChange: () => void;
 };
 
-export default function ProfileAvatarEditor({ profile, onChange }: Props) {
+export default function ProfileAvatarEditor({ profile, onChange, disabled, onBeginChange, onEndChange }: Props) {
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState("");
 
     async function upload(file: File) {
+        if (busy || disabled || !onBeginChange()) return;
         setBusy(true);
         setError("");
         try {
@@ -24,10 +28,12 @@ export default function ProfileAvatarEditor({ profile, onChange }: Props) {
             setError(caught instanceof Error ? caught.message : "The photo could not be uploaded.");
         } finally {
             setBusy(false);
+            onEndChange();
         }
     }
 
     async function remove() {
+        if (busy || disabled || !onBeginChange()) return;
         setBusy(true);
         setError("");
         try {
@@ -36,6 +42,7 @@ export default function ProfileAvatarEditor({ profile, onChange }: Props) {
             setError(caught instanceof Error ? caught.message : "The photo could not be removed.");
         } finally {
             setBusy(false);
+            onEndChange();
         }
     }
 
@@ -68,7 +75,7 @@ export default function ProfileAvatarEditor({ profile, onChange }: Props) {
                         <input
                             type="file"
                             accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-                            disabled={busy}
+                            disabled={busy || disabled}
                             className="sr-only"
                             onChange={(event) => {
                                 const file = event.target.files?.[0];
@@ -80,7 +87,7 @@ export default function ProfileAvatarEditor({ profile, onChange }: Props) {
                     {profile.profilePicture && (
                         <button
                             type="button"
-                            disabled={busy}
+                            disabled={busy || disabled}
                             onClick={() => void remove()}
                             className="border-line text-12 text-foreground rounded-[2px] border px-3 py-2"
                         >

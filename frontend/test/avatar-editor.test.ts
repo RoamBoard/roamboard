@@ -20,9 +20,12 @@ const profile: UserProfile = {
     createdAt: "",
     updatedAt: ""
 };
+const writeControls = { disabled: false, onBeginChange: () => true, onEndChange: () => {} };
 
 test("avatar editor offers upload and shows the default state without external URL controls", () => {
-    const html = renderToStaticMarkup(createElement(ProfileAvatarEditor, { profile, onChange: () => {} }));
+    const html = renderToStaticMarkup(
+        createElement(ProfileAvatarEditor, { profile, onChange: () => {}, ...writeControls })
+    );
     assert.match(html, /Upload photo/);
     assert.match(html, /No photo/);
     assert.doesNotMatch(html, /Image URL|preset/i);
@@ -35,9 +38,26 @@ test("avatar editor offers removal for an uploaded photo", () => {
                 ...profile,
                 profilePicture: { imageId: 12, url: "http://localhost:3001/photo", storageKey: null }
             },
-            onChange: () => {}
+            onChange: () => {},
+            ...writeControls
         })
     );
     assert.match(html, /Remove photo/);
     assert.match(html, /Current profile photo/);
+});
+
+test("avatar controls are disabled during another profile write", () => {
+    const html = renderToStaticMarkup(
+        createElement(ProfileAvatarEditor, {
+            profile: {
+                ...profile,
+                profilePicture: { imageId: 12, url: "http://localhost:3001/photo", storageKey: null }
+            },
+            onChange: () => {},
+            ...writeControls,
+            disabled: true
+        })
+    );
+    assert.match(html, /<input[^>]*disabled=""/);
+    assert.match(html, /<button[^>]*disabled=""[^>]*>Remove photo/);
 });

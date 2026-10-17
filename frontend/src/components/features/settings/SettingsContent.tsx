@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { listBoardTags } from "@/lib/board-creator-api";
 import { loadLanguages, loadProfile, ProfileApiError, updateProfile, type UserProfile } from "@/lib/profile";
@@ -45,6 +45,7 @@ export default function SettingsContent() {
     const [toastKey, setToastKey] = useState(0);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const writeInProgress = useRef(false);
     const [error, setError] = useState("");
     const [retry, setRetry] = useState(0);
 
@@ -97,9 +98,21 @@ export default function SettingsContent() {
         localStorage.setItem("roamboard-theme", value);
     }
 
+    function beginWrite() {
+        if (writeInProgress.current) return false;
+        writeInProgress.current = true;
+        setSaving(true);
+        return true;
+    }
+
+    function endWrite() {
+        writeInProgress.current = false;
+        setSaving(false);
+    }
+
     async function save(event?: FormEvent) {
         event?.preventDefault();
-        if (!draft || !saved || saving) return;
+        if (!draft || !saved || writeInProgress.current) return;
         const username = draft.username.trim().toLowerCase();
         if (username.length > 64 || !/^(?:[a-z0-9]|[a-z0-9][a-z0-9._]*[a-z0-9])$/.test(username)) {
             setError(
@@ -115,7 +128,7 @@ export default function SettingsContent() {
             setError("Choose tags from the available list.");
             return;
         }
-        setSaving(true);
+        if (!beginWrite()) return;
         setError("");
         try {
             const next = await updateProfile({
@@ -137,14 +150,13 @@ export default function SettingsContent() {
         } catch (caught) {
             setError(caught instanceof Error ? caught.message : "Profile changes could not be saved.");
         } finally {
-            setSaving(false);
+            endWrite();
         }
     }
 
     async function undo() {
-        if (!lastSaved || !saved || saving) return;
+        if (!lastSaved || !saved || !beginWrite()) return;
         const draftBeforeUndo = draft;
-        setSaving(true);
         setError("");
         try {
             const restored = await updateProfile({ ...editable(lastSaved), revision: saved.revision });
@@ -158,7 +170,7 @@ export default function SettingsContent() {
         } catch (caught) {
             setError(caught instanceof Error ? caught.message : "Previous profile values could not be restored.");
         } finally {
-            setSaving(false);
+            endWrite();
         }
     }
 
@@ -221,7 +233,13 @@ export default function SettingsContent() {
                 <form onSubmit={(event) => void save(event)} className="space-y-8">
                     {activeTab === "PROFILE" && (
                         <div className="space-y-6">
-                            <ProfileAvatarEditor profile={draft} onChange={onPictureChange} />
+                            <ProfileAvatarEditor
+                                profile={draft}
+                                onChange={onPictureChange}
+                                disabled={saving}
+                                onBeginChange={beginWrite}
+                                onEndChange={endWrite}
+                            />
                             <PersonalDetailsForm
                                 name={draft.displayName}
                                 onChangeName={(value) => change("displayName", value)}
@@ -276,7 +294,7 @@ export default function SettingsContent() {
                         showToast={showSaveToast && !isDirty}
                         onDismissToast={() => setShowSaveToast(false)}
                         onUndo={() => void undo()}
-                        canUndo={Boolean(lastSaved)}
+                        canUndo={Boolean(lastSaved) && !saving}
                         toastKey={toastKey}
                         saving={saving}
                     />
