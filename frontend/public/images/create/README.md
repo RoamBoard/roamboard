@@ -1,5 +1,9 @@
 # Create photography
 
+## Image workflow for coding agents
+
+Read [the supported image workflow](../../../../docs/IMAGE_WORKFLOW.md) before adding or changing images. Raster page photography now uses database-backed `library:` references through the shared image components. These original files remain migration/rollback fallbacks and retain the source credits below. SVG icons and masks stay local. Register new supplied images with `images:add`, verify the saved record, and wire the returned key into the page; do not introduce unregistered image URLs. Protected Board/activity uploads keep their separate authenticated upload and ordering flow.
+
 `desert.jpg` is a local copy of Nejc Soklič’s photograph of the Dubai desert at sunset,
 [YXFw9L-0DKo on Unsplash](https://unsplash.com/photos/YXFw9L-0DKo), downloaded at 2000px wide.
 The source identifies it as free to use under the [Unsplash License](https://unsplash.com/license).

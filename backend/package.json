@@ -18,6 +18,9 @@
         "test:db": "tsx --test integration/*.db.ts",
         "build": "tsc -p tsconfig.build.json",
         "cleanup:images": "tsx src/jobs/cleanup-unused-images.ts",
+        "images:inventory": "tsx src/jobs/import-frontend-images.ts --inventory",
+        "images:import": "tsx src/jobs/import-frontend-images.ts --apply",
+        "images:add": "tsx src/jobs/register-image.ts",
         "start": "node dist/server.js",
         "check": "npm run lint && npm run typecheck && npm test && npm run build"
     },

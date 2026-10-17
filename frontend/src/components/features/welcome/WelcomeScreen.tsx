@@ -1,4 +1,4 @@
-import Image from "next/image";
+import Image from "@/components/images/LibraryImage";
 import EnterTransition from "@/components/features/welcome/EnterTransition";
 import WelcomeUsername from "@/components/features/welcome/WelcomeUsername";
 import ThemeSelect from "@/components/ui/ThemeSelect";
@@ -31,7 +31,7 @@ export default function WelcomeScreen({ username }: Props) {
             >
                 <div className="absolute top-[6.25%] left-[6.5%] h-[70.4%] w-[26%] overflow-hidden">
                     <Image
-                        src="/images/welcome/blossoms.jpg"
+                        src="library:frontend.images.welcome.blossoms"
                         alt=""
                         fill
                         sizes="26vw"
@@ -41,7 +41,7 @@ export default function WelcomeScreen({ username }: Props) {
                 </div>
                 <div className="absolute top-[8.7%] left-[41.9%] h-[65.8%] w-[36.5%] overflow-hidden">
                     <Image
-                        src="/images/welcome/water.jpg"
+                        src="library:frontend.images.welcome.water"
                         alt=""
                         fill
                         sizes="75vw"
@@ -51,7 +51,7 @@ export default function WelcomeScreen({ username }: Props) {
                 </div>
                 <div className="absolute top-[13%] left-[26.9%] z-1 h-[68.8%] w-[26.9%] overflow-hidden">
                     <Image
-                        src="/images/welcome/flowers.jpg"
+                        src="library:frontend.images.welcome.flowers"
                         alt=""
                         fill
                         sizes="27vw"

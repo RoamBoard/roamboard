@@ -1,6 +1,6 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
+import { LibraryImg } from "@/components/images/LibraryImage";
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 
@@ -288,7 +288,7 @@ export default function ProfilePrototype() {
                     <h2 className="font-display text-28 font-bold">Profile picture</h2>
                     {profile.profilePicture ? (
                         <div className="mt-5">
-                            <img
+                            <LibraryImg
                                 src={profile.profilePicture.url}
                                 alt="Current profile"
                                 className="border-line size-28 rounded-full border object-cover"

@@ -6,7 +6,7 @@ export const mockRowanProfile: UserProfile = {
     id: "user-rowan-mercer",
     name: "ROWAN",
     handle: "@rowan.mercer",
-    avatarUrl: "https://images.unsplash.com/photo-1769786186317-272d062fcf93?auto=format&fit=crop&w=400&q=80",
+    avatarUrl: "library:frontend.unsplash.41db7fb4311d2054",
     location: "San Fransisco, USA",
     headline: "Chasing places, collecting stories.",
     bio: 'Usually somewhere between "I made an itinerary" and "we\'ll figure it out when we get there." I travel for the food, the views, the people, and the completely unnecessary side quests that somehow become the best part of the trip.',
@@ -46,27 +46,27 @@ export const mockRowanProfile: UserProfile = {
             savedCount: "Saved by 1,284 travelers",
             images: [
                 {
-                    url: "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.39ce2a6bfb993c6c",
                     alt: "Tokyo red tower"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1542051841857-5f90071e7989?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.1c753fdb75bc8a55",
                     alt: "Tokyo neon alley"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1538688525198-9b88f6f53126?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.8af634962a6d50bc",
                     alt: "Tokyo lantern street"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.5e72887d0d3f7f08",
                     alt: "Tokyo alley bars"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1536098561742-ca998e48cbcc?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.4c9518b691c46948",
                     alt: "Shinjuku night skyline"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.1682d9969d7ef24c",
                     alt: "Senso-ji pagoda"
                 }
             ]
@@ -90,27 +90,27 @@ export const mockRowanProfile: UserProfile = {
             savedCount: "Saved by 1,476 travelers",
             images: [
                 {
-                    url: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.f058865b59d2e7e3",
                     alt: "Eiffel tower and classic Parisian avenue"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.6231787db47b8bbd",
                     alt: "Pont Alexandre III at sunset"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1550340499-a6c60fc8287c?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.26e5387122aacb78",
                     alt: "Parisian sidewalk café"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.843eb666abba6b2e",
                     alt: "Eiffel Tower viewed from Seine"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1549144511-f099e773c147?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.f9f6f9e599ddd3e2",
                     alt: "Louvre glass pyramid at twilight"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1509299349698-dd22323b5963?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.a1630a73793b3a28",
                     alt: "Arc de Triomphe facade"
                 }
             ]
@@ -127,27 +127,27 @@ export const mockRowanProfile: UserProfile = {
             savedCount: "Saved by 1,932 travelers",
             images: [
                 {
-                    url: "https://images.unsplash.com/photo-1508009603885-50cf7c579365?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.dd2b1465d6d1ab51",
                     alt: "Wat Arun temple at dawn"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1528181304800-259b08848526?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.4b9afeaddd6f486a",
                     alt: "Bangkok tuk-tuk in Chinatown"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.e2a41519d15792c9",
                     alt: "Longtail wooden boat on river"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1563492065599-3520f775eeed?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.65e3de1264b6fa5b",
                     alt: "Chao Phraya sunset over temples"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1512553353614-82a7370096dc?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.87702fad7958d19c",
                     alt: "Bangkok street night market"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1519451241324-20b4ea2c4220?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.6ee43a65bb6b0e07",
                     alt: "Bangkok morning golden sunlight"
                 }
             ]
@@ -173,27 +173,27 @@ export const mockRowanProfile: UserProfile = {
             savedCount: "Saved by 1,284 travelers",
             images: [
                 {
-                    url: "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.39ce2a6bfb993c6c",
                     alt: "Tokyo red tower"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1542051841857-5f90071e7989?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.1c753fdb75bc8a55",
                     alt: "Tokyo neon alley"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1538688525198-9b88f6f53126?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.8af634962a6d50bc",
                     alt: "Tokyo lantern street"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.5e72887d0d3f7f08",
                     alt: "Tokyo alley bars"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1536098561742-ca998e48cbcc?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.4c9518b691c46948",
                     alt: "Shinjuku night skyline"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.1682d9969d7ef24c",
                     alt: "Senso-ji pagoda"
                 }
             ]
@@ -217,27 +217,27 @@ export const mockRowanProfile: UserProfile = {
             savedCount: "Saved by 1,476 travelers",
             images: [
                 {
-                    url: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.f058865b59d2e7e3",
                     alt: "Eiffel tower and classic Parisian avenue"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.6231787db47b8bbd",
                     alt: "Pont Alexandre III at sunset"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1550340499-a6c60fc8287c?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.26e5387122aacb78",
                     alt: "Parisian sidewalk café"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.843eb666abba6b2e",
                     alt: "Eiffel Tower viewed from Seine"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1549144511-f099e773c147?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.f9f6f9e599ddd3e2",
                     alt: "Louvre glass pyramid at twilight"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1509299349698-dd22323b5963?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.a1630a73793b3a28",
                     alt: "Arc de Triomphe facade"
                 }
             ]
@@ -254,27 +254,27 @@ export const mockRowanProfile: UserProfile = {
             savedCount: "Saved by 1,932 travelers",
             images: [
                 {
-                    url: "https://images.unsplash.com/photo-1508009603885-50cf7c579365?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.dd2b1465d6d1ab51",
                     alt: "Wat Arun temple at dawn"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1528181304800-259b08848526?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.4b9afeaddd6f486a",
                     alt: "Bangkok tuk-tuk in Chinatown"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.e2a41519d15792c9",
                     alt: "Longtail wooden boat on river"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1563492065599-3520f775eeed?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.65e3de1264b6fa5b",
                     alt: "Chao Phraya sunset over temples"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1512553353614-82a7370096dc?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.87702fad7958d19c",
                     alt: "Bangkok street night market"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1519451241324-20b4ea2c4220?auto=format&fit=crop&w=400&q=80",
+                    url: "library:frontend.unsplash.6ee43a65bb6b0e07",
                     alt: "Bangkok morning golden sunlight"
                 }
             ]
@@ -392,15 +392,15 @@ export const mockRowanProfile: UserProfile = {
             subLabel: "3 visits",
             images: [
                 {
-                    url: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=300&q=80",
+                    url: "library:frontend.unsplash.1682d9969d7ef24c",
                     alt: "Senso-ji pagoda close-up"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1542051841857-5f90071e7989?auto=format&fit=crop&w=300&q=80",
+                    url: "library:frontend.unsplash.1c753fdb75bc8a55",
                     alt: "Tokyo vibrant neon alley"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=300&q=80",
+                    url: "library:frontend.unsplash.39ce2a6bfb993c6c",
                     alt: "Tokyo night street"
                 }
             ]
@@ -412,15 +412,15 @@ export const mockRowanProfile: UserProfile = {
             subLabel: "Greece, 2024",
             images: [
                 {
-                    url: "https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?auto=format&fit=crop&w=300&q=80",
+                    url: "library:frontend.unsplash.6f388dc88faf20d8",
                     alt: "Santorini cliffside white village"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=300&q=80",
+                    url: "library:frontend.unsplash.b00a5a12b1e0519d",
                     alt: "Greek seaside dining with white chairs"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1555993539-1732b0258235?auto=format&fit=crop&w=300&q=80",
+                    url: "library:frontend.unsplash.c295709664de669f",
                     alt: "Ancient Greek temple columns"
                 }
             ]
@@ -432,15 +432,15 @@ export const mockRowanProfile: UserProfile = {
             subLabel: "12 places",
             images: [
                 {
-                    url: "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=300&q=80",
+                    url: "library:frontend.unsplash.183ce167c753aa6b",
                     alt: "Desert canyon rock formations"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1485871981521-5b1fd3805eee?auto=format&fit=crop&w=300&q=80",
+                    url: "library:frontend.unsplash.d492b9ab9906412d",
                     alt: "Manhattan avenue canyon perspective"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=300&q=80",
+                    url: "library:frontend.unsplash.5ab37360c57936bb",
                     alt: "Green mountain ridge and valley"
                 }
             ]
@@ -452,15 +452,15 @@ export const mockRowanProfile: UserProfile = {
             subLabel: "8 places",
             images: [
                 {
-                    url: "https://images.unsplash.com/photo-1516483638261-f4dbaf036963?auto=format&fit=crop&w=300&q=80",
+                    url: "library:frontend.unsplash.9a2e4c3d730c1c81",
                     alt: "Cinque Terre colorful coastal village"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=300&q=80",
+                    url: "library:frontend.unsplash.b00a5a12b1e0519d",
                     alt: "Amalfi beach umbrellas in turquoise water"
                 },
                 {
-                    url: "https://images.unsplash.com/photo-1520175480921-4edfa2983e0f?auto=format&fit=crop&w=300&q=80",
+                    url: "library:frontend.unsplash.bb3f01d3bdc6eb40",
                     alt: "Positano rustic terrace overlooking the sea"
                 }
             ]

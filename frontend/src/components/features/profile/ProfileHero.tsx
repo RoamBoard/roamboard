@@ -1,4 +1,4 @@
-import Image from "next/image";
+import Image from "@/components/images/LibraryImage";
 import Link from "next/link";
 import type { UserProfile } from "@/types/social";
 import { getBoardTag, boardTagHref } from "@/data/board-tags";

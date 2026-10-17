@@ -8,6 +8,11 @@ export const metadata: Metadata = {
 
 const routes = [
     {
+        href: "/dev/images",
+        title: "Image library",
+        description: "Upload website photography, select Unsplash images, and copy reusable database references."
+    },
+    {
         href: "/dev/board-cards",
         title: "Board card gallery",
         description: "All four collapsed Board designs with twelve Figma reference examples."

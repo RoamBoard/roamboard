@@ -19,8 +19,12 @@ import { createUsersModule } from "./features/users/users.module.js";
 import type { UsersRepository } from "./features/users/users.types.js";
 import { createSearchModule } from "./features/search/search.module.js";
 import type { SearchProvider, SearchRepository } from "./features/search/search.types.js";
+import { createLibraryModule } from "./features/image-library/image-library.module.js";
+import type { LibraryProvider, LibraryRepository } from "./features/image-library/image-library.types.js";
 
 export interface AppOptions extends AuthModuleOptions {
+    libraryRepository?: LibraryRepository;
+    libraryProvider?: LibraryProvider;
     boardRepository?: BoardRepository;
     imagesRepository?: ImagesRepository;
     imageProvider?: ImageProvider;
@@ -73,6 +77,10 @@ export function createApp(options: AppOptions = {}): Express {
     );
     const users = createUsersModule(attachUser, images.repository, boards.repository, options.usersRepository);
     app.use("/api/v1/auth", auth.router);
+    app.use(
+        "/api/v1/image-library",
+        createLibraryModule(attachUser, quota, options.libraryRepository, options.libraryProvider).router
+    );
     app.use("/api/v1/providers", providers.router);
     app.use("/api/v1/destinations", destinations.router);
     app.use("/api/v1/users", users.router);

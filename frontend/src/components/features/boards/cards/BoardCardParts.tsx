@@ -1,4 +1,5 @@
 import Image from "next/image";
+import LibraryImage from "@/components/images/LibraryImage";
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
 import type { BoardCardActions, BoardCardImage, BoardCardSummary } from "@/types/board-card";
@@ -56,6 +57,8 @@ export function BoardCardPhoto({
     className?: string;
     sizes: string;
 }) {
+    const Photo = image.src.startsWith("library:") ? LibraryImage : Image;
+
     return (
         <div className={`relative overflow-hidden ${className}`}>
             <div
@@ -71,7 +74,7 @@ export function BoardCardPhoto({
                         : undefined
                 }
             >
-                <Image
+                <Photo
                     src={image.src}
                     alt={image.alt}
                     fill
