@@ -113,7 +113,12 @@ export default function HandleProfileContent({ handle }: { handle: string }) {
                 </h1>
             </header>
             <main className="flex flex-col">
-                <ProfileHero profile={view.profile} stats={null} isOwner={false} />
+                <ProfileHero
+                    profile={view.profile}
+                    stats={null}
+                    isOwner={false}
+                    friendshipStatus={view.friendshipStatus}
+                />
                 <section aria-label="Public boards" className="border-line mt-12 border-t pt-8">
                     <h2 className="font-display text-20 sm:text-22 text-foreground font-bold">boards</h2>
                     <p className="text-12 text-muted-foreground mt-0.5 font-medium">

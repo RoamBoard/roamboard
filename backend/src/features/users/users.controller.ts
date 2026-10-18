@@ -52,6 +52,24 @@ export function createUsersController(service: ReturnType<typeof createUsersServ
             const { boardId } = response.locals.params as { boardId: number };
             await service.unsaveBoard(response.locals.user.userId, boardId);
             response.status(204).send();
+        },
+        sendFriendRequest: async (_request, response) => {
+            const { handle } = response.locals.params as { handle: string };
+            const result = await service.sendFriendRequest(response.locals.user.userId, handle);
+            response.status(201).json({ data: result });
+        },
+        listFriendRequests: async (_request, response) => {
+            response.json({ data: await service.listFriendRequests(response.locals.user.userId) });
+        },
+        acceptFriendRequest: async (_request, response) => {
+            const { requestId } = response.locals.params as { requestId: number };
+            const result = await service.acceptFriendRequest(response.locals.user.userId, requestId);
+            response.json({ data: result });
+        },
+        rejectFriendRequest: async (_request, response) => {
+            const { requestId } = response.locals.params as { requestId: number };
+            await service.rejectFriendRequest(response.locals.user.userId, requestId);
+            response.status(204).send();
         }
     } satisfies Record<string, RequestHandler>;
 }

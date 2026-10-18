@@ -26,9 +26,29 @@ export type PublicProfile = Pick<
     | "profilePicture"
 >;
 
+export type FriendshipStatus = "none" | "pending_sent" | "pending_received" | "accepted";
+
+export interface FriendRequest {
+    requestId: number;
+    requester: {
+        userId: string;
+        username: string;
+        displayName: string;
+        profilePictureUrl: string | null;
+    };
+}
+
+export interface FriendshipRecord {
+    friendshipId: number;
+    status: "pending" | "accepted";
+    requesterUserId: string;
+    recipientUserId: string;
+}
+
 export interface PublicProfileView {
     profile: PublicProfile;
     isOwner: boolean;
+    friendshipStatus?: FriendshipStatus;
     stats: Pick<
         ProfileStats,
         "countriesVisited" | "citiesExplored" | "continentsCovered" | "photosUploaded" | "boardsCreated"
@@ -105,4 +125,9 @@ export interface UsersRepository {
     listSavedBoards(userId: string, page: number, limit: number): Promise<{ items: SavedBoard[]; hasMore: boolean }>;
     saveBoard(userId: string, boardId: number): Promise<boolean>;
     unsaveBoard(userId: string, boardId: number): Promise<void>;
+    getFriendship(userId1: string, userId2: string): Promise<FriendshipRecord | null>;
+    sendFriendRequest(requesterId: string, recipientId: string): Promise<number>;
+    listIncomingFriendRequests(userId: string): Promise<FriendRequest[]>;
+    acceptFriendRequest(recipientId: string, requestId: number): Promise<boolean>;
+    rejectFriendRequest(userId: string, requestId: number): Promise<boolean>;
 }

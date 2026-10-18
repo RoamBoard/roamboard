@@ -309,6 +309,84 @@ export function createUsersRepository(): UsersRepository {
         },
         async unsaveBoard(userId, boardId) {
             await getPool().query("DELETE FROM saved_boards WHERE user_id=$1 AND board_id=$2", [userId, boardId]);
+        },
+        async getFriendship(userId1, userId2) {
+            const result = await getPool().query<{
+                friendship_id: number;
+                status: "pending" | "accepted";
+                requester_user_id: string;
+                recipient_user_id: string;
+            }>(
+                `SELECT friendship_id, status, requester_user_id, recipient_user_id
+                 FROM friendship
+                 WHERE (requester_user_id = $1 AND recipient_user_id = $2)
+                    OR (requester_user_id = $2 AND recipient_user_id = $1)`,
+                [userId1, userId2]
+            );
+            const row = result.rows[0];
+            if (!row) return null;
+            return {
+                friendshipId: row.friendship_id,
+                status: row.status,
+                requesterUserId: row.requester_user_id,
+                recipientUserId: row.recipient_user_id
+            };
+        },
+        async sendFriendRequest(requesterId, recipientId) {
+            const result = await getPool().query<{ friendship_id: number }>(
+                `INSERT INTO friendship (requester_user_id, recipient_user_id, status)
+                 VALUES ($1, $2, 'pending')
+                 RETURNING friendship_id`,
+                [requesterId, recipientId]
+            );
+            const row = result.rows[0];
+            if (!row) throw new AppError(500, "Failed to create friend request", "INTERNAL_ERROR");
+            return row.friendship_id;
+        },
+        async listIncomingFriendRequests(userId) {
+            const result = await getPool().query<{
+                friendship_id: number;
+                requester_user_id: string;
+                username: string;
+                display_name: string;
+                profile_picture_image_id: number | null;
+            }>(
+                `SELECT f.friendship_id, f.requester_user_id, u.username, u.display_name, u.profile_picture_image_id
+                 FROM friendship f
+                 JOIN app_user u ON u.user_id = f.requester_user_id
+                 WHERE f.recipient_user_id = $1 AND f.status = 'pending'
+                 ORDER BY f.friendship_id DESC`,
+                [userId]
+            );
+            return result.rows.map((row) => ({
+                requestId: row.friendship_id,
+                requester: {
+                    userId: row.requester_user_id,
+                    username: row.username,
+                    displayName: row.display_name,
+                    profilePictureUrl:
+                        row.profile_picture_image_id === null
+                            ? null
+                            : `/api/v1/images/${row.profile_picture_image_id}/content?variant=thumbnail`
+                }
+            }));
+        },
+        async acceptFriendRequest(recipientId, requestId) {
+            const result = await getPool().query(
+                `UPDATE friendship
+                 SET status = 'accepted'
+                 WHERE friendship_id = $1 AND recipient_user_id = $2 AND status = 'pending'`,
+                [requestId, recipientId]
+            );
+            return (result.rowCount ?? 0) > 0;
+        },
+        async rejectFriendRequest(userId, requestId) {
+            const result = await getPool().query(
+                `DELETE FROM friendship
+                 WHERE friendship_id = $1 AND (recipient_user_id = $2 OR requester_user_id = $2) AND status = 'pending'`,
+                [requestId, userId]
+            );
+            return (result.rowCount ?? 0) > 0;
         }
     };
 }

@@ -48,6 +48,21 @@ export function createUsersService(
                 const continent = continentForCountry(place.countryCode);
                 if (continent) continents.add(continent);
             }
+            let friendshipStatus: PublicProfileView["friendshipStatus"] = undefined;
+            if (viewerId && viewerId !== userId) {
+                const friendship = await repository.getFriendship(viewerId, userId);
+                if (!friendship) {
+                    friendshipStatus = "none";
+                } else if (friendship.status === "accepted") {
+                    friendshipStatus = "accepted";
+                } else if (friendship.requesterUserId === viewerId) {
+                    friendshipStatus = "pending_sent";
+                } else {
+                    friendshipStatus = "pending_received";
+                }
+            } else if (!viewerId) {
+                friendshipStatus = "none";
+            }
             return {
                 profile: {
                     username: user.username,
@@ -65,6 +80,7 @@ export function createUsersService(
                         : null
                 },
                 isOwner: viewerId === userId,
+                friendshipStatus,
                 stats: {
                     countriesVisited: countries.size,
                     citiesExplored: cities.size,
@@ -131,6 +147,32 @@ export function createUsersService(
                 throw new AppError(403, "You cannot save your own Board", "CANNOT_SAVE_OWN_BOARD");
             return repository.saveBoard(userId, boardId);
         },
-        unsaveBoard: (userId: string, boardId: number) => repository.unsaveBoard(userId, boardId)
+        unsaveBoard: (userId: string, boardId: number) => repository.unsaveBoard(userId, boardId),
+        async sendFriendRequest(requesterId: string, handle: string) {
+            const recipientId = await repository.findIdByHandle(handle);
+            if (!recipientId) throw new AppError(404, "User not found", "NOT_FOUND");
+            if (requesterId === recipientId)
+                throw new AppError(400, "Cannot add yourself as a friend", "INVALID_REQUEST");
+            const existing = await repository.getFriendship(requesterId, recipientId);
+            if (existing) {
+                if (existing.status === "accepted") throw new AppError(409, "Already friends", "ALREADY_FRIENDS");
+                if (existing.requesterUserId === requesterId)
+                    throw new AppError(409, "Friend request already sent", "REQUEST_ALREADY_SENT");
+                await repository.acceptFriendRequest(requesterId, existing.friendshipId);
+                return { requestId: existing.friendshipId, status: "accepted" as const };
+            }
+            const requestId = await repository.sendFriendRequest(requesterId, recipientId);
+            return { requestId, status: "pending_sent" as const };
+        },
+        listFriendRequests: (userId: string) => repository.listIncomingFriendRequests(userId),
+        async acceptFriendRequest(userId: string, requestId: number) {
+            const updated = await repository.acceptFriendRequest(userId, requestId);
+            if (!updated) throw new AppError(404, "Friend request not found", "NOT_FOUND");
+            return { requestId, status: "accepted" as const };
+        },
+        async rejectFriendRequest(userId: string, requestId: number) {
+            const deleted = await repository.rejectFriendRequest(userId, requestId);
+            if (!deleted) throw new AppError(404, "Friend request not found", "NOT_FOUND");
+        }
     };
 }

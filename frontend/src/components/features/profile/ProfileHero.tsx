@@ -1,7 +1,17 @@
-import { Fragment } from "react";
+"use client";
+
+import { Fragment, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { apiOrigin, type PublicProfile, type ProfileStats } from "@/lib/profile";
+import { useRouter } from "next/navigation";
+import {
+    apiOrigin,
+    sendFriendRequest,
+    ProfileApiError,
+    type PublicProfile,
+    type ProfileStats,
+    type FriendshipStatus
+} from "@/lib/profile";
 import { boardTags, boardTagHref } from "@/data/board-tags";
 import TagIcon from "@/components/ui/TagIcon";
 
@@ -9,6 +19,7 @@ type Props = {
     profile: PublicProfile;
     stats: ProfileStats | null;
     isOwner?: boolean;
+    friendshipStatus?: FriendshipStatus;
 };
 
 function getNameStyle(nameStr: string): string {
@@ -25,7 +36,44 @@ function getNameStyle(nameStr: string): string {
     return "text-48 sm:text-60 leading-[0.85] -mt-8 sm:-mt-12";
 }
 
-export default function ProfileHero({ profile, stats, isOwner = true }: Props) {
+function useOptionalRouter() {
+    try {
+        return useRouter();
+    } catch {
+        return null;
+    }
+}
+
+export default function ProfileHero({ profile, stats, isOwner = true, friendshipStatus }: Props) {
+    const router = useOptionalRouter();
+    const [actionStatus, setActionStatus] = useState<FriendshipStatus | null>(null);
+    const [pending, setPending] = useState(false);
+
+    const currentStatus = actionStatus ?? friendshipStatus ?? "none";
+
+    const handleFriendAction = async () => {
+        if (pending || currentStatus === "accepted" || currentStatus === "pending_sent") return;
+        setPending(true);
+        try {
+            const res = await sendFriendRequest(profile.username);
+            setActionStatus(res.status);
+        } catch (caught) {
+            if (caught instanceof ProfileApiError && caught.status === 401) {
+                router?.push("/login");
+            }
+        } finally {
+            setPending(false);
+        }
+    };
+
+    const getFriendButtonLabel = () => {
+        if (pending) return "+ sending…";
+        if (currentStatus === "pending_sent") return "request sent";
+        if (currentStatus === "pending_received") return "+ accept request";
+        if (currentStatus === "accepted") return "friends";
+        return "+ add friends";
+    };
+
     const portraitUrl = profile.profilePicture ? new URL(profile.profilePicture.url, apiOrigin) : null;
     portraitUrl?.searchParams.set("variant", "display");
     const occupation = profile.occupation;
@@ -103,8 +151,8 @@ export default function ProfileHero({ profile, stats, isOwner = true }: Props) {
                             </div>
                         </div>
 
-                        {/* Top right button: [ edit profile ] */}
-                        {isOwner && (
+                        {/* Top right button: [ edit profile ] or [ + add friends ] */}
+                        {isOwner ? (
                             <div className="flex items-center gap-2">
                                 <Link
                                     href="/settings"
@@ -112,6 +160,20 @@ export default function ProfileHero({ profile, stats, isOwner = true }: Props) {
                                 >
                                     edit profile
                                 </Link>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => void handleFriendAction()}
+                                    disabled={
+                                        pending || currentStatus === "accepted" || currentStatus === "pending_sent"
+                                    }
+                                    aria-label="Add friend"
+                                    className="border-line text-12 text-muted-foreground hover:text-foreground hover:border-foreground font-body disabled:hover:text-muted-foreground disabled:hover:border-line cursor-pointer rounded-[2px] border px-3.5 py-1 font-medium transition-colors disabled:cursor-default disabled:opacity-60"
+                                >
+                                    {getFriendButtonLabel()}
+                                </button>
                             </div>
                         )}
                     </div>

@@ -65,3 +65,36 @@ test("profile portraits use a square frame and the display variant for owners an
         assert.match(html, /alt="Portrait of Ada Lovelace"/);
     }
 });
+
+test("visitor profile shows add friends button in place of edit profile", () => {
+    const profile: PublicProfile = {
+        username: "traveler",
+        displayName: "Traveler",
+        description: "",
+        location: null,
+        occupation: null,
+        languages: [],
+        interests: [],
+        profilePicture: null
+    };
+
+    const visitorHtml = renderToStaticMarkup(
+        createElement(ProfileHero, { profile, stats: null, isOwner: false, friendshipStatus: "none" })
+    );
+    assert.match(visitorHtml, /\+ add friends/);
+    assert.doesNotMatch(visitorHtml, /edit profile/);
+
+    const pendingHtml = renderToStaticMarkup(
+        createElement(ProfileHero, { profile, stats: null, isOwner: false, friendshipStatus: "pending_sent" })
+    );
+    assert.match(pendingHtml, /request sent/);
+
+    const acceptedHtml = renderToStaticMarkup(
+        createElement(ProfileHero, { profile, stats: null, isOwner: false, friendshipStatus: "accepted" })
+    );
+    assert.match(acceptedHtml, /friends/);
+
+    const ownerHtml = renderToStaticMarkup(createElement(ProfileHero, { profile, stats: null, isOwner: true }));
+    assert.match(ownerHtml, /edit profile/);
+    assert.doesNotMatch(ownerHtml, /\+ add friends/);
+});

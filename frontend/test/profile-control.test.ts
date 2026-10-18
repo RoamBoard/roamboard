@@ -4,6 +4,7 @@ import { createElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import ProfileControl from "../src/components/ui/ProfileControl";
+import NotificationControl from "../src/components/ui/NotificationControl";
 import Sidebar from "../src/components/layout/Sidebar";
 import { getMockAuthState, getMockAuthStateServerSnapshot, setMockAuthState } from "../src/data/mock-social";
 
@@ -96,4 +97,64 @@ test("Sidebar renders navigation links and does not render theme select", () => 
     assert.ok(html.includes('href="/home"'));
     assert.ok(html.includes('href="/discover"'));
     assert.ok(!html.includes("Color theme"));
+});
+
+test("NotificationControl renders bell trigger, badge counter, and request items when open", () => {
+    const requests = [
+        {
+            requestId: 42,
+            requester: {
+                userId: "user-1",
+                username: "alice",
+                displayName: "Alice Wonderland",
+                profilePictureUrl: null
+            }
+        }
+    ];
+
+    const closedHtml = renderToStaticMarkup(
+        createElement(NotificationControl, {
+            sidebar: true,
+            iconOnly: false,
+            open: false,
+            initialRequests: requests
+        })
+    );
+    assert.ok(closedHtml.includes("Notifications"));
+    assert.ok(closedHtml.includes("notifications"));
+    assert.ok(closedHtml.includes("1 pending requests"));
+    assert.ok(!closedHtml.includes("Alice Wonderland"));
+
+    const openHtml = renderToStaticMarkup(
+        createElement(NotificationControl, {
+            sidebar: true,
+            iconOnly: false,
+            open: true,
+            initialRequests: requests
+        })
+    );
+    assert.ok(openHtml.includes("notifications"));
+    assert.ok(openHtml.includes("view all"));
+    assert.ok(openHtml.includes("Alice Wonderland"));
+    assert.ok(openHtml.includes("@alice"));
+    assert.ok(openHtml.includes("accept"));
+    assert.ok(openHtml.includes("reject"));
+});
+
+test("Sidebar renders navigation links including labs, and notification menu above profile control", () => {
+    const html = renderToStaticMarkup(
+        createElement(RouterWrapper, null, createElement(Sidebar, { activeHref: "/home" }))
+    );
+    assert.ok(html.includes("ROAMBOARD"));
+    assert.ok(html.includes('href="/home"'));
+    assert.ok(html.includes('href="/discover"'));
+    assert.ok(html.includes('href="/dev/providers"'));
+    assert.ok(html.includes("labs"));
+    assert.ok(html.includes("Notifications"));
+    assert.ok(html.includes("Account menu"));
+
+    // Notification menu appears before account menu in DOM order (above it)
+    const notifIdx = html.indexOf('aria-label="Notifications"');
+    const accountIdx = html.indexOf('aria-label="Account menu"');
+    assert.ok(notifIdx !== -1 && accountIdx !== -1 && notifIdx < accountIdx);
 });

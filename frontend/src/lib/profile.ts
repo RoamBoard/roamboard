@@ -29,9 +29,22 @@ export type PublicProfile = Pick<
     | "profilePicture"
 >;
 
+export type FriendshipStatus = "none" | "pending_sent" | "pending_received" | "accepted";
+
+export type FriendRequest = {
+    requestId: number;
+    requester: {
+        userId: string;
+        username: string;
+        displayName: string;
+        profilePictureUrl: string | null;
+    };
+};
+
 export type PublicProfileView = {
     profile: PublicProfile;
     isOwner: boolean;
+    friendshipStatus?: FriendshipStatus;
     stats: Pick<
         ProfileStats,
         "countriesVisited" | "citiesExplored" | "continentsCovered" | "photosUploaded" | "boardsCreated"
@@ -306,4 +319,36 @@ function resolveProfilePicture<T extends { profilePicture: UserProfile["profileP
             url: new URL(profile.profilePicture.url, apiOrigin).toString()
         }
     };
+}
+
+export function sendFriendRequest(handle: string) {
+    return apiRequest<{ requestId: number; status: FriendshipStatus }>(
+        `/api/v1/users/by-handle/${encodeURIComponent(handle)}/friend-request`,
+        { method: "POST" }
+    );
+}
+
+export function loadFriendRequests() {
+    return apiRequest<FriendRequest[]>("/api/v1/users/me/friend-requests").then((requests) =>
+        requests.map((req) => ({
+            ...req,
+            requester: {
+                ...req.requester,
+                profilePictureUrl: req.requester.profilePictureUrl
+                    ? new URL(req.requester.profilePictureUrl, apiOrigin).toString()
+                    : null
+            }
+        }))
+    );
+}
+
+export function acceptFriendRequest(requestId: number) {
+    return apiRequest<{ requestId: number; status: "accepted" }>(
+        `/api/v1/users/me/friend-requests/${requestId}/accept`,
+        { method: "PUT" }
+    );
+}
+
+export function rejectFriendRequest(requestId: number) {
+    return apiRequest<void>(`/api/v1/users/me/friend-requests/${requestId}`, { method: "DELETE" });
 }
