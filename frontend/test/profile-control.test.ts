@@ -350,6 +350,75 @@ test("NotificationControl accept failure does not broadcast update", async (cont
     assert.equal(events.length, 0);
 });
 
+test("NotificationControl hides requests and counter when signed out", () => {
+    const html = renderToStaticMarkup(
+        createElement(NotificationControl, {
+            sidebar: true,
+            iconOnly: false,
+            open: true
+        })
+    );
+    assert.ok(html.includes("Sign in to see notifications"));
+    assert.ok(html.includes("Sign in →"));
+    assert.ok(!html.includes("pending requests"));
+    assert.ok(!html.includes("No pending notifications"));
+});
+
+test("NotificationControl newer read supersedes older pending read", async (context) => {
+    const tracker = { count: 0 };
+    const deferredOld: { reject: (err: Error) => void } = { reject: () => {} };
+    const oldPromise = new Promise<Response>((_, rej) => {
+        deferredOld.reject = rej;
+    });
+
+    context.mock.method(globalThis, "fetch", async () => {
+        tracker.count += 1;
+        if (tracker.count === 1) {
+            return oldPromise;
+        }
+        return Response.json(
+            {
+                data: [
+                    {
+                        requestId: 99,
+                        requester: {
+                            userId: "u-99",
+                            username: "bob",
+                            displayName: "Bob Builder",
+                            profilePictureUrl: null
+                        }
+                    }
+                ]
+            },
+            { headers: { "content-type": "application/json" } }
+        );
+    });
+
+    const { nodes } = capture(() =>
+        NotificationControl({
+            sidebar: true,
+            iconOnly: false,
+            open: true,
+            initialRequests: [],
+            initialError: "Initial network error"
+        })
+    );
+
+    const retryBtn = nodes.find((n) => n.type === "button" && n.props.children === "Retry");
+    assert.ok(retryBtn, "Expected retry button");
+
+    // First click triggers call 1 (returns hanging oldPromise)
+    void retryBtn.props.onClick?.();
+
+    // Second click triggers call 2 (resolves with data)
+    await retryBtn.props.onClick?.();
+
+    // Now call 1 rejects after call 2 has finished
+    deferredOld.reject(new Error("Old network timeout"));
+
+    assert.equal(tracker.count, 2);
+});
+
 test("Sidebar renders navigation links including labs, and notification menu above profile control", () => {
     const html = renderToStaticMarkup(
         createElement(RouterWrapper, null, createElement(Sidebar, { activeHref: "/home" }))

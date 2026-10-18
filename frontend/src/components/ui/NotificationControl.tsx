@@ -67,10 +67,17 @@ export default function NotificationControl({
         [onOpenChange]
     );
 
+    const activeUserIdRef = useRef<string | null>(initialRequests || initialError ? "initial-session" : null);
+    const readVersionRef = useRef(0);
+    const activeUserIdRef = useRef<string | null>(
+        initialRequests || initialError ? "initial-session" : null
+    );
+    const readVersionRef = useRef(0);
     const requestVersionRef = useRef(0);
 
     useEffect(() => {
         return subscribeToFriendRequestUpdates((event) => {
+            readVersionRef.current += 1;
             requestVersionRef.current += 1;
             setRequests((prev) => prev.filter((r) => r.requestId !== event.requestId));
         });
@@ -78,24 +85,33 @@ export default function NotificationControl({
 
     const fetchRequests = useCallback(() => {
         if (!sessionUser) return Promise.resolve();
-        const request = { active: true };
-        const version = requestVersionRef.current;
+        const readId = ++readVersionRef.current;
+        const currentUserId = activeUserIdRef.current;
+        const requestVersion = requestVersionRef.current;
         setLoading(true);
         setLoadError(null);
         return loadFriendRequests()
             .then((data) => {
-                if (request.active && version === requestVersionRef.current) {
+                if (
+                    activeUserIdRef.current === currentUserId &&
+                    readId === readVersionRef.current &&
+                    requestVersion === requestVersionRef.current
+                ) {
                     setRequests(data);
                     setLoadError(null);
                 }
             })
             .catch(() => {
-                if (request.active && version === requestVersionRef.current) {
+                if (
+                    activeUserIdRef.current === currentUserId &&
+                    readId === readVersionRef.current &&
+                    requestVersion === requestVersionRef.current
+                ) {
                     setLoadError("Failed to load notifications. Please try again.");
                 }
             })
             .finally(() => {
-                if (request.active) {
+                if (activeUserIdRef.current === currentUserId && readId === readVersionRef.current) {
                     setLoading(false);
                 }
             });
@@ -103,64 +119,85 @@ export default function NotificationControl({
 
     useEffect(() => {
         return observeCurrentUser((user) => {
-            setSessionUser(user);
-            if (!user && !initialRequests) {
+            readVersionRef.current += 1;
+            requestVersionRef.current += 1;
+            if (!user) {
+                activeUserIdRef.current = null;
+                setSessionUser(null);
                 setRequests([]);
                 setLoadError(null);
-            } else if (user && !initialRequests) {
-                setLoading(true);
+                setLoading(false);
+            } else {
+                activeUserIdRef.current = user.userId;
+                setSessionUser(user);
+                if (!initialRequests) {
+                    setLoading(true);
+                }
             }
         });
     }, [initialRequests]);
 
     useEffect(() => {
         if (!sessionUser || initialRequests) return;
-        const request = { active: true };
-        const version = requestVersionRef.current;
+        const readId = ++readVersionRef.current;
+        const currentUserId = activeUserIdRef.current;
+        const requestVersion = requestVersionRef.current;
         void loadFriendRequests()
             .then((data) => {
-                if (request.active && version === requestVersionRef.current) {
+                if (
+                    activeUserIdRef.current === currentUserId &&
+                    readId === readVersionRef.current &&
+                    requestVersion === requestVersionRef.current
+                ) {
                     setRequests(data);
                     setLoadError(null);
                 }
             })
             .catch(() => {
-                if (request.active && version === requestVersionRef.current) {
+                if (
+                    activeUserIdRef.current === currentUserId &&
+                    readId === readVersionRef.current &&
+                    requestVersion === requestVersionRef.current
+                ) {
                     setLoadError("Failed to load notifications. Please try again.");
                 }
             })
             .finally(() => {
-                if (request.active) {
+                if (activeUserIdRef.current === currentUserId && readId === readVersionRef.current) {
                     setLoading(false);
                 }
             });
-        return () => {
-            request.active = false;
-        };
     }, [sessionUser, initialRequests]);
 
     useEffect(() => {
         if (!isOpen || !sessionUser) return;
-        const request = { active: true };
-        const version = requestVersionRef.current;
+        const readId = ++readVersionRef.current;
+        const currentUserId = activeUserIdRef.current;
+        const requestVersion = requestVersionRef.current;
         void loadFriendRequests()
             .then((data) => {
-                if (request.active && version === requestVersionRef.current) {
+                if (
+                    activeUserIdRef.current === currentUserId &&
+                    readId === readVersionRef.current &&
+                    requestVersion === requestVersionRef.current
+                ) {
                     setRequests(data);
                     setLoadError(null);
                 }
             })
             .catch(() => {
-                if (request.active && version === requestVersionRef.current) {
+                if (
+                    activeUserIdRef.current === currentUserId &&
+                    readId === readVersionRef.current &&
+                    requestVersion === requestVersionRef.current
+                ) {
                     setLoadError("Failed to load notifications. Please try again.");
                 }
             });
-        return () => {
-            request.active = false;
-        };
     }, [isOpen, sessionUser]);
 
     const handleAccept = async (requestId: number) => {
+        readVersionRef.current += 1;
         requestVersionRef.current += 1;
         setActionInProgress((prev) => ({ ...prev, [requestId]: "accepting" }));
         setActionError(null);
@@ -179,6 +216,7 @@ export default function NotificationControl({
     };
 
     const handleReject = async (requestId: number) => {
+        readVersionRef.current += 1;
         requestVersionRef.current += 1;
         setActionInProgress((prev) => ({ ...prev, [requestId]: "rejecting" }));
         setActionError(null);
@@ -236,7 +274,7 @@ export default function NotificationControl({
             >
                 <div className="relative flex shrink-0 items-center justify-center">
                     <Bell aria-hidden="true" size={20} strokeWidth={1.5} className="shrink-0" />
-                    {requests.length > 0 && (
+                    {sessionUser && requests.length > 0 && (
                         <span
                             aria-label={`${requests.length} pending requests`}
                             className="bg-foreground text-background absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] leading-none font-bold"
@@ -246,7 +284,7 @@ export default function NotificationControl({
                     )}
                 </div>
                 {!iconOnly && <span>notifications</span>}
-                {!iconOnly && requests.length > 0 && (
+                {!iconOnly && sessionUser && requests.length > 0 && (
                     <span className="text-10 bg-faint border-line text-muted-foreground ml-auto rounded-[2px] border px-1.5 py-0.5 font-medium">
                         {requests.length}
                     </span>
@@ -277,114 +315,131 @@ export default function NotificationControl({
                             </Link>
                         </div>
                         <div className="flex-1 overflow-y-auto overscroll-contain">
-                            {actionError && (
-                                <p role="alert" className="text-10 px-4 py-2 text-red-500">
-                                    {actionError}
-                                </p>
-                            )}
-                            {loadError && requests.length > 0 && (
-                                <div
-                                    role="alert"
-                                    className="border-line text-10 flex items-center justify-between border-b px-4 py-2 text-red-500"
-                                >
-                                    <span>{loadError}</span>
-                                    <button
-                                        type="button"
-                                        onClick={() => void fetchRequests()}
-                                        className="cursor-pointer underline underline-offset-2 hover:opacity-80"
+                            {!sessionUser ? (
+                                <div className="px-4 py-8 text-center">
+                                    <p className="text-12 text-muted-foreground font-body mb-2">
+                                        Sign in to see notifications
+                                    </p>
+                                    <Link
+                                        href="/login"
+                                        onClick={() => toggleOpen(false)}
+                                        className="text-12 text-foreground font-medium underline underline-offset-4 hover:opacity-80"
                                     >
-                                        Retry
-                                    </button>
+                                        Sign in →
+                                    </Link>
                                 </div>
-                            )}
-                            {loading && requests.length === 0 ? (
-                                <p className="text-12 text-muted-foreground font-body px-4 py-6 text-center">
-                                    Loading notifications…
-                                </p>
-                            ) : loadError && requests.length === 0 ? (
-                                <div role="alert" className="px-4 py-6 text-center">
-                                    <p className="text-12 font-body mb-2 text-red-500">{loadError}</p>
-                                    <button
-                                        type="button"
-                                        onClick={() => void fetchRequests()}
-                                        className="text-12 text-foreground cursor-pointer font-medium underline underline-offset-4 hover:opacity-80"
-                                    >
-                                        Retry
-                                    </button>
-                                </div>
-                            ) : requests.length === 0 ? (
-                                <p className="text-12 text-muted-foreground font-body px-4 py-6 text-center">
-                                    No pending notifications
-                                </p>
                             ) : (
-                                <ul className="flex flex-col gap-2 p-3">
-                                    {requests.map((req) => (
-                                        <li
-                                            key={req.requestId}
-                                            className="bg-faint/50 border-line flex flex-col gap-2 rounded-[2px] border p-3 transition-colors"
+                                <>
+                                    {actionError && (
+                                        <p role="alert" className="text-10 px-4 py-2 text-red-500">
+                                            {actionError}
+                                        </p>
+                                    )}
+                                    {loadError && requests.length > 0 && (
+                                        <div
+                                            role="alert"
+                                            className="border-line text-10 flex items-center justify-between border-b px-4 py-2 text-red-500"
                                         >
-                                            <div className="flex items-center gap-2.5">
-                                                {resolveAvatarUrl(req.requester.profilePictureUrl) &&
-                                                !failedAvatars[req.requestId] ? (
-                                                    <Image
-                                                        src={resolveAvatarUrl(req.requester.profilePictureUrl)!}
-                                                        alt=""
-                                                        width={28}
-                                                        height={28}
-                                                        unoptimized
-                                                        onError={() =>
-                                                            setFailedAvatars((prev) => ({
-                                                                ...prev,
-                                                                [req.requestId]: true
-                                                            }))
-                                                        }
-                                                        className="size-7 shrink-0 rounded-full object-cover"
-                                                    />
-                                                ) : (
-                                                    <div className="bg-muted text-muted-foreground flex size-7 shrink-0 items-center justify-center rounded-full">
-                                                        <UserRound size={16} strokeWidth={1.5} />
+                                            <span>{loadError}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => void fetchRequests()}
+                                                className="cursor-pointer underline underline-offset-2 hover:opacity-80"
+                                            >
+                                                Retry
+                                            </button>
+                                        </div>
+                                    )}
+                                    {loading && requests.length === 0 ? (
+                                        <p className="text-12 text-muted-foreground font-body px-4 py-6 text-center">
+                                            Loading notifications…
+                                        </p>
+                                    ) : loadError && requests.length === 0 ? (
+                                        <div role="alert" className="px-4 py-6 text-center">
+                                            <p className="text-12 font-body mb-2 text-red-500">{loadError}</p>
+                                            <button
+                                                type="button"
+                                                onClick={() => void fetchRequests()}
+                                                className="text-12 text-foreground cursor-pointer font-medium underline underline-offset-4 hover:opacity-80"
+                                            >
+                                                Retry
+                                            </button>
+                                        </div>
+                                    ) : requests.length === 0 ? (
+                                        <p className="text-12 text-muted-foreground font-body px-4 py-6 text-center">
+                                            No pending notifications
+                                        </p>
+                                    ) : (
+                                        <ul className="flex flex-col gap-2 p-3">
+                                            {requests.map((req) => (
+                                                <li
+                                                    key={req.requestId}
+                                                    className="bg-faint/50 border-line flex flex-col gap-2 rounded-[2px] border p-3 transition-colors"
+                                                >
+                                                    <div className="flex items-center gap-2.5">
+                                                        {resolveAvatarUrl(req.requester.profilePictureUrl) &&
+                                                        !failedAvatars[req.requestId] ? (
+                                                            <Image
+                                                                src={resolveAvatarUrl(req.requester.profilePictureUrl)!}
+                                                                alt=""
+                                                                width={28}
+                                                                height={28}
+                                                                unoptimized
+                                                                onError={() =>
+                                                                    setFailedAvatars((prev) => ({
+                                                                        ...prev,
+                                                                        [req.requestId]: true
+                                                                    }))
+                                                                }
+                                                                className="size-7 shrink-0 rounded-full object-cover"
+                                                            />
+                                                        ) : (
+                                                            <div className="bg-muted text-muted-foreground flex size-7 shrink-0 items-center justify-center rounded-full">
+                                                                <UserRound size={16} strokeWidth={1.5} />
+                                                            </div>
+                                                        )}
+                                                        <div className="min-w-0 flex-1">
+                                                            <Link
+                                                                href={`/profile/${encodeURIComponent(req.requester.username)}`}
+                                                                onClick={() => toggleOpen(false)}
+                                                                className="text-12 text-foreground block truncate font-medium hover:underline"
+                                                            >
+                                                                {req.requester.displayName}
+                                                            </Link>
+                                                            <span className="text-10 text-muted-foreground block truncate">
+                                                                @{req.requester.username}
+                                                            </span>
+                                                        </div>
                                                     </div>
-                                                )}
-                                                <div className="min-w-0 flex-1">
-                                                    <Link
-                                                        href={`/profile/${encodeURIComponent(req.requester.username)}`}
-                                                        onClick={() => toggleOpen(false)}
-                                                        className="text-12 text-foreground block truncate font-medium hover:underline"
-                                                    >
-                                                        {req.requester.displayName}
-                                                    </Link>
-                                                    <span className="text-10 text-muted-foreground block truncate">
-                                                        @{req.requester.username}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2 pt-1">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleAccept(req.requestId)}
-                                                    disabled={Boolean(actionInProgress[req.requestId])}
-                                                    aria-label={`Accept friend request from ${req.requester.displayName}`}
-                                                    className="bg-foreground text-background font-body text-10 cursor-pointer rounded-[2px] px-3 py-1.5 font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
-                                                >
-                                                    {actionInProgress[req.requestId] === "accepting"
-                                                        ? "accepting…"
-                                                        : "accept"}
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleReject(req.requestId)}
-                                                    disabled={Boolean(actionInProgress[req.requestId])}
-                                                    aria-label={`Reject friend request from ${req.requester.displayName}`}
-                                                    className="border-line text-muted-foreground hover:text-foreground hover:border-foreground font-body text-10 cursor-pointer rounded-[2px] border px-3 py-1.5 font-medium transition-colors disabled:opacity-50"
-                                                >
-                                                    {actionInProgress[req.requestId] === "rejecting"
-                                                        ? "rejecting…"
-                                                        : "reject"}
-                                                </button>
-                                            </div>
-                                        </li>
-                                    ))}
-                                </ul>
+                                                    <div className="flex items-center gap-2 pt-1">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleAccept(req.requestId)}
+                                                            disabled={Boolean(actionInProgress[req.requestId])}
+                                                            aria-label={`Accept friend request from ${req.requester.displayName}`}
+                                                            className="bg-foreground text-background font-body text-10 cursor-pointer rounded-[2px] px-3 py-1.5 font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
+                                                        >
+                                                            {actionInProgress[req.requestId] === "accepting"
+                                                                ? "accepting…"
+                                                                : "accept"}
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleReject(req.requestId)}
+                                                            disabled={Boolean(actionInProgress[req.requestId])}
+                                                            aria-label={`Reject friend request from ${req.requester.displayName}`}
+                                                            className="border-line text-muted-foreground hover:text-foreground hover:border-foreground font-body text-10 cursor-pointer rounded-[2px] border px-3 py-1.5 font-medium transition-colors disabled:opacity-50"
+                                                        >
+                                                            {actionInProgress[req.requestId] === "rejecting"
+                                                                ? "rejecting…"
+                                                                : "reject"}
+                                                        </button>
+                                                    </div>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </>
                             )}
                         </div>
                     </motion.div>
