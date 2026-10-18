@@ -89,6 +89,7 @@ export default function BoardCreator({
     const [mode, setMode] = useState(initialMode);
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
+    const [previewAuthor, setPreviewAuthor] = useState("");
     const [images, setImages] = useState<BoardImageDraft[]>([]);
     const [selectedCoverImageId, setSelectedCoverImageId] = useState<number | null>(null);
     const initialDayId = useId();
@@ -212,6 +213,7 @@ export default function BoardCreator({
         if (initialBoardId !== undefined) return;
         void loadProfile()
             .then((profile) => {
+                setPreviewAuthor(profile.username);
                 if (!visibilityTouched.current) {
                     setVisibility(profile.defaultBoardVisibility);
                     setInitialFingerprint(
@@ -587,6 +589,7 @@ export default function BoardCreator({
                         <label className="text-foreground/80 text-20 sm:text-24 block max-w-3xl min-w-0 font-bold">
                             Description
                             <textarea
+                                id="board-description"
                                 value={description}
                                 onChange={(event) => setDescription(event.target.value)}
                                 placeholder="type here..."
@@ -596,7 +599,7 @@ export default function BoardCreator({
                         </label>
                     </section>
 
-                    <section id="day-plan" className={fullChapterClasses}>
+                    <section id="day-plan" tabIndex={-1} className={fullChapterClasses}>
                         <CreatorSectionIntro
                             number="02"
                             title="BUILD YOUR DAY PLAN"
@@ -664,7 +667,12 @@ export default function BoardCreator({
                     </section>
                 </fieldset>
 
-                <BoardPreviewSection board={payload} confirmedPhotoPins={confirmedPhotoPins} />
+                <BoardPreviewSection
+                    board={{ ...payload, status: savedBoard?.status ?? "draft" }}
+                    confirmedPhotoPins={confirmedPhotoPins}
+                    author={savedBoard?.author.username ?? previewAuthor}
+                    editable={!editorDisabled}
+                />
 
                 <section id="publish" className={`${fullChapterClasses} mb-20 sm:mb-32`}>
                     <CreatorSectionIntro

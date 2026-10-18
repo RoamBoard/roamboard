@@ -175,9 +175,10 @@ export default function BoardImageIntake({
     return (
         <section
             id="board-images"
+            tabIndex={-1}
             aria-label="Board images"
             aria-busy={busy || loading}
-            className="mx-auto w-[92%] max-w-[78rem] scroll-mt-36 sm:w-[80%]"
+            className="mx-auto w-[92%] max-w-[78rem] scroll-mt-36 focus-visible:outline-1 focus-visible:outline-offset-4 sm:w-[80%]"
         >
             <input
                 ref={inputRef}
@@ -265,6 +266,7 @@ export default function BoardImageIntake({
                                     type="button"
                                     disabled={disabled || busy}
                                     onClick={() => onSelectCover(image.uploadedImageId!)}
+                                    data-board-cover-choice=""
                                     className="text-9 mt-1 block underline disabled:opacity-40"
                                 >
                                     Set as cover

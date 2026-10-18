@@ -25,7 +25,12 @@ test("all preview source-edit links resolve to real targets in the production cr
     for (const source of [board(), { ...board(), title: "", description: "", tags: [], days: [] }]) {
         const markup = renderToStaticMarkup(createElement(BoardCreationPreview, { board: source }));
         const targets = [...markup.matchAll(/href="#([^"#]+)"/g)].map((match) => match[1]);
-        for (const target of ["board-title", "board-images", "board-basics", "details-discovery", "day-plan"]) {
+        for (const target of [
+            "board-title",
+            "board-images",
+            "day-plan",
+            ...(source.tags.length ? ["details-discovery"] : [])
+        ]) {
             assert.ok(targets.includes(target), `The ${target} source must stay reachable`);
         }
         for (const target of targets)
@@ -70,15 +75,16 @@ test("the composition retains external photo attribution and source links in its
     }
 });
 
-test("floating annotations expose only actual supported Board metadata", () => {
+test("floating annotations describe the card states without adding invisible description, visibility or dates callouts", () => {
     const source = board();
     const markup = renderToStaticMarkup(createElement(BoardCreationPreview, { board: source }));
     const text = markup.replace(/<[^>]*>/g, "");
     assert.ok(text.includes(source.title));
-    assert.ok(text.includes(source.description));
     assert.match(text, /Art/);
     assert.match(text, /Coffee/);
-    assert.match(text, /Friends/);
-    assert.match(text, /Drafts[\s\S]*only to you/);
+    assert.match(text, /COVER VIEW/);
+    assert.match(text, /DETAILS VIEW/);
+    assert.doesNotMatch(markup, />(?:Description|Visibility|Dates|Dates &amp; duration)</);
+    assert.doesNotMatch(markup, /aria-label="(?:Edit description|Edit visibility|Review dates)/);
     assert.doesNotMatch(text, /Highlights:|Vibes:|Saved by|by Roamboard|Tokyo|Japan/);
 });

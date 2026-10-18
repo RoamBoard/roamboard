@@ -31,11 +31,18 @@ type EventControl = {
     "aria-expanded"?: boolean;
     "aria-pressed"?: boolean;
     "aria-label"?: string;
+    "data-photo-board-expanded"?: boolean;
     onClick?: (event: { stopPropagation: () => void }) => void;
     onPointerDownCapture?: (event: { stopPropagation: () => void; pointerType?: string }) => void;
     onKeyDown?: (event: { key: string; stopPropagation: () => void; preventDefault: () => void }) => void;
     onHoverStart?: () => void;
     onHoverEnd?: () => void;
+    onFocusCapture?: (event: {
+        currentTarget: { contains: () => boolean };
+        target: { matches: () => boolean };
+        relatedTarget: null;
+    }) => void;
+    onBlurCapture?: (event: { currentTarget: { contains: () => boolean }; relatedTarget: null }) => void;
 };
 
 function controls(node: ReactNode): EventControl[] {
@@ -237,6 +244,7 @@ test("missing metadata and photography preserve a useful card without invented c
         destinationLabel: ""
     };
     const markup = html({ board: minimal, expanded: true, reduceMotion: true });
+    assert.match(markup, /data-photo-board-expanded="false"/, "An empty interactive card remains its cover view");
     assert.match(markup, /An unfinished journey/);
     assert.doesNotMatch(markup, /<img\b|0 saves|undefined|NaN|PORTO|Oslo|Architecture/);
     const zero = html({ board: { ...minimal, savedCount: 0 }, expanded: true, reduceMotion: true });
@@ -467,4 +475,76 @@ test("a departing gallery card still clears hover after metadata is disabled wit
     const markup = renderToStaticMarkup(createElement(PhotoBoardCardContent, departingProps));
     assert.match(markup, /data-photo-board-expanded="false"/);
     assert.doesNotMatch(markup, /aria-label="Board details"|aria-expanded=/);
+});
+
+test("fixed cover and details presentations ignore interaction state and never mutate disclosure, focus or hover", () => {
+    for (const presentation of ["cover", "details"] as const) {
+        const mutations = { expanded: [] as boolean[], hovered: [] as boolean[], focused: [] as boolean[] };
+        const cardProps = props({
+            presentation,
+            details: presentation === "cover",
+            expanded: presentation === "cover",
+            onExpandedChange: (value) => mutations.expanded.push(value),
+            onHoverChange: (value) => mutations.hovered.push(value),
+            onFocusChange: (value) => mutations.focused.push(value)
+        });
+        const view = PhotoBoardCardContent(cardProps);
+        const root = controls(view)[0];
+        assert.equal(root["data-photo-board-expanded"], presentation === "details");
+        root.onHoverStart?.();
+        root.onHoverEnd?.();
+        root.onPointerDownCapture?.({ pointerType: "touch", stopPropagation: () => {} });
+        root.onFocusCapture?.({
+            currentTarget: { contains: () => false },
+            target: { matches: () => true },
+            relatedTarget: null
+        });
+        root.onBlurCapture?.({ currentTarget: { contains: () => false }, relatedTarget: null });
+        root.onKeyDown?.({ key: "Escape", preventDefault: () => {}, stopPropagation: () => {} });
+        assert.deepEqual(mutations, { expanded: [], hovered: [], focused: [] });
+        const markup = renderToStaticMarkup(createElement(PhotoBoardCardContent, cardProps));
+        assert.doesNotMatch(markup, /<button\b|aria-expanded=/, "Fixed states do not offer a disclosure action");
+        requireNoVisibleDisclosure(markup);
+        if (presentation === "details") {
+            assert.match(markup, /aria-label="Board details" aria-hidden="false"/);
+            assert.match(markup, /Architecture/);
+            assert.match(markup, /17 saves/);
+        } else {
+            assert.doesNotMatch(markup, /aria-label="Board details" aria-hidden="false"/);
+        }
+    }
+});
+
+test("fixed details honors its explicit expanded presentation without fabricating optional metadata", () => {
+    const minimal: PhotoBoardCardData = {
+        id: "unpopulated",
+        title: "An unfinished journey",
+        author: "",
+        destination: "",
+        destinationLabel: ""
+    };
+    const markup = html({ board: minimal, details: false, presentation: "details", expanded: true });
+    assert.match(markup, /data-photo-board-expanded="true"/);
+    assert.match(markup, /aria-label="Board details" aria-hidden="false"/);
+    assert.match(markup, /THE JOURNEY/);
+    assert.match(markup, /An unfinished journey/);
+    assert.match(markup, /No cover photo/);
+    assert.doesNotMatch(markup, /0 saves|0 days|Board tags|<button\b|undefined|NaN/);
+});
+
+test("fixed presentations retain ordinary touch navigation without the interactive preview interception", () => {
+    for (const presentation of ["cover", "details"] as const) {
+        const mutations: boolean[] = [];
+        const cardProps = props({
+            presentation,
+            href: "/boards/71",
+            onExpandedChange: (value) => mutations.push(value)
+        });
+        const view = PhotoBoardCardContent(cardProps);
+        controls(view)[0].onPointerDownCapture?.({ pointerType: "touch", stopPropagation: () => {} });
+        const click = clickEvent();
+        control(renderedFrame(view), (candidate) => candidate.href === "/boards/71").onClick?.(click);
+        assert.equal(click.defaultPrevented, false);
+        assert.deepEqual(mutations, []);
+    }
 });

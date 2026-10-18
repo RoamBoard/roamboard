@@ -1,5 +1,5 @@
 import type { BoardCreatorPayload, BoardImageDraft } from "@/types/board-creator";
-import type { CollageBoardCardData } from "@/types/board-card";
+import type { CollageBoardCardData, PhotoBoardCardData } from "@/types/board-card";
 import { boardTitleLines } from "@/lib/my-boards";
 import { findCountry } from "@/lib/countries";
 
@@ -25,7 +25,8 @@ function descriptionExcerpt(value: string): string {
 
 export function createBoardPreview(
     board: BoardCreatorPayload,
-    confirmedPhotoPins: ReadonlySet<string> = new Set()
+    confirmedPhotoPins: ReadonlySet<string> = new Set(),
+    author = ""
 ): {
     cover: BoardImageDraft | undefined;
     photos: BoardImageDraft[];
@@ -33,6 +34,7 @@ export function createBoardPreview(
     countryLabel: string;
     dateLabel: string;
     card: CollageBoardCardData;
+    photo: PhotoBoardCardData;
 } {
     const title = board.title.trim() || "Untitled Board";
     const cover = board.images.find(
@@ -62,6 +64,7 @@ export function createBoardPreview(
         )
     ].join(" · ");
     const dates = board.days.flatMap((day) => formattedDate(day.date) ?? []);
+    const photo = cover ?? photos[0];
     const undated = board.days.length - dates.length;
     const dateLabel =
         dates.length === 0
@@ -75,6 +78,27 @@ export function createBoardPreview(
         destination: destination || "Destination not added",
         countryLabel,
         dateLabel,
+        photo: {
+            id: "creator-preview",
+            title,
+            author: author.trim(),
+            destination,
+            destinationLabel: countryLabel,
+            status: board.status,
+            visibility: board.visibility,
+            description: board.description.trim(),
+            tags: board.tags,
+            durationDays: board.days.length,
+            image: photo
+                ? {
+                      src: photo.url,
+                      alt: photo === cover ? `Cover of ${title}` : `${title} trip photo`,
+                      credit: photo.credit ?? undefined,
+                      creditUrl: photo.creditUrl ?? undefined,
+                      sourceUrl: photo.sourceUrl ?? undefined
+                  }
+                : undefined
+        },
         card: {
             id: "creator-preview",
             title,

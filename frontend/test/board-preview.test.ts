@@ -7,7 +7,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import BoardCreationPreview from "../src/components/features/boards/BoardCreationPreview";
 import type { BoardCreatorPayload } from "../src/types/board-creator";
 
-test("preview shows one Board cover and the photos linked to an activity", () => {
+test("preview shows the same Board cover in both card states and retains the photos linked to an activity", () => {
     const board: BoardCreatorPayload = {
         title: "City walk",
         description: "",
@@ -76,7 +76,14 @@ test("preview shows one Board cover and the photos linked to an activity", () =>
         ]
     };
     const markup = renderToStaticMarkup(createElement(BoardCreationPreview, { board }));
-    assert.equal((markup.match(/alt="Cover of City walk"/g) ?? []).length, 1);
+    assert.equal((markup.match(/alt="Cover of City walk"/g) ?? []).length, 2);
+    assert.match(markup, /COVER VIEW/);
+    assert.match(markup, /DETAILS VIEW/);
+    assert.equal((markup.match(/data-photo-board-expanded="false"/g) ?? []).length, 1);
+    assert.equal((markup.match(/data-photo-board-expanded="true"/g) ?? []).length, 1);
+    const cards = [...markup.matchAll(/<article\b[^>]*style="aspect-ratio:400 \/ 500"[^>]*>[\s\S]*?<\/article>/g)];
+    assert.equal(cards.length, 2);
+    assert.ok(cards.every((card) => card[0].includes('src="/image/2"')));
     assert.match(markup, /src="\/image\/2"/);
     assert.match(markup, /aria-label="Images for Museum"/);
     assert.match(markup, /src="\/thumb\/1"/);

@@ -40,7 +40,13 @@ export default function BoardDiscoveryDetails({
                 error={tagsError}
                 onRetry={onRetryTags}
             />
-            <fieldset disabled={disabled || !canChangeVisibility} aria-describedby="board-visibility-help">
+            <fieldset
+                id="board-visibility"
+                tabIndex={-1}
+                disabled={disabled || !canChangeVisibility}
+                aria-describedby="board-visibility-help"
+                className="scroll-mt-36"
+            >
                 <legend className="text-foreground/80 text-20 flex items-center gap-3 font-bold">
                     <span>Visibility</span>
                     <button

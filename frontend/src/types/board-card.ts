@@ -69,6 +69,8 @@ export type PhotoBoardCardProps = {
     board: PhotoBoardCardData;
     href?: string;
     details?: boolean;
+    // Editorial comparisons can hold either state; normal cards remain interactive.
+    presentation?: "interactive" | "cover" | "details";
     ownership?: "owner" | "other" | "unknown";
     save?: PhotoBoardSave;
     reduceMotion?: boolean;

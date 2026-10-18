@@ -205,16 +205,23 @@ retain owner-only changes and explain that draft access remains owner-only. Publ
 typographic action and an underlined draft action; published editing offers Save changes and never a downgrade.
 Save status/errors appear beside these controls with review links, separately from upload/load feedback. All writes,
 revision checks, server ID reconciliation, and permission gates remain in `BoardCreator`.
-The creator preview reuses `CollageBoardCard` with an opt-in `preview` presentation that hides unsupported author,
-bookmark, saved-count, and Highlights content; default V1 cards retain their existing presentation. Its immutable
-adapter (`board-creation-preview.ts`) leads with the selected uploaded Board cover, de-duplicates collage URLs,
-and displays up to six photos without discarding other media records. The creator's opt-in quiet empty slots use
-faint outlines. `BoardPreviewSection` and the stateless `BoardPreviewDiagram` place the compact V1 card and floating
-annotations on one proportional desktop canvas, with original Figma connector masks. Below a 1100px container,
-annotations follow a readable flow without connectors. Motion respects reduced-motion preferences.
+The creator preview reuses `PhotoBoardCard` (V4) at 4:5 without save controls or a redundant visibility icon.
+Its immutable adapter (`board-creation-preview.ts`) uses the selected uploaded cover, otherwise an existing photo;
+missing/failed imagery keeps V4's architectural fallback. Author metadata comes from the creator's existing profile
+or canonical document read, with no additional requests. The retained V1 adapter is not actively rendered here.
+`BoardPreviewSection` and `BoardPreviewDiagram` show equal V4 cover and permanently expanded details views of the
+same live data. Explanatory annotations sit outside the pair, with edit icons beside their headings. Only fields
+visible on the cards are annotated: title/cover on the left, confirmed destination/tags/day count on the right.
+Missing destination/tags are omitted; duration is informational, with no date-edit affordance. Description/visibility
+remain in their existing editor chapters. Cards stay at or below 340px, where V4's existing description breakpoint
+keeps descriptions off the card. An SVG overlay measures real title/metadata elements and callout bounds for fine
+orthogonal connectors; hover and keyboard focus emphasize the related line. Below a 1100px container annotations
+flow without connectors; below 760px the two studies stack vertically.
+Source links scroll to and focus existing editor controls, with section/retry fallbacks when a control is unavailable.
+Loading/read-only previews have no editor links. Visibility permissions in the actual editor are unchanged. Motion respects
+reduced-motion preferences. Preview status reflects the loaded document without changing the save payload.
 Only confirmed locations contribute to destination/country lettering, and multi-country or unresolved country
-data produces no country watermark. Dates list actual recorded dates and identify undated days. Full title,
-description, tags, visibility, and source-edit links surround the collage; keyboard-accessible native disclosures
+data produces no country watermark. Keyboard-accessible native disclosures
 retain every activity and photo, including source credits. This is a live local preview, not proof of persistence.
 Draft and My Boards navigation remain available; remixing remains
 explicitly deferred. Discover links to `/discover`. The shared sidebar is unchanged.
@@ -236,7 +243,7 @@ and checks fresh document identity and `canEditContent` before showing an editor
 Production APIs cannot enumerate shared editable Boards; a shared-link/ID lookup checks the canonical document
 permission instead. No developer listing endpoint is used. The shared presentation uses a Motion V4 photographic focus gallery and a smaller V4 collection that promotes selected Boards into the same gallery, without duplicates. It retains spring rearrangement, mouse-only 3D tilt, keyboard selection, animated annotations and fresh-document editor gates. V4 selection controls share the card surface; inactive featured cards leave the tab order. Ownership comes from the owner-list scope or canonical management permission; shared edit access does not imply ownership.
 V1=`collage`, V2=`compact`, V3=`landscape`, and V4=`photo` retain their existing names and identifiers.
-V4 is the approved primary card direction. Stage 3 Batch 2 migrates Continue and Draft selection; creator preview and bespoke cards remain pending their own batches.
+V4 is the approved primary card direction. Stage 3 Batch 2 migrates Continue and Draft selection; Batch 3 migrates the creator preview. Bespoke cards remain pending their own batch.
 The Remix page remains an unavailable state. The production account-saved Board list now exists, but this page
 does not consume it yet; persistent remix creation is still unavailable. Session preview bookmarks are separate
 from account saves. Completing remix requires frontend saved-list integration and agreed independent-copy/media
@@ -407,6 +414,10 @@ navigation URL and controlled bookmark callback; they perform no backend request
 metadata on genuine hover, keyboard focus, or whole-card activation; Escape dismisses it. Internal typography,
 gradient and line transitions leave parent gallery transforms and image zoom untouched. Missing fields stay absent;
 missing/failed photos use a quiet architectural fallback. Parent widths remain responsible for readable card sizes.
+Optional `presentation="cover" | "details"` holds a state for editorial comparisons without disclosure controls or
+hover/focus/touch/Escape state changes. The default `interactive` presentation keeps existing gallery behavior.
+Fixed details displays the expanded frame without needing `details`; empty fields stay absent and its heading falls
+back to the existing Board title. Normal interactive cards with no detail metadata retain the cover presentation.
 `ownership` defaults to unknown: no account control is shown without reliable context. Owners get informational
 visibility icons; drafts are owner-only, while `collaborators` means restricted access including existing invited members.
 Roamboard is not developing collaborative editing, invitations or member-management UI. Preserve current API access
@@ -416,7 +427,7 @@ rules until the backend team agrees on changes; do not label restricted publishe
 existing save/unsave services. Only server-confirmed writes change saved state. Unknown membership is disabled rather
 than assumed unsaved. `/dev/boards` includes this connected V4 preview inside expanded records; documents are not
 fetched just to populate cards. `/dev/board-cards` retains all variants and adds labelled V4 control/size/metadata studies.
-Stage 3 Batches 1–2 migrate the My Boards featured/Recently Created/Archive, destination-story galleries, Continue and Draft selection. Creator preview and bespoke cards remain pending their separate approval batches. Gallery `selection`
+Stage 3 Batches 1–3 migrate the My Boards featured/Recently Created/Archive, destination-story galleries, Continue, Draft selection and creator preview. Bespoke cards remain pending their separate approval batch. Gallery `selection`
 uses a native V4 card button that also toggles metadata when selected; navigation remains a separate gallery action. Inactive cards leave
 the tab order, save controls keep their own keyboard interaction, and pan selection returns focus to the gallery region. Linked V4 cards preview metadata on the first touch and navigate on the next; mouse and keyboard retain normal link activation. There is no visible Details/Close button.
 See [V4 backend handoff](../docs/V4_BACKEND_HANDOFF.md) for cumulative gaps.
@@ -494,3 +505,8 @@ If staffing makes separation impossible, record that limitation in the handoff a
 Before finishing, review the diff for unrelated changes and generated files. Explain what changed and what was checked in short, plain language a student can follow. State any remaining limitations.
 
 `/dev/board-selection` is a development-only visual review of the production Continue/Draft presenters. Its labelled fixtures support loading, missing-cover and denied-access compositions; fixture editor links are intercepted, and no Board data is requested or persisted. It is unavailable in production. Real requests, restoration, permissions, pagination and retry remain covered by the page/store/API-helper tests.
+
+`/dev/creator-preview` is a development-only visual review of the production creator preview, with labelled empty,
+draft, published, long-title, failed-image and read-only fixtures. It uses existing reference images;
+editor links are intercepted and no Board data is requested or persisted. Use the actual creator for source-control
+focus/navigation and persistence checks. The fixture route is unavailable in production.

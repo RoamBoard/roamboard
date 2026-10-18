@@ -275,7 +275,9 @@ test("an empty preview stays usable without sample photos or unsupported metadat
         createElement(BoardCreationPreview, { board: board({ title: "", description: "", tags: [] }) })
     );
     assert.match(markup, /Untitled Board/);
-    assert.match(markup, /Dates open/);
+    assert.match(markup, /COVER VIEW/);
+    assert.match(markup, /DETAILS VIEW/);
+    assert.doesNotMatch(markup, />(?:Dates|Dates &amp; duration)</);
     assert.doesNotMatch(markup.replace(/<[^>]*>/g, ""), /Highlights:|Saved by|by Roamboard|Tokyo|Japan/i);
     assert.doesNotMatch(markup, /<img[^>]*src="(?:\/images\/|https:\/\/images\.unsplash\.com)/);
 });

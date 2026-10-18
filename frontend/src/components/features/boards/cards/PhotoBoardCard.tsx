@@ -106,6 +106,7 @@ export function PhotoBoardCardContent({
     board,
     href,
     details = false,
+    presentation = "interactive",
     ownership = "unknown",
     save,
     reduceMotion = false,
@@ -122,8 +123,12 @@ export function PhotoBoardCardContent({
     const hasCount = validCount(board.savedCount);
     const hasDays = validCount(board.durationDays) && board.durationDays! > 0;
     const hasDetails =
-        details && Boolean(board.destination.trim() || tags.length || board.description?.trim() || hasCount || hasDays);
-    const expanded = hasDetails && requestedExpanded;
+        presentation === "details" ||
+        (details &&
+            Boolean(board.destination.trim() || tags.length || board.description?.trim() || hasCount || hasDays));
+    const interactiveDetails = hasDetails && presentation === "interactive";
+    const expanded =
+        hasDetails && (presentation === "details" || (presentation === "interactive" && requestedExpanded));
     const ownerControl =
         ownership === "owner" &&
         (board.status === "draft" || (board.status === "published" && Boolean(board.visibility)));
@@ -168,30 +173,46 @@ export function PhotoBoardCardContent({
         <motion.div
             initial={false}
             data-photo-board-expanded={expanded}
-            onPointerDownCapture={(event) => {
-                pointerType.current = event.pointerType;
-                pointerType.expandedOnPointerDown = expanded;
-            }}
-            onHoverStart={hasDetails ? () => onHoverChange?.(true) : undefined}
-            onHoverEnd={() => onHoverChange?.(false)}
-            onFocusCapture={(event) => {
-                if (
-                    hasDetails &&
-                    !event.currentTarget.contains(event.relatedTarget) &&
-                    event.target.matches(":focus-visible")
-                )
-                    onFocusChange?.(true);
-            }}
-            onBlurCapture={(event) => {
-                if (!event.currentTarget.contains(event.relatedTarget)) onFocusChange?.(false);
-            }}
-            onKeyDown={(event) => {
-                pointerType.current = "";
-                if (event.key === "Escape" && expanded) {
-                    event.stopPropagation();
-                    onExpandedChange(false);
-                }
-            }}
+            onPointerDownCapture={
+                presentation === "interactive"
+                    ? (event) => {
+                          pointerType.current = event.pointerType;
+                          pointerType.expandedOnPointerDown = expanded;
+                      }
+                    : undefined
+            }
+            onHoverStart={interactiveDetails ? () => onHoverChange?.(true) : undefined}
+            onHoverEnd={presentation === "interactive" ? () => onHoverChange?.(false) : undefined}
+            onFocusCapture={
+                presentation === "interactive"
+                    ? (event) => {
+                          if (
+                              hasDetails &&
+                              !event.currentTarget.contains(event.relatedTarget) &&
+                              event.target.matches(":focus-visible")
+                          )
+                              onFocusChange?.(true);
+                      }
+                    : undefined
+            }
+            onBlurCapture={
+                presentation === "interactive"
+                    ? (event) => {
+                          if (!event.currentTarget.contains(event.relatedTarget)) onFocusChange?.(false);
+                      }
+                    : undefined
+            }
+            onKeyDown={
+                presentation === "interactive"
+                    ? (event) => {
+                          pointerType.current = "";
+                          if (event.key === "Escape" && expanded) {
+                              event.stopPropagation();
+                              onExpandedChange(false);
+                          }
+                      }
+                    : undefined
+            }
             className="relative w-full"
         >
             <BoardCardFrame
@@ -200,7 +221,7 @@ export function PhotoBoardCardContent({
                 height={500}
                 href={selection ? undefined : href}
                 linkProps={
-                    hasDetails
+                    interactiveDetails
                         ? {
                               "aria-describedby": expanded ? detailsId : undefined,
                               onClick: (event) => {
@@ -232,7 +253,7 @@ export function PhotoBoardCardContent({
                         tabIndex={selection.tabIndex}
                         onClick={(event) => {
                             selection.onSelect(event);
-                            if (hasDetails && selection.selected && !event.defaultPrevented)
+                            if (interactiveDetails && selection.selected && !event.defaultPrevented)
                                 onExpandedChange(!expanded);
                         }}
                         className={`absolute inset-0 z-10 cursor-pointer ${focus}`}
@@ -305,7 +326,10 @@ export function PhotoBoardCardContent({
                             variants={{ open: { y: 0, opacity: 1 }, closed: { y: reduceMotion ? 0 : 10, opacity: 0 } }}
                             transition={transition}
                         >
-                            <p className="line-clamp-2 pb-[.12em] text-[clamp(24px,8cqw,44px)] leading-[1.12] font-medium tracking-[-.04em] [overflow-wrap:anywhere]">
+                            <p
+                                data-photo-board-field="destination"
+                                className="line-clamp-2 pb-[.12em] text-[clamp(24px,8cqw,44px)] leading-[1.12] font-medium tracking-[-.04em] [overflow-wrap:anywhere]"
+                            >
                                 {board.destination.trim() || board.title}
                             </p>
                             {board.description?.trim() && (
@@ -317,6 +341,7 @@ export function PhotoBoardCardContent({
                         {tags.length > 0 && (
                             <motion.ul
                                 aria-label="Board tags"
+                                data-photo-board-field="tags"
                                 variants={{
                                     open: { y: 0, opacity: 1 },
                                     closed: { y: reduceMotion ? 0 : 10, opacity: 0 }
@@ -349,7 +374,7 @@ export function PhotoBoardCardContent({
                             className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[clamp(12px,3cqw,14px)] text-white/80 tabular-nums"
                         >
                             {hasDays && (
-                                <span>
+                                <span data-photo-board-field="duration">
                                     {board.durationDays} {board.durationDays === 1 ? "day" : "days"}
                                 </span>
                             )}
@@ -428,7 +453,7 @@ export function PhotoBoardCardContent({
                         )}
                     </button>
                 )}
-                {hasDetails && !selection && !href && (
+                {interactiveDetails && !selection && !href && (
                     <button
                         type="button"
                         data-board-disclosure=""
