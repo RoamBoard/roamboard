@@ -115,7 +115,7 @@ export default function HandleProfileContent({ handle }: { handle: string }) {
             <main className="flex flex-col">
                 <ProfileHero
                     profile={view.profile}
-                    stats={null}
+                    stats={view.stats}
                     isOwner={false}
                     friendshipStatus={view.friendshipStatus}
                 />

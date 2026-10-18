@@ -47,6 +47,7 @@ export default function ProfileControl({
     user = null,
     href,
     profileHref = "/profile",
+    settingsHref = "/settings",
     label = "my profile",
     userName,
     avatarUrl,
@@ -190,9 +191,12 @@ export default function ProfileControl({
                                 >
                                     {isLoggedIn ? "my profile" : "sign in"} ↗
                                 </Link>
-                                <button type="button" disabled className="text-muted-foreground py-2 opacity-50">
+                                <Link
+                                    href={isLoggedIn ? settingsHref : "/login"}
+                                    className="text-foreground py-2 underline-offset-4 hover:underline"
+                                >
                                     settings
-                                </button>
+                                </Link>
                                 <div role="group" aria-label="Appearance" className="flex gap-3 py-2">
                                     {["light", "dark"].map((theme) => (
                                         <button
@@ -232,7 +236,7 @@ export default function ProfileControl({
                     aria-expanded={sidebarOpen}
                     aria-controls={accountPanelId}
                     onClick={() => toggleSidebarAccount(!sidebarOpen)}
-                    className="font-body text-12 text-muted-foreground hover:text-foreground flex min-h-11 w-full cursor-pointer items-center gap-3 px-3 font-medium focus-visible:outline-1 focus-visible:outline-offset-4"
+                    className={`font-body text-12 text-muted-foreground hover:text-foreground flex min-h-11 w-full cursor-pointer items-center font-medium focus-visible:outline-1 focus-visible:outline-offset-4 ${iconOnly ? "justify-center" : "gap-3 px-3"}`}
                 >
                     {accountIcon}
                     {!iconOnly && <span>account</span>}
@@ -295,9 +299,13 @@ export default function ProfileControl({
                                 <span aria-hidden="true">↗</span>
                             </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem disabled className="text-14 justify-between rounded-none px-3 py-3">
-                            <span>settings</span>
-                            <span className="text-10">soon</span>
+                        <DropdownMenuItem asChild className="rounded-none px-3 py-3">
+                            <Link
+                                href={isLoggedIn ? settingsHref : "/login"}
+                                className="text-14 flex w-full justify-between"
+                            >
+                                <span>settings</span>
+                            </Link>
                         </DropdownMenuItem>
                     </div>
                     <div className="border-line border-t px-5 pt-4 pb-2">

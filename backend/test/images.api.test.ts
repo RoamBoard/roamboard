@@ -291,6 +291,7 @@ test("photo upload intent, completion, idempotence, ownership and streaming acce
     fake.images.get(12)!.profileOwnerUserId = "owner";
     fake.images.get(12)!.profileOwnerUsername = "owner";
     assert.equal((await api.get("/api/v1/images/12/content?profileHandle=owner")).status, 200);
+    assert.equal((await api.get("/api/v1/images/12/content?profileHandle=owner&profileHandle=owner")).status, 200);
     assert.equal((await api.get("/api/v1/images/12/content?profileHandle=other")).status, 404);
     assert.equal((await api.get("/api/v1/images/12/content?profileHandle=owner&boardId=1")).status, 400);
     fake.images.get(12)!.profileOwnerUserId = null;

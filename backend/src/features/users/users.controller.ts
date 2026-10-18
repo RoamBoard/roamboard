@@ -70,6 +70,31 @@ export function createUsersController(service: ReturnType<typeof createUsersServ
             const { requestId } = response.locals.params as { requestId: number };
             await service.rejectFriendRequest(response.locals.user.userId, requestId);
             response.status(204).send();
+        },
+        friends: async (_request, response) => {
+            response.json({ data: await service.listFriends(response.locals.user.userId) });
+        },
+        search: async (_request, response) => {
+            const { q, limit } = response.locals.query as { q: string; limit: number };
+            response.json({ data: await service.searchUsers(response.locals.user.userId, q, limit) });
+        },
+        friendsBoards: async (request, response) => {
+            const limit = Number(request.query.limit) || 20;
+            response.json({ data: await service.listFriendsBoards(response.locals.user.userId, limit) });
+        },
+        friendsActivity: async (request, response) => {
+            const limit = Number(request.query.limit) || 20;
+            response.json({ data: await service.listFriendsActivity(response.locals.user.userId, limit) });
+        },
+        removeFriend: async (_request, response) => {
+            const { targetUserId } = response.locals.params as { targetUserId: string };
+            await service.removeFriend(response.locals.user.userId, targetUserId);
+            response.status(204).send();
+        },
+        removeFriendByHandle: async (_request, response) => {
+            const { handle } = response.locals.params as { handle: string };
+            await service.removeFriendByHandle(response.locals.user.userId, handle);
+            response.status(204).send();
         }
     } satisfies Record<string, RequestHandler>;
 }

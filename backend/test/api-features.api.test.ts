@@ -249,7 +249,16 @@ test("profile reads and writes use the session owner and reject forged identity"
             return 0;
         },
         async stats() {
-            return { boardsCreated: 0 };
+            return {
+                countriesVisited: 0,
+                citiesExplored: 0,
+                continentsCovered: 0,
+                photosUploaded: 0,
+                boardsCreated: 0,
+                friends: 0,
+                activitiesSaved: 0,
+                boardsSaved: 0
+            };
         },
         async listSavedBoards() {
             return { items: [], hasMore: false };
@@ -273,6 +282,24 @@ test("profile reads and writes use the session owner and reject forged identity"
             return true;
         },
         async rejectFriendRequest() {
+            return true;
+        },
+        async listFriends() {
+            return [];
+        },
+        async searchUsers() {
+            return [];
+        },
+        async listFriendsBoards() {
+            return [];
+        },
+        async listFriendsActivity() {
+            return [];
+        },
+        async removeFriend() {
+            return true;
+        },
+        async removeFriendByHandle() {
             return true;
         }
     };
@@ -304,6 +331,9 @@ test("profile reads and writes use the session owner and reject forged identity"
     assert.equal(publicProfile.body.data.isOwner, false);
     assert.equal("revision" in publicProfile.body.data.profile, false);
     assert.equal("defaultBoardVisibility" in publicProfile.body.data.profile, false);
+    assert.equal(typeof publicProfile.body.data.stats.friends, "number");
+    assert.equal(typeof publicProfile.body.data.stats.activitiesSaved, "number");
+    assert.equal(typeof publicProfile.body.data.stats.boardsSaved, "number");
     assert.equal(
         (await request(app).get("/api/v1/users/by-handle/owner").set("Cookie", cookie)).body.data.isOwner,
         true
@@ -519,6 +549,57 @@ test("friendship lifecycle handles requests, public profile status, accept, reje
             if (idx === -1) return false;
             requests.splice(idx, 1);
             return true;
+        },
+        async listFriends(userId) {
+            const friendIds = requests
+                .filter(
+                    (r) => r.status === "accepted" && (r.requesterUserId === userId || r.recipientUserId === userId)
+                )
+                .map((r) => (r.requesterUserId === userId ? r.recipientUserId : r.requesterUserId));
+            return friendIds.map((id) => ({
+                userId: id,
+                username: id,
+                displayName: id.toUpperCase(),
+                profilePictureUrl: null,
+                bio: null,
+                location: null
+            }));
+        },
+        async searchUsers(_userId, query) {
+            const clean = query.replace(/^@+/, "").trim();
+            if (clean && clean !== "alice") return [];
+            return [
+                {
+                    userId: "alice",
+                    username: "alice",
+                    displayName: "ALICE",
+                    profilePictureUrl: null,
+                    bio: null,
+                    location: null,
+                    friendshipStatus: "accepted",
+                    requestId: 1
+                }
+            ];
+        },
+        async listFriendsBoards() {
+            return [];
+        },
+        async listFriendsActivity() {
+            return [];
+        },
+        async removeFriend(userId, targetUserId) {
+            const idx = requests.findIndex(
+                (r) =>
+                    r.status === "accepted" &&
+                    ((r.requesterUserId === userId && r.recipientUserId === targetUserId) ||
+                        (r.requesterUserId === targetUserId && r.recipientUserId === userId))
+            );
+            if (idx === -1) return false;
+            requests.splice(idx, 1);
+            return true;
+        },
+        async removeFriendByHandle(userId, handle) {
+            return this.removeFriend(userId, handle.replace(/^@+/, "").toLowerCase());
         }
     };
 
@@ -616,4 +697,59 @@ test("friendship lifecycle handles requests, public profile status, accept, reje
     requests[0].status = "accepted";
     const acceptedAliceProfile = await request(app).get("/api/v1/users/by-handle/alice").set("Cookie", cookie);
     assert.equal(acceptedAliceProfile.body.data.friendshipStatus, "accepted");
+
+    // 14. List accepted friends
+    const friendsRes = await request(app).get("/api/v1/users/me/friends").set("Cookie", cookie);
+    assert.equal(friendsRes.status, 200);
+    assert.equal(friendsRes.body.data.length, 1);
+    assert.equal(friendsRes.body.data[0].userId, "alice");
+
+    // 15. Search users (by handle, with @ prefix, and empty query for suggestions)
+    const searchRes = await request(app).get("/api/v1/users/search?q=alice").set("Cookie", cookie);
+    assert.equal(searchRes.status, 200);
+    assert.equal(searchRes.body.data.length, 1);
+    assert.equal(searchRes.body.data[0].username, "alice");
+    assert.equal(searchRes.body.data[0].friendshipStatus, "accepted");
+
+    const searchAtRes = await request(app).get("/api/v1/users/search?q=@alice").set("Cookie", cookie);
+    assert.equal(searchAtRes.status, 200);
+    assert.equal(searchAtRes.body.data.length, 1);
+
+    const searchEmptyRes = await request(app).get("/api/v1/users/search").set("Cookie", cookie);
+    assert.equal(searchEmptyRes.status, 200);
+    assert.equal(searchEmptyRes.body.data.length, 1);
+
+    // 16. Friends boards and activity
+    const boardsRes = await request(app).get("/api/v1/users/me/friends/boards").set("Cookie", cookie);
+    assert.equal(boardsRes.status, 200);
+    assert.deepEqual(boardsRes.body.data, []);
+
+    const activityRes = await request(app).get("/api/v1/users/me/friends/activity").set("Cookie", cookie);
+    assert.equal(activityRes.status, 200);
+    assert.deepEqual(activityRes.body.data, []);
+
+    // 17. Unfriend Alice
+    const unfriendRes = await request(app)
+        .delete("/api/v1/users/me/friends/alice")
+        .set("Cookie", cookie)
+        .set("Origin", origin);
+    assert.equal(unfriendRes.status, 204);
+
+    const friendsAfter = await request(app).get("/api/v1/users/me/friends").set("Cookie", cookie);
+    assert.equal(friendsAfter.body.data.length, 0);
+
+    const unfriendAliceProfile = await request(app).get("/api/v1/users/by-handle/alice").set("Cookie", cookie);
+    assert.equal(unfriendAliceProfile.body.data.friendshipStatus, "none");
+
+    // 18. Unfriending non-friend returns 404
+    assert.equal(
+        (await request(app).delete("/api/v1/users/me/friends/alice").set("Cookie", cookie).set("Origin", origin))
+            .status,
+        404
+    );
+    assert.equal(
+        (await request(app).delete("/api/v1/users/by-handle/alice/friend").set("Cookie", cookie).set("Origin", origin))
+            .status,
+        404
+    );
 });

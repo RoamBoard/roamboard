@@ -89,6 +89,22 @@ test("ProfileControl shows the supplied profile photo in regular and sidebar acc
     }
 });
 
+test("ProfileControl renders settings link pointing to /settings when sidebar menu is open", () => {
+    const html = renderToStaticMarkup(
+        createElement(
+            RouterWrapper,
+            null,
+            createElement(ProfileControl, {
+                user: { name: "Ada Lovelace", handle: "@ada_lovelace" },
+                sidebar: true,
+                sidebarAccountOpen: true
+            })
+        )
+    );
+    assert.ok(html.includes('href="/settings"'));
+    assert.ok(html.includes("settings"));
+});
+
 test("Sidebar renders navigation links and does not render theme select", () => {
     const html = renderToStaticMarkup(
         createElement(RouterWrapper, null, createElement(Sidebar, { activeHref: "/home" }))

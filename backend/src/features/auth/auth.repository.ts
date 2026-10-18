@@ -16,7 +16,7 @@ function toUser(row: UserRow): AppUser {
         username: row.username,
         displayName: row.display_name,
         profilePictureUrl: row.profile_picture_image_id
-            ? `/api/v1/images/${row.profile_picture_image_id}/content?variant=thumbnail`
+            ? `/api/v1/images/${row.profile_picture_image_id}/content?variant=thumbnail&profileHandle=${encodeURIComponent(row.username)}`
             : null
     };
 }

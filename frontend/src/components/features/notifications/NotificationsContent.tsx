@@ -13,6 +13,17 @@ export default function NotificationsContent({ initialRequests }: { initialReque
     const [sessionUser, setSessionUser] = useState<AuthUser | null>(null);
     const [actionInProgress, setActionInProgress] = useState<Record<number, "accepting" | "rejecting">>({});
     const [actionError, setActionError] = useState<string | null>(null);
+    const [failedAvatars, setFailedAvatars] = useState<Record<number, boolean>>({});
+
+    const apiOrigin = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+    const resolveAvatarUrl = (url: string | null) => {
+        if (!url) return null;
+        try {
+            return new URL(url, apiOrigin).toString();
+        } catch {
+            return url;
+        }
+    };
 
     useEffect(() => {
         return observeCurrentUser((user) => {
@@ -172,13 +183,17 @@ export default function NotificationsContent({ initialRequests }: { initialReque
                                         className="border-line bg-background hover:bg-faint/30 flex flex-col gap-4 rounded-[2px] border p-4 transition-colors sm:flex-row sm:items-center sm:justify-between"
                                     >
                                         <div className="flex min-w-0 items-center gap-3.5">
-                                            {req.requester.profilePictureUrl ? (
+                                            {resolveAvatarUrl(req.requester.profilePictureUrl) &&
+                                            !failedAvatars[req.requestId] ? (
                                                 <Image
-                                                    src={req.requester.profilePictureUrl}
+                                                    src={resolveAvatarUrl(req.requester.profilePictureUrl)!}
                                                     alt=""
                                                     width={44}
                                                     height={44}
                                                     unoptimized
+                                                    onError={() =>
+                                                        setFailedAvatars((prev) => ({ ...prev, [req.requestId]: true }))
+                                                    }
                                                     className="size-11 shrink-0 rounded-full object-cover"
                                                 />
                                             ) : (

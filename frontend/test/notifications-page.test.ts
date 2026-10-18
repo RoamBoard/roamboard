@@ -16,13 +16,11 @@ test("NotificationsContent renders requests list with requester details and acti
         {
             requestId: 101,
             requester: {
-                id: "user-101",
+                userId: "user-101",
                 username: "sammy",
                 displayName: "Sammy Explorer",
                 profilePictureUrl: null
-            },
-            status: "pending",
-            createdAt: new Date().toISOString()
+            }
         }
     ];
 
@@ -35,3 +33,21 @@ test("NotificationsContent renders requests list with requester details and acti
     assert.ok(html.includes("reject"));
 });
 
+test("NotificationsContent renders requester avatar image when profilePictureUrl is provided", () => {
+    const sampleRequests: FriendRequest[] = [
+        {
+            requestId: 102,
+            requester: {
+                userId: "user-102",
+                username: "alex",
+                displayName: "Alex Rover",
+                profilePictureUrl: "/api/v1/images/42/content?variant=thumbnail&profileHandle=alex"
+            }
+        }
+    ];
+
+    const html = renderToStaticMarkup(createElement(NotificationsContent, { initialRequests: sampleRequests }));
+    assert.ok(html.includes("Alex Rover"));
+    assert.ok(html.includes("src="));
+    assert.ok(html.includes("profileHandle=alex"));
+});

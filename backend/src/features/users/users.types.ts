@@ -49,10 +49,7 @@ export interface PublicProfileView {
     profile: PublicProfile;
     isOwner: boolean;
     friendshipStatus?: FriendshipStatus;
-    stats: Pick<
-        ProfileStats,
-        "countriesVisited" | "citiesExplored" | "continentsCovered" | "photosUploaded" | "boardsCreated"
-    >;
+    stats: ProfileStats;
     boards: Array<{ boardId: number; title: string; coverImageUrl: string | null; updatedAt: string }>;
     destinations: MapDestination[];
 }
@@ -114,6 +111,49 @@ export interface SavedBoard {
     coverImageUrl: string | null;
     savedAt: string;
 }
+
+export interface FriendUser {
+    userId: string;
+    username: string;
+    displayName: string;
+    profilePictureUrl: string | null;
+    bio: string | null;
+    location: string | null;
+}
+
+export interface UserSearchResult extends FriendUser {
+    friendshipStatus: "none" | "pending_sent" | "pending_received" | "accepted";
+    requestId?: number;
+}
+
+export interface FriendBoardSummary {
+    boardId: number;
+    title: string;
+    description: string | null;
+    owner: {
+        userId: string;
+        username: string;
+        displayName: string;
+        profilePictureUrl: string | null;
+    };
+    coverImageUrl: string | null;
+    createdAt: string;
+}
+
+export interface FriendActivityItem {
+    activityType: "published_board";
+    boardId: number;
+    title: string;
+    owner: {
+        userId: string;
+        username: string;
+        displayName: string;
+        profilePictureUrl: string | null;
+    };
+    coverImageUrl: string | null;
+    timestamp: string;
+}
+
 export interface UsersRepository {
     read(userId: string): Promise<UserProfile | null>;
     findIdByHandle(handle: string): Promise<string | null>;
@@ -130,4 +170,10 @@ export interface UsersRepository {
     listIncomingFriendRequests(userId: string): Promise<FriendRequest[]>;
     acceptFriendRequest(recipientId: string, requestId: number): Promise<boolean>;
     rejectFriendRequest(userId: string, requestId: number): Promise<boolean>;
+    listFriends(userId: string): Promise<FriendUser[]>;
+    searchUsers(userId: string, query: string, limit: number): Promise<UserSearchResult[]>;
+    listFriendsBoards(userId: string, limit: number): Promise<FriendBoardSummary[]>;
+    listFriendsActivity(userId: string, limit: number): Promise<FriendActivityItem[]>;
+    removeFriend(userId: string, targetUserId: string): Promise<boolean>;
+    removeFriendByHandle(userId: string, handle: string): Promise<boolean>;
 }

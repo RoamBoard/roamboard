@@ -33,7 +33,18 @@ export default function NotificationControl({
     const [loading, setLoading] = useState(false);
     const [actionInProgress, setActionInProgress] = useState<Record<number, "accepting" | "rejecting">>({});
     const [actionError, setActionError] = useState<string | null>(null);
+    const [failedAvatars, setFailedAvatars] = useState<Record<number, boolean>>({});
     const [sessionUser, setSessionUser] = useState<AuthUser | null>(null);
+
+    const apiOrigin = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+    const resolveAvatarUrl = (url: string | null) => {
+        if (!url) return null;
+        try {
+            return new URL(url, apiOrigin).toString();
+        } catch {
+            return url;
+        }
+    };
 
     const toggleOpen = useCallback(
         (nextOpen: boolean) => {
@@ -160,7 +171,7 @@ export default function NotificationControl({
                 aria-expanded={isOpen}
                 aria-controls={panelId}
                 onClick={() => toggleOpen(!isOpen)}
-                className="font-body text-12 text-muted-foreground hover:text-foreground relative flex min-h-11 w-full cursor-pointer items-center gap-3 px-3 font-medium focus-visible:outline-1 focus-visible:outline-offset-4"
+                className={`font-body text-12 text-muted-foreground hover:text-foreground relative flex min-h-11 w-full cursor-pointer items-center font-medium focus-visible:outline-1 focus-visible:outline-offset-4 ${iconOnly ? "justify-center" : "gap-3 px-3"}`}
             >
                 <div className="relative flex shrink-0 items-center justify-center">
                     <Bell aria-hidden="true" size={20} strokeWidth={1.5} className="shrink-0" />
@@ -226,13 +237,20 @@ export default function NotificationControl({
                                             className="bg-faint/50 border-line flex flex-col gap-2 rounded-[2px] border p-3 transition-colors"
                                         >
                                             <div className="flex items-center gap-2.5">
-                                                {req.requester.profilePictureUrl ? (
+                                                {resolveAvatarUrl(req.requester.profilePictureUrl) &&
+                                                !failedAvatars[req.requestId] ? (
                                                     <Image
-                                                        src={req.requester.profilePictureUrl}
+                                                        src={resolveAvatarUrl(req.requester.profilePictureUrl)!}
                                                         alt=""
                                                         width={28}
                                                         height={28}
                                                         unoptimized
+                                                        onError={() =>
+                                                            setFailedAvatars((prev) => ({
+                                                                ...prev,
+                                                                [req.requestId]: true
+                                                            }))
+                                                        }
                                                         className="size-7 shrink-0 rounded-full object-cover"
                                                     />
                                                 ) : (

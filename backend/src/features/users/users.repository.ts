@@ -44,7 +44,7 @@ export function createUsersRepository(): UsersRepository {
                         ? null
                         : {
                               imageId: row.profile_picture_image_id,
-                              url: `/api/v1/images/${row.profile_picture_image_id}/content?variant=thumbnail`,
+                              url: `/api/v1/images/${row.profile_picture_image_id}/content?variant=thumbnail&profileHandle=${encodeURIComponent(row.username)}`,
                               storageKey: null
                           },
                 defaultBoardVisibility: row.default_board_visibility,
@@ -55,9 +55,10 @@ export function createUsersRepository(): UsersRepository {
             return profile;
         },
         async findIdByHandle(handle) {
+            const cleanHandle = handle.replace(/^@+/, "").trim();
             const result = await getPool().query<{ user_id: string }>(
                 "SELECT user_id FROM app_user WHERE username=$1",
-                [handle]
+                [cleanHandle]
             );
             return result.rows[0]?.user_id ?? null;
         },
@@ -367,7 +368,7 @@ export function createUsersRepository(): UsersRepository {
                     profilePictureUrl:
                         row.profile_picture_image_id === null
                             ? null
-                            : `/api/v1/images/${row.profile_picture_image_id}/content?variant=thumbnail`
+                            : `/api/v1/images/${row.profile_picture_image_id}/content?variant=thumbnail&profileHandle=${encodeURIComponent(row.username)}`
                 }
             }));
         },
@@ -387,6 +388,194 @@ export function createUsersRepository(): UsersRepository {
                 [requestId, userId]
             );
             return (result.rowCount ?? 0) > 0;
+        },
+        async listFriends(userId) {
+            const result = await getPool().query<{
+                user_id: string;
+                username: string;
+                display_name: string;
+                profile_picture_image_id: number | null;
+                biography: string | null;
+                location: string | null;
+            }>(
+                `SELECT u.user_id, u.username, u.display_name, u.profile_picture_image_id, u.biography, u.location
+                 FROM friendship f
+                 JOIN app_user u ON u.user_id = (CASE WHEN f.requester_user_id = $1 THEN f.recipient_user_id ELSE f.requester_user_id END)
+                 WHERE (f.requester_user_id = $1 OR f.recipient_user_id = $1) AND f.status = 'accepted'
+                 ORDER BY u.display_name ASC`,
+                [userId]
+            );
+            return result.rows.map((row) => ({
+                userId: row.user_id,
+                username: row.username,
+                displayName: row.display_name,
+                profilePictureUrl:
+                    row.profile_picture_image_id === null
+                        ? null
+                        : `/api/v1/images/${row.profile_picture_image_id}/content?variant=thumbnail&profileHandle=${encodeURIComponent(row.username)}`,
+                bio: row.biography,
+                location: row.location
+            }));
+        },
+        async searchUsers(userId, query, limit) {
+            const cleanQuery = query.replace(/^@+/, "").trim();
+            const pattern = `%${cleanQuery}%`;
+            const isMatchAll = cleanQuery.length === 0;
+            const result = await getPool().query<{
+                user_id: string;
+                username: string;
+                display_name: string;
+                profile_picture_image_id: number | null;
+                biography: string | null;
+                location: string | null;
+                friendship_id: number | null;
+                friendship_status: "pending" | "accepted" | null;
+                requester_user_id: string | null;
+            }>(
+                `SELECT u.user_id, u.username, u.display_name, u.profile_picture_image_id, u.biography, u.location,
+                        f.friendship_id, f.status as friendship_status, f.requester_user_id
+                 FROM app_user u
+                 LEFT JOIN friendship f ON (
+                    (f.requester_user_id = $1 AND f.recipient_user_id = u.user_id) OR
+                    (f.recipient_user_id = $1 AND f.requester_user_id = u.user_id)
+                 )
+                 WHERE u.user_id <> $1
+                   ${isMatchAll ? "" : "AND (u.username ILIKE $2 OR u.display_name ILIKE $2)"}
+                 ORDER BY u.display_name ASC
+                 LIMIT ${isMatchAll ? "$2" : "$3"}`,
+                isMatchAll ? [userId, limit] : [userId, pattern, limit]
+            );
+            return result.rows.map((row) => {
+                let friendshipStatus: "none" | "pending_sent" | "pending_received" | "accepted" = "none";
+                if (row.friendship_status === "accepted") {
+                    friendshipStatus = "accepted";
+                } else if (row.friendship_status === "pending") {
+                    friendshipStatus = row.requester_user_id === userId ? "pending_sent" : "pending_received";
+                }
+                return {
+                    userId: row.user_id,
+                    username: row.username,
+                    displayName: row.display_name,
+                    profilePictureUrl:
+                        row.profile_picture_image_id === null
+                            ? null
+                            : `/api/v1/images/${row.profile_picture_image_id}/content?variant=thumbnail&profileHandle=${encodeURIComponent(row.username)}`,
+                    bio: row.biography,
+                    location: row.location,
+                    friendshipStatus,
+                    requestId: row.friendship_id ?? undefined
+                };
+            });
+        },
+        async listFriendsBoards(userId, limit) {
+            const result = await getPool().query<{
+                board_id: number;
+                title: string;
+                description: string | null;
+                owner_user_id: string;
+                username: string;
+                display_name: string;
+                profile_picture_image_id: number | null;
+                cover_image_id: number | null;
+                created_at: Date;
+            }>(
+                `SELECT b.board_id, b.title, b.description, b.owner_user_id,
+                        u.username, u.display_name, u.profile_picture_image_id,
+                        b.cover_image_id, b.created_at
+                 FROM board b
+                 JOIN app_user u ON u.user_id = b.owner_user_id
+                 JOIN friendship f ON (
+                    (f.requester_user_id = $1 AND f.recipient_user_id = b.owner_user_id) OR
+                    (f.recipient_user_id = $1 AND f.requester_user_id = b.owner_user_id)
+                 )
+                 WHERE f.status = 'accepted'
+                   AND b.status = 'published'
+                   AND (b.visibility = 'public' OR b.visibility = 'friends')
+                 ORDER BY b.created_at DESC
+                 LIMIT $2`,
+                [userId, limit]
+            );
+            return result.rows.map((row) => ({
+                boardId: row.board_id,
+                title: row.title,
+                description: row.description,
+                owner: {
+                    userId: row.owner_user_id,
+                    username: row.username,
+                    displayName: row.display_name,
+                    profilePictureUrl:
+                        row.profile_picture_image_id === null
+                            ? null
+                            : `/api/v1/images/${row.profile_picture_image_id}/content?variant=thumbnail&profileHandle=${encodeURIComponent(row.username)}`
+                },
+                coverImageUrl:
+                    row.cover_image_id === null ? null : `/api/v1/images/${row.cover_image_id}/content?variant=display`,
+                createdAt: row.created_at.toISOString()
+            }));
+        },
+        async listFriendsActivity(userId, limit) {
+            const result = await getPool().query<{
+                board_id: number;
+                title: string;
+                owner_user_id: string;
+                username: string;
+                display_name: string;
+                profile_picture_image_id: number | null;
+                cover_image_id: number | null;
+                created_at: Date;
+            }>(
+                `SELECT b.board_id, b.title, b.owner_user_id,
+                        u.username, u.display_name, u.profile_picture_image_id,
+                        b.cover_image_id, b.created_at
+                 FROM board b
+                 JOIN app_user u ON u.user_id = b.owner_user_id
+                 JOIN friendship f ON (
+                    (f.requester_user_id = $1 AND f.recipient_user_id = b.owner_user_id) OR
+                    (f.recipient_user_id = $1 AND f.requester_user_id = b.owner_user_id)
+                 )
+                 WHERE f.status = 'accepted'
+                   AND b.status = 'published'
+                   AND (b.visibility = 'public' OR b.visibility = 'friends')
+                 ORDER BY b.created_at DESC
+                 LIMIT $2`,
+                [userId, limit]
+            );
+            return result.rows.map((row) => ({
+                activityType: "published_board" as const,
+                boardId: row.board_id,
+                title: row.title,
+                owner: {
+                    userId: row.owner_user_id,
+                    username: row.username,
+                    displayName: row.display_name,
+                    profilePictureUrl:
+                        row.profile_picture_image_id === null
+                            ? null
+                            : `/api/v1/images/${row.profile_picture_image_id}/content?variant=thumbnail&profileHandle=${encodeURIComponent(row.username)}`
+                },
+                coverImageUrl:
+                    row.cover_image_id === null ? null : `/api/v1/images/${row.cover_image_id}/content?variant=display`,
+                timestamp: row.created_at.toISOString()
+            }));
+        },
+        async removeFriend(userId, targetUserId) {
+            const result = await getPool().query(
+                `DELETE FROM friendship
+                 WHERE ((requester_user_id = $1 AND recipient_user_id = $2) OR (requester_user_id = $2 AND recipient_user_id = $1))
+                   AND status = 'accepted'`,
+                [userId, targetUserId]
+            );
+            return (result.rowCount ?? 0) > 0;
+        },
+        async removeFriendByHandle(userId, handle) {
+            const cleanHandle = handle.replace(/^@+/, "").trim().toLowerCase();
+            const target = await getPool().query<{ user_id: string }>(
+                "SELECT user_id FROM app_user WHERE LOWER(username) = $1",
+                [cleanHandle]
+            );
+            const targetUserId = target.rows[0]?.user_id;
+            if (!targetUserId) return false;
+            return this.removeFriend(userId, targetUserId);
         }
     };
 }

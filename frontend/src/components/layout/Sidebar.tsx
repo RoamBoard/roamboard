@@ -68,11 +68,14 @@ function SidebarNavigation({ activeHref, expanded, compactTop = false, onNavigat
                     aria-label={label}
                     aria-current={active ? "page" : undefined}
                     onClick={onNavigate}
-                    className={`relative flex h-11 items-center transition-colors duration-150 focus-visible:outline-1 focus-visible:outline-offset-4 motion-reduce:transition-none ${expanded ? "w-full" : "w-11"} ${active ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                    className={`relative flex h-11 w-full items-center transition-colors duration-150 focus-visible:outline-1 focus-visible:outline-offset-4 motion-reduce:transition-none ${expanded ? "justify-start px-3" : "justify-center"} ${active ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
                 >
-                    <Icon aria-hidden="true" className="mx-3 size-5 shrink-0" strokeWidth={1.5} />
+                    <Icon aria-hidden="true" className="size-5 shrink-0" strokeWidth={1.5} />
                     {!expanded && active && (
-                        <span aria-hidden="true" className="absolute bottom-1 left-3 h-px w-5 bg-current" />
+                        <span
+                            aria-hidden="true"
+                            className="absolute bottom-1 left-1/2 h-px w-5 -translate-x-1/2 bg-current"
+                        />
                     )}
                     <motion.span
                         aria-hidden="true"
@@ -93,10 +96,10 @@ function SidebarNavigation({ activeHref, expanded, compactTop = false, onNavigat
     return (
         <nav
             aria-label="Main navigation"
-            className={`flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-contain transition-all duration-200 ${expanded ? "px-4" : "px-2.5 md:px-[18px]"}`}
+            className={`flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-contain transition-all duration-200 ${expanded ? "justify-start px-4" : "justify-center px-2.5 md:px-4"}`}
         >
             <ul
-                className={`mb-4 flex w-full shrink-0 flex-col gap-2 transition-[padding] duration-200 ${compactTop ? "pt-1" : "pt-8 [@media(max-height:650px)]:pt-0"}`}
+                className={`flex w-full shrink-0 flex-col gap-2 transition-[margin,padding] duration-200 ${expanded ? "mt-0 pt-2" : compactTop ? "my-auto pt-1" : "my-auto py-4 [@media(max-height:650px)]:py-0"}`}
             >
                 {navigation.map(renderLink)}
             </ul>
@@ -238,7 +241,7 @@ export default function Sidebar({ activeHref, profile = {} }: { activeHref: stri
                 className={`bg-background text-foreground border-line fixed inset-y-0 left-0 z-40 flex ${accountOpen ? "w-56" : "w-16"} flex-col border-r pt-[env(safe-area-inset-top)] pb-[max(1.5rem,env(safe-area-inset-bottom))] md:w-[var(--sidebar-width)] [@media(max-height:400px)]:pb-2 ${expanded ? "shadow-[16px_0_40px_-24px_rgb(0_0_0/0.25)]" : ""}`}
             >
                 <header
-                    className={`relative shrink-0 transition-[height] duration-200 ease-out ${compactTop ? "h-16 md:h-20" : "h-[clamp(11rem,25dvh,15rem)]"} [@media(max-height:400px)]:h-12 [@media(max-height:650px)]:h-20`}
+                    className={`relative shrink-0 transition-[height] duration-200 ease-out ${expanded || compactTop ? "h-16 md:h-20" : "h-[clamp(11rem,25dvh,15rem)]"} [@media(max-height:400px)]:h-12 [@media(max-height:650px)]:h-20`}
                 >
                     <Link
                         href="/home"
@@ -262,7 +265,8 @@ export default function Sidebar({ activeHref, profile = {} }: { activeHref: stri
                 <div id={panelId} className="flex min-h-0 min-w-0 flex-1 flex-col">
                     <SidebarNavigation activeHref={selectedHref} expanded={expanded} compactTop={compactTop} />
                 </div>
-                <div className="mx-2.5 mt-auto flex shrink-0 flex-col gap-1 md:mx-4">
+                <div aria-hidden="true" className="border-line mx-2.5 mt-auto mb-2 border-t md:mx-4" />
+                <div className="mx-2.5 flex shrink-0 flex-col gap-1 md:mx-4">
                     <NotificationControl
                         sidebar
                         iconOnly={!expanded}
@@ -283,7 +287,7 @@ export default function Sidebar({ activeHref, profile = {} }: { activeHref: stri
                         }}
                     />
                 </div>
-                <div aria-hidden="true" className="border-line mx-2.5 mt-3 border-t md:mx-4" />
+                <div aria-hidden="true" className="border-line mx-2.5 mt-2 border-t md:mx-4" />
                 <button
                     type="button"
                     ref={triggerRef}

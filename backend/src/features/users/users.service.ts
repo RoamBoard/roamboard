@@ -22,9 +22,10 @@ export function createUsersService(
         async publicProfile(handle: string, viewerId: string | null): Promise<PublicProfileView> {
             const userId = await repository.findIdByHandle(handle);
             if (!userId) throw new AppError(404, "Profile not found", "NOT_FOUND");
-            const [user, boards, photosUploaded] = await Promise.all([
+            const [user, boards, userStats, photosUploaded] = await Promise.all([
                 read(userId),
                 repository.listBoards(userId, false, true),
+                repository.stats(userId),
                 repository.countPublicPhotos(userId)
             ]);
             const destinations = boards
@@ -75,13 +76,18 @@ export function createUsersService(
                     profilePicture: user.profilePicture
                         ? {
                               ...user.profilePicture,
-                              url: `${user.profilePicture.url}&profileHandle=${encodeURIComponent(user.username)}`
+                              url: user.profilePicture.url.includes("profileHandle=")
+                                  ? user.profilePicture.url
+                                  : `${user.profilePicture.url}${
+                                        user.profilePicture.url.includes("?") ? "&" : "?"
+                                    }profileHandle=${encodeURIComponent(user.username)}`
                           }
                         : null
                 },
                 isOwner: viewerId === userId,
                 friendshipStatus,
                 stats: {
+                    ...userStats,
                     countriesVisited: countries.size,
                     citiesExplored: cities.size,
                     continentsCovered: continents.size,
@@ -173,6 +179,18 @@ export function createUsersService(
         async rejectFriendRequest(userId: string, requestId: number) {
             const deleted = await repository.rejectFriendRequest(userId, requestId);
             if (!deleted) throw new AppError(404, "Friend request not found", "NOT_FOUND");
+        },
+        listFriends: (userId: string) => repository.listFriends(userId),
+        searchUsers: (userId: string, query: string, limit: number) => repository.searchUsers(userId, query, limit),
+        listFriendsBoards: (userId: string, limit: number) => repository.listFriendsBoards(userId, limit),
+        listFriendsActivity: (userId: string, limit: number) => repository.listFriendsActivity(userId, limit),
+        async removeFriend(userId: string, targetUserId: string) {
+            const deleted = await repository.removeFriend(userId, targetUserId);
+            if (!deleted) throw new AppError(404, "Friendship not found", "NOT_FOUND");
+        },
+        async removeFriendByHandle(userId: string, handle: string) {
+            const deleted = await repository.removeFriendByHandle(userId, handle);
+            if (!deleted) throw new AppError(404, "Friendship not found", "NOT_FOUND");
         }
     };
 }
