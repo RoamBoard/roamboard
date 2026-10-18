@@ -6,6 +6,9 @@ import test from "node:test";
 import { Client } from "pg";
 import { closeDatabase, getPool } from "../src/db.js";
 import { createAuthRepository } from "../src/features/auth/auth.repository.js";
+import { createUsersRepository } from "../src/features/users/users.repository.js";
+import { createImagesRepository } from "../src/features/images/images.repository.js";
+import { createGooglePhotoImporter } from "../src/features/auth/auth.photo.js";
 import type { ProviderAsset } from "../src/features/images/images.types.js";
 
 const databaseUrl = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL;
@@ -15,7 +18,7 @@ test(
     {
         skip: databaseUrl ? undefined : "Database URL required"
     },
-    async () => {
+    async (context) => {
         const schema = `rb_auth_test_${randomBytes(6).toString("hex")}`;
         const admin = new Client({ connectionString: databaseUrl, connectionTimeoutMillis: 3000 });
         const previousUrl = process.env.DATABASE_URL;
@@ -37,7 +40,21 @@ test(
                     await readFile(new URL(`../db/migrations/${migration}`, import.meta.url), "utf8")
                 );
             }
-            const repository = createAuthRepository();
+            const authRepository = createAuthRepository();
+            // Photo imports are completed into tracked orphan images before the auth transaction.
+            const repository = {
+                ...authRepository,
+                async saveGoogleDefaults(...args: Parameters<typeof authRepository.saveGoogleDefaults>) {
+                    const [userId, , , asset] = args;
+                    if (asset)
+                        await getPool().query(
+                            `INSERT INTO uploaded_image (storage_key, uploaded_by_user_id, uploaded_at, byte_size, file_format)
+                         VALUES ($1,$2,NOW(),$3,$4) ON CONFLICT (storage_key) DO NOTHING`,
+                            [asset.storageKey, userId, asset.byteSize, asset.format]
+                        );
+                    return authRepository.saveGoogleDefaults(...args);
+                }
+            };
             const first = await repository.createUser({
                 userId: "first",
                 username: "ada_lovelace",
@@ -166,6 +183,133 @@ test(
                 (await repository.findUserById("first"))?.profilePictureUrl,
                 repaired?.profilePictureUrl,
                 "A stale repair cannot overwrite the user's newer photo"
+            );
+
+            // The import starts with a photo, but its removal finishes before the download is saved.
+            await createUsersRepository().setPicture("first", null);
+            const removed = await repository.findUserById("first");
+            const removedRevision = await getPool().query("SELECT profile_revision FROM app_user WHERE user_id=$1", [
+                "first"
+            ]);
+            const latePhoto = { ...photo, storageKey: "roamboard/google-profile/removed-during-import" };
+            await repository.saveGoogleDefaults(
+                "first",
+                "Ada",
+                "Ada Lovelace",
+                latePhoto,
+                "ada_lovelace",
+                repairedPhoto.storageKey
+            );
+            assert.equal(removed?.profilePictureUrl, null);
+            assert.deepEqual(
+                await repository.findUserById("first"),
+                removed,
+                "A completed photo removal must not be undone by the in-flight replacement"
+            );
+            const afterRemoval = await getPool().query("SELECT profile_revision FROM app_user WHERE user_id=$1", [
+                "first"
+            ]);
+            assert.equal(afterRemoval.rows[0].profile_revision, removedRevision.rows[0].profile_revision);
+            const lateAsset = await getPool().query("SELECT orphaned_at FROM uploaded_image WHERE storage_key=$1", [
+                latePhoto.storageKey
+            ]);
+            assert.ok(lateAsset.rows[0]?.orphaned_at, "The discarded replacement remains eligible for cleanup");
+
+            const images = createImagesRepository();
+            const importer = createGooglePhotoImporter(
+                {
+                    async inspect() {
+                        return null;
+                    },
+                    authorizeUpload(storageKey) {
+                        return {
+                            uploadUrl: "https://upload.example.test/image",
+                            method: "POST" as const,
+                            headers: {},
+                            formFields: { public_id: storageKey }
+                        };
+                    }
+                },
+                images
+            );
+            let timeout = true;
+            let uploadKey = "";
+            context.mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {
+                if (String(input).startsWith("https://lh3.googleusercontent.com/")) {
+                    return new Response("photo", { headers: { "content-type": "image/jpeg" } });
+                }
+                uploadKey = String((init?.body as FormData).get("public_id"));
+                const tracked = await getPool().query(
+                    "SELECT upload_id FROM image_upload_intent WHERE storage_key=$1",
+                    [uploadKey]
+                );
+                assert.equal(tracked.rows.length, 1, "The provider must never receive an untracked upload");
+                if (timeout) throw new Error("Upload response timed out after file was stored");
+                return Response.json({
+                    public_id: uploadKey,
+                    bytes: 5,
+                    format: "jpg",
+                    created_at: new Date().toISOString()
+                });
+            });
+            await assert.rejects(
+                importer("https://lh3.googleusercontent.com/a/photo", undefined, "first"),
+                /timed out/
+            );
+            const failedIntent = await getPool().query(
+                "SELECT upload_id, uploaded_image_id FROM image_upload_intent WHERE storage_key=$1",
+                [uploadKey]
+            );
+            assert.equal(failedIntent.rows[0].uploaded_image_id, null);
+            await getPool().query(
+                "UPDATE image_upload_intent SET created_at=NOW()-INTERVAL '3 days', expires_at=NOW()-INTERVAL '2 days' WHERE upload_id=$1",
+                [failedIntent.rows[0].upload_id]
+            );
+            assert.ok(
+                (await images.listCleanupCandidates(new Date(), 100)).some(
+                    (item) => item.uploadId === failedIntent.rows[0].upload_id
+                )
+            );
+            let destroyed = false;
+            assert.equal(
+                await images.cleanupIntent(failedIntent.rows[0].upload_id, async () => {
+                    destroyed = true;
+                }),
+                true
+            );
+            assert.equal(destroyed, true, "An ambiguous provider timeout must remain recoverable by cleanup");
+
+            timeout = false;
+            const completedPhoto = await importer("https://lh3.googleusercontent.com/a/photo", undefined, "first");
+            assert.ok(completedPhoto);
+            // Fail after the image is linked inside the transaction, forcing the entire profile save to roll back.
+            await assert.rejects(
+                authRepository.saveGoogleDefaults("first", "Countess Ada", "x".repeat(501), completedPhoto)
+            );
+            const afterRollback = await getPool().query(
+                `SELECT i.uploaded_image_id, i.orphaned_at, intent.uploaded_image_id AS intent_image_id
+                 FROM uploaded_image i JOIN image_upload_intent intent ON intent.storage_key=i.storage_key WHERE i.storage_key=$1`,
+                [completedPhoto.storageKey]
+            );
+            assert.ok(afterRollback.rows[0].orphaned_at, "A rolled-back profile save must retain the tracked orphan");
+            assert.equal(afterRollback.rows[0].uploaded_image_id, afterRollback.rows[0].intent_image_id);
+            assert.equal((await authRepository.findUserById("first"))?.profilePictureUrl, null);
+            await getPool().query(
+                "UPDATE uploaded_image SET orphaned_at=NOW()-INTERVAL '2 days' WHERE storage_key=$1",
+                [completedPhoto.storageKey]
+            );
+            assert.ok(
+                (await images.listCleanupCandidates(new Date(), 100)).some(
+                    (item) => item.imageId === afterRollback.rows[0].uploaded_image_id
+                )
+            );
+            await authRepository.saveGoogleDefaults("first", "Ada", "Ada Lovelace", completedPhoto);
+            assert.ok((await authRepository.findUserById("first"))?.profilePictureUrl);
+            assert.ok(
+                !(await images.listCleanupCandidates(new Date(), 100)).some(
+                    (item) => item.storageKey === completedPhoto.storageKey
+                ),
+                "A successfully linked import must not be cleaned up"
             );
         } finally {
             await closeDatabase();

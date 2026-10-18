@@ -1,6 +1,10 @@
 import type { ProviderAsset } from "../images/images.types.js";
 
-export type GooglePhotoImporter = (url: string, previousStorageKey?: string) => Promise<ProviderAsset | null>;
+export type GooglePhotoImporter = (
+    url: string,
+    previousStorageKey: string | undefined,
+    userId: string
+) => Promise<ProviderAsset | null>;
 
 export interface AppUser {
     userId: string;

@@ -73,7 +73,9 @@ export function createAuthService(
                     : null;
             if (identity.picture && (!found.user.profilePictureUrl || previousPhotoStorageKey) && importPhoto) {
                 try {
-                    asset = (await importPhoto(identity.picture, previousPhotoStorageKey ?? undefined)) ?? undefined;
+                    asset =
+                        (await importPhoto(identity.picture, previousPhotoStorageKey ?? undefined, identity.sub)) ??
+                        undefined;
                 } catch {
                     // An optional default photo must not prevent Google sign-in. Retry on a later sign-in.
                 }

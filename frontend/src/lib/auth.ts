@@ -11,6 +11,38 @@ type ApiError = {
     error?: { code?: string; message?: string };
 };
 
+const accountListeners = new Set<(user: AuthUser) => void>();
+
+export function subscribeToAccountUpdates(listener: (user: AuthUser) => void): () => void {
+    accountListeners.add(listener);
+    return () => {
+        accountListeners.delete(listener);
+    };
+}
+
+export function publishAccountUpdate(user: AuthUser): void {
+    accountListeners.forEach((listener) => listener(user));
+}
+
+export function observeCurrentUser(onChange: (user: AuthUser | null) => void): () => void {
+    const state = { active: true, updated: false };
+    const unsubscribe = subscribeToAccountUpdates((user) => {
+        state.updated = true;
+        onChange(user);
+    });
+    void getCurrentUser()
+        .then((user) => {
+            if (state.active && !state.updated) onChange(user);
+        })
+        .catch(() => {
+            if (state.active && !state.updated) onChange(null);
+        });
+    return () => {
+        state.active = false;
+        unsubscribe();
+    };
+}
+
 export async function signInWithGoogle(credential: string): Promise<{ user: AuthUser; isNew: boolean }> {
     const response = await fetch(`${apiUrl}/api/v1/auth/google`, {
         method: "POST",

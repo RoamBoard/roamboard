@@ -252,7 +252,7 @@ test("returning users repair an old imported Google photo on the next login", as
         return googlePhoto;
     });
     await service.signIn("valid-google-token");
-    assert.deepEqual(imports, [[googleIdentity.picture, "roamboard/old-google"]]);
+    assert.deepEqual(imports, [[googleIdentity.picture, "roamboard/old-google", googleIdentity.sub]]);
     assert.equal(saves[0]?.[5], "roamboard/old-google");
     assert.equal(saves[0]?.[3], googlePhoto);
 });

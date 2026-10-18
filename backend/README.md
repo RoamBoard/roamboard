@@ -230,7 +230,9 @@ Display names default to Google's given and family names together. On later sign
 default is expanded to the full name; other edited display names are preserved.
 
 When no profile picture is saved, sign-in imports Google's verified photo claim into authenticated Cloudinary
-storage and links it through the existing uploaded-image tables. No schema migration is needed. Downloads accept
+storage and links it through the existing uploaded-image tables. An upload intent is committed before sending
+the file, then completed into an orphan image before profile linking. Timeouts and failed profile transactions
+remain tracked for the existing cleanup job. No schema migration is needed. Downloads accept
 only HTTPS `lh<number>.googleusercontent.com` URLs without redirects, supported raster types, and at most 10 MB.
 Google imports request a 1024-pixel source rather than the small sign-in thumbnail. Previously imported thumbnails
 are upgraded on a later sign-in only when provider metadata identifies the old Google import; uploaded photos are

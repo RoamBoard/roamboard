@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import type { ImagesRepository, UploadIntent } from "../src/features/images/images.types.js";
 import { createGooglePhotoImporter } from "../src/features/auth/auth.photo.js";
 
 const googleUrl = "https://lh3.googleusercontent.com/a/photo";
@@ -7,19 +8,29 @@ const googleUrl = "https://lh3.googleusercontent.com/a/photo";
 function photoImporter(
     inspect: (
         key: string
-    ) => Promise<import("../src/features/images/images.types.js").ProviderAsset | null> = async () => null
-) {
-    return createGooglePhotoImporter({
-        inspect,
-        authorizeUpload(storageKey) {
-            return {
-                uploadUrl: "https://upload.example.test/image",
-                method: "POST",
-                headers: {},
-                formFields: { public_id: storageKey, signature: "server-signature" }
-            };
+    ) => Promise<import("../src/features/images/images.types.js").ProviderAsset | null> = async () => null,
+    images: Pick<ImagesRepository, "createIntent" | "completeIntent"> = {
+        async createIntent() {},
+        async completeIntent() {
+            return 42;
         }
-    });
+    }
+) {
+    const importer = createGooglePhotoImporter(
+        {
+            inspect,
+            authorizeUpload(storageKey) {
+                return {
+                    uploadUrl: "https://upload.example.test/image",
+                    method: "POST",
+                    headers: {},
+                    formFields: { public_id: storageKey, signature: "server-signature" }
+                };
+            }
+        },
+        images
+    );
+    return (url: string, previousStorageKey?: string) => importer(url, previousStorageKey, "google-user");
 }
 
 test("Google default photos reject untrusted hosts and protocols before making a request", async (context) => {
@@ -185,4 +196,80 @@ test("only a verified old Google import is upgraded; custom and already upgraded
     assert.match(upgraded.storageKey, /^roamboard\/google-profile\//);
     assert.equal(fetched.length, 2);
     assert.ok(inspected.includes("roamboard/old-google"));
+});
+
+test("Google uploads persist cleanup intent before sending bytes, including response timeouts", async (context) => {
+    let intent: UploadIntent | undefined;
+    let completions = 0;
+    const importer = photoImporter(undefined, {
+        async createIntent(value) {
+            intent = value;
+        },
+        async completeIntent() {
+            completions += 1;
+            return 42;
+        }
+    });
+    context.mock.method(globalThis, "fetch", async (url: string | URL | Request, init?: RequestInit) => {
+        if (String(url).startsWith("https://lh3.googleusercontent.com/")) {
+            return new Response("photo", { headers: { "content-type": "image/jpeg" } });
+        }
+        assert.ok(intent, "Cleanup intent must already be committed when upload starts");
+        assert.equal(intent.storageKey, (init?.body as FormData).get("public_id"));
+        assert.equal(intent.userId, "google-user");
+        assert.equal(intent.sizeBytes, 5);
+        assert.equal(intent.imageId, null);
+        throw new Error("Provider saved bytes but response timed out");
+    });
+    await assert.rejects(importer(googleUrl), /timed out/);
+    assert.ok(intent, "An ambiguous upload failure must retain cleanup tracking");
+    assert.equal(completions, 0);
+});
+
+test("Google upload is never sent when cleanup tracking cannot be persisted", async (context) => {
+    const requested: string[] = [];
+    context.mock.method(globalThis, "fetch", async (url: string | URL | Request) => {
+        requested.push(String(url));
+        return new Response("photo", { headers: { "content-type": "image/jpeg" } });
+    });
+    const importer = photoImporter(undefined, {
+        async createIntent() {
+            throw new Error("Database unavailable");
+        },
+        async completeIntent() {
+            assert.fail("No completion expected");
+        }
+    });
+    await assert.rejects(importer(googleUrl), /Database unavailable/);
+    assert.equal(requested.length, 1);
+    assert.match(requested[0]!, /^https:\/\/lh3\.googleusercontent\.com\//);
+});
+
+test("Google imports complete their tracked upload before handing the asset to profile saving", async (context) => {
+    let intent: UploadIntent | undefined;
+    let completed = false;
+    context.mock.method(globalThis, "fetch", async (url: string | URL | Request, init?: RequestInit) =>
+        String(url).startsWith("https://lh3.googleusercontent.com/")
+            ? new Response("photo", { headers: { "content-type": "image/jpeg" } })
+            : Response.json({
+                  public_id: (init?.body as FormData).get("public_id"),
+                  bytes: 5,
+                  format: "jpg",
+                  created_at: new Date().toISOString()
+              })
+    );
+    const importer = photoImporter(undefined, {
+        async createIntent(value) {
+            intent = value;
+        },
+        async completeIntent(value, asset) {
+            assert.equal(value, intent);
+            assert.equal(asset.storageKey, intent?.storageKey);
+            completed = true;
+            return 42;
+        }
+    });
+    const asset = await importer(googleUrl);
+    assert.ok(completed);
+    assert.equal(asset?.storageKey, intent?.storageKey);
 });

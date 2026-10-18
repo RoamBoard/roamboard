@@ -5,6 +5,8 @@ import { createAuthController, type AuthController } from "./auth.controller.js"
 import { createGoogleVerifier } from "./auth.google.js";
 import { createAuthRepository } from "./auth.repository.js";
 import { createAuthRouter } from "./auth.routes.js";
+import { createImagesRepository } from "../images/images.repository.js";
+import type { ImagesRepository } from "../images/images.types.js";
 import { createCloudinaryProvider } from "../images/images.cloudinary.js";
 import { createGooglePhotoImporter } from "./auth.photo.js";
 import { createAuthService } from "./auth.service.js";
@@ -19,6 +21,7 @@ export interface AuthModule {
 
 export interface AuthModuleOptions {
     quotaService?: QuotaService;
+    imagesRepository?: ImagesRepository;
     repository?: AuthRepository;
     googleVerifier?: GoogleVerifier;
     googlePhotoImporter?: GooglePhotoImporter;
@@ -30,7 +33,11 @@ export function createAuthModule(options: AuthModuleOptions = {}): AuthModule {
     const service = createAuthService(
         repository,
         verifier,
-        options.googlePhotoImporter ?? createGooglePhotoImporter(createCloudinaryProvider(options.quotaService))
+        options.googlePhotoImporter ??
+            createGooglePhotoImporter(
+                createCloudinaryProvider(options.quotaService),
+                options.imagesRepository ?? createImagesRepository()
+            )
     );
     const controller = createAuthController(service);
     const router = createAuthRouter(controller);

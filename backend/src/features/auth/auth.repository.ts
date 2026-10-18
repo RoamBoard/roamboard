@@ -124,22 +124,27 @@ export function createAuthRepository(): AuthRepository {
                                   [imageId, previousPhotoStorageKey]
                               )
                             : null;
-                    const replacePhoto = imageId === null || Boolean(previousImage?.rows.length);
+                    const replacePhoto = previousPhotoStorageKey
+                        ? Boolean(previousImage?.rows.length)
+                        : imageId === null;
                     if (asset) {
-                        // Unused concurrent imports remain orphans for the existing cleanup job.
-                        const image = await client.query<{ uploaded_image_id: number }>(
-                            `INSERT INTO uploaded_image (storage_key, uploaded_by_user_id, uploaded_at, byte_size, file_format, orphaned_at)
-                             VALUES ($1,$2,NOW(),$3,$4,CASE WHEN $5 THEN NULL ELSE NOW() END)
-                             RETURNING uploaded_image_id`,
-                            [asset.storageKey, userId, asset.byteSize, asset.format, replacePhoto]
+                        const tracked = await client.query<{ uploaded_image_id: number }>(
+                            "SELECT uploaded_image_id FROM uploaded_image WHERE storage_key=$1 AND uploaded_by_user_id=$2 FOR UPDATE",
+                            [asset.storageKey, userId]
                         );
+                        const importedImageId = tracked.rows[0]?.uploaded_image_id;
+                        if (importedImageId === undefined) throw new Error("Imported profile image is not tracked");
                         if (replacePhoto) {
+                            await client.query(
+                                "UPDATE uploaded_image SET orphaned_at=NULL WHERE uploaded_image_id=$1",
+                                [importedImageId]
+                            );
                             if (imageId !== null)
                                 await client.query(
                                     "UPDATE uploaded_image SET orphaned_at=NOW() WHERE uploaded_image_id=$1",
                                     [imageId]
                                 );
-                            imageId = image.rows[0]!.uploaded_image_id;
+                            imageId = importedImageId;
                         }
                     }
                     if (

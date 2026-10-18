@@ -1,13 +1,14 @@
 import { randomUUID } from "node:crypto";
 
-import type { ImageProvider } from "../images/images.types.js";
+import type { ImageProvider, ImagesRepository, UploadIntent } from "../images/images.types.js";
 import type { GooglePhotoImporter } from "./auth.types.js";
 
 // Only verified Google claims reach this adapter; still restrict downloads and reject redirects.
 export function createGooglePhotoImporter(
-    provider: Pick<ImageProvider, "authorizeUpload" | "inspect">
+    provider: Pick<ImageProvider, "authorizeUpload" | "inspect">,
+    images: Pick<ImagesRepository, "createIntent" | "completeIntent">
 ): GooglePhotoImporter {
-    return async (input, previousStorageKey) => {
+    return async (input, previousStorageKey, userId) => {
         const url = new URL(input);
         if (
             url.protocol !== "https:" ||
@@ -58,6 +59,20 @@ export function createGooglePhotoImporter(
         const form = new FormData();
         for (const [key, value] of Object.entries(authorization.formFields)) form.set(key, value);
         form.set("file", new Blob(chunks as BlobPart[], { type: contentType }), "google-profile");
+        const createdAt = new Date();
+        const intent: UploadIntent = {
+            uploadId: randomUUID(),
+            userId,
+            storageKey,
+            fileName: "google-profile",
+            contentType,
+            sizeBytes: size,
+            createdAt,
+            expiresAt: new Date(createdAt.getTime() + 60 * 60 * 1000),
+            imageId: null
+        };
+        // Commit cleanup tracking before the provider can receive any bytes.
+        await images.createIntent(intent);
         const uploaded = await fetch(authorization.uploadUrl, {
             method: authorization.method,
             headers: authorization.headers,
@@ -75,7 +90,7 @@ export function createGooglePhotoImporter(
         if (asset.public_id !== storageKey || !asset.bytes || !asset.format || !asset.created_at) {
             throw new Error("Invalid saved Google photo");
         }
-        return {
+        const saved = {
             storageKey,
             byteSize: asset.bytes,
             format: asset.format,
@@ -84,5 +99,7 @@ export function createGooglePhotoImporter(
             latitude: null,
             longitude: null
         };
+        await images.completeIntent(intent, saved);
+        return saved;
     };
 }

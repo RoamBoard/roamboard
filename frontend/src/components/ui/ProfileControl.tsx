@@ -6,7 +6,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useId, useRef, useSyncExternalStore, type ReactNode } from "react";
-import { getCurrentUser, signOut, type AuthUser } from "@/lib/auth";
+import { observeCurrentUser, signOut, type AuthUser } from "@/lib/auth";
 import {
     getMockAuthState,
     getMockAuthStateServerSnapshot,
@@ -95,22 +95,7 @@ export default function ProfileControl({
     useEffect(() => {
         restoreMockStore();
         if (user) return;
-        const state = { active: true };
-        getCurrentUser()
-            .then((currentUser) => {
-                if (state.active) {
-                    setSessionUser(currentUser);
-                }
-            })
-            .catch(() => {
-                // Silently fallback to unauthenticated state if offline or 401
-                if (state.active) {
-                    setSessionUser(null);
-                }
-            });
-        return () => {
-            state.active = false;
-        };
+        return observeCurrentUser(setSessionUser);
     }, [user]);
 
     async function handleSignOut() {
