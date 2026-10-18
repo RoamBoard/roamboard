@@ -124,6 +124,7 @@ The saved-places file was later renamed to `008_saved_places.sql` when the branc
 were combined, because 005 is used by the image library. This is the same SQL and
 does not need to run again on the shared database. Fresh databases use the current
 filename after 007.
+
 ## Explicit Board destination - 2026-10-18
 
 Applied only 008_board_destination.sql to the configured shared development database after verifying both columns

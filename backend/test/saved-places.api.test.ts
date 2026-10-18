@@ -41,6 +41,19 @@ function setup(persistence?: SavedPlacesRepository) {
         }
     };
     const auth: AuthRepository = {
+        async listGuestAccounts() {
+            return [];
+        },
+        async createGuestAccount() {
+            return null;
+        },
+        async findGuestAccount() {
+            return null;
+        },
+        async findGooglePhotoStorageKey() {
+            return null;
+        },
+        async saveGoogleDefaults() {},
         async findUserById(id) {
             return users.find((user) => user.userId === id) ?? null;
         },

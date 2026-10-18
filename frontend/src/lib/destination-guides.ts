@@ -1,4 +1,5 @@
 import { findCountry } from "./countries";
+import { destinationSelectionMatches } from "./destination-search";
 import type { Destination } from "./destinations";
 import type { ProviderPhoto } from "./providers";
 
@@ -93,9 +94,12 @@ export function destinationPhotoUrl(value: string, width = 3200): string {
 
 export function getDestinationGuideInput(slug: string, params: SearchParams = {}): DestinationGuideInput | undefined {
     const fields = ["name", "country", "latitude", "longitude"];
-    if (fields.every((field) => params[field] === undefined)) {
+    if (params.name === undefined && params.latitude === undefined && params.longitude === undefined) {
         const shortcut = featuredDestinationGuides.find((destination) => destination.slug === slug);
         if (!shortcut) return undefined;
+        // Existing city links use country/id/type/lat/lon. Keep their namesake checks.
+        if (!destinationSelectionMatches({ countryCode: shortcut.country, coordinates: shortcut }, "place", params))
+            return undefined;
         const { name, country, latitude, longitude } = shortcut;
         return { name, country, latitude, longitude };
     }

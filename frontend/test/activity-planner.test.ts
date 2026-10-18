@@ -460,8 +460,8 @@ test("the image order chosen while creating an activity is preserved when its st
     assert.deepEqual(assigned, ["new-2", "new-1"]);
 });
 
-test("the map has chapter 03 between planning and details with six ordered navigation chapters", () => {
-    const page = NewBoardPage();
+test("the map has chapter 03 between planning and details with six ordered navigation chapters", async () => {
+    const page = await NewBoardPage({ searchParams: Promise.resolve({}) });
     const markup = renderToStaticMarkup(page.props.children);
     const chapterIds = ["board-basics", "day-plan", "board-map", "details-discovery", "board-preview", "publish"];
     for (const [index, id] of chapterIds.entries()) {
