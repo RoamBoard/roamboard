@@ -105,7 +105,19 @@ The Board creator now uses the versioned Board and image upload-intent endpoints
 
 The `/home` route follows Figma 4.0–4.1.3: a small Satoshi destination prompt centered in the space beside
 our universal sidebar, with generous whitespace and no duplicate wordmark. The field has a restrained focus/hover
-underline; its existing Kyoto, Paris and Copenhagen shortcuts appear on focus when the field is empty.
+typographic interaction without an underline. A separate, interruptible prompt presentation types the question once;
+the real input value remains owned by the search store. Reduced motion shows the complete question immediately.
+Kyoto, Paris and Copenhagen links enter individually with varied delays after the faster prompt or on early interaction.
+`RoamWorld` adds original SVG architectural studies in peripheral whitespace after focus, with no ambient typography
+or destination labels. `roam-landmarks.ts` lists the 30 editorial landmarks; five lazy modules under
+`features/destinations/landmarks/` contain their original paths and individual construction phases/directions.
+Only selected drawings mount. Its page-local `roam-ambient.ts` scheduler varies delays and regions, works through
+the full collection before refilling, avoids the previous six selections and favors a change in silhouette. It caps
+visible moments at three on wide desktop or two on narrow/mobile layouts. Large, thin-line studies use asymmetric
+edge crops that preserve identifying crowns, domes and spans. Drawings have varied size, drawing time
+and lifetime. The central search column stays protected. A nonempty query slows admissions and dims the artwork;
+mobile query moments use only the upper region. Blur dissolves the canvas; page hiding, selection, short viewports
+and reduced motion stop its work. Illustration assets are local SVG code and introduce no catalog or provider calls.
 Suggestions are typographic, show at most three results and retain smaller country/type labels. The URL remains `/home`.
 Debounced, cancellable search forwards destination queries to Mapbox without a hardcoded catalog or geographic bias.
 `src/lib/destination-search-store.ts` owns request cancellation, debounce, results, keyboard selection and same-query

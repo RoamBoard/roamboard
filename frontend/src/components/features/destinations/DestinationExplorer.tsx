@@ -8,6 +8,8 @@ import { AnimatePresence, motion, useAnimationControls, useReducedMotion } from 
 import { destinationPages, destinationPageHref } from "@/data/destination-atlas";
 import { resolveDestinationSearchHref } from "@/lib/destination-search";
 import { useDestinationTransition } from "./DestinationTransitionProvider";
+import RoamWorld from "./RoamWorld";
+import { createRoamPromptStore, ROAM_PROMPT } from "@/lib/roam-prompt";
 import type { Destination } from "@/lib/destinations";
 import {
     createDestinationSearchStore,
@@ -21,7 +23,25 @@ export default function DestinationExplorer() {
     const controls = useAnimationControls();
     const transition = useDestinationTransition();
     const [actions] = useState(createDestinationSearchStore);
+    const [prompt] = useState(createRoamPromptStore);
     const state = useSyncExternalStore(actions.subscribe, actions.getSnapshot, actions.getSnapshot);
+    const promptText = useSyncExternalStore(prompt.subscribe, prompt.getSnapshot, prompt.getSnapshot);
+
+    useEffect(() => {
+        const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
+        const update = () => {
+            if (document.hidden) prompt.dispose();
+            else prompt.start({ reducedMotion: preference.matches });
+        };
+        update();
+        document.addEventListener("visibilitychange", update);
+        preference.addEventListener("change", update);
+        return () => {
+            prompt.dispose();
+            document.removeEventListener("visibilitychange", update);
+            preference.removeEventListener("change", update);
+        };
+    }, [prompt]);
 
     useEffect(() => {
         actions.resume();
@@ -44,6 +64,8 @@ export default function DestinationExplorer() {
             leaving={transition?.opening ?? false}
             controls={controls}
             reduced={Boolean(reduced)}
+            promptText={promptText}
+            onEngage={() => prompt.yield()}
             onNavigate={navigate}
         />
     );
@@ -58,6 +80,8 @@ type DestinationExplorerContentProps = {
     reduced: boolean;
     controls: ReturnType<typeof useAnimationControls>;
     onNavigate: (href: DestinationNavigationTarget, name?: string) => void;
+    promptText?: string;
+    onEngage?: () => void;
 };
 
 export function DestinationExplorerContent({
@@ -66,7 +90,9 @@ export function DestinationExplorerContent({
     leaving,
     reduced,
     controls,
-    onNavigate
+    onNavigate,
+    promptText = ROAM_PROMPT,
+    onEngage
 }: DestinationExplorerContentProps) {
     const { query, results, active, open, loading, searched, error } = state;
     const showSuggestions = open && query.trim().length >= 2;
@@ -84,10 +110,14 @@ export function DestinationExplorerContent({
     }
 
     return (
-        <section className="font-body grid min-h-dvh min-w-0 place-items-center px-5 md:px-10" aria-label="Roamboard">
+        <section
+            className="font-body relative isolate grid min-h-dvh min-w-0 place-items-center overflow-hidden px-5 md:px-10"
+            aria-label="Roamboard"
+        >
+            <RoamWorld focused={open} typing={Boolean(query.trim())} leaving={leaving} reduced={reduced} />
             <motion.div
                 animate={controls}
-                className="relative w-full max-w-[550px]"
+                className="relative z-10 w-full max-w-[550px]"
                 inert={leaving}
                 onBlur={(event) => {
                     if (!event.currentTarget.contains(event.relatedTarget)) actions.setOpen(false);
@@ -95,11 +125,16 @@ export function DestinationExplorerContent({
             >
                 <h1 className="sr-only">Roamboard — find your destination</h1>
                 <form role="search" aria-label="Destination search" onSubmit={submit} className="relative">
-                    <div className="group focus-within:border-line hover:border-line/50 relative flex min-h-20 items-center border-b border-transparent transition-colors motion-reduce:transition-none">
+                    <motion.div
+                        className="group relative flex min-h-20 items-center"
+                        initial={false}
+                        animate="rest"
+                        whileHover={reduced ? undefined : "approach"}
+                    >
                         <label htmlFor="destination-search" className="sr-only">
                             Search destinations
                         </label>
-                        <input
+                        <motion.input
                             id="destination-search"
                             role="combobox"
                             aria-autocomplete="list"
@@ -112,9 +147,17 @@ export function DestinationExplorerContent({
                             maxLength={100}
                             spellCheck={false}
                             value={query}
-                            placeholder="so, where is it you wish to go?"
-                            className="placeholder:text-muted-foreground text-16 md:text-20 w-full min-w-0 bg-transparent px-6 py-7 text-center outline-none focus-visible:outline-1 focus-visible:-outline-offset-4"
-                            onFocus={() => actions.setOpen(true)}
+                            placeholder={ROAM_PROMPT}
+                            initial={false}
+                            whileHover={reduced ? undefined : { letterSpacing: "0.015em" }}
+                            animate={{ letterSpacing: !reduced && open ? "0.008em" : "0em" }}
+                            transition={reduced ? { duration: 0 } : { type: "spring", stiffness: 180, damping: 28 }}
+                            className={`text-16 max-[360px]:text-14 md:text-20 focus-visible:outline-foreground/20 w-full min-w-0 cursor-text rounded-sm bg-transparent py-7 text-center outline-none focus-visible:outline-1 focus-visible:-outline-offset-4 ${query ? "px-6" : "px-0"} ${open ? "placeholder:text-muted-foreground" : "placeholder:text-transparent"}`}
+                            onPointerDown={onEngage}
+                            onFocus={() => {
+                                onEngage?.();
+                                actions.setOpen(true);
+                            }}
                             onChange={(event) => actions.setQuery(event.target.value)}
                             onKeyDown={(event) => {
                                 if (event.nativeEvent?.isComposing) return;
@@ -128,6 +171,24 @@ export function DestinationExplorerContent({
                                 }
                             }}
                         />
+                        {!query && !open && (
+                            <div
+                                aria-hidden="true"
+                                className="pointer-events-none absolute inset-0 flex items-center justify-center px-6"
+                            >
+                                <motion.span
+                                    className="text-muted-foreground group-hover:text-foreground/80 text-16 max-[360px]:text-14 md:text-20 relative whitespace-nowrap transition-colors duration-500 motion-reduce:transition-none"
+                                    variants={{
+                                        rest: { letterSpacing: "0em" },
+                                        approach: { letterSpacing: "0.015em" }
+                                    }}
+                                    transition={{ type: "spring", stiffness: 180, damping: 28 }}
+                                >
+                                    <span className="invisible">{ROAM_PROMPT}</span>
+                                    <span className="absolute inset-0 text-left">{promptText}</span>
+                                </motion.span>
+                            </div>
+                        )}
                         {query.trim() ? (
                             <button
                                 type="submit"
@@ -138,7 +199,7 @@ export function DestinationExplorerContent({
                                 <ArrowRight size={16} strokeWidth={1.2} aria-hidden="true" />
                             </button>
                         ) : null}
-                    </div>
+                    </motion.div>
                     <AnimatePresence>
                         {showSuggestions && (
                             <motion.div
@@ -200,33 +261,63 @@ export function DestinationExplorerContent({
                         <p className="text-muted-foreground text-12 mt-3 text-center leading-4">{error}</p>
                     )}
                 </form>
-                <nav
-                    className={`text-12 absolute inset-x-0 top-full mt-4 flex flex-wrap justify-center gap-x-6 gap-y-1 leading-4 ${showSuggestions || !open ? "invisible" : ""}`}
+                <motion.nav
+                    initial={false}
+                    animate={promptText === ROAM_PROMPT || open ? "visible" : "hidden"}
+                    className={`text-12 absolute inset-x-0 top-full mt-6 text-center leading-4 ${showSuggestions ? "invisible" : ""}`}
                     aria-label="Suggested destinations"
-                    inert={showSuggestions || !open}
+                    inert={showSuggestions || (promptText !== ROAM_PROMPT && !open)}
                 >
-                    {destinationPages.map((destination) => (
-                        <Link
-                            key={destination.slug}
-                            href={destinationPageHref(destination)}
-                            onClick={(event) => {
-                                if (
-                                    event.button !== 0 ||
-                                    event.metaKey ||
-                                    event.ctrlKey ||
-                                    event.shiftKey ||
-                                    event.altKey
-                                )
-                                    return;
-                                event.preventDefault();
-                                if (!leaving) onNavigate(destinationPageHref(destination), destination.name);
-                            }}
-                            className="text-muted-foreground hover:text-foreground inline-flex min-h-11 items-center underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4"
-                        >
-                            {destination.name}
-                        </Link>
-                    ))}
-                </nav>
+                    <div className="flex flex-wrap justify-center gap-x-6 gap-y-1">
+                        {destinationPages.map((destination, index) => (
+                            <motion.div
+                                key={destination.slug}
+                                className="relative"
+                                variants={{ hidden: { opacity: 0, y: reduced ? 0 : 5 }, visible: { opacity: 1, y: 0 } }}
+                                transition={{
+                                    duration: reduced ? 0 : [0.58, 0.76, 0.64][index],
+                                    delay: reduced ? 0 : [0.04, 0.22, 0.49][index],
+                                    ease: [0.22, 1, 0.36, 1]
+                                }}
+                            >
+                                {index > 0 && (
+                                    <span
+                                        aria-hidden="true"
+                                        className="text-muted-foreground/50 absolute top-1/2 -left-3 -translate-y-1/2"
+                                    >
+                                        ·
+                                    </span>
+                                )}
+                                <Link
+                                    href={destinationPageHref(destination)}
+                                    onClick={(event) => {
+                                        if (
+                                            event.button !== 0 ||
+                                            event.metaKey ||
+                                            event.ctrlKey ||
+                                            event.shiftKey ||
+                                            event.altKey
+                                        )
+                                            return;
+                                        event.preventDefault();
+                                        if (!leaving) onNavigate(destinationPageHref(destination), destination.name);
+                                    }}
+                                    className="group text-muted-foreground hover:text-foreground focus-visible:outline-foreground/40 relative inline-flex min-h-11 items-center rounded-sm transition-colors duration-300 focus-visible:outline-1 focus-visible:outline-offset-4 motion-reduce:transition-none"
+                                >
+                                    <span className="transition-transform duration-500 ease-out group-hover:-translate-x-1 group-focus-visible:-translate-x-1 group-active:translate-x-0 motion-reduce:transform-none motion-reduce:transition-none">
+                                        {destination.name}
+                                    </span>
+                                    <ArrowRight
+                                        size={11}
+                                        strokeWidth={1}
+                                        aria-hidden="true"
+                                        className="absolute -right-3 translate-x-0 opacity-0 transition-all duration-500 group-hover:translate-x-1 group-hover:opacity-100 group-focus-visible:translate-x-1 group-focus-visible:opacity-100 motion-reduce:transform-none motion-reduce:transition-none"
+                                    />
+                                </Link>
+                            </motion.div>
+                        ))}
+                    </div>
+                </motion.nav>
             </motion.div>
             <p role="status" className="sr-only">
                 {leaving
