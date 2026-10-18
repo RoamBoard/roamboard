@@ -4,7 +4,7 @@ import { Fragment, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AtSign, Check } from "lucide-react";
+import { AtSign, Check, Pencil } from "lucide-react";
 import {
     apiOrigin,
     sendFriendRequest,
@@ -190,8 +190,9 @@ export default function ProfileHero({ profile, stats, isOwner = true, friendship
                             <div className="flex items-center gap-2">
                                 <Link
                                     href="/settings"
-                                    className="border-line text-12 text-muted-foreground hover:text-foreground hover:border-foreground font-body inline-flex h-7 cursor-pointer items-center justify-center rounded-[2px] border px-3.5 font-medium transition-colors"
+                                    className="border-line text-12 text-muted-foreground hover:text-foreground hover:border-foreground font-body inline-flex h-7 cursor-pointer items-center justify-center gap-1.5 rounded-[2px] border px-3.5 font-medium transition-colors"
                                 >
+                                    <Pencil size={12} strokeWidth={2} className="shrink-0" />
                                     edit profile
                                 </Link>
                             </div>
