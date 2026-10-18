@@ -5,11 +5,9 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { useReducedMotion } from "motion/react";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { createDraftBoardsStore, filterDraftBoards, type DraftBoardsState } from "@/lib/draft-boards-store";
-import { fromBoardDocument, type BoardDocument, type DraftSummary } from "@/lib/board-creator-api";
-import { createBoardPreview } from "@/lib/board-creation-preview";
-import { boardTitleLines } from "@/lib/my-boards";
-import CollageBoardCard from "./cards/CollageBoardCard";
-import { BoardCardGraphic, BoardCardPhoto, BoardCardTitle } from "./cards/BoardCardParts";
+import type { BoardDocument, DraftSummary } from "@/lib/board-creator-api";
+import { toDraftPhotoBoardCard } from "@/lib/photo-board-card";
+import PhotoBoardCard from "./cards/PhotoBoardCard";
 
 const actionClass =
     "min-h-11 inline-flex items-center underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 disabled:opacity-40";
@@ -23,93 +21,35 @@ function savedDate(value: string) {
         : "Date unavailable";
 }
 
-function DraftCollage({ document }: { document: BoardDocument }) {
-    const restored = fromBoardDocument(document);
-    const preview = createBoardPreview(
-        {
-            title: document.title,
-            description: document.description ?? "",
-            status: "draft",
-            visibility: document.visibility,
-            coverImageId: document.coverImageId,
-            tags: document.tags.map((tag) => tag.name),
-            days: restored.days,
-            images: restored.images
-        },
-        restored.confirmedPhotoPins
-    );
+// Reuse the first five hydrated documents; the rest of the library stays summary-only.
+function DraftTile({ item, document }: { item: DraftSummary; document?: BoardDocument }) {
+    const board = toDraftPhotoBoardCard(item, document);
     return (
-        <CollageBoardCard
-            board={{ ...preview.card, id: String(document.boardId) }}
-            preview
-            href={`/boards/drafts/${document.boardId}`}
-        />
-    );
-}
-
-// Summary-only tiles keep the library light: no document fetch or invented country/author data.
-function DraftTile({ item }: { item: DraftSummary }) {
-    const title = item.title.trim() || "Untitled Board";
-    const summary = {
-        id: String(item.boardId),
-        title,
-        titleLines: boardTitleLines(title, 10).map((line) => line.replace(/[\uD800-\uDBFF](?=…|$)/g, "")),
-        author: "",
-        destination: "",
-        destinationLabel: ""
-    };
-    const cover = item.coverImageUrl
-        ? new URL(item.coverImageUrl, process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001").toString()
-        : null;
-    return (
-        <Link
-            href={`/boards/drafts/${item.boardId}`}
-            aria-label={`Edit draft: ${title}`}
-            className="group mx-auto block w-full max-w-[180px] focus-visible:outline-2 focus-visible:outline-offset-8"
-        >
-            <div className="@container relative aspect-[180/340] transition-transform duration-200 motion-safe:group-hover:-translate-y-1 motion-reduce:transition-none">
-                {cover ? (
-                    <BoardCardPhoto
-                        image={{ src: cover, alt: `Cover of ${title}` }}
-                        sizes="131px"
-                        className="absolute! top-px left-[13.333cqw] h-[30cqw] w-[72.778cqw] rounded-b-[50%_100%]"
-                    />
-                ) : (
-                    <div
-                        aria-hidden="true"
-                        className="bg-faint border-line absolute top-px left-[13.333cqw] h-[30cqw] w-[72.778cqw] rounded-b-[50%_100%] border border-dashed"
-                    />
-                )}
-                <BoardCardTitle
-                    board={summary}
-                    className="font-display absolute top-[36.111cqw] left-0 w-full text-center text-[17.778cqw] leading-[.9] font-bold"
+        <div className="mx-auto w-full max-w-[264px]">
+            <div className="transition-transform duration-200 motion-safe:hover:-translate-y-1 motion-reduce:transition-none">
+                <PhotoBoardCard
+                    board={board}
+                    ownership="owner"
+                    details
+                    href={`/boards/drafts/${item.boardId}`}
+                    imageSizes="(max-width: 640px) 75vw, 264px"
                 />
-                <p className="text-muted-foreground absolute top-[72cqw] w-full text-center text-[6cqw]">
-                    Draft · only you
-                </p>
-                <p className="text-muted-foreground absolute top-[94cqw] w-full text-center text-[6cqw]">
+            </div>
+            <div className="text-muted-foreground mt-5 flex flex-wrap items-center justify-between gap-3 text-[11px] leading-relaxed">
+                <span>
                     Last saved
                     <br />
                     <time dateTime={item.updatedAt}>{savedDate(item.updatedAt)}</time>
-                </p>
-                <p className="text-muted-foreground absolute top-[164cqw] w-full text-center text-[7cqw] underline underline-offset-4">
-                    Edit draft
-                </p>
-                <BoardCardGraphic
-                    asset="v2-tokyo-line32.svg"
-                    className="bg-card-line absolute top-px left-0 h-px w-full"
-                />
-                <BoardCardGraphic
-                    asset="v2-tokyo-line33.svg"
-                    className="bg-card-line absolute top-[82.5cqw] left-[22.222cqw] h-px w-[55.556cqw]"
-                />
-                <BoardCardGraphic
-                    asset="v2-tokyo-line34.svg"
-                    className="bg-card-line absolute top-[145.778cqw] left-[36.111cqw] h-px w-[27.778cqw]"
-                />
+                </span>
+                <Link
+                    href={`/boards/drafts/${item.boardId}`}
+                    aria-label={`Edit draft: ${board.title}`}
+                    className={actionClass}
+                >
+                    Edit draft ↗
+                </Link>
             </div>
-            <span className="sr-only">{title}</span>
-        </Link>
+        </div>
     );
 }
 
@@ -241,23 +181,26 @@ export function DraftBoardListContent({
                                 <CarouselItem
                                     key={item.boardId}
                                     aria-label={`${index + 1} of ${recent.length}: ${item.title || "Untitled Board"}`}
-                                    className="border-line mr-6 basis-full border-r pr-6 sm:mr-12 sm:basis-[700px] sm:pr-12"
+                                    className="border-line mr-6 basis-full border-r pr-6 sm:mr-10 sm:basis-[680px] sm:pr-10"
                                 >
-                                    <div className="grid min-w-0 items-center gap-3 sm:grid-cols-[minmax(0,440px)_minmax(0,1fr)] sm:gap-6">
-                                        <div className="w-full max-w-[440px]">
-                                            {state.documents[item.boardId] ? (
-                                                <DraftCollage document={state.documents[item.boardId]} />
-                                            ) : (
-                                                <div className="border-line bg-faint/30 flex aspect-[440/560] flex-col items-center justify-center gap-4 border px-6 text-center">
-                                                    <p className="font-display text-32 max-w-full break-words">
-                                                        {item.title || "Untitled Board"}
-                                                    </p>
-                                                    <p className="text-muted-foreground text-13">
-                                                        {state.failedIds.includes(item.boardId)
-                                                            ? "Preview unavailable. Your saved draft can still be opened."
-                                                            : "Loading draft preview…"}
-                                                    </p>
-                                                </div>
+                                    <div className="grid min-w-0 items-center gap-6 sm:grid-cols-[minmax(0,360px)_minmax(0,1fr)] sm:gap-8">
+                                        <div className="w-full max-w-[360px]">
+                                            <PhotoBoardCard
+                                                board={toDraftPhotoBoardCard(item, state.documents[item.boardId])}
+                                                ownership="owner"
+                                                details
+                                                href={`/boards/drafts/${item.boardId}`}
+                                                imageSizes="(max-width: 640px) 80vw, 360px"
+                                            />
+                                            {!state.documents[item.boardId] && (
+                                                <p
+                                                    role="status"
+                                                    className="text-muted-foreground mt-3 text-xs leading-relaxed"
+                                                >
+                                                    {state.failedIds.includes(item.boardId)
+                                                        ? "Preview unavailable. Your saved draft can still be opened."
+                                                        : "Loading draft preview…"}
+                                                </p>
                                             )}
                                         </div>
                                         <div className="border-line mb-8 flex min-w-0 flex-col items-start border-l pl-5 sm:mb-0">
@@ -331,10 +274,13 @@ export function DraftBoardListContent({
                         {matches.length === 1 ? "draft" : "drafts"} loaded{state.hasMore ? " · more available" : ""}
                     </p>
                     {matches.length ? (
-                        <ul className="border-line mt-12 grid grid-cols-1 border-t sm:grid-cols-2 xl:grid-cols-4">
+                        <ul className="border-line mt-12 grid grid-cols-1 border-t sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                             {matches.map((item) => (
-                                <li key={item.boardId} className="border-line border-r border-b px-5 py-12 sm:px-10">
-                                    <DraftTile item={item} />
+                                <li
+                                    key={item.boardId}
+                                    className="border-line border-r border-b px-4 py-8 sm:px-6 sm:py-10"
+                                >
+                                    <DraftTile item={item} document={state.documents[item.boardId]} />
                                 </li>
                             ))}
                         </ul>

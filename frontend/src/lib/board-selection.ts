@@ -1,17 +1,20 @@
 import type { BoardDocument, DraftSummary } from "./board-creator-api";
-import type { BoardCardImage, CollageBoardCardData, PhotoBoardCardData } from "../types/board-card";
+import type { CollageBoardCardData, PhotoBoardCardData, PhotoBoardCardProps } from "../types/board-card";
+import { toPhotoBoardCard, toSummaryPhotoBoardCard } from "./photo-board-card";
 import { boardTitleLines } from "./my-boards";
 import { findCountry } from "./countries";
 
 export type SelectionSummary = DraftSummary & {
     status: "draft" | "published";
     source: "owned" | "shared";
+    visibility?: BoardDocument["visibility"];
 };
 export type SelectionFilter = "all" | "draft" | "published";
 export type SelectionBoard = {
     summary: SelectionSummary;
     collage: CollageBoardCardData;
-    photo: (PhotoBoardCardData & { image: BoardCardImage }) | null;
+    photo: PhotoBoardCardData;
+    ownership: PhotoBoardCardProps["ownership"];
     document?: BoardDocument;
     destination: string;
 };
@@ -114,6 +117,12 @@ export function toSelectionBoard(summary: SelectionSummary, document?: BoardDocu
         document,
         collage,
         destination,
-        photo: cover ? { ...collage, titleLines: boardTitleLines(title, 16), image: cover } : null
+        photo: document ? toPhotoBoardCard(document) : toSummaryPhotoBoardCard(summary),
+        ownership:
+            summary.source === "owned" || document?.permissions.canManageBoard
+                ? "owner"
+                : document
+                  ? "other"
+                  : "unknown"
     };
 }

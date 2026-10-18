@@ -1,6 +1,6 @@
 # V4 frontend–backend handoff
 
-Stages 2 and 3 Batch 1 — shared enhancement and initial gallery adoption. Updated 2026-10-18.
+Stages 2 and 3 Batches 1–2 — shared enhancement and gallery adoption. Updated 2026-10-18.
 No backend contracts, endpoints or schemas changed. Further Stage 3 batches await separate review.
 
 ## Already implemented and connected
@@ -19,6 +19,11 @@ No backend contracts, endpoints or schemas changed. Further Stage 3 batches awai
   remain labelled editorial samples with no persistence, account controls, invented Board links or save counts.
   No new blocking backend capability was encountered in this batch.
 
+- Batch 2 Continue and Draft selection use the same canonical V4 adapter. Existing draft/published owner-list
+  endpoints, first-five preview reads, separate pagination and targeted retries remain unchanged. Continue editor
+  links still require a fresh document's `canEditContent`; drafts retain `/boards/drafts/{id}` and published edits
+  `/boards/{id}/edit`. No extra per-card requests or backend writes were added.
+
 ## Existing capabilities requiring later frontend adoption
 
 - `/api/v1/users/me/saved-boards` already supplies accessible saved membership and owner/title/cover summaries.
@@ -36,6 +41,12 @@ No backend contracts, endpoints or schemas changed. Further Stage 3 batches awai
   `PhotoBoardSave.state` supports `unknown` and disables toggling until membership is resolved. Summary enrichment
   could remove that limitation at scale; response shape and access semantics require agreement. V4 makes no extra
   document/list requests solely to infer that an unlisted Board is unsaved.
+
+- **Optional metadata on summary-only selection cards:** owner-list summaries do not include authors, tags,
+  confirmed destinations or itinerary length. `toSummaryPhotoBoardCard` / `toDraftPhotoBoardCard` omit them; existing
+  preview documents enrich only the cards already hydrated. If metadata reveal is required across every loaded
+  library card without additional reads, enrich the existing `GET /api/v1/boards?scope=drafts|published` responses.
+  This is optional, not blocking. Published-summary visibility is consumed when supplied; draft access remains owner-only.
 
 ## Contract decision requiring discussion
 
@@ -58,3 +69,9 @@ No backend contracts, endpoints or schemas changed. Further Stage 3 batches awai
   The local owned-list failure displayed labelled samples; canonical owner controls and real navigation were verified
   through production-component/API-helper tests rather than claimed as live account verification. Physical touch
   hardware was unavailable; whole-card disclosure and first-touch preview before linked navigation are independently tested alongside pointer/keyboard controls. The visible Details/Close control was removed following Batch 1 feedback.
+
+- Batch 2 live routes still returned API errors locally. Browser checks use the real routes for error/retry feedback
+  and a development-only, labelled `/dev/board-selection` presentation harness for populated galleries, dark/light
+  layouts, keyboard/tilt/promotion and draft carousel behavior. Fixture links cannot open or save account Boards.
+  Real document restoration, fresh permissions, hydration limits and retry/pagination are verified through the existing
+  API helpers with controlled responses; live persisted editor restoration remains unverified until the API is available.

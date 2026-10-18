@@ -76,6 +76,7 @@ export type PhotoBoardCardProps = {
     // Galleries own selection; navigation remains a separate action in that context.
     selection?: {
         selected: boolean;
+        label?: string;
         onSelect: (event: MouseEvent<HTMLButtonElement>) => void;
         tabIndex?: number;
     };

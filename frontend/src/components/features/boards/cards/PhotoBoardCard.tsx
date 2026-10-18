@@ -143,7 +143,7 @@ export function PhotoBoardCardContent({
         <>
             <BoardCardTitle
                 board={board}
-                className={`font-body absolute top-[5.75cqw] left-[6.5cqw] line-clamp-2 max-w-[87cqw] text-[10cqw] leading-none font-bold [overflow-wrap:anywhere] ${ownerControl || saveControl ? "pr-[10cqw]" : ""}`}
+                className={`font-body absolute top-[5.75cqw] left-[6.5cqw] line-clamp-2 max-w-[87cqw] text-[10cqw] leading-none font-bold [overflow-wrap:anywhere] ${ownerControl || saveControl ? "pr-[max(44px,10cqw)]" : ""}`}
             />
             {board.author && (
                 <p
@@ -225,7 +225,7 @@ export function PhotoBoardCardContent({
                     <button
                         type="button"
                         data-board-selection=""
-                        aria-label={`Select ${board.title}`}
+                        aria-label={selection.label ?? `Select ${board.title}`}
                         aria-pressed={selection.selected}
                         aria-expanded={hasDetails ? expanded : undefined}
                         aria-controls={hasDetails ? detailsId : undefined}

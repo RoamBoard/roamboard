@@ -1,6 +1,35 @@
-import type { BoardDocument } from "./board-creator-api";
+import type { BoardDocument, DraftSummary } from "./board-creator-api";
 import type { CollageBoardCardData, PhotoBoardCardData } from "../types/board-card";
 import { findCountry } from "./countries";
+
+// List summaries do not supply author, itinerary or tags. Keep those absent until an existing preview read resolves.
+export function toSummaryPhotoBoardCard(
+    summary: DraftSummary & Pick<PhotoBoardCardData, "status" | "visibility">
+): PhotoBoardCardData {
+    const title = summary.title.trim() || "Untitled Board";
+    return {
+        id: String(summary.boardId),
+        title,
+        author: "",
+        destination: "",
+        destinationLabel: "",
+        status: summary.status,
+        visibility: summary.visibility,
+        image: summary.coverImageUrl
+            ? {
+                  src: new URL(
+                      summary.coverImageUrl,
+                      process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"
+                  ).toString(),
+                  alt: `Cover of ${title}`
+              }
+            : undefined
+    };
+}
+
+export function toDraftPhotoBoardCard(summary: DraftSummary, document?: BoardDocument): PhotoBoardCardData {
+    return document ? toPhotoBoardCard(document) : toSummaryPhotoBoardCard({ ...summary, status: "draft" });
+}
 
 // Existing editorial fixtures keep their content, without carrying V1 typography or fictional save totals into V4.
 export function toEditorialPhotoBoardCard(board: CollageBoardCardData): PhotoBoardCardData {

@@ -220,9 +220,9 @@ Draft and My Boards navigation remain available; remixing remains
 explicitly deferred. Discover links to `/discover`. The shared sidebar is unchanged.
 
 The Create draft selection page (`/boards/drafts`) uses an editorial heading and title search, an installed
-shadcn/Embla recent-drafts carousel, and a ruled compact library. Search covers loaded summary titles only;
+shadcn/Embla recent-drafts carousel, and a ruled V4 photographic library. Search covers loaded summary titles only;
 explicit pagination remains available while searching. Only the first page's five most recent drafts request full
-documents for honest collage previews; library tiles use summary covers and never infer destinations or authors.
+documents for V4 previews; the library reuses those documents and otherwise uses summary covers without inferring destinations, authors or itinerary metadata. Empty drafts use the shared V4 architectural cover fallback; all owner draft cards show owner-only access, regardless of intended publication visibility.
 Drafts have no bookmark or Highlights controls. Preview failures retain all summary links and support targeted
 retries. `draft-boards-store.ts` owns page-local request guards, pagination de-duplication, and stale-response
 protection; it never substitutes sample data. Reopening still uses `/boards/drafts/[boardId]` and the shared
@@ -234,10 +234,9 @@ loaded-title search scope. `board-selection-store.ts` clears cached documents on
 and checks fresh document identity and `canEditContent` before showing an editor link. Drafts reopen at
 `/boards/drafts/[boardId]`; published Boards reopen at `/boards/[boardId]/edit`, preserving ID, revision, and status.
 Production APIs cannot enumerate shared editable Boards; a shared-link/ID lookup checks the canonical document
-permission instead. No developer listing endpoint is used. The shared presentation uses a Motion V1 collage
-focus gallery and a photo-card collection that promotes selected Boards into the same gallery, without duplicates.
+permission instead. No developer listing endpoint is used. The shared presentation uses a Motion V4 photographic focus gallery and a smaller V4 collection that promotes selected Boards into the same gallery, without duplicates. It retains spring rearrangement, mouse-only 3D tilt, keyboard selection, animated annotations and fresh-document editor gates. V4 selection controls share the card surface; inactive featured cards leave the tab order. Ownership comes from the owner-list scope or canonical management permission; shared edit access does not imply ownership.
 V1=`collage`, V2=`compact`, V3=`landscape`, and V4=`photo` retain their existing names and identifiers.
-V4 is the approved primary card direction. Stage 2 extends V4; migration of existing V1/V2 surfaces awaits Stage 3 approval.
+V4 is the approved primary card direction. Stage 3 Batch 2 migrates Continue and Draft selection; creator preview and bespoke cards remain pending their own batches.
 The Remix page remains an unavailable state. The production account-saved Board list now exists, but this page
 does not consume it yet; persistent remix creation is still unavailable. Session preview bookmarks are separate
 from account saves. Completing remix requires frontend saved-list integration and agreed independent-copy/media
@@ -417,8 +416,7 @@ rules until the backend team agrees on changes; do not label restricted publishe
 existing save/unsave services. Only server-confirmed writes change saved state. Unknown membership is disabled rather
 than assumed unsaved. `/dev/boards` includes this connected V4 preview inside expanded records; documents are not
 fetched just to populate cards. `/dev/board-cards` retains all variants and adds labelled V4 control/size/metadata studies.
-Stage 3 Batch 1 migrates the My Boards featured/Recently Created/Archive and destination-story galleries. Continue,
-Draft selection, creator preview and bespoke cards remain pending their separate approval batches. Gallery `selection`
+Stage 3 Batches 1–2 migrate the My Boards featured/Recently Created/Archive, destination-story galleries, Continue and Draft selection. Creator preview and bespoke cards remain pending their separate approval batches. Gallery `selection`
 uses a native V4 card button that also toggles metadata when selected; navigation remains a separate gallery action. Inactive cards leave
 the tab order, save controls keep their own keyboard interaction, and pan selection returns focus to the gallery region. Linked V4 cards preview metadata on the first touch and navigate on the next; mouse and keyboard retain normal link activation. There is no visible Details/Close button.
 See [V4 backend handoff](../docs/V4_BACKEND_HANDOFF.md) for cumulative gaps.
@@ -494,3 +492,5 @@ Tests are a first-class deliverable when a feature needs them, not self-validati
 If staffing makes separation impossible, record that limitation in the handoff and require a separate review of test intent and coverage before treating the feature as verified. Do not weaken tests to match an implementation; change the implementation or explicitly revise the agreed contract. Use the configured tests, lint, TypeScript, build, and manual/browser checks and report the remaining test gap honestly.
 
 Before finishing, review the diff for unrelated changes and generated files. Explain what changed and what was checked in short, plain language a student can follow. State any remaining limitations.
+
+`/dev/board-selection` is a development-only visual review of the production Continue/Draft presenters. Its labelled fixtures support loading, missing-cover and denied-access compositions; fixture editor links are intercepted, and no Board data is requested or persisted. It is unavailable in production. Real requests, restoration, permissions, pagination and retry remain covered by the page/store/API-helper tests.

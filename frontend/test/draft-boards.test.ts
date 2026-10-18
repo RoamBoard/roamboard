@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import { createDraftBoardsStore, filterDraftBoards } from "../src/lib/draft-boards-store";
 import { DraftBoardListContent } from "../src/components/features/boards/DraftBoardList";
+import { toDraftPhotoBoardCard } from "../src/lib/photo-board-card";
 import {
     fromBoardDocument,
     loadBoardDocument,
@@ -505,4 +506,112 @@ test("reopening and updating a selected draft preserves its revision and child I
     assert.deepEqual(write.days[0].activities[0].uploadedImageIds, [42]);
     assert.equal(write.coverImageId, 42);
     assert.equal(write.title, "Updated draft title");
+});
+
+function v4DraftCards(markup: string) {
+    return [...markup.matchAll(/<article\b[^>]*style="aspect-ratio:400 \/ 500"[^>]*>[\s\S]*?<\/article>/g)].map(
+        (match) => match[0]
+    );
+}
+
+test("draft V4 adaptation keeps full canonical metadata and treats summary-only fields as unknown", () => {
+    const item = summary(101, "A long draft title that must not be abbreviated in the shared V4 data");
+    const loaded = { ...document(101), title: item.title, visibility: "public" as const };
+    const board = toDraftPhotoBoardCard(item, loaded);
+    assert.equal(board.title, item.title);
+    assert.equal(board.author, "owner");
+    assert.equal(board.destination, "Stockholm, Sweden");
+    assert.deepEqual(board.tags, ["Museums"]);
+    assert.equal(board.durationDays, 1);
+    assert.equal(board.description, "Draft notes 101");
+    assert.equal(board.status, "draft");
+    assert.equal(
+        board.visibility,
+        "public",
+        "Configured publication visibility is preserved as data, not current draft access"
+    );
+    assert.match(board.image?.src ?? "", /\/images\/101\/content\?variant=display$/);
+    assert.equal(board.savedCount, undefined);
+    const summaryOnly = toDraftPhotoBoardCard(item);
+    assert.equal(summaryOnly.title, item.title);
+    assert.equal(summaryOnly.status, "draft");
+    assert.equal(summaryOnly.author, "");
+    assert.equal(summaryOnly.destination, "");
+    assert.equal(summaryOnly.destinationLabel, "");
+    assert.equal(summaryOnly.visibility, undefined);
+    assert.equal(summaryOnly.durationDays, undefined);
+    assert.ok(!summaryOnly.tags?.length);
+    assert.ok(!summaryOnly.description);
+    assert.equal(summaryOnly.savedCount, undefined);
+    assert.ok(summaryOnly.image?.src.includes("/api/v1/images/101/content"));
+    const noCover = toDraftPhotoBoardCard({ ...item, coverImageUrl: null });
+    assert.equal(noCover.image, undefined);
+});
+
+test("recent and all-draft cards render V4 with owner-only access while hydration stays limited to the first five", async (t) => {
+    const calls: string[] = [];
+    t.mock.method(globalThis, "fetch", async (input: string, init: RequestInit) => {
+        const url = new URL(input);
+        calls.push(url.pathname + url.search);
+        assert.equal(init.credentials, "include");
+        if (url.pathname === "/api/v1/boards")
+            return list(Array.from({ length: 8 }, (_, index) => ({ ...summary(index + 1), coverImageUrl: null })));
+        const boardId = Number(url.pathname.split("/").at(-1));
+        return Response.json({
+            data: { ...document(boardId), visibility: "public", coverImageId: null, imageIds: [], images: [] }
+        });
+    });
+    const store = createDraftBoardsStore();
+    await store.load();
+    const markup = renderToStaticMarkup(createElement(DraftBoardListContent, presenter(store)));
+    const cards = v4DraftCards(markup);
+    assert.equal(cards.length, 13, "Five recent cards and eight library cards all use the shared V4 frame");
+    for (const card of cards) {
+        assert.match(card, /Draft — only you can view this Board/);
+        assert.match(card, /No cover photo/);
+        assert.doesNotMatch(card, /aria-label="(?:Public|Friends|Restricted access) —|aria-label="(?:Save|Unsave) /);
+        assert.doesNotMatch(card, /[\d,]+ saves|Destination not added|globe\.svg|>(?:Details|Close)(?:<|$)/);
+    }
+    assert.match(cards[0], /by owner/);
+    assert.match(cards[0], /Stockholm, Sweden/);
+    assert.match(cards[0], /Museums/);
+    const summaryOnly = cards.find((card) => card.includes('aria-label="Draft journey 8"'));
+    assert.ok(summaryOnly);
+    assert.doesNotMatch(summaryOnly, /by owner|Stockholm|Museums|Draft notes|\d+ days/);
+    assert.match(markup, /href="\/boards\/drafts\/8"/);
+    assert.doesNotMatch(markup, /href="\/boards\/[1-8](?:\/edit)?"/);
+    assert.deepEqual(calls, [
+        "/api/v1/boards?scope=drafts&page=1",
+        ...[1, 2, 3, 4, 5].map((id) => `/api/v1/boards/${id}`)
+    ]);
+});
+
+test("failed recent previews use honest V4 summary covers while retry and draft editing remain available", async (t) => {
+    const access = { allowed: false };
+    const requests: string[] = [];
+    t.mock.method(globalThis, "fetch", async (input: string) => {
+        const url = new URL(input);
+        requests.push(url.pathname + url.search);
+        if (url.pathname === "/api/v1/boards") return list([summary(111)]);
+        return access.allowed
+            ? Response.json({ data: document(111) })
+            : failure(503, "Preview temporarily unavailable.");
+    });
+    const store = createDraftBoardsStore();
+    await store.load();
+    const failed = renderToStaticMarkup(createElement(DraftBoardListContent, presenter(store)));
+    const cards = v4DraftCards(failed);
+    assert.equal(cards.length, 2);
+    assert.ok(cards.every((card) => card.includes("/api/v1/images/111/content")));
+    assert.ok(cards.every((card) => !card.includes("Stockholm") && !card.includes("by owner")));
+    assert.match(failed, /Preview unavailable/);
+    assert.match(failed, /Retry previews/);
+    assert.match(failed, /href="\/boards\/drafts\/111"/);
+    access.allowed = true;
+    await store.retryFeatured();
+    const recovered = renderToStaticMarkup(createElement(DraftBoardListContent, presenter(store)));
+    assert.match(recovered, /Stockholm, Sweden/);
+    assert.match(recovered, /Museums/);
+    assert.deepEqual(store.getSnapshot().failedIds, []);
+    assert.deepEqual(requests, ["/api/v1/boards?scope=drafts&page=1", "/api/v1/boards/111", "/api/v1/boards/111"]);
 });

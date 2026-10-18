@@ -1,5 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import {
+    BoardSelectionCollection,
+    BoardSelectionGallery
+} from "../src/components/features/boards/BoardSelectionGallery";
 import {
     filterSelectionBoards,
     parseSharedBoardId,
@@ -492,7 +498,15 @@ test("card adaptation uses real media and confirmed destinations and never fabri
     assert.equal(selected.destination, "Paris, France");
     assert.equal(selected.collage.destinationLabel, "FRA");
     assert.match(selected.collage.images[0].src, /\/images\/2\/content\?variant=thumbnail$/);
-    assert.match(selected.photo?.image.src ?? "", /\/images\/2\/content\?variant=thumbnail$/);
+    assert.match(selected.photo.image?.src ?? "", /\/images\/2\/content\?variant=display$/);
+    assert.equal(selected.photo.author, board.author.username);
+    assert.equal(selected.photo.destination, "Paris, France");
+    assert.deepEqual(selected.photo.tags, ["Architecture"]);
+    assert.equal(selected.photo.description, board.description);
+    assert.equal(selected.photo.status, "draft");
+    assert.equal(selected.photo.visibility, "friends");
+    assert.equal(selected.photo.savedCount, undefined);
+    assert.equal(selected.ownership, "owner");
     assert.equal(selected.collage.savedCount, undefined);
     assert.deepEqual(board, original);
     const empty = toSelectionBoard({ ...summary(31), source: "shared" });
@@ -500,7 +514,158 @@ test("card adaptation uses real media and confirmed destinations and never fabri
     assert.equal(empty.destination, "");
     assert.equal(empty.collage.destinationLabel, "");
     assert.deepEqual(empty.collage.images, []);
-    assert.equal(empty.photo, null);
+    assert.equal(empty.photo.title, "Journey 31");
+    assert.equal(empty.photo.image, undefined);
+    assert.equal(empty.photo.author, "");
+    assert.equal(empty.photo.destination, "");
+    assert.equal(empty.photo.durationDays, undefined);
+    assert.equal(empty.photo.savedCount, undefined);
+    assert.equal(empty.ownership, "unknown");
+});
+
+test("Continue ownership follows explicit owner context or management permission, never shared edit access", () => {
+    const shared = { ...summary(81, "published"), source: "shared" as const };
+    const editor = {
+        ...document(81, "published"),
+        author: { username: "you", bio: "", photo: null },
+        permissions: { canEditContent: true, canManageBoard: false }
+    };
+    const board = toSelectionBoard(shared, editor);
+    assert.equal(board.ownership, "other");
+    assert.equal(board.photo.author, "you", "Displayed attribution must not become an ownership check");
+    assert.equal(selectionEditorHref(editor), "/boards/81/edit");
+    assert.equal(toSelectionBoard(shared).ownership, "unknown");
+    assert.equal(toSelectionBoard(shared, document(81, "published")).ownership, "owner");
+    const owned = toSelectionBoard(summary(81), { ...editor, status: "draft" });
+    assert.equal(owned.ownership, "owner", "The authenticated owned-list source establishes ownership");
+});
+
+test("an owner opened through a shared-link lookup keeps owner annotations rather than shared-editor copy", () => {
+    const board = toSelectionBoard({ ...summary(82, "published"), source: "shared" }, document(82, "published"));
+    const markup = selectionMarkup([board]);
+    assert.match(markup, />Your Board<\/dt>/);
+    assert.match(markup, /Published · still yours to shape/);
+    assert.doesNotMatch(markup, /Shared with you|Published · editing access/);
+    assert.match(markup, /href="\/boards\/82\/edit"/);
+});
+
+function selectionMarkup(boards: ReturnType<typeof toSelectionBoard>[], selected = boards[0], error?: string) {
+    return renderToStaticMarkup(
+        createElement(BoardSelectionGallery, {
+            boards,
+            selected,
+            error,
+            onSelect: () => {},
+            onRetry: () => {}
+        })
+    );
+}
+
+function v4Cards(markup: string) {
+    return [...markup.matchAll(/<article\b[^>]*style="aspect-ratio:400 \/ 500"[^>]*>[\s\S]*?<\/article>/g)].map(
+        (match) => match[0]
+    );
+}
+
+test("Continue featured cards retain native focus selection, honest owner visibility and permission-gated editing", () => {
+    const owned = toSelectionBoard(summary(91, "published"), { ...document(91, "published"), visibility: "public" });
+    const shared = toSelectionBoard(
+        { ...summary(92, "published"), source: "shared" },
+        { ...document(92, "published"), permissions: { canEditContent: true, canManageBoard: false } }
+    );
+    const markup = selectionMarkup([owned, shared]);
+    const cards = v4Cards(markup);
+    assert.equal(cards.length, 2);
+    assert.match(cards[0], /aria-label="Public — anyone can view this Board"/);
+    assert.match(cards[0], /Architecture/);
+    assert.match(cards[0], /Paris, France/);
+    assert.match(cards[0], /aria-label="Focus Journey 91"[^>]*aria-pressed="true"[^>]*aria-expanded="false"/);
+    assert.match(cards[0], /tabindex="0"/);
+    assert.match(cards[1], /aria-label="Focus Journey 92"[^>]*aria-pressed="false"/);
+    assert.match(cards[1], /tabindex="-1"/);
+    assert.doesNotMatch(cards[1], /aria-label="(?:Public|Friends|Restricted access) —|aria-label="(?:Save|Unsave) /);
+    assert.match(markup, /href="\/boards\/91\/edit"/);
+    assert.doesNotMatch(markup, /href="\/boards\/92\/edit"/);
+    assert.match(markup, /aria-label="Previous Board"/);
+    assert.match(markup, /aria-label="Next Board"/);
+    assert.match(markup, /aria-live="polite"/);
+    assert.doesNotMatch(markup, />(?:Details|Close)(?:<|$)|[\d,]+ saves/);
+    assert.doesNotMatch(markup, /<button\b[^>]*>(?:(?!<\/button>)[\s\S])*<button\b/);
+    const revoked = toSelectionBoard(summary(91, "published"), {
+        ...document(91, "published"),
+        permissions: { canEditContent: false, canManageBoard: false }
+    });
+    const denied = selectionMarkup([revoked]);
+    assert.doesNotMatch(denied, /href="\/boards\/91\/edit"/);
+    assert.match(denied, /Editing unavailable/);
+    assert.doesNotMatch(denied, /Checking edit access/);
+});
+
+test("summary-only Continue cards remain V4 without pretending that cover, ownership or edit access has resolved", () => {
+    const ownedDraft = toSelectionBoard(summary(93));
+    const featured = selectionMarkup([ownedDraft]);
+    assert.equal(v4Cards(featured).length, 1);
+    assert.match(featured, /No cover photo/);
+    assert.match(featured, /Draft — only you can view this Board/);
+    assert.doesNotMatch(featured, /href="\/boards\/(?:drafts\/)?93(?:\/edit)?"/);
+    assert.match(featured, /Checking edit access/);
+    const shared = toSelectionBoard({ ...summary(94, "published"), source: "shared" });
+    const collection = renderToStaticMarkup(
+        createElement(BoardSelectionCollection, { boards: [shared], onSelect: () => {} })
+    );
+    assert.equal(v4Cards(collection).length, 1);
+    assert.match(collection, /aria-label="Focus Journey 94 from collection"/);
+    assert.match(collection, /No cover photo/);
+    assert.doesNotMatch(collection, /aria-label="(?:Save|Unsave|Public|Friends|Restricted access) |href=|[\d,]+ saves/);
+    assert.doesNotMatch(collection, /Room for memories|by you|Destination not added/);
+});
+
+test("an owned published summary exposes its actual visibility and cover without inventing optional metadata or edit access", () => {
+    const item: SelectionSummary = {
+        ...summary(96, "published", "A title without a claimed destination"),
+        visibility: "friends",
+        coverImageUrl: "/api/v1/images/96/content?variant=thumbnail"
+    };
+    const board = toSelectionBoard(item);
+    assert.equal(board.photo.status, "published");
+    assert.equal(board.photo.visibility, "friends");
+    assert.equal(board.photo.author, "");
+    assert.equal(board.photo.destination, "");
+    assert.equal(board.photo.savedCount, undefined);
+    assert.equal(board.photo.durationDays, undefined);
+    assert.match(board.photo.image?.src ?? "", /\/api\/v1\/images\/96\/content\?variant=thumbnail$/);
+    const markup = selectionMarkup([board]);
+    assert.match(markup, /Friends — you, your friends and invited Board members/);
+    assert.doesNotMatch(markup, /href="\/boards\/96\/edit"|by you|[\d,]+ saves/);
+    assert.match(markup, /Checking edit access/);
+});
+
+test("a failed real Continue preview keeps V4 selectable and enables only the original editor after successful retry", async (t) => {
+    const requests: string[] = [];
+    const access = { allowed: false };
+    t.mock.method(globalThis, "fetch", async (input: string, init: RequestInit) => {
+        const url = new URL(input);
+        requests.push(url.pathname + url.search);
+        assert.equal(init.credentials, "include");
+        if (url.pathname === "/api/v1/boards")
+            return page(url.searchParams.get("scope") === "drafts" ? [summary(95)] : []);
+        return access.allowed ? Response.json({ data: document(95) }) : failure(403, "Editing access unavailable.");
+    });
+    const store = createBoardSelectionStore();
+    await store.load();
+    await store.loadPreview(95);
+    const failed = toSelectionBoard(store.getSnapshot().items[0], store.getSnapshot().documents[95]);
+    const unavailable = selectionMarkup([failed], failed, store.getSnapshot().documentErrors[95]);
+    assert.equal(v4Cards(unavailable).length, 1);
+    assert.match(unavailable, /Editing access unavailable/);
+    assert.match(unavailable, /Retry access and preview/);
+    assert.doesNotMatch(unavailable, /href="\/boards\/drafts\/95"/);
+    access.allowed = true;
+    await store.loadPreview(95);
+    const ready = toSelectionBoard(store.getSnapshot().items[0], store.getSnapshot().documents[95]);
+    assert.match(selectionMarkup([ready]), /href="\/boards\/drafts\/95"/);
+    assert.equal(store.getSnapshot().documents[95].revision, 12);
+    assert.deepEqual(requests.slice(2), ["/api/v1/boards/95", "/api/v1/boards/95"]);
 });
 
 test("continuing a published Board saves to the original identity and revision without downgrading or copying", async (t) => {
