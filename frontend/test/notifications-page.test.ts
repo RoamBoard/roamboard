@@ -4,6 +4,7 @@ import { Children, createElement, isValidElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import NotificationsContent from "@/components/features/notifications/NotificationsContent";
 import { subscribeToFriendRequestUpdates, type FriendRequest } from "@/lib/profile";
+import { signOut } from "@/lib/auth";
 
 type ElementProps = {
     children?: ReactNode;
@@ -287,4 +288,109 @@ test("NotificationsContent renders load error and clicking retry triggers fetch"
 
     assert.equal(calls.length, 1);
     assert.ok(calls[0].url.endsWith("/api/v1/users/me/friend-requests"));
+});
+
+test("NotificationsContent concurrent accept and reject updates retain both changes without clobbering", async (context) => {
+    const deferredAccept: { resolve: (val: Response) => void } = { resolve: () => {} };
+    const acceptPromise = new Promise<Response>((res) => {
+        deferredAccept.resolve = res;
+    });
+
+    const deferredReject: { resolve: (val: Response) => void } = { resolve: () => {} };
+    const rejectPromise = new Promise<Response>((res) => {
+        deferredReject.resolve = res;
+    });
+
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+        const url = String(input);
+        if (url.includes("/accept")) {
+            return acceptPromise;
+        }
+        if (url.includes("/friend-requests/")) {
+            return rejectPromise;
+        }
+        return Response.json({ data: [] });
+    });
+
+    const requests: FriendRequest[] = [
+        {
+            requestId: 201,
+            requester: { userId: "u-201", username: "alice", displayName: "Alice", profilePictureUrl: null }
+        },
+        {
+            requestId: 202,
+            requester: { userId: "u-202", username: "bob", displayName: "Bob", profilePictureUrl: null }
+        }
+    ];
+
+    const tracker = { requests };
+    const { nodes } = capture(() =>
+        NotificationsContent({
+            initialRequests: requests,
+            onRequestsChange: (reqs) => {
+                tracker.requests = reqs;
+            }
+        })
+    );
+
+    const acceptButtons = nodes.filter((n) => n.type === "button" && n.props.children === "accept");
+    const rejectButtons = nodes.filter((n) => n.type === "button" && n.props.children === "reject");
+    assert.equal(acceptButtons.length, 2);
+    assert.equal(rejectButtons.length, 2);
+
+    const p1 = acceptButtons[0].props.onClick?.();
+    const p2 = rejectButtons[1].props.onClick?.();
+
+    deferredAccept.resolve(Response.json({ data: { requestId: 201, status: "accepted" } }));
+    await p1;
+    assert.equal(tracker.requests.length, 1);
+    assert.equal(tracker.requests[0].requestId, 202);
+
+    deferredReject.resolve(new Response(null, { status: 204 }));
+    await p2;
+    assert.equal(tracker.requests.length, 0);
+});
+
+test("NotificationsContent ignores action completion from earlier account after account switch or sign out", async (context) => {
+    const deferredAccept: { resolve: (val: Response) => void } = { resolve: () => {} };
+    const acceptPromise = new Promise<Response>((res) => {
+        deferredAccept.resolve = res;
+    });
+
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+        const url = String(input);
+        if (url.includes("/accept")) {
+            return acceptPromise;
+        }
+        return Response.json({ data: [] });
+    });
+
+    const requests: FriendRequest[] = [
+        {
+            requestId: 201,
+            requester: { userId: "u-201", username: "alice", displayName: "Alice", profilePictureUrl: null }
+        }
+    ];
+
+    const tracker = { requests };
+    const { nodes } = capture(() =>
+        NotificationsContent({
+            initialRequests: requests,
+            onRequestsChange: (reqs) => {
+                tracker.requests = reqs;
+            }
+        })
+    );
+
+    const acceptBtn = nodes.find((n) => n.type === "button" && n.props.children === "accept");
+    assert.ok(acceptBtn);
+
+    const actionPromise = acceptBtn.props.onClick?.();
+
+    await signOut().catch(() => {});
+
+    deferredAccept.resolve(Response.json({ data: { requestId: 201, status: "accepted" } }));
+    await actionPromise;
+
+    assert.equal(tracker.requests.length, 0);
 });

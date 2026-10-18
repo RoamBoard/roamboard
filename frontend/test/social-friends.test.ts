@@ -572,6 +572,219 @@ test("FindFriendsDialog unfriend succeeds and calls onFriendAdded", async (conte
     assert.equal(tracker.results[0].friendshipStatus, "none");
 });
 
+test("FindFriendsDialog concurrent friend actions retain all updates without clobbering", async (context) => {
+    const deferredAlice: { resolve: (val: Response) => void } = { resolve: () => {} };
+    const alicePromise = new Promise<Response>((res) => {
+        deferredAlice.resolve = res;
+    });
+
+    const deferredBob: { resolve: (val: Response) => void } = { resolve: () => {} };
+    const bobPromise = new Promise<Response>((res) => {
+        deferredBob.resolve = res;
+    });
+
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+        const url = String(input);
+        if (url.includes("/by-handle/alice/")) {
+            return alicePromise;
+        }
+        if (url.includes("/by-handle/bob/")) {
+            return bobPromise;
+        }
+        return Response.json({ data: [] });
+    });
+
+    const sampleResults: UserSearchResult[] = [
+        {
+            userId: "u-alice",
+            username: "alice",
+            displayName: "Alice",
+            profilePictureUrl: null,
+            bio: null,
+            location: null,
+            friendshipStatus: "none"
+        },
+        {
+            userId: "u-bob",
+            username: "bob",
+            displayName: "Bob",
+            profilePictureUrl: null,
+            bio: null,
+            location: null,
+            friendshipStatus: "none"
+        }
+    ];
+
+    const tracker = { results: sampleResults };
+    const { nodes } = capture(() =>
+        FindFriendsDialog({
+            open: true,
+            onClose: () => {},
+            initialResults: sampleResults,
+            onResultsChange: (r) => {
+                tracker.results = r;
+            }
+        })
+    );
+
+    const addButtons = nodes.filter((n) => n.type === "button" && n.props.children === "+ add friend");
+    assert.equal(addButtons.length, 2);
+
+    const p1 = addButtons[0].props.onClick?.();
+    const p2 = addButtons[1].props.onClick?.();
+
+    deferredAlice.resolve(
+        Response.json(
+            { data: { requestId: 101, status: "pending_sent" } },
+            { status: 201, headers: { "content-type": "application/json" } }
+        )
+    );
+    await p1;
+    assert.equal(tracker.results.find((u) => u.userId === "u-alice")?.friendshipStatus, "pending_sent");
+
+    deferredBob.resolve(
+        Response.json(
+            { data: { requestId: 102, status: "pending_sent" } },
+            { status: 201, headers: { "content-type": "application/json" } }
+        )
+    );
+    await p2;
+    assert.equal(tracker.results.find((u) => u.userId === "u-alice")?.friendshipStatus, "pending_sent");
+    assert.equal(tracker.results.find((u) => u.userId === "u-bob")?.friendshipStatus, "pending_sent");
+});
+
+test("FindFriendsDialog out-of-order search response does not overwrite newer search", async (context) => {
+    const deferredSearch1: { resolve: (val: Response) => void } = { resolve: () => {} };
+    const search1Promise = new Promise<Response>((res) => {
+        deferredSearch1.resolve = res;
+    });
+
+    const calls: Array<{ url: string }> = [];
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+        const url = String(input);
+        calls.push({ url });
+        if (url.includes("q=alice")) {
+            return search1Promise;
+        }
+        return Response.json({
+            data: [
+                {
+                    userId: "u-bob",
+                    username: "bob",
+                    displayName: "Bob",
+                    profilePictureUrl: null,
+                    bio: null,
+                    location: null,
+                    friendshipStatus: "none"
+                }
+            ]
+        });
+    });
+
+    const state = { results: [] as UserSearchResult[] };
+    const { nodes } = capture(() =>
+        FindFriendsDialog({
+            open: true,
+            onClose: () => {},
+            onResultsChange: (r) => {
+                state.results = r;
+            }
+        })
+    );
+    const input = nodes.find((n) => n.type === "input");
+    assert.ok(input);
+
+    const onKeyDown = input.props.onKeyDown as (e: unknown) => Promise<void>;
+    const p1 = onKeyDown({
+        key: "Enter",
+        target: { value: "alice" },
+        preventDefault: () => {}
+    });
+
+    await onKeyDown({
+        key: "Enter",
+        target: { value: "bob" },
+        preventDefault: () => {}
+    });
+
+    assert.equal(state.results.length, 1);
+    assert.equal(state.results[0].username, "bob");
+
+    deferredSearch1.resolve(
+        Response.json({
+            data: [
+                {
+                    userId: "u-alice",
+                    username: "alice",
+                    displayName: "Alice",
+                    profilePictureUrl: null,
+                    bio: null,
+                    location: null,
+                    friendshipStatus: "none"
+                }
+            ]
+        })
+    );
+    await p1;
+
+    assert.equal(state.results.length, 1);
+    assert.equal(state.results[0].username, "bob");
+});
+
+test("FindFriendsDialog closing dialog cancels pending search and discards result", async (context) => {
+    const deferredSearch: { resolve: (val: Response) => void } = { resolve: () => {} };
+    const searchPromise = new Promise<Response>((res) => {
+        deferredSearch.resolve = res;
+    });
+
+    context.mock.method(globalThis, "fetch", async () => {
+        return searchPromise;
+    });
+
+    const state = { results: [] as UserSearchResult[] };
+    const { nodes } = capture(() =>
+        FindFriendsDialog({
+            open: true,
+            onClose: () => {},
+            onResultsChange: (r) => {
+                state.results = r;
+            }
+        })
+    );
+    const input = nodes.find((n) => n.type === "input");
+    assert.ok(input);
+
+    const onKeyDown = input.props.onKeyDown as (e: unknown) => Promise<void>;
+    const searchCall = onKeyDown({
+        key: "Enter",
+        target: { value: "charlie" },
+        preventDefault: () => {}
+    });
+
+    const closeBtn = nodes.find((n) => n.type === "button" && n.props["aria-label"] === "Close dialog");
+    assert.ok(closeBtn);
+    closeBtn.props.onClick?.();
+
+    deferredSearch.resolve(
+        Response.json({
+            data: [
+                {
+                    userId: "u-charlie",
+                    username: "charlie",
+                    displayName: "Charlie",
+                    profilePictureUrl: null,
+                    bio: null,
+                    location: null,
+                    friendshipStatus: "none"
+                }
+            ]
+        })
+    );
+    await searchCall;
+
+    assert.equal(state.results.length, 0);
+});
+
 test("SocialFriendsContent retry handlers track loading state and keep empty state hidden", async (context) => {
     const deferred: { resolve: (val: FriendUser[]) => void } = { resolve: () => {} };
     const friendsPromise = new Promise<FriendUser[]>((res) => {

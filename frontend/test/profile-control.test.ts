@@ -8,6 +8,7 @@ import NotificationControl from "../src/components/ui/NotificationControl";
 import Sidebar from "../src/components/layout/Sidebar";
 import { getMockAuthState, getMockAuthStateServerSnapshot, setMockAuthState } from "../src/data/mock-social";
 import { subscribeToFriendRequestUpdates, type FriendRequest } from "../src/lib/profile";
+import { signOut } from "../src/lib/auth";
 
 const mockRouter = {
     back: () => {},
@@ -501,4 +502,115 @@ test("Sidebar renders navigation links including labs, and notification menu abo
     const notifIdx = html.indexOf('aria-label="Notifications"');
     const accountIdx = html.indexOf('aria-label="Account menu"');
     assert.ok(notifIdx !== -1 && accountIdx !== -1 && notifIdx < accountIdx);
+});
+
+test("NotificationControl concurrent accept and reject updates retain both changes without clobbering", async (context) => {
+    const deferredAccept: { resolve: (val: Response) => void } = { resolve: () => {} };
+    const acceptPromise = new Promise<Response>((res) => {
+        deferredAccept.resolve = res;
+    });
+
+    const deferredReject: { resolve: (val: Response) => void } = { resolve: () => {} };
+    const rejectPromise = new Promise<Response>((res) => {
+        deferredReject.resolve = res;
+    });
+
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+        const url = String(input);
+        if (url.includes("/accept")) {
+            return acceptPromise;
+        }
+        if (url.includes("/friend-requests/")) {
+            return rejectPromise;
+        }
+        return Response.json({ data: [] });
+    });
+
+    const requests: FriendRequest[] = [
+        {
+            requestId: 1,
+            requester: { userId: "u-1", username: "alice", displayName: "Alice", profilePictureUrl: null }
+        },
+        {
+            requestId: 2,
+            requester: { userId: "u-2", username: "bob", displayName: "Bob", profilePictureUrl: null }
+        }
+    ];
+
+    const tracker = { requests };
+    const { nodes } = capture(() =>
+        NotificationControl({
+            sidebar: true,
+            iconOnly: false,
+            open: true,
+            initialRequests: requests,
+            onRequestsChange: (reqs) => {
+                tracker.requests = reqs;
+            }
+        })
+    );
+
+    const acceptButtons = nodes.filter((n) => n.type === "button" && n.props.children === "accept");
+    const rejectButtons = nodes.filter((n) => n.type === "button" && n.props.children === "reject");
+    assert.equal(acceptButtons.length, 2);
+    assert.equal(rejectButtons.length, 2);
+
+    const p1 = acceptButtons[0].props.onClick?.();
+    const p2 = rejectButtons[1].props.onClick?.();
+
+    deferredAccept.resolve(Response.json({ data: { requestId: 1, status: "accepted" } }));
+    await p1;
+    assert.equal(tracker.requests.length, 1);
+    assert.equal(tracker.requests[0].requestId, 2);
+
+    deferredReject.resolve(new Response(null, { status: 204 }));
+    await p2;
+    assert.equal(tracker.requests.length, 0);
+});
+
+test("NotificationControl ignores action completion from earlier account after account switch or sign out", async (context) => {
+    const deferredAccept: { resolve: (val: Response) => void } = { resolve: () => {} };
+    const acceptPromise = new Promise<Response>((res) => {
+        deferredAccept.resolve = res;
+    });
+
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+        const url = String(input);
+        if (url.includes("/accept")) {
+            return acceptPromise;
+        }
+        return Response.json({ data: [] });
+    });
+
+    const requests: FriendRequest[] = [
+        {
+            requestId: 1,
+            requester: { userId: "u-1", username: "alice", displayName: "Alice", profilePictureUrl: null }
+        }
+    ];
+
+    const tracker = { requests };
+    const { nodes } = capture(() =>
+        NotificationControl({
+            sidebar: true,
+            iconOnly: false,
+            open: true,
+            initialRequests: requests,
+            onRequestsChange: (reqs) => {
+                tracker.requests = reqs;
+            }
+        })
+    );
+
+    const acceptBtn = nodes.find((n) => n.type === "button" && n.props.children === "accept");
+    assert.ok(acceptBtn);
+
+    const actionPromise = acceptBtn.props.onClick?.();
+
+    await signOut().catch(() => {});
+
+    deferredAccept.resolve(Response.json({ data: { requestId: 1, status: "accepted" } }));
+    await actionPromise;
+
+    assert.equal(tracker.requests.length, 0);
 });

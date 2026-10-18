@@ -39,6 +39,15 @@ export default function FindFriendsDialog({
 }: FindFriendsDialogProps) {
     const [query, setQuery] = useState("");
     const [results, setResults] = useState<UserSearchResult[]>(initialResults ?? []);
+    const resultsRef = useRef<UserSearchResult[]>(initialResults ?? []);
+
+    useEffect(() => {
+        resultsRef.current = results;
+    }, [results]);
+
+    const searchVersionRef = useRef(0);
+    const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(initialError);
     const [actionState, setActionState] = useState<Record<string, "pending" | "done">>({});
@@ -51,7 +60,13 @@ export default function FindFriendsDialog({
     const dialogRef = useRef<HTMLDivElement>(null);
 
     const handleClose = useCallback(() => {
+        searchVersionRef.current += 1;
+        if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current);
+            debounceTimerRef.current = null;
+        }
         setQuery("");
+        resultsRef.current = initialResults ?? [];
         setResults(initialResults ?? []);
         onResultsChange?.(initialResults ?? []);
         setError(null);
@@ -75,20 +90,29 @@ export default function FindFriendsDialog({
 
     const executeSearch = useCallback(
         async (searchQuery: string) => {
+            const searchId = ++searchVersionRef.current;
             const trimmed = searchQuery.trim();
             setLoading(true);
             setError(null);
             onErrorChange?.(null);
             try {
                 const data = await searchUsers(trimmed);
-                setResults(data);
-                onResultsChange?.(data);
+                if (searchId === searchVersionRef.current) {
+                    resultsRef.current = data;
+                    setResults(data);
+                    onResultsChange?.(data);
+                }
             } catch (caught) {
-                const message = caught instanceof Error ? caught.message : "Failed to search users. Please try again.";
-                setError(message);
-                onErrorChange?.(message);
+                if (searchId === searchVersionRef.current) {
+                    const message =
+                        caught instanceof Error ? caught.message : "Failed to search users. Please try again.";
+                    setError(message);
+                    onErrorChange?.(message);
+                }
             } finally {
-                setLoading(false);
+                if (searchId === searchVersionRef.current) {
+                    setLoading(false);
+                }
             }
         },
         [onErrorChange, onResultsChange]
@@ -98,42 +122,19 @@ export default function FindFriendsDialog({
         if (!open) return;
         if (initialResults && !query.trim() && searchRetry === 0) return;
         const trimmed = query.trim();
-        const request = { active: true };
-
         const handle = setTimeout(
             () => {
-                setLoading(true);
-                setError(null);
-                onErrorChange?.(null);
-                searchUsers(trimmed)
-                    .then((data) => {
-                        if (request.active) {
-                            setResults(data);
-                            onResultsChange?.(data);
-                        }
-                    })
-                    .catch((caught) => {
-                        if (request.active) {
-                            const message =
-                                caught instanceof Error ? caught.message : "Failed to search users. Please try again.";
-                            setError(message);
-                            onErrorChange?.(message);
-                        }
-                    })
-                    .finally(() => {
-                        if (request.active) {
-                            setLoading(false);
-                        }
-                    });
+                void executeSearch(trimmed);
             },
             trimmed ? 250 : 0
         );
+        debounceTimerRef.current = handle;
 
         return () => {
-            request.active = false;
             clearTimeout(handle);
+            debounceTimerRef.current = null;
         };
-    }, [query, open, initialResults, searchRetry, onErrorChange, onResultsChange]);
+    }, [query, open, initialResults, searchRetry, executeSearch]);
 
     if (!open) return null;
 
@@ -144,9 +145,10 @@ export default function FindFriendsDialog({
         try {
             const result = await sendFriendRequest(handle);
             setActionState((prev) => ({ ...prev, [userId]: "done" }));
-            const next: UserSearchResult[] = results.map((u): UserSearchResult =>
+            const next: UserSearchResult[] = resultsRef.current.map((u): UserSearchResult =>
                 u.userId === userId ? { ...u, friendshipStatus: result.status } : u
             );
+            resultsRef.current = next;
             setResults(next);
             onResultsChange?.(next);
             onFriendAdded?.();
@@ -170,9 +172,10 @@ export default function FindFriendsDialog({
         try {
             await acceptFriendRequest(requestId);
             setActionState((prev) => ({ ...prev, [userId]: "done" }));
-            const next: UserSearchResult[] = results.map((u): UserSearchResult =>
+            const next: UserSearchResult[] = resultsRef.current.map((u): UserSearchResult =>
                 u.userId === userId ? { ...u, friendshipStatus: "accepted" } : u
             );
+            resultsRef.current = next;
             setResults(next);
             onResultsChange?.(next);
             onFriendAdded?.();
@@ -230,6 +233,10 @@ export default function FindFriendsDialog({
                             onKeyDown={async (e) => {
                                 if (e.key === "Enter") {
                                     e.preventDefault();
+                                    if (debounceTimerRef.current) {
+                                        clearTimeout(debounceTimerRef.current);
+                                        debounceTimerRef.current = null;
+                                    }
                                     const targetValue = (e.target as HTMLInputElement | null)?.value ?? query;
                                     await executeSearch(targetValue);
                                 }
@@ -270,7 +277,13 @@ export default function FindFriendsDialog({
                             <p className="text-12 font-body mb-2 text-red-500">{error}</p>
                             <button
                                 type="button"
-                                onClick={() => void executeSearch(query)}
+                                onClick={() => {
+                                    if (debounceTimerRef.current) {
+                                        clearTimeout(debounceTimerRef.current);
+                                        debounceTimerRef.current = null;
+                                    }
+                                    void executeSearch(query);
+                                }}
                                 className="text-12 text-foreground cursor-pointer font-medium underline underline-offset-4 hover:opacity-80"
                             >
                                 Retry search
@@ -414,9 +427,10 @@ export default function FindFriendsDialog({
                         setActionState((prev) => ({ ...prev, [target.userId]: "pending" }));
                         try {
                             await removeFriend(target.userId);
-                            const next: UserSearchResult[] = results.map((u): UserSearchResult =>
+                            const next: UserSearchResult[] = resultsRef.current.map((u): UserSearchResult =>
                                 u.userId === target.userId ? { ...u, friendshipStatus: "none" } : u
                             );
+                            resultsRef.current = next;
                             setResults(next);
                             onResultsChange?.(next);
                             onFriendAdded?.();

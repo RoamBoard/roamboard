@@ -74,14 +74,22 @@ export default function NotificationControl({
     const activeUserIdRef = useRef<string | null>(initialRequests || initialError ? "initial-session" : null);
     const readVersionRef = useRef(0);
     const requestVersionRef = useRef(0);
+    const requestsRef = useRef<FriendRequest[]>(initialRequests ?? []);
+
+    useEffect(() => {
+        requestsRef.current = requests;
+    }, [requests]);
 
     useEffect(() => {
         return subscribeToFriendRequestUpdates((event) => {
             readVersionRef.current += 1;
             requestVersionRef.current += 1;
-            setRequests((prev) => prev.filter((r) => r.requestId !== event.requestId));
+            const next = requestsRef.current.filter((r) => r.requestId !== event.requestId);
+            requestsRef.current = next;
+            setRequests(next);
+            onRequestsChange?.(next);
         });
-    }, []);
+    }, [onRequestsChange]);
 
     const fetchRequests = useCallback(() => {
         if (!sessionUser) return Promise.resolve();
@@ -97,7 +105,9 @@ export default function NotificationControl({
                     readId === readVersionRef.current &&
                     requestVersion === requestVersionRef.current
                 ) {
+                    requestsRef.current = data;
                     setRequests(data);
+                    onRequestsChange?.(data);
                     setLoadError(null);
                 }
             })
@@ -115,7 +125,7 @@ export default function NotificationControl({
                     setLoading(false);
                 }
             });
-    }, [sessionUser]);
+    }, [sessionUser, onRequestsChange]);
 
     useEffect(() => {
         return observeCurrentUser((user) => {
@@ -124,7 +134,9 @@ export default function NotificationControl({
             if (!user) {
                 activeUserIdRef.current = null;
                 setSessionUser(null);
+                requestsRef.current = [];
                 setRequests([]);
+                onRequestsChange?.([]);
                 setLoadError(null);
                 setLoading(false);
             } else {
@@ -135,7 +147,7 @@ export default function NotificationControl({
                 }
             }
         });
-    }, [initialRequests]);
+    }, [initialRequests, onRequestsChange]);
 
     useEffect(() => {
         if (!sessionUser || initialRequests) return;
@@ -149,7 +161,9 @@ export default function NotificationControl({
                     readId === readVersionRef.current &&
                     requestVersion === requestVersionRef.current
                 ) {
+                    requestsRef.current = data;
                     setRequests(data);
+                    onRequestsChange?.(data);
                     setLoadError(null);
                 }
             })
@@ -167,7 +181,7 @@ export default function NotificationControl({
                     setLoading(false);
                 }
             });
-    }, [sessionUser, initialRequests]);
+    }, [sessionUser, initialRequests, onRequestsChange]);
 
     useEffect(() => {
         if (!isOpen || !sessionUser) return;
@@ -181,7 +195,9 @@ export default function NotificationControl({
                     readId === readVersionRef.current &&
                     requestVersion === requestVersionRef.current
                 ) {
+                    requestsRef.current = data;
                     setRequests(data);
+                    onRequestsChange?.(data);
                     setLoadError(null);
                 }
             })
@@ -194,51 +210,73 @@ export default function NotificationControl({
                     setLoadError("Failed to load notifications. Please try again.");
                 }
             });
-    }, [isOpen, sessionUser]);
+    }, [isOpen, sessionUser, onRequestsChange]);
 
     const handleAccept = async (requestId: number) => {
         readVersionRef.current += 1;
         requestVersionRef.current += 1;
+        const currentUserId = activeUserIdRef.current;
+        if (!currentUserId) return;
         setActionInProgress((prev) => ({ ...prev, [requestId]: "accepting" }));
         setActionError(null);
         onActionErrorChange?.(null);
         try {
             await acceptFriendRequest(requestId);
-            const next = requests.filter((r) => r.requestId !== requestId);
+            if (activeUserIdRef.current !== currentUserId || !activeUserIdRef.current) {
+                return;
+            }
+            const next = requestsRef.current.filter((r) => r.requestId !== requestId);
+            requestsRef.current = next;
             setRequests(next);
             onRequestsChange?.(next);
         } catch {
+            if (activeUserIdRef.current !== currentUserId || !activeUserIdRef.current) {
+                return;
+            }
             setActionError("Failed to accept friend request");
             onActionErrorChange?.("Failed to accept friend request");
         } finally {
-            setActionInProgress((prev) => {
-                const next = { ...prev };
-                delete next[requestId];
-                return next;
-            });
+            if (activeUserIdRef.current === currentUserId && activeUserIdRef.current) {
+                setActionInProgress((prev) => {
+                    const next = { ...prev };
+                    delete next[requestId];
+                    return next;
+                });
+            }
         }
     };
 
     const handleReject = async (requestId: number) => {
         readVersionRef.current += 1;
         requestVersionRef.current += 1;
+        const currentUserId = activeUserIdRef.current;
+        if (!currentUserId) return;
         setActionInProgress((prev) => ({ ...prev, [requestId]: "rejecting" }));
         setActionError(null);
         onActionErrorChange?.(null);
         try {
             await rejectFriendRequest(requestId);
-            const next = requests.filter((r) => r.requestId !== requestId);
+            if (activeUserIdRef.current !== currentUserId || !activeUserIdRef.current) {
+                return;
+            }
+            const next = requestsRef.current.filter((r) => r.requestId !== requestId);
+            requestsRef.current = next;
             setRequests(next);
             onRequestsChange?.(next);
         } catch {
+            if (activeUserIdRef.current !== currentUserId || !activeUserIdRef.current) {
+                return;
+            }
             setActionError("Failed to reject friend request");
             onActionErrorChange?.("Failed to reject friend request");
         } finally {
-            setActionInProgress((prev) => {
-                const next = { ...prev };
-                delete next[requestId];
-                return next;
-            });
+            if (activeUserIdRef.current === currentUserId && activeUserIdRef.current) {
+                setActionInProgress((prev) => {
+                    const next = { ...prev };
+                    delete next[requestId];
+                    return next;
+                });
+            }
         }
     };
 
