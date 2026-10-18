@@ -18,15 +18,23 @@ export type FindFriendsDialogProps = {
     open: boolean;
     onClose: () => void;
     onFriendAdded?: () => void;
+    initialResults?: UserSearchResult[];
+    initialConfirmUnfriendUser?: UserSearchResult | null;
 };
 
-export default function FindFriendsDialog({ open, onClose, onFriendAdded }: FindFriendsDialogProps) {
+export default function FindFriendsDialog({
+    open,
+    onClose,
+    onFriendAdded,
+    initialResults,
+    initialConfirmUnfriendUser = null
+}: FindFriendsDialogProps) {
     const [query, setQuery] = useState("");
-    const [results, setResults] = useState<UserSearchResult[]>([]);
+    const [results, setResults] = useState<UserSearchResult[]>(initialResults ?? []);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [actionState, setActionState] = useState<Record<string, "pending" | "done">>({});
-    const [confirmUnfriendUser, setConfirmUnfriendUser] = useState<UserSearchResult | null>(null);
+    const [confirmUnfriendUser, setConfirmUnfriendUser] = useState<UserSearchResult | null>(initialConfirmUnfriendUser);
     const [unfriendError, setUnfriendError] = useState<string | null>(null);
     const [unfriendLoading, setUnfriendLoading] = useState(false);
     const [failedAvatars, setFailedAvatars] = useState<Record<string, boolean>>({});
@@ -35,14 +43,14 @@ export default function FindFriendsDialog({ open, onClose, onFriendAdded }: Find
 
     const handleClose = useCallback(() => {
         setQuery("");
-        setResults([]);
+        setResults(initialResults ?? []);
         setError(null);
         setUnfriendError(null);
         setUnfriendLoading(false);
         setActionState({});
         setFailedAvatars({});
         onClose();
-    }, [onClose]);
+    }, [initialResults, onClose]);
 
     useDialogFocus(dialogRef, handleClose, open && confirmUnfriendUser === null);
 
@@ -53,6 +61,7 @@ export default function FindFriendsDialog({ open, onClose, onFriendAdded }: Find
 
     useEffect(() => {
         if (!open) return;
+        if (initialResults && !query.trim()) return;
         const trimmed = query.trim();
         const request = { active: true };
 
@@ -86,7 +95,7 @@ export default function FindFriendsDialog({ open, onClose, onFriendAdded }: Find
             request.active = false;
             clearTimeout(handle);
         };
-    }, [query, open]);
+    }, [query, open, initialResults]);
 
     if (!open) return null;
 
@@ -282,7 +291,7 @@ export default function FindFriendsDialog({ open, onClose, onFriendAdded }: Find
                                                         type="button"
                                                         disabled={isActing}
                                                         onClick={() =>
-                                                            void handleAcceptRequest(user.requestId!, user.userId)
+                                                            handleAcceptRequest(user.requestId!, user.userId)
                                                         }
                                                         className="bg-foreground text-background font-body text-10 cursor-pointer rounded-[2px] px-3 py-1 font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
                                                     >
@@ -292,9 +301,7 @@ export default function FindFriendsDialog({ open, onClose, onFriendAdded }: Find
                                                     <button
                                                         type="button"
                                                         disabled={isActing}
-                                                        onClick={() =>
-                                                            void handleSendRequest(user.username, user.userId)
-                                                        }
+                                                        onClick={() => handleSendRequest(user.username, user.userId)}
                                                         className="bg-foreground text-background font-body text-10 cursor-pointer rounded-[2px] px-3 py-1 font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
                                                     >
                                                         {isActing ? "adding…" : "+ add friend"}

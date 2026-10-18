@@ -104,55 +104,74 @@ export type SocialFriendsContentProps = {
     initialFriends?: FriendUser[];
     initialBoards?: FriendBoardSummary[];
     initialActivities?: FriendActivityItem[];
+    initialFriendsError?: string | null;
+    initialBoardsError?: string | null;
+    initialActivitiesError?: string | null;
 };
 
 export default function SocialFriendsContent({
     initialFriends,
     initialBoards,
-    initialActivities
+    initialActivities,
+    initialFriendsError = null,
+    initialBoardsError = null,
+    initialActivitiesError = null
 }: SocialFriendsContentProps) {
     const router = useRouter();
     const [friends, setFriends] = useState<FriendUser[]>(initialFriends ?? []);
     const [boards, setBoards] = useState<FriendBoardSummary[]>(initialBoards ?? []);
     const [activities, setActivities] = useState<FriendActivityItem[]>(initialActivities ?? []);
-    const [loading, setLoading] = useState(!initialFriends);
-    const [friendsError, setFriendsError] = useState<string | null>(null);
-    const [boardsError, setBoardsError] = useState<string | null>(null);
-    const [activitiesError, setActivitiesError] = useState<string | null>(null);
+    const [friendsLoading, setFriendsLoading] = useState(!initialFriends && !initialFriendsError);
+    const [boardsLoading, setBoardsLoading] = useState(!initialBoards && !initialBoardsError);
+    const [activitiesLoading, setActivitiesLoading] = useState(!initialActivities && !initialActivitiesError);
+    const [friendsError, setFriendsError] = useState<string | null>(initialFriendsError);
+    const [boardsError, setBoardsError] = useState<string | null>(initialBoardsError);
+    const [activitiesError, setActivitiesError] = useState<string | null>(initialActivitiesError);
     const [searchOpen, setSearchOpen] = useState(false);
 
     const reloadFriends = async () => {
+        setFriendsLoading(true);
         setFriendsError(null);
         try {
             const data = await loadFriends();
             setFriends(data);
         } catch {
             setFriendsError("Failed to load your travel pals.");
+        } finally {
+            setFriendsLoading(false);
         }
     };
 
     const reloadBoards = async () => {
+        setBoardsLoading(true);
         setBoardsError(null);
         try {
             const data = await loadFriendsBoards(12);
             setBoards(data);
         } catch {
             setBoardsError("Failed to load friends' boards.");
+        } finally {
+            setBoardsLoading(false);
         }
     };
 
     const reloadActivities = async () => {
+        setActivitiesLoading(true);
         setActivitiesError(null);
         try {
             const data = await loadFriendsActivity(10);
             setActivities(data);
         } catch {
             setActivitiesError("Failed to load recent friend activity.");
+        } finally {
+            setActivitiesLoading(false);
         }
     };
 
     const refreshData = () => {
-        setLoading(true);
+        setFriendsLoading(true);
+        setBoardsLoading(true);
+        setActivitiesLoading(true);
         setFriendsError(null);
         setBoardsError(null);
         setActivitiesError(null);
@@ -175,12 +194,14 @@ export default function SocialFriendsContent({
                 }
             })
             .finally(() => {
-                setLoading(false);
+                setFriendsLoading(false);
+                setBoardsLoading(false);
+                setActivitiesLoading(false);
             });
     };
 
     useEffect(() => {
-        if (initialFriends) return;
+        if (initialFriends || initialFriendsError || initialBoards || initialActivities) return;
         const tracker = { active: true };
         void Promise.allSettled([loadFriends(), loadFriendsBoards(12), loadFriendsActivity(10)])
             .then(([friendsRes, boardsRes, activitiesRes]) => {
@@ -202,12 +223,16 @@ export default function SocialFriendsContent({
                 }
             })
             .finally(() => {
-                if (tracker.active) setLoading(false);
+                if (tracker.active) {
+                    setFriendsLoading(false);
+                    setBoardsLoading(false);
+                    setActivitiesLoading(false);
+                }
             });
         return () => {
             tracker.active = false;
         };
-    }, [initialFriends]);
+    }, [initialFriends, initialFriendsError, initialBoards, initialActivities]);
 
     const handleTabChange = (tab: "ME" | "FRIENDS" | "EXPLORE") => {
         if (tab === "ME") {
@@ -243,9 +268,10 @@ export default function SocialFriendsContent({
                             <button
                                 type="button"
                                 onClick={refreshData}
-                                className="text-foreground cursor-pointer font-medium underline underline-offset-4 hover:opacity-80"
+                                disabled={friendsLoading || boardsLoading || activitiesLoading}
+                                className="text-foreground cursor-pointer font-medium underline underline-offset-4 hover:opacity-80 disabled:opacity-50"
                             >
-                                Retry all
+                                {friendsLoading || boardsLoading || activitiesLoading ? "Retrying…" : "Retry all"}
                             </button>
                         </div>
                     )}
@@ -270,7 +296,7 @@ export default function SocialFriendsContent({
                             </button>
                         </div>
 
-                        {loading && friends.length === 0 ? (
+                        {friendsLoading && friends.length === 0 ? (
                             <div className="border-line bg-background rounded-[2px] border p-8 text-center">
                                 <p className="text-12 text-muted-foreground font-body">Loading travel pals…</p>
                             </div>
@@ -282,10 +308,11 @@ export default function SocialFriendsContent({
                                 <p className="mb-2 text-red-500">{friendsError}</p>
                                 <button
                                     type="button"
-                                    onClick={() => void reloadFriends()}
-                                    className="text-foreground cursor-pointer font-medium underline underline-offset-4 hover:opacity-80"
+                                    onClick={() => reloadFriends()}
+                                    disabled={friendsLoading}
+                                    className="text-foreground cursor-pointer font-medium underline underline-offset-4 hover:opacity-80 disabled:opacity-50"
                                 >
-                                    Retry
+                                    {friendsLoading ? "Retrying…" : "Retry"}
                                 </button>
                             </div>
                         ) : friends.length === 0 ? (
@@ -361,7 +388,7 @@ export default function SocialFriendsContent({
                                     </p>
                                 </div>
 
-                                {loading && activities.length === 0 ? (
+                                {activitiesLoading && activities.length === 0 ? (
                                     <div className="border-line bg-background rounded-[2px] border p-8 text-center">
                                         <p className="text-12 text-muted-foreground font-body">
                                             Loading recent activity…
@@ -375,10 +402,11 @@ export default function SocialFriendsContent({
                                         <p className="mb-2 text-red-500">{activitiesError}</p>
                                         <button
                                             type="button"
-                                            onClick={() => void reloadActivities()}
-                                            className="text-foreground cursor-pointer font-medium underline underline-offset-4 hover:opacity-80"
+                                            onClick={() => reloadActivities()}
+                                            disabled={activitiesLoading}
+                                            className="text-foreground cursor-pointer font-medium underline underline-offset-4 hover:opacity-80 disabled:opacity-50"
                                         >
-                                            Retry
+                                            {activitiesLoading ? "Retrying…" : "Retry"}
                                         </button>
                                     </div>
                                 ) : activities.length === 0 ? (
@@ -519,7 +547,7 @@ export default function SocialFriendsContent({
                             </div>
                         </div>
 
-                        {loading && boards.length === 0 ? (
+                        {boardsLoading && boards.length === 0 ? (
                             <div className="border-line bg-background rounded-[2px] border p-8 text-center">
                                 <p className="text-12 text-muted-foreground font-body">Loading friends&apos; boards…</p>
                             </div>
@@ -531,10 +559,11 @@ export default function SocialFriendsContent({
                                 <p className="mb-2 text-red-500">{boardsError}</p>
                                 <button
                                     type="button"
-                                    onClick={() => void reloadBoards()}
-                                    className="text-foreground cursor-pointer font-medium underline underline-offset-4 hover:opacity-80"
+                                    onClick={() => reloadBoards()}
+                                    disabled={boardsLoading}
+                                    className="text-foreground cursor-pointer font-medium underline underline-offset-4 hover:opacity-80 disabled:opacity-50"
                                 >
-                                    Retry
+                                    {boardsLoading ? "Retrying…" : "Retry"}
                                 </button>
                             </div>
                         ) : boards.length === 0 ? (

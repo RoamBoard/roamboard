@@ -6,7 +6,7 @@ import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared
 import SocialFriendsContent from "@/components/features/social/SocialFriendsContent";
 import FindFriendsDialog from "@/components/features/social/FindFriendsDialog";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
-import type { FriendUser, FriendBoardSummary, FriendActivityItem } from "@/lib/profile";
+import type { FriendUser, FriendBoardSummary, FriendActivityItem, UserSearchResult } from "@/lib/profile";
 import {
     searchUsers,
     sendFriendRequest,
@@ -147,7 +147,7 @@ function capture(render: () => ReactNode) {
         holder.nodes = elements(holder.tree);
         return holder.tree;
     }
-    const markup = renderToStaticMarkup(createElement(Probe));
+    const markup = renderToStaticMarkup(createElement(RouterWrapper, null, createElement(Probe)));
     return { markup, nodes: holder.nodes, tree: holder.tree };
 }
 
@@ -176,6 +176,310 @@ test("FindFriendsDialog captures search input and updates query", () => {
     assert.ok(input, "Expected search input inside open dialog");
     assert.equal(input.props.value, "");
     assert.equal(typeof input.props.onChange, "function");
+});
+
+test("FindFriendsDialog sends friend request and updates row to request sent", async (context) => {
+    const calls: Array<{ url: string; method?: string }> = [];
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {
+        calls.push({ url: String(input), method: init?.method });
+        return Response.json(
+            { data: { requestId: 101, status: "pending_sent" } },
+            { status: 201, headers: { "content-type": "application/json" } }
+        );
+    });
+
+    const sampleResults: UserSearchResult[] = [
+        {
+            userId: "u-traveler",
+            username: "traveler",
+            displayName: "World Traveler",
+            profilePictureUrl: null,
+            bio: null,
+            location: null,
+            friendshipStatus: "none"
+        }
+    ];
+
+    const tracker = { friendAddedCalled: false };
+    const { nodes } = capture(() =>
+        FindFriendsDialog({
+            open: true,
+            onClose: () => {},
+            onFriendAdded: () => {
+                tracker.friendAddedCalled = true;
+            },
+            initialResults: sampleResults
+        })
+    );
+
+    const addBtn = nodes.find((n) => n.type === "button" && n.props.children === "+ add friend");
+    assert.ok(addBtn, "Expected + add friend button");
+
+    await addBtn.props.onClick?.();
+
+    assert.equal(calls.length, 1);
+    assert.ok(calls[0].url.endsWith("/api/v1/users/by-handle/traveler/friend-request"));
+    assert.equal(calls[0].method, "POST");
+    assert.equal(tracker.friendAddedCalled, true);
+});
+
+test("FindFriendsDialog handles crossed friend request and updates row to accepted", async (context) => {
+    const calls: Array<{ url: string; method?: string }> = [];
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {
+        calls.push({ url: String(input), method: init?.method });
+        return Response.json(
+            { data: { requestId: 102, status: "accepted" } },
+            { status: 201, headers: { "content-type": "application/json" } }
+        );
+    });
+
+    const sampleResults: UserSearchResult[] = [
+        {
+            userId: "u-crossed",
+            username: "crossed",
+            displayName: "Crossed Friend",
+            profilePictureUrl: null,
+            bio: null,
+            location: null,
+            friendshipStatus: "none"
+        }
+    ];
+
+    const { nodes } = capture(() =>
+        FindFriendsDialog({
+            open: true,
+            onClose: () => {},
+            initialResults: sampleResults
+        })
+    );
+
+    const addBtn = nodes.find((n) => n.type === "button" && n.props.children === "+ add friend");
+    assert.ok(addBtn, "Expected + add friend button");
+
+    await addBtn.props.onClick?.();
+
+    assert.equal(calls.length, 1);
+    assert.ok(calls[0].url.endsWith("/api/v1/users/by-handle/crossed/friend-request"));
+    assert.equal(calls[0].method, "POST");
+});
+
+test("FindFriendsDialog displays visible error alert when sendFriendRequest fails", async (context) => {
+    context.mock.method(globalThis, "fetch", async () => {
+        return Response.json(
+            { error: { code: "SERVER_ERROR", message: "Failed to create friendship" } },
+            { status: 500, headers: { "content-type": "application/json" } }
+        );
+    });
+
+    const sampleResults: UserSearchResult[] = [
+        {
+            userId: "u-fail",
+            username: "failexample",
+            displayName: "Fail Example",
+            profilePictureUrl: null,
+            bio: null,
+            location: null,
+            friendshipStatus: "none"
+        }
+    ];
+
+    const { nodes } = capture(() =>
+        FindFriendsDialog({
+            open: true,
+            onClose: () => {},
+            initialResults: sampleResults
+        })
+    );
+
+    const addBtn = nodes.find((n) => n.type === "button" && n.props.children === "+ add friend");
+    assert.ok(addBtn);
+
+    await addBtn.props.onClick?.();
+});
+
+test("FindFriendsDialog accepts incoming request and calls onFriendAdded", async (context) => {
+    const calls: Array<{ url: string; method?: string }> = [];
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {
+        calls.push({ url: String(input), method: init?.method });
+        return Response.json(
+            { data: { requestId: 505, status: "accepted" } },
+            { headers: { "content-type": "application/json" } }
+        );
+    });
+
+    const sampleResults: UserSearchResult[] = [
+        {
+            userId: "u-requester",
+            username: "requester",
+            displayName: "Requester User",
+            profilePictureUrl: null,
+            bio: null,
+            location: null,
+            friendshipStatus: "pending_received",
+            requestId: 505
+        }
+    ];
+
+    const tracker = { friendAddedCalled: false };
+    const { nodes } = capture(() =>
+        FindFriendsDialog({
+            open: true,
+            onClose: () => {},
+            onFriendAdded: () => {
+                tracker.friendAddedCalled = true;
+            },
+            initialResults: sampleResults
+        })
+    );
+
+    const acceptBtn = nodes.find((n) => n.type === "button" && n.props.children === "accept request");
+    assert.ok(acceptBtn, "Expected accept request button");
+
+    await acceptBtn.props.onClick?.();
+
+    assert.equal(calls.length, 1);
+    assert.ok(calls[0].url.endsWith("/api/v1/users/me/friend-requests/505/accept"));
+    assert.equal(calls[0].method, "PUT");
+    assert.equal(tracker.friendAddedCalled, true);
+});
+
+test("FindFriendsDialog unfriend opens confirmation and displays error on failure", async (context) => {
+    context.mock.method(globalThis, "fetch", async () => {
+        return Response.json(
+            { error: { code: "SERVER_ERROR", message: "Failed to delete friendship" } },
+            { status: 500, headers: { "content-type": "application/json" } }
+        );
+    });
+
+    const sampleResults: UserSearchResult[] = [
+        {
+            userId: "u-friend",
+            username: "frienduser",
+            displayName: "Friend User",
+            profilePictureUrl: null,
+            bio: null,
+            location: null,
+            friendshipStatus: "accepted"
+        }
+    ];
+
+    const { nodes } = capture(() =>
+        FindFriendsDialog({
+            open: true,
+            onClose: () => {},
+            initialResults: sampleResults,
+            initialConfirmUnfriendUser: sampleResults[0]
+        })
+    );
+
+    const confirmDialog = nodes.find((n) => n.type === ConfirmDialog);
+    assert.ok(confirmDialog, "Expected ConfirmDialog to be rendered");
+
+    await (confirmDialog.props as { onConfirm: () => Promise<void> }).onConfirm();
+});
+
+test("FindFriendsDialog unfriend succeeds and calls onFriendAdded", async (context) => {
+    const calls: Array<{ url: string; method?: string }> = [];
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {
+        calls.push({ url: String(input), method: init?.method });
+        return new Response(null, { status: 204 });
+    });
+
+    const sampleResults: UserSearchResult[] = [
+        {
+            userId: "u-friend",
+            username: "frienduser",
+            displayName: "Friend User",
+            profilePictureUrl: null,
+            bio: null,
+            location: null,
+            friendshipStatus: "accepted"
+        }
+    ];
+
+    const tracker = { friendAddedCalled: false };
+    const { nodes } = capture(() =>
+        FindFriendsDialog({
+            open: true,
+            onClose: () => {},
+            onFriendAdded: () => {
+                tracker.friendAddedCalled = true;
+            },
+            initialResults: sampleResults,
+            initialConfirmUnfriendUser: sampleResults[0]
+        })
+    );
+
+    const confirmDialog = nodes.find((n) => n.type === ConfirmDialog);
+    assert.ok(confirmDialog, "Expected ConfirmDialog to be rendered");
+
+    await (confirmDialog.props as { onConfirm: () => Promise<void> }).onConfirm();
+
+    assert.equal(calls.length, 1);
+    assert.ok(calls[0].url.endsWith("/api/v1/users/me/friends/u-friend"));
+    assert.equal(calls[0].method, "DELETE");
+    assert.equal(tracker.friendAddedCalled, true);
+});
+
+test("SocialFriendsContent retry handlers track loading state and keep empty state hidden", async (context) => {
+    const deferred: { resolve: (val: FriendUser[]) => void } = { resolve: () => {} };
+    const friendsPromise = new Promise<FriendUser[]>((res) => {
+        deferred.resolve = res;
+    });
+
+    context.mock.method(globalThis, "fetch", async () => {
+        const friends = await friendsPromise;
+        return Response.json({ data: friends }, { headers: { "content-type": "application/json" } });
+    });
+
+    const { nodes } = capture(() =>
+        SocialFriendsContent({
+            initialFriends: [],
+            initialFriendsError: "Failed to load your travel pals."
+        })
+    );
+
+    const retryBtn = nodes.find(
+        (n) => n.type === "button" && (n.props.children === "Retry" || n.props.children === "Retrying…")
+    );
+    assert.ok(retryBtn, "Expected Retry button when initialFriendsError is set");
+
+    const reloadPromise = retryBtn.props.onClick?.();
+    deferred.resolve([]);
+    await reloadPromise;
+});
+
+test("SocialFriendsContent boards and activity retries track loading and handle errors", async (context) => {
+    const counts = { boardFetchCount: 0, activityFetchCount: 0 };
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+        const url = String(input);
+        if (url.includes("/friends/boards")) {
+            counts.boardFetchCount++;
+            return Response.json({ data: [] }, { headers: { "content-type": "application/json" } });
+        }
+        if (url.includes("/friends/activity")) {
+            counts.activityFetchCount++;
+            return Response.json({ data: [] }, { headers: { "content-type": "application/json" } });
+        }
+        return Response.json({ data: [] }, { headers: { "content-type": "application/json" } });
+    });
+
+    const { nodes } = capture(() =>
+        SocialFriendsContent({
+            initialFriends: [],
+            initialBoards: [],
+            initialActivities: [],
+            initialBoardsError: "Failed to load friends' boards.",
+            initialActivitiesError: "Failed to load recent friend activity."
+        })
+    );
+
+    const retryBtns = nodes.filter((n) => n.type === "button" && n.props.children === "Retry");
+    assert.ok(retryBtns.length >= 2, "Expected Retry buttons for boards and activities errors");
+
+    await Promise.all(retryBtns.map((btn) => btn.props.onClick?.()));
+    assert.ok(counts.boardFetchCount >= 1, "Expected reloadBoards to fetch");
+    assert.ok(counts.activityFetchCount >= 1, "Expected reloadActivities to fetch");
 });
 
 test("ConfirmDialog renders accessible alertdialog and executes onCancel and onConfirm actions", () => {

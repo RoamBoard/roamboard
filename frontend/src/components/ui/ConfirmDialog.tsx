@@ -12,7 +12,7 @@ type Props = {
     error?: string | null;
     loading?: boolean;
     onCancel: () => void;
-    onConfirm: () => void;
+    onConfirm: () => void | Promise<void>;
 };
 
 export default function ConfirmDialog({
