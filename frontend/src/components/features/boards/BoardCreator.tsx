@@ -676,7 +676,13 @@ export default function BoardCreator({
                         id="board-map"
                         className="mx-auto w-full max-w-[96rem] scroll-mt-36 px-5 pb-20 sm:px-8 lg:px-12 lg:pb-28"
                     >
-                        <BoardPlanMap days={days} onOpenActivity={setMapActivityId} />
+                        <BoardPlanMap
+                            days={days}
+                            onOpenActivity={(activityId) => {
+                                if (editorDisabled || boardUploading) return;
+                                setMapActivityId(activityId);
+                            }}
+                        />
                     </section>
 
                     <section id="details-discovery" className={fullChapterClasses}>

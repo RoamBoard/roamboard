@@ -168,7 +168,7 @@ export default function ActivityEditorDialog({
                     if (photo)
                         setAutomaticImage({
                             locationKey,
-                            id: "unsplash-" + photo.id,
+                            id: crypto.randomUUID(),
                             publicId: photo.id,
                             pinId: pin.id,
                             source: "unsplash",

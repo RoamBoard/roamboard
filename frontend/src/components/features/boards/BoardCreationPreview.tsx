@@ -3,6 +3,7 @@
 
 import BoardPreviewDiagram from "./BoardPreviewDiagram";
 import { createBoardPreview } from "@/lib/board-creation-preview";
+import { usePhotoUrls } from "@/lib/use-photo-urls";
 import { dayColors, type BoardCreatorPayload } from "@/types/board-creator";
 
 type Props = {
@@ -12,7 +13,16 @@ type Props = {
 const editLink =
     "text-muted-foreground hover:text-foreground mt-2 inline-flex min-h-11 items-center text-[11px] underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4";
 
-export default function BoardCreationPreview({ board }: Props) {
+export default function BoardCreationPreview({ board: sourceBoard }: Props) {
+    const photoUrl = usePhotoUrls();
+    const board = {
+        ...sourceBoard,
+        images: sourceBoard.images.map((image) => ({
+            ...image,
+            url: photoUrl(image.url),
+            thumbnailUrl: photoUrl(image.thumbnailUrl)
+        }))
+    };
     const preview = createBoardPreview(board);
     const pins = board.days.flatMap((day) => day.pins);
     const uploadedCount = board.images.filter((image) => image.source === "upload").length;

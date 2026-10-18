@@ -96,13 +96,15 @@ export default function PhotoEditorDialog({ imageId, onClose }: { imageId: numbe
     return (
         <>
             {discard ? (
-                <ConfirmDialog
-                    title="Discard photo edits?"
-                    description="Your saved photo will keep its previous crop and size."
-                    confirmLabel="Discard edits"
-                    onCancel={() => setDiscard(false)}
-                    onConfirm={onClose}
-                />
+                <div className="fixed inset-0 z-[90]">
+                    <ConfirmDialog
+                        title="Discard photo edits?"
+                        description="Your saved photo will keep its previous crop and size."
+                        confirmLabel="Discard edits"
+                        onCancel={() => setDiscard(false)}
+                        onConfirm={onClose}
+                    />
+                </div>
             ) : null}
             <div
                 className="fixed inset-0 z-[80] grid place-items-center bg-black/65 p-4"

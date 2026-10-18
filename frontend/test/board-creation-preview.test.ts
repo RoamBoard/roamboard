@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import BoardCreationPreview from "../src/components/features/boards/BoardCreationPreview";
 import CollageBoardCard from "../src/components/features/boards/cards/CollageBoardCard";
 import { createBoardPreview } from "../src/lib/board-creation-preview";
+import { photoWasEdited } from "../src/lib/use-photo-urls";
 import type { BoardCreatorPayload, BoardImageDraft, BoardPinDraft } from "../src/types/board-creator";
 
 function image(id: number, order: number, overrides: Partial<BoardImageDraft> = {}): BoardImageDraft {
@@ -265,6 +266,43 @@ test("the controlled preview retains all days, more than five activities, descri
     for (const photo of images)
         assert.ok(markup.includes(photo.thumbnailUrl.replaceAll("&", "&amp;")), `${photo.id} must remain accessible`);
     assert.doesNotMatch(markup, /_next\/image\?url=https%3A%2F%2Fapi\.example\.test/);
+});
+
+test("saved crop revisions refresh collage, itinerary and photo-review URLs without changing Board data", () => {
+    const edited = image(901, 0, { pinId: "museum" });
+    const untouched = image(902, 1);
+    const external = image(903, 2, {
+        source: "unsplash",
+        uploadedImageId: undefined,
+        url: "https://images.unsplash.com/external",
+        thumbnailUrl: "https://images.unsplash.com/external?w=400"
+    });
+    const source = freeze(
+        board({
+            coverImageId: 901,
+            images: [
+                edited,
+                untouched,
+                ...Array.from({ length: 4 }, (_, index) => image(904 + index, 2 + index)),
+                { ...external, order: 6 }
+            ],
+            days: [{ id: "day-1", dayNumber: 1, date: null, pins: [pin("museum")] }]
+        })
+    );
+    const before = structuredClone(source);
+    for (const revision of [2, 3]) {
+        photoWasEdited(901, revision);
+        const markup = renderToStaticMarkup(createElement(BoardCreationPreview, { board: source }));
+        const sources = [...markup.matchAll(/<img\b[^>]*\bsrc="([^"]+)"/g)].map((match) =>
+            match[1].replaceAll("&amp;", "&")
+        );
+        const refreshed = `${edited.thumbnailUrl}&v=${revision}`;
+        assert.ok(sources.filter((url) => url === refreshed).length >= 3);
+        assert.ok(!sources.includes(edited.thumbnailUrl));
+        assert.ok(sources.includes(untouched.thumbnailUrl));
+        assert.ok(sources.includes(external.thumbnailUrl));
+        assert.deepEqual(source, before);
+    }
 });
 
 test("an empty preview stays usable without sample photos or unsupported metadata", () => {
