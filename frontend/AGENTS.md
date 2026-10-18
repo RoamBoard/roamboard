@@ -103,16 +103,10 @@ The `/dev` index links to the implemented frontend routes and explains how to op
 
 The Board creator now uses the versioned Board and image upload-intent endpoints with the session cookie. Existing drafts are listed at `/boards/drafts` and reopen at `/boards/drafts/[boardId]`; saving again sends the Board revision to the backend. `/create` contains the creation landing page and links to `/boards/mine`, which lists the signed-in owner's published Boards. Published Boards open for editing at `/boards/[boardId]/edit`; owners can edit content and visibility, while members with the editor role can edit content but not visibility. The creator has one selected Board cover and lets users attach several uploaded images to an activity, order them, and choose its activity cover. Unattached uploads can be assigned while editing an activity. The creator uses the backend's allowed tag list. Geoapify location search/reverse geocoding and Unsplash search are implemented in the current backend, with missing-key, quota and provider-failure states. Manual coordinates remain available. Vibe and Highlights controls are absent by agreement. The developer provider lab remains separate from persisted Board media.
 
-The `/home` route has a centered ROAMBOARD heading just above its search, using the Cabinet Grotesk typography and
-desktop sizing of MY BOARDS. ROAM and BOARD both use full foreground color, linking to `/discover` and `/boards`
-respectively. Both dim to 90% foreground on hover without underlines and retain visible keyboard focus.
-Its horizontally centered destination search sits at the same upper-page height as the `/boards` search, rather than
-the viewport midpoint, and matches its dimensions:
-550px maximum width, 64px mobile / 80px desktop minimum height, and 14px mobile / 20px desktop input text.
-A faint resting underline and search icon make the field discoverable; the underline strengthens on hover and focus. Search retains
-smaller country labels in autocomplete and Kyoto, Paris and Copenhagen links. Autocomplete requests and displays
-at most the three highest-ranked filtered suggestions. There is no promotional copy or visible
-keyboard instruction. The URL remains `/home` for existing navigation and welcome flows.
+The `/home` route follows Figma 4.0–4.1.3: a small Satoshi destination prompt centered in the space beside
+our universal sidebar, with generous whitespace and no duplicate wordmark. The field has a restrained focus/hover
+underline; its existing Kyoto, Paris and Copenhagen shortcuts appear on focus when the field is empty.
+Suggestions are typographic, show at most three results and retain smaller country/type labels. The URL remains `/home`.
 Debounced, cancellable search forwards destination queries to Mapbox without a hardcoded catalog or geographic bias.
 `src/lib/destination-search-store.ts` owns request cancellation, debounce, results, keyboard selection and same-query
 failure retry. `DestinationExplorer` subscribes to that store and renders `DestinationExplorerContent`; its integration
@@ -126,12 +120,22 @@ breaks ties and repeated displayed names/provider IDs are removed. Short queries
 Transport facilities remain excluded by type and generic label safeguards. There is no population cutoff or extra
 provider request. Countries display a small "Country" label; other destinations retain the smaller country label.
 General destination page support remains owned by its separate workstream.
-Home fades out and moves 6px upward over 400ms before navigating, respecting reduced motion. Search links use the existing
-`/discover/destinations/[slug]` convention; destination-page implementation belongs to its separate workstream.
-The destination segment's `template.tsx` supplies the matching 400ms entrance fade and 6px downward settle from above
-for existing and future city/country pages. It remounts for destination slug changes without changing page content.
-Home and destination arrivals share timing/distance in `src/lib/destination-transition.ts`, with inverse easing curves;
-reduced-motion users skip both animations.
+Selecting a destination starts the root `DestinationTransitionProvider` and navigates as soon as URL resolution finishes.
+Its provider-owned `destination-loading.ts` store independently gates the reveal on a three-second Motion introduction
+and `DestinationReady`, mounted inside the resolved destination page after critical awaits. Readiness includes the
+server-rendered URL identity; a retained page cannot announce readiness for another destination or namesake.
+`DestinationLoading` draws eight staggered architectural rules (five on mobile), reveals up to three existing guide
+photographs (two on mobile) when their images load, and continues with bounded, slow drift during longer requests.
+Images and catalog reads are optional and never gate readiness. No context/provider requests are added just for animation.
+Reduced-motion users skip the introduction and elaborate composition. The overlay dissolves over 650ms, then restores
+focus to the page heading. The existing destination template entrance remains for direct/other navigation.
+The route's scoped not-found page preserves unsupported-destination 404 behavior and offers a return to search;
+its error boundary notifies the transition and supports retry. A 25-second deadline prevents a stalled route from
+leaving an endless loading state. Cancel, browser history interruption and provider cleanup abort URL resolution,
+clear timers and remove the overlay. No new data library or global state manager is introduced.
+`/dev/roam` is development-only and provides fast, seven-second server-delay, thrown-error and unknown-route tests;
+controlled test delays are isolated there. The independent Node tests in `destination-loading.test.ts` cover both
+readiness gates, failure, timeout, retry, cancellation and stale completion. Existing search presenter/API tests remain.
 All API clients use NEXT_PUBLIC_API_URL and session cookies.
 
 `/discover/destinations/[slug]` renders the reusable Destination Atlas for Kyoto, Paris and Copenhagen from
@@ -141,6 +145,10 @@ The horizontal exhibition uses native trackpad/touch/Shift-wheel scrolling, chap
 Kyoto's opening copy, pins and tags are transcribed from Figma frame `55:1060`; other cities retain existing mock copy.
 The compact Credits disclosure retains destination navigation and photography attribution without an extra full-height panel.
 Place details support map/visitor links and previous/next browsing. Existing country destination routes remain available.
+Destination descriptions and guide records are structured local editorial data. Country pages currently await
+`getDiscoverBoardsByDestination`, but its public-Boards source is an asynchronous unavailable placeholder, not a live
+backend request. The existing destination-context API helper is not consumed by these routes. Search and the image
+catalog are genuinely network-backed; general dynamic destination content remains future work.
 Primary destinations use clean `/discover/destinations/<slug>` URLs. Existing editorial guides own their slugs;
 otherwise the highest-ranked unqualified Mapbox result owns the clean URL. Home reuses an exact-name autocomplete
 response or makes one unqualified-name request when selection came from a prefix/qualified query. This extra lookup

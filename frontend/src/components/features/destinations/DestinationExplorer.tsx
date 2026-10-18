@@ -1,13 +1,13 @@
 ﻿"use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
+import { useEffect, useState, useSyncExternalStore, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, LoaderCircle, Search } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { AnimatePresence, motion, useAnimationControls, useReducedMotion } from "motion/react";
 import { destinationPages, destinationPageHref } from "@/data/destination-atlas";
 import { resolveDestinationSearchHref } from "@/lib/destination-search";
-import { destinationTransition } from "@/lib/destination-transition";
+import { useDestinationTransition } from "./DestinationTransitionProvider";
 import type { Destination } from "@/lib/destinations";
 import {
     createDestinationSearchStore,
@@ -19,50 +19,32 @@ export default function DestinationExplorer() {
     const router = useRouter();
     const reduced = useReducedMotion();
     const controls = useAnimationControls();
-    const navigating = useRef(false);
-    const navigationController = useRef<AbortController | null>(null);
+    const transition = useDestinationTransition();
     const [actions] = useState(createDestinationSearchStore);
     const state = useSyncExternalStore(actions.subscribe, actions.getSnapshot, actions.getSnapshot);
-    const [leaving, setLeaving] = useState(false);
 
     useEffect(() => {
         actions.resume();
         return () => {
             actions.dispose();
-            navigationController.current?.abort();
         };
     }, [actions]);
 
-    async function navigate(href: DestinationNavigationTarget) {
-        if (navigating.current) return;
-        navigating.current = true;
-        setLeaving(true);
+    function navigate(href: DestinationNavigationTarget, name?: string) {
+        if (transition?.opening) return;
         actions.setOpen(false);
-        const controller = new AbortController();
-        navigationController.current = controller;
-        const pendingHref = typeof href === "string" ? href : href(controller.signal);
-        const exit = reduced
-            ? Promise.resolve()
-            : controls.start({
-                  opacity: 0,
-                  y: -destinationTransition.distance,
-                  transition: { duration: destinationTransition.duration, ease: destinationTransition.exitEase }
-              });
-        const target = await pendingHref;
-        if (controller.signal.aborted) return;
-        router.prefetch(target);
-        await exit;
-        if (!controller.signal.aborted) router.push(target);
+        if (transition) transition.open(href, name ?? state.query);
+        else if (typeof href === "string") router.push(href);
     }
 
     return (
         <DestinationExplorerContent
             state={state}
             actions={actions}
-            leaving={leaving}
+            leaving={transition?.opening ?? false}
             controls={controls}
             reduced={Boolean(reduced)}
-            onNavigate={(href) => void navigate(href)}
+            onNavigate={navigate}
         />
     );
 }
@@ -75,7 +57,7 @@ type DestinationExplorerContentProps = {
     leaving: boolean;
     reduced: boolean;
     controls: ReturnType<typeof useAnimationControls>;
-    onNavigate: (href: DestinationNavigationTarget) => void;
+    onNavigate: (href: DestinationNavigationTarget, name?: string) => void;
 };
 
 export function DestinationExplorerContent({
@@ -90,7 +72,8 @@ export function DestinationExplorerContent({
     const showSuggestions = open && query.trim().length >= 2;
 
     function choose(destination: Destination) {
-        if (!leaving) onNavigate((signal) => resolveDestinationSearchHref(destination, query, results, signal));
+        if (!leaving)
+            onNavigate((signal) => resolveDestinationSearchHref(destination, query, results, signal), destination.name);
     }
 
     function submit(event: FormEvent) {
@@ -101,47 +84,18 @@ export function DestinationExplorerContent({
     }
 
     return (
-        <section
-            className="font-body flex min-h-dvh min-w-0 items-start justify-center px-5 pt-56 pb-32 md:px-10 md:pt-[calc(13.75rem+clamp(40px,6.4vw,96px))]"
-            aria-labelledby="roamboard-heading"
-        >
-            <motion.div animate={controls} className="relative w-full max-w-[550px]" inert={leaving}>
-                <h1
-                    id="roamboard-heading"
-                    aria-label="Roamboard"
-                    className="font-display absolute inset-x-0 bottom-full pb-8 text-center text-[clamp(32px,6.4vw,96px)] leading-[1.02] font-bold tracking-[-0.045em] whitespace-nowrap sm:pb-10"
-                >
-                    <Link
-                        href="/discover"
-                        aria-label="Roam: discover destinations"
-                        className="text-foreground hover:text-foreground/90 transition-colors focus-visible:outline-1 focus-visible:outline-offset-4 motion-reduce:transition-none"
-                    >
-                        ROAM
-                    </Link>
-                    <Link
-                        href="/boards"
-                        aria-label="Board: view your Boards"
-                        className="text-foreground hover:text-foreground/90 transition-colors focus-visible:outline-1 focus-visible:outline-offset-4 motion-reduce:transition-none"
-                    >
-                        BOARD
-                    </Link>
-                </h1>
-                <form
-                    role="search"
-                    aria-label="Destination search"
-                    onSubmit={submit}
-                    className="relative"
-                    onBlur={(event) => {
-                        if (!event.currentTarget.contains(event.relatedTarget)) actions.setOpen(false);
-                    }}
-                >
-                    <div className="group border-line/65 hover:border-muted-foreground/60 focus-within:border-foreground/60 relative flex min-h-16 items-center border-b transition-colors motion-reduce:transition-none md:min-h-20">
-                        <Search
-                            aria-hidden="true"
-                            size={18}
-                            strokeWidth={1.3}
-                            className="text-muted-foreground/65 pointer-events-none ml-3 shrink-0"
-                        />
+        <section className="font-body grid min-h-dvh min-w-0 place-items-center px-5 md:px-10" aria-label="Roamboard">
+            <motion.div
+                animate={controls}
+                className="relative w-full max-w-[550px]"
+                inert={leaving}
+                onBlur={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget)) actions.setOpen(false);
+                }}
+            >
+                <h1 className="sr-only">Roamboard — find your destination</h1>
+                <form role="search" aria-label="Destination search" onSubmit={submit} className="relative">
+                    <div className="group focus-within:border-line hover:border-line/50 relative flex min-h-20 items-center border-b border-transparent transition-colors motion-reduce:transition-none">
                         <label htmlFor="destination-search" className="sr-only">
                             Search destinations
                         </label>
@@ -158,11 +112,12 @@ export function DestinationExplorerContent({
                             maxLength={100}
                             spellCheck={false}
                             value={query}
-                            placeholder="where would you like to go?"
-                            className="text-14 placeholder:text-muted-foreground md:text-20 w-full min-w-0 bg-transparent px-4 py-5 text-center outline-none"
+                            placeholder="so, where is it you wish to go?"
+                            className="placeholder:text-muted-foreground text-16 md:text-20 w-full min-w-0 bg-transparent px-6 py-7 text-center outline-none focus-visible:outline-1 focus-visible:-outline-offset-4"
                             onFocus={() => actions.setOpen(true)}
                             onChange={(event) => actions.setQuery(event.target.value)}
                             onKeyDown={(event) => {
+                                if (event.nativeEvent?.isComposing) return;
                                 if (event.key === "Escape") {
                                     actions.setOpen(false);
                                     return;
@@ -178,21 +133,11 @@ export function DestinationExplorerContent({
                                 type="submit"
                                 aria-label="Explore selected destination"
                                 disabled={loading || leaving}
-                                className="text-muted-foreground hover:text-foreground focus-visible:outline-foreground mr-1 grid size-11 shrink-0 place-items-center focus-visible:outline-2 disabled:opacity-40"
+                                className="text-muted-foreground hover:text-foreground focus-visible:outline-foreground absolute right-0 grid size-11 place-items-center focus-visible:outline-2 disabled:opacity-40"
                             >
-                                {loading ? (
-                                    <LoaderCircle
-                                        size={14}
-                                        aria-hidden="true"
-                                        className="animate-spin motion-reduce:animate-none"
-                                    />
-                                ) : (
-                                    <ArrowRight size={16} strokeWidth={1.2} aria-hidden="true" />
-                                )}
+                                <ArrowRight size={16} strokeWidth={1.2} aria-hidden="true" />
                             </button>
-                        ) : (
-                            <span aria-hidden="true" className="mr-1 block size-11 shrink-0" />
-                        )}
+                        ) : null}
                     </div>
                     <AnimatePresence>
                         {showSuggestions && (
@@ -219,7 +164,7 @@ export function DestinationExplorerContent({
                                                 tabIndex={-1}
                                                 onMouseDown={(event) => event.preventDefault()}
                                                 onClick={() => choose(destination)}
-                                                className="group flex min-h-11 w-full items-baseline justify-between gap-4 px-2 py-3 text-left focus-visible:outline-2"
+                                                className="group flex min-h-11 w-full items-baseline justify-center gap-2 px-2 py-3 text-center focus-visible:outline-2"
                                             >
                                                 <span
                                                     className={`text-14 min-w-0 leading-5 break-words underline-offset-4 group-hover:underline ${active === index ? "underline" : ""}`}
@@ -235,9 +180,17 @@ export function DestinationExplorerContent({
                                         </li>
                                     ))}
                                 </ul>
-                                {(error || (!loading && searched && !results.length)) && (
+                                {(loading || error || (!loading && searched && !results.length)) && (
                                     <p className="text-muted-foreground text-12 px-2 py-3 leading-4">
-                                        {error || "No destinations found."}
+                                        {loading ? "Searching destinations…" : error || "No destinations found."}
+                                        {error && (
+                                            <button
+                                                type="submit"
+                                                className="ml-2 min-h-11 underline underline-offset-4 focus-visible:outline-2"
+                                            >
+                                                Try again
+                                            </button>
+                                        )}
                                     </p>
                                 )}
                             </motion.div>
@@ -248,9 +201,9 @@ export function DestinationExplorerContent({
                     )}
                 </form>
                 <nav
-                    className={`text-12 absolute inset-x-0 top-full mt-7 flex flex-wrap justify-center gap-x-6 gap-y-1 leading-4 ${showSuggestions ? "invisible" : ""}`}
+                    className={`text-12 absolute inset-x-0 top-full mt-4 flex flex-wrap justify-center gap-x-6 gap-y-1 leading-4 ${showSuggestions || !open ? "invisible" : ""}`}
                     aria-label="Suggested destinations"
-                    inert={showSuggestions}
+                    inert={showSuggestions || !open}
                 >
                     {destinationPages.map((destination) => (
                         <Link
@@ -266,7 +219,7 @@ export function DestinationExplorerContent({
                                 )
                                     return;
                                 event.preventDefault();
-                                if (!leaving) onNavigate(destinationPageHref(destination));
+                                if (!leaving) onNavigate(destinationPageHref(destination), destination.name);
                             }}
                             className="text-muted-foreground hover:text-foreground inline-flex min-h-11 items-center underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4"
                         >
