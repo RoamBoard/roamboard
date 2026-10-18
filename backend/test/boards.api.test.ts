@@ -20,6 +20,15 @@ function fakeAuth(): { repository: AuthRepository; googleVerifier: GoogleVerifie
     const otherHash = createHash("sha256").update("other-token").digest("hex");
     return {
         repository: {
+            async listGuestAccounts() {
+                return [];
+            },
+            async createGuestAccount() {
+                return null;
+            },
+            async findGuestAccount() {
+                return null;
+            },
             async findUserById() {
                 return null;
             },

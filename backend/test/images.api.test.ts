@@ -29,6 +29,15 @@ function fakeAuth(): { repository: AuthRepository; googleVerifier: GoogleVerifie
     ]);
     return {
         repository: {
+            async listGuestAccounts() {
+                return [];
+            },
+            async createGuestAccount() {
+                return null;
+            },
+            async findGuestAccount() {
+                return null;
+            },
             async findUserById() {
                 return null;
             },

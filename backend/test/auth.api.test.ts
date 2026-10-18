@@ -11,6 +11,7 @@ import type { GoogleIdentity } from "../src/features/auth/auth.types.js";
 import type { ProviderAsset } from "../src/features/images/images.types.js";
 
 const origin = "http://localhost:3000";
+process.env.NODE_ENV = "development";
 
 test("Google sign-in returns a configuration error when its backend client ID is missing", async () => {
     const previous = process.env.GOOGLE_CLIENT_ID;
@@ -40,6 +41,18 @@ function fakeDependencies(
 
     return {
         repository: {
+            async listGuestAccounts() {
+                return [...users.values()].filter((user) => user.userId.startsWith("guest:"));
+            },
+            async createGuestAccount(userId, username) {
+                if ([...users.values()].some((user) => user.username === username)) return null;
+                const user = { userId, username, displayName: username };
+                users.set(userId, user);
+                return user;
+            },
+            async findGuestAccount(userId) {
+                return userId.startsWith("guest:") ? (users.get(userId) ?? null) : null;
+            },
             async findUserById(id) {
                 return users.get(id) ?? null;
             },
@@ -125,6 +138,108 @@ test("Google sign-in creates a user and a revocable HTTP-only session cookie", a
     assert.equal(signOut.status, 204);
     const afterSignOut = await request(app).get("/api/v1/auth/me").set("Cookie", cookie);
     assert.equal(afterSignOut.status, 401);
+});
+
+test("guest accounts are listed, created once, and can be signed into again", async () => {
+    const app = createApp(fakeDependencies());
+    const empty = await request(app).get("/api/v1/auth/guests");
+    assert.deepEqual(empty.body.data, []);
+
+    const created = await request(app)
+        .post("/api/v1/auth/guests")
+        .set("Origin", origin)
+        .send({ username: "team_demo" });
+    assert.equal(created.status, 201);
+    assert.equal(created.body.data.isNew, true);
+    assert.equal(created.body.data.user.username, "team_demo");
+    assert.match(created.body.data.user.userId, /^guest:/);
+    const firstCookie = created.headers["set-cookie"]?.[0] as string;
+    assert.match(firstCookie, /HttpOnly/);
+    assert.equal((await request(app).get("/api/v1/auth/me").set("Cookie", firstCookie)).status, 200);
+
+    const listed = await request(app).get("/api/v1/auth/guests");
+    assert.equal(listed.body.data.length, 1);
+    assert.equal(listed.body.data[0].userId, created.body.data.user.userId);
+    const selected = await request(app)
+        .post("/api/v1/auth/guests/sign-in")
+        .set("Origin", origin)
+        .send({ userId: created.body.data.user.userId });
+    assert.equal(selected.status, 200);
+    assert.equal(selected.body.data.isNew, false);
+    assert.equal(selected.body.data.user.username, "team_demo");
+    const selectedCookie = selected.headers["set-cookie"]?.[0] as string;
+    assert.equal((await request(app).get("/api/v1/auth/me").set("Cookie", selectedCookie)).status, 200);
+
+    const duplicate = await request(app)
+        .post("/api/v1/auth/guests")
+        .set("Origin", origin)
+        .send({ username: "team_demo" });
+    assert.equal(duplicate.status, 409);
+    assert.equal(duplicate.headers["set-cookie"], undefined);
+});
+
+test("guest creation and selection validate input and exact frontend origin", async () => {
+    const app = createApp(
+        fakeDependencies([{ userId: "google-user", username: "google_user", displayName: "Google User" }])
+    );
+    assert.equal((await request(app).post("/api/v1/auth/guests").send({ username: "demo_one" })).status, 403);
+    assert.equal(
+        (await request(app).post("/api/v1/auth/guests").set("Origin", origin).send({ username: "bad name" })).status,
+        400
+    );
+    assert.equal(
+        (await request(app).post("/api/v1/auth/guests").set("Origin", origin).send({ username: "google_user" })).status,
+        409
+    );
+    assert.equal(
+        (await request(app).post("/api/v1/auth/guests/sign-in").set("Origin", origin).send({ userId: "google-user" }))
+            .status,
+        400
+    );
+    assert.equal(
+        (
+            await request(app)
+                .post("/api/v1/auth/guests/sign-in")
+                .set("Origin", origin)
+                .send({ userId: "guest:00000000-0000-0000-0000-000000000000" })
+        ).status,
+        404
+    );
+    assert.equal(
+        (
+            await request(app)
+                .post("/api/v1/auth/guests/sign-in")
+                .set("Origin", "https://wrong.test")
+                .send({ userId: "guest:00000000-0000-0000-0000-000000000000" })
+        ).status,
+        403
+    );
+});
+
+test("guest account routes are unavailable in production", async () => {
+    const previous = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+    try {
+        const app = createApp(fakeDependencies());
+        assert.equal((await request(app).get("/api/v1/auth/guests")).status, 404);
+        assert.equal(
+            (await request(app).post("/api/v1/auth/guests").set("Origin", origin).send({ username: "demo_user" }))
+                .status,
+            404
+        );
+        assert.equal(
+            (
+                await request(app)
+                    .post("/api/v1/auth/guests/sign-in")
+                    .set("Origin", origin)
+                    .send({ userId: "guest:00000000-0000-0000-0000-000000000000" })
+            ).status,
+            404
+        );
+    } finally {
+        if (previous === undefined) delete process.env.NODE_ENV;
+        else process.env.NODE_ENV = previous;
+    }
 });
 
 test("rejects invalid Google credentials, invalid bodies, and foreign origins", async () => {
