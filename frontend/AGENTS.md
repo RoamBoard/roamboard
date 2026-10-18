@@ -103,7 +103,36 @@ The `/dev` index links to the implemented frontend routes and explains how to op
 
 The Board creator now uses the versioned Board and image upload-intent endpoints with the session cookie. Existing drafts are listed at `/boards/drafts` and reopen at `/boards/drafts/[boardId]`; saving again sends the Board revision to the backend. `/create` contains the creation landing page and links to `/boards/mine`, which lists the signed-in owner's published Boards. Published Boards open for editing at `/boards/[boardId]/edit`; owners can edit content and visibility, while members with the editor role can edit content but not visibility. The creator has one selected Board cover and lets users attach several uploaded images to an activity, order them, and choose its activity cover. Unattached uploads can be assigned while editing an activity. The creator uses the backend's allowed tag list. Geoapify location search/reverse geocoding and Unsplash search are implemented in the current backend, with missing-key, quota and provider-failure states. Manual coordinates remain available. Vibe and Highlights controls are absent by agreement. The developer provider lab remains separate from persisted Board media.
 
-The Home destination explorer uses the current backend for Mapbox search, Open-Meteo weather, Wikipedia descriptions and Unsplash imagery, with partial-failure feedback. All API clients use NEXT_PUBLIC_API_URL and session cookies.
+The `/home` route has a centered ROAMBOARD heading just above its search, using the Cabinet Grotesk typography and
+desktop sizing of MY BOARDS. ROAM and BOARD both use full foreground color, linking to `/discover` and `/boards`
+respectively. Both dim to 90% foreground on hover without underlines and retain visible keyboard focus.
+Its horizontally centered destination search sits at the same upper-page height as the `/boards` search, rather than
+the viewport midpoint, and matches its dimensions:
+550px maximum width, 64px mobile / 80px desktop minimum height, and 14px mobile / 20px desktop input text.
+A faint resting underline and search icon make the field discoverable; the underline strengthens on hover and focus. Search retains
+smaller country labels in autocomplete and Kyoto, Paris and Copenhagen links. Autocomplete requests and displays
+at most the three highest-ranked filtered suggestions. There is no promotional copy or visible
+keyboard instruction. The URL remains `/home` for existing navigation and welcome flows.
+Debounced, cancellable search forwards destination queries to Mapbox without a hardcoded catalog or geographic bias.
+`src/lib/destination-search-store.ts` owns request cancellation, debounce, results, keyboard selection and same-query
+failure retry. `DestinationExplorer` subscribes to that store and renders `DestinationExplorerContent`; its integration
+tests render the production content and invoke its real input, keyboard, form and option/link handlers through the
+credentialed API helper. These tests use the installed Node test runner and React server renderer without a DOM library.
+They do not verify browser focus/default-event behavior or animation timing. Frontend CI runs `pnpm test` alongside
+lint, TypeScript and build checks.
+Countries and regions/provinces/states are included alongside cities. The backend ranks exact/qualified matches above
+close whole-name spellings, prefixes and fuzzy fallback, returning only the strongest available group. Mapbox order
+breaks ties and repeated displayed names/provider IDs are removed. Short queries preserve provider prefix ordering.
+Transport facilities remain excluded by type and generic label safeguards. There is no population cutoff or extra
+provider request. Countries display a small "Country" label; other destinations retain the smaller country label.
+General destination page support remains owned by its separate workstream.
+Home fades out and moves 6px upward over 400ms before navigating, respecting reduced motion. Search links use the existing
+`/discover/destinations/[slug]` convention; destination-page implementation belongs to its separate workstream.
+The destination segment's `template.tsx` supplies the matching 400ms entrance fade and 6px downward settle from above
+for existing and future city/country pages. It remounts for destination slug changes without changing page content.
+Home and destination arrivals share timing/distance in `src/lib/destination-transition.ts`, with inverse easing curves;
+reduced-motion users skip both animations.
+All API clients use NEXT_PUBLIC_API_URL and session cookies.
 
 `/discover/destinations/[slug]` renders the reusable Destination Atlas for Kyoto, Paris and Copenhagen from
 `src/data/destination-atlas.ts`. These are editorial mock guides with local, credited photography, destination-specific
@@ -112,8 +141,21 @@ The horizontal exhibition uses native trackpad/touch/Shift-wheel scrolling, chap
 Kyoto's opening copy, pins and tags are transcribed from Figma frame `55:1060`; other cities retain existing mock copy.
 The compact Credits disclosure retains destination navigation and photography attribution without an extra full-height panel.
 Place details support map/visitor links and previous/next browsing. Existing country destination routes remain available.
-Home routes recognized city search results to guides (matching city identity, ISO alpha-3 country and provider place type);
-other search results retain their compact live briefs. Discover search and its Kyoto feature link to guides.
+Primary destinations use clean `/discover/destinations/<slug>` URLs. Existing editorial guides own their slugs;
+otherwise the highest-ranked unqualified Mapbox result owns the clean URL. Home reuses an exact-name autocomplete
+response or makes one unqualified-name request when selection came from a prefix/qualified query. This extra lookup
+has a one-second deadline: the request is aborted and navigation uses the clean fallback URL, even if the
+transport does not settle after cancellation. Leaving the page cancels this lookup; successful lookups clear its timer.
+There is no hardcoded prominence list or persistent Mapbox cache. Secondary cross-country namesakes use `?country=<ISO alpha-3>`;
+same-country namesakes retain country, provider ID, type and coordinates only when confirmed secondary. Ordinary
+selections, including unsupported destinations and failed/empty primary lookups, generate the clean slug directly.
+Opaque provider ID changes do not disambiguate the same named city at the same location. There are no cleanup redirects.
+Page rendering and metadata validate
+country-only selectors and continue validating legacy full identities (including city type and a 25km center tolerance).
+Incomplete, repeated or mismatched selectors return 404. General destination pages in the separate workstream must
+resolve clean URLs by unqualified provider ranking, country selectors within that country, and full identities by provider ID.
+Other search results use a normalized destination slug under the same route. General city detail-page support is
+handled separately and is not implemented by Home. Discover search and its Kyoto feature link to guides.
 The destination story gallery uses Motion to focus and rearrange unchanged V1 collage cards, with button, keyboard and drag selection. Its mock stories have no detail links or persistence; an optional real Board href is respected when supplied. Seasonal controls live in a separate white, ruled editorial interlude. The Trending destinations section uses a destination-specific asymmetric photo grid, a fixed near-black palette, animated filtering and shared-photo native-dialog details. The concluding Create panel returns to the page theme; Kyoto’s closing image rotation follows the Figma artwork. Create links open the existing
 blank `/boards/new` flow; destination prefill, activity saving and copying are future integrations. Editorial guide data
 does not create backend destination/location records. Photo sources and rights notes live in `public/images/destinations/README.md`.

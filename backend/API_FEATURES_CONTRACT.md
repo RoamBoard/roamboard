@@ -58,7 +58,27 @@ Missing keys return `503 PROVIDER_UNAVAILABLE`; upstream rejection/timeout retur
 files return `413 IMAGE_TOO_LARGE`; exhausted budgets return `429 PROVIDER_QUOTA_EXHAUSTED`
 before an upstream call.
 
-`GET /api/v1/destinations/search?q=...&limit=6` returns temporary Mapbox locations.
+`GET /api/v1/destinations/search?q=...&limit=3` returns temporary Mapbox destination results.
+One Geocoding v6 request forwards the user's query unchanged with `types=country,region,place`, autocomplete and
+no proximity, country or bounding-box restriction. This includes travel provinces, states and countries as well as
+cities; regions/countries keep their actual `placeType` and have `city: null`. Country codes remain ISO alpha-3.
+There is no curated destination catalog or population threshold. Ranking uses case/accent/punctuation-normalized
+display names and provider aliases, with a leading English "The" ignored:
+
+1. Exact names (four or more normalized characters) and complete name-plus-country/region qualifiers.
+2. Close whole-name spellings for queries of five or more characters: normalized edit similarity at least 0.8,
+   including adjacent transpositions. Higher similarity wins within this group.
+3. Prefix matches. Short inputs retain provider order rather than forcing a tiny exact namesake above prominent prefixes.
+4. Provider-ranked fuzzy results when none of the stronger groups is present.
+
+Only the strongest available group is returned, without padding with weaker results. Provider order breaks ties,
+preserving Mapbox prominence where textual strength is equal. One winner per normalized displayed name and provider ID
+is retained before applying the requested limit. Alias/qualifier/ranking metadata remains internal; the public response
+shape is unchanged. A generic transport label filter excludes airports, aerodromes, airfields, heliports,
+railway/train/bus stations and bus/ferry terminals, including facilities misclassified as places. This is best effort,
+not an authoritative geographic classification or Google-equivalent ranking. Mapbox v6 exposes no population or
+non-address confidence field for this purpose. No additional provider requests, caching or persistence are introduced.
+The separate provider Search Box/POI search is unchanged.
 `GET /api/v1/destinations/context` accepts the selected `id`, `name`, `address`,
 `latitude`, `longitude`, `placeType`. It returns the selected destination,
 optional Open-Meteo weather, Wikipedia article and Unsplash image, plus
@@ -156,7 +176,11 @@ without a per-request log. It can block earlier and up to a bucket longer than a
 exact sliding window. Open-Meteo's month guard is a fixed 31-day duration, not an
 assumed provider calendar month. Rows use explicit `:rolling:` names for these guards.
 
-There is no per-period history or cleanup job. The current policies use at most 20
+Mapbox map loads, geocoding and directions use their monthly budgets without extra daily application caps.
+Geoapify uses its daily and second guards without an extra hourly application cap. Provider-published rate
+windows remain for other APIs, and upstream rate-limit/cooldown feedback is always honored.
+
+There is no per-period history or cleanup job. The current policies use at most 16
 counter rows plus 11 `provider:cooldown` rows, independent of request volume.
 Cooldown rows use `window_end` as the next permitted attempt time; `window_start`
 is negative infinity and `used` stays zero. Every reservation locks its policy's
@@ -173,7 +197,7 @@ are distinguished from conservative application guards below.
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Google Places | Free usage resets on the first of the month at midnight US Pacific time. Calendar months use `America/Los_Angeles`, including DST. [Google pricing overview](https://developers.google.com/maps/billing-and-pricing/overview).                                                                                                                                                                                                                                                                                                     |
 | Mapbox        | Calendar-month free usage; usage reporting is UTC. Monthly application counters use UTC. Other application guards are rolling. HTTP 429/reset feedback respects `X-Rate-Limit-Reset`; it describes a short rate interval, not the monthly billing allowance. [Billing](https://docs.mapbox.com/accounts/guides/invoices/), [UTC usage](https://docs.mapbox.com/accounts/guides/statistics/), [rate-limit headers](https://docs.mapbox.com/api/guides/#rate-limit-headers).                                                         |
-| Geoapify      | Daily credits and requests/second are published, but an exact daily reset timezone was not established. Rolling 24-hour and second guards avoid guessing midnight; the hourly guard is an additional application budget. Honor `Retry-After` when returned. [Pricing](https://www.geoapify.com/pricing/), [rate limiting](https://www.geoapify.com/how-to-avoid-429-too-many-requests-with-api-rate-limiting/).                                                                                                                    |
+| Geoapify      | Daily credits and requests/second are published, but an exact daily reset timezone was not established. Rolling 24-hour and second guards avoid guessing midnight; there is no additional hourly application budget. Honor `Retry-After` when returned. [Pricing](https://www.geoapify.com/pricing/), [rate limiting](https://www.geoapify.com/how-to-avoid-429-too-many-requests-with-api-rate-limiting/).                                                                                                                        |
 | Unsplash      | Team-confirmed production allowance is 1,000/hour; application cap is 990. No exact hourly boundary was established from the docs, so use a conservative trailing-hour guard. Observe remaining/reset headers when present; zero remaining without a reset pauses for an hour. [Unsplash documentation](https://unsplash.com/documentation#rate-limiting).                                                                                                                                                                         |
 | Open-Meteo    | Publishes minute/hour/day/month allowances without precise reset boundaries on its pricing page. Use trailing-duration guards (including 31 days for the month); honor upstream `Retry-After`. The current five-day, three-variable request counts as one call; expanded weather requests may cost multiple units and must update accounting. [Pricing and call calculation](https://open-meteo.com/en/pricing).                                                                                                                   |
 | Wikipedia     | Per-minute limits depend on client identification, not a monthly billing reset. Use a rolling minute guard and a meaningful server `User-Agent` with a project contact URL. Honor `Retry-After`; unknown 429 cooldown defaults to five seconds. [Wikimedia limits](https://www.mediawiki.org/wiki/Wikimedia_APIs/Rate_limits).                                                                                                                                                                                                     |

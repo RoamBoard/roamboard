@@ -45,6 +45,128 @@ test("verified calendar billing months and conservative rolling durations are ex
     assert.equal(month.endsAt.getTime() - month.startsAt.getTime(), 31 * 86400000);
 });
 
+test("Mapbox monthly allowances can be used without artificial daily budgets and still stop at exhaustion", async () => {
+    const monthlyLimits = [
+        ["mapbox.map_loads", 49500],
+        ["mapbox.geocoding", 99000],
+        ["mapbox.directions", 99000]
+    ] as const;
+    const consumed = new Map<string, number>();
+    const reservations: Array<{ id: string; windows: QuotaReservationWindow[] }> = [];
+    const retryAt = new Date("2026-12-01T00:00:00Z");
+    const quota = createQuotaService(
+        {
+            async reserve(id, units, windows) {
+                reservations.push({ id, windows });
+                const limit = monthlyLimits.find(([policyId]) => policyId === id)![1];
+                const total = (consumed.get(id) ?? 0) + units;
+                if (total > limit) return { allowed: false, retryAt };
+                consumed.set(id, total);
+                return { allowed: true };
+            }
+        },
+        createQuotaPolicies(),
+        () => new Date("2026-11-15T12:30:00Z")
+    );
+    for (const [id, limit] of monthlyLimits) {
+        let upstreamCalls = 0;
+        assert.equal(await quota.run(id, async () => ++upstreamCalls, limit), 1);
+        const reservation = reservations.at(-1)!;
+        assert.equal(reservation.id, id);
+        assert.deepEqual(
+            reservation.windows.map(({ period, limit, timeZone, rolling }) => ({ period, limit, timeZone, rolling })),
+            [{ period: "month", limit, timeZone: "UTC", rolling: false }]
+        );
+        assert.equal(reservation.windows[0]!.startsAt.toISOString(), "2026-11-01T00:00:00.000Z");
+        assert.equal(reservation.windows[0]!.endsAt.toISOString(), retryAt.toISOString());
+        await assert.rejects(
+            () => quota.run(id, async () => ++upstreamCalls),
+            (error: unknown) =>
+                error instanceof AppError &&
+                error.statusCode === 429 &&
+                error.code === "PROVIDER_QUOTA_EXHAUSTED" &&
+                error.retryAt?.getTime() === retryAt.getTime()
+        );
+        assert.equal(upstreamCalls, 1, "Exhausted monthly allowance must prevent the provider call");
+        const reservationCount = reservations.length;
+        await assert.rejects(() => quota.reserve(id, limit + 1), AppError);
+        assert.equal(reservations.length, reservationCount, "Oversized operations must fail before repository access");
+    }
+});
+
+test("Geoapify retains its native daily and per-second limits without an artificial hourly allocation", async () => {
+    const reservations: QuotaReservationWindow[][] = [];
+    const quota = createQuotaService(
+        {
+            async reserve(_id, _units, windows) {
+                reservations.push(windows);
+                return { allowed: true };
+            }
+        },
+        createQuotaPolicies(),
+        () => new Date("2026-11-15T12:30:00Z")
+    );
+    await quota.reserve("geoapify.geocoding", 2);
+    assert.deepEqual(
+        reservations[0]!.map(({ period, limit, rolling }) => ({ period, limit, rolling })),
+        [
+            { period: "second", limit: 2, rolling: true },
+            { period: "day", limit: 2970, rolling: true }
+        ]
+    );
+    for (const window of reservations[0]!) {
+        const expectedDuration = window.period === "second" ? 1000 : 86400000;
+        assert.equal(window.endsAt.getTime() - window.startsAt.getTime(), expectedDuration);
+    }
+    await assert.rejects(
+        () => quota.reserve("geoapify.geocoding", 3),
+        (error: unknown) => error instanceof AppError && error.statusCode === 429
+    );
+    assert.equal(reservations.length, 1, "The retained per-second cap must still reject oversized operations");
+});
+
+test("removing artificial budgets preserves other providers' existing allowance periods and limits", async () => {
+    const reservations = new Map<string, QuotaReservationWindow[]>();
+    const quota = createQuotaService(
+        {
+            async reserve(id, _units, windows) {
+                reservations.set(id, windows);
+                return { allowed: true };
+            }
+        },
+        createQuotaPolicies(),
+        () => new Date("2026-11-15T12:30:00Z")
+    );
+    const expected = [
+        {
+            id: "mapbox.search_box",
+            windows: [
+                ["month", 495, false],
+                ["second", 9, true]
+            ]
+        },
+        { id: "unsplash.requests", windows: [["hour", 990, true]] },
+        {
+            id: "open_meteo.forecast",
+            windows: [
+                ["minute", 590, true],
+                ["hour", 4950, true],
+                ["day", 9900, true],
+                ["month", 297000, true]
+            ]
+        },
+        { id: "wikipedia.action_api", windows: [["minute", 190, true]] },
+        { id: "cloudinary.admin", windows: [["hour", 495, true]] }
+    ];
+    for (const policy of expected) {
+        await quota.reserve(policy.id);
+        assert.deepEqual(
+            reservations.get(policy.id)!.map(({ period, limit, rolling }) => [period, limit, rolling]),
+            policy.windows
+        );
+    }
+});
+
 test("provider headers honor both Retry-After formats, zero remaining and the later reset", async () => {
     const signals: ProviderQuotaSignal[] = [];
     const observe = async (signal: ProviderQuotaSignal) => {

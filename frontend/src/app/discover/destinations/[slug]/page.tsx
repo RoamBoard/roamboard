@@ -8,22 +8,29 @@ import { getDiscoverDestination } from "@/data/discover-destinations";
 import { getDiscoverBoardsByDestination } from "@/data/discover-boards";
 import { getDestinationPage } from "@/data/destination-atlas";
 import { DestinationPage as DestinationExperience } from "@/components/features/destinations/DestinationPage";
+import { destinationSelectionMatches, type DestinationSelectionParams } from "@/lib/destination-search";
 
-type Props = { params: Promise<{ slug: string }> };
+type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<DestinationSelectionParams> };
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+async function resolveDestination({ params, searchParams }: Props) {
     const slug = (await params).slug;
-    const destination = getDestinationPage(slug) ?? getDiscoverDestination(slug);
-    if (!destination) notFound();
+    const guide = getDestinationPage(slug);
+    const destination = guide ?? getDiscoverDestination(slug);
+    const selection = (await searchParams) ?? {};
+    if (!destination || !destinationSelectionMatches(destination, guide ? "place" : "country", selection)) notFound();
+    return { guide, destination };
+}
+
+export async function generateMetadata(props: Props): Promise<Metadata> {
+    const { destination } = await resolveDestination(props);
     return {
         title: `${destination.name} | Roamboard`,
         description: "introduction" in destination ? destination.introduction : destination.description
     };
 }
 
-export default async function DestinationPage({ params }: Props) {
-    const slug = (await params).slug;
-    const guide = getDestinationPage(slug);
+export default async function DestinationPage(props: Props) {
+    const { guide, destination: resolved } = await resolveDestination(props);
     if (guide)
         return (
             <div className="[&+footer]:pl-20 [&+footer]:transition-colors [&+footer]:duration-500 motion-reduce:[&+footer]:transition-none md:[&+footer]:pl-28 [&:has([href='#atlas'][aria-current='location'])+footer]:bg-[var(--atlas-background)] [&:has([href='#atlas'][aria-current='location'])+footer]:text-[var(--atlas-muted)] [&>div]:min-h-0">
@@ -32,7 +39,7 @@ export default async function DestinationPage({ params }: Props) {
                 </AppShell>
             </div>
         );
-    const destination = getDiscoverDestination(slug);
+    const destination = "description" in resolved ? resolved : undefined;
     if (!destination) notFound();
     const { boards, available } = await getDiscoverBoardsByDestination(destination.countryCode);
 

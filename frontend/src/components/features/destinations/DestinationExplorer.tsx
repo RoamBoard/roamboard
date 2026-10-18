@@ -1,257 +1,291 @@
-/* eslint-disable @next/next/no-img-element */
-"use client";
+﻿"use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { destinationPages, destinationPageHref, findDestinationPage } from "@/data/destination-atlas";
-import type { FormEvent } from "react";
+import { ArrowRight, LoaderCircle, Search } from "lucide-react";
+import { AnimatePresence, motion, useAnimationControls, useReducedMotion } from "motion/react";
+import { destinationPages, destinationPageHref } from "@/data/destination-atlas";
+import { resolveDestinationSearchHref } from "@/lib/destination-search";
+import { destinationTransition } from "@/lib/destination-transition";
+import type { Destination } from "@/lib/destinations";
 import {
-    loadDestinationContext,
-    searchDestinations,
-    type Destination,
-    type DestinationContext
-} from "@/lib/destinations";
-
-const inputClasses =
-    "w-full border-b border-line bg-transparent px-0 py-3 text-16 text-foreground outline-none placeholder:text-graphite focus:border-foreground";
-
-function formatDate(value: string) {
-    return new Intl.DateTimeFormat("en", {
-        weekday: "short",
-        month: "short",
-        day: "numeric"
-    }).format(new Date(`${value}T12:00:00`));
-}
+    createDestinationSearchStore,
+    type DestinationSearchState,
+    type DestinationSearchStore
+} from "@/lib/destination-search-store";
 
 export default function DestinationExplorer() {
     const router = useRouter();
-    const [query, setQuery] = useState("");
-    const [results, setResults] = useState<Destination[]>([]);
-    const [selected, setSelected] = useState<DestinationContext | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [contextLoading, setContextLoading] = useState(false);
-    const [error, setError] = useState("");
+    const reduced = useReducedMotion();
+    const controls = useAnimationControls();
+    const navigating = useRef(false);
+    const navigationController = useRef<AbortController | null>(null);
+    const [actions] = useState(createDestinationSearchStore);
+    const state = useSyncExternalStore(actions.subscribe, actions.getSnapshot, actions.getSnapshot);
+    const [leaving, setLeaving] = useState(false);
 
-    async function handleSearch(event: FormEvent<HTMLFormElement>) {
-        event.preventDefault();
-        const trimmed = query.trim();
-        if (trimmed.length < 2) {
-            setError("Enter at least two characters to search for a destination.");
-            return;
-        }
-        setLoading(true);
-        setError("");
-        setSelected(null);
-        try {
-            setResults(await searchDestinations(trimmed));
-        } catch (caught) {
-            setResults([]);
-            setError(caught instanceof Error ? caught.message : "Destination search failed.");
-        } finally {
-            setLoading(false);
-        }
-    }
+    useEffect(() => {
+        actions.resume();
+        return () => {
+            actions.dispose();
+            navigationController.current?.abort();
+        };
+    }, [actions]);
 
-    async function chooseDestination(destination: Destination) {
-        const guide = findDestinationPage(destination);
-        if (guide) {
-            router.push(destinationPageHref(guide));
-            return;
-        }
-        setContextLoading(true);
-        setError("");
-        try {
-            setSelected(await loadDestinationContext(destination));
-        } catch (caught) {
-            setError(caught instanceof Error ? caught.message : "This destination could not be loaded.");
-        } finally {
-            setContextLoading(false);
-        }
+    async function navigate(href: DestinationNavigationTarget) {
+        if (navigating.current) return;
+        navigating.current = true;
+        setLeaving(true);
+        actions.setOpen(false);
+        const controller = new AbortController();
+        navigationController.current = controller;
+        const pendingHref = typeof href === "string" ? href : href(controller.signal);
+        const exit = reduced
+            ? Promise.resolve()
+            : controls.start({
+                  opacity: 0,
+                  y: -destinationTransition.distance,
+                  transition: { duration: destinationTransition.duration, ease: destinationTransition.exitEase }
+              });
+        const target = await pendingHref;
+        if (controller.signal.aborted) return;
+        router.prefetch(target);
+        await exit;
+        if (!controller.signal.aborted) router.push(target);
     }
 
     return (
-        <section className="w-full max-w-5xl px-6 py-16 sm:px-10 lg:px-20" aria-labelledby="destination-heading">
-            <div className="max-w-2xl">
-                <p className="font-body text-10 tracking-label text-graphite font-bold uppercase">
-                    Destination discovery
-                </p>
+        <DestinationExplorerContent
+            state={state}
+            actions={actions}
+            leaving={leaving}
+            controls={controls}
+            reduced={Boolean(reduced)}
+            onNavigate={(href) => void navigate(href)}
+        />
+    );
+}
+
+type DestinationNavigationTarget = string | ((signal: AbortSignal) => Promise<string>);
+
+type DestinationExplorerContentProps = {
+    state: DestinationSearchState;
+    actions: DestinationSearchStore;
+    leaving: boolean;
+    reduced: boolean;
+    controls: ReturnType<typeof useAnimationControls>;
+    onNavigate: (href: DestinationNavigationTarget) => void;
+};
+
+export function DestinationExplorerContent({
+    state,
+    actions,
+    leaving,
+    reduced,
+    controls,
+    onNavigate
+}: DestinationExplorerContentProps) {
+    const { query, results, active, open, loading, searched, error } = state;
+    const showSuggestions = open && query.trim().length >= 2;
+
+    function choose(destination: Destination) {
+        if (!leaving) onNavigate((signal) => resolveDestinationSearchHref(destination, query, results, signal));
+    }
+
+    function submit(event: FormEvent) {
+        event.preventDefault();
+        if (leaving) return;
+        const selected = actions.submit();
+        if (selected) choose(selected);
+    }
+
+    return (
+        <section
+            className="font-body flex min-h-dvh min-w-0 items-start justify-center px-5 pt-56 pb-32 md:px-10 md:pt-[calc(13.75rem+clamp(40px,6.4vw,96px))]"
+            aria-labelledby="roamboard-heading"
+        >
+            <motion.div animate={controls} className="relative w-full max-w-[550px]" inert={leaving}>
                 <h1
-                    id="destination-heading"
-                    className="font-display text-48 text-foreground sm:text-72 mt-5 leading-[0.95] font-bold"
+                    id="roamboard-heading"
+                    aria-label="Roamboard"
+                    className="font-display absolute inset-x-0 bottom-full pb-8 text-center text-[clamp(32px,6.4vw,96px)] leading-[1.02] font-bold tracking-[-0.045em] whitespace-nowrap sm:pb-10"
                 >
-                    Where will you wander?
+                    <Link
+                        href="/discover"
+                        aria-label="Roam: discover destinations"
+                        className="text-foreground hover:text-foreground/90 transition-colors focus-visible:outline-1 focus-visible:outline-offset-4 motion-reduce:transition-none"
+                    >
+                        ROAM
+                    </Link>
+                    <Link
+                        href="/boards"
+                        aria-label="Board: view your Boards"
+                        className="text-foreground hover:text-foreground/90 transition-colors focus-visible:outline-1 focus-visible:outline-offset-4 motion-reduce:transition-none"
+                    >
+                        BOARD
+                    </Link>
                 </h1>
-                <p className="text-15 text-graphite mt-6 max-w-xl leading-7">
-                    Search a place to explore its destination guide or compact travel brief.
-                </p>
-                <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm" aria-label="Editorial destination guides">
+                <form
+                    role="search"
+                    aria-label="Destination search"
+                    onSubmit={submit}
+                    className="relative"
+                    onBlur={(event) => {
+                        if (!event.currentTarget.contains(event.relatedTarget)) actions.setOpen(false);
+                    }}
+                >
+                    <div className="group border-line/65 hover:border-muted-foreground/60 focus-within:border-foreground/60 relative flex min-h-16 items-center border-b transition-colors motion-reduce:transition-none md:min-h-20">
+                        <Search
+                            aria-hidden="true"
+                            size={18}
+                            strokeWidth={1.3}
+                            className="text-muted-foreground/65 pointer-events-none ml-3 shrink-0"
+                        />
+                        <label htmlFor="destination-search" className="sr-only">
+                            Search destinations
+                        </label>
+                        <input
+                            id="destination-search"
+                            role="combobox"
+                            aria-autocomplete="list"
+                            aria-expanded={showSuggestions}
+                            aria-controls={showSuggestions ? "destination-suggestions" : undefined}
+                            aria-activedescendant={
+                                showSuggestions && results[active] ? `destination-option-${active}` : undefined
+                            }
+                            autoComplete="off"
+                            maxLength={100}
+                            spellCheck={false}
+                            value={query}
+                            placeholder="where would you like to go?"
+                            className="text-14 placeholder:text-muted-foreground md:text-20 w-full min-w-0 bg-transparent px-4 py-5 text-center outline-none"
+                            onFocus={() => actions.setOpen(true)}
+                            onChange={(event) => actions.setQuery(event.target.value)}
+                            onKeyDown={(event) => {
+                                if (event.key === "Escape") {
+                                    actions.setOpen(false);
+                                    return;
+                                }
+                                if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                                    event.preventDefault();
+                                    actions.moveSelection(event.key === "ArrowDown" ? 1 : -1);
+                                }
+                            }}
+                        />
+                        {query.trim() ? (
+                            <button
+                                type="submit"
+                                aria-label="Explore selected destination"
+                                disabled={loading || leaving}
+                                className="text-muted-foreground hover:text-foreground focus-visible:outline-foreground mr-1 grid size-11 shrink-0 place-items-center focus-visible:outline-2 disabled:opacity-40"
+                            >
+                                {loading ? (
+                                    <LoaderCircle
+                                        size={14}
+                                        aria-hidden="true"
+                                        className="animate-spin motion-reduce:animate-none"
+                                    />
+                                ) : (
+                                    <ArrowRight size={16} strokeWidth={1.2} aria-hidden="true" />
+                                )}
+                            </button>
+                        ) : (
+                            <span aria-hidden="true" className="mr-1 block size-11 shrink-0" />
+                        )}
+                    </div>
+                    <AnimatePresence>
+                        {showSuggestions && (
+                            <motion.div
+                                initial={{ opacity: 0, y: reduced ? 0 : -3 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: reduced ? 0 : 0.16 }}
+                                className="bg-background absolute inset-x-0 top-full z-20 pt-3 pb-4"
+                            >
+                                <ul
+                                    id="destination-suggestions"
+                                    role="listbox"
+                                    aria-label="Destinations"
+                                    aria-busy={loading}
+                                >
+                                    {results.map((destination, index) => (
+                                        <li key={destination.id} role="presentation">
+                                            <button
+                                                id={`destination-option-${index}`}
+                                                role="option"
+                                                aria-selected={active === index}
+                                                type="button"
+                                                tabIndex={-1}
+                                                onMouseDown={(event) => event.preventDefault()}
+                                                onClick={() => choose(destination)}
+                                                className="group flex min-h-11 w-full items-baseline justify-between gap-4 px-2 py-3 text-left focus-visible:outline-2"
+                                            >
+                                                <span
+                                                    className={`text-14 min-w-0 leading-5 break-words underline-offset-4 group-hover:underline ${active === index ? "underline" : ""}`}
+                                                >
+                                                    {destination.name}
+                                                </span>
+                                                <span className="text-muted-foreground text-12 max-w-[45%] shrink-0 text-right leading-4">
+                                                    {destination.placeType === "country"
+                                                        ? "Country"
+                                                        : destination.country}
+                                                </span>
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                                {(error || (!loading && searched && !results.length)) && (
+                                    <p className="text-muted-foreground text-12 px-2 py-3 leading-4">
+                                        {error || "No destinations found."}
+                                    </p>
+                                )}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                    {error && query.trim().length < 2 && (
+                        <p className="text-muted-foreground text-12 mt-3 text-center leading-4">{error}</p>
+                    )}
+                </form>
+                <nav
+                    className={`text-12 absolute inset-x-0 top-full mt-7 flex flex-wrap justify-center gap-x-6 gap-y-1 leading-4 ${showSuggestions ? "invisible" : ""}`}
+                    aria-label="Suggested destinations"
+                    inert={showSuggestions}
+                >
                     {destinationPages.map((destination) => (
                         <Link
                             key={destination.slug}
                             href={destinationPageHref(destination)}
-                            className="inline-flex min-h-11 items-center underline underline-offset-4"
+                            onClick={(event) => {
+                                if (
+                                    event.button !== 0 ||
+                                    event.metaKey ||
+                                    event.ctrlKey ||
+                                    event.shiftKey ||
+                                    event.altKey
+                                )
+                                    return;
+                                event.preventDefault();
+                                if (!leaving) onNavigate(destinationPageHref(destination));
+                            }}
+                            className="text-muted-foreground hover:text-foreground inline-flex min-h-11 items-center underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4"
                         >
-                            {destination.name} ↗
+                            {destination.name}
                         </Link>
                     ))}
-                </div>
-                <form className="mt-10 flex items-end gap-4" onSubmit={handleSearch}>
-                    <label className="min-w-0 flex-1" htmlFor="destination-search">
-                        <span className="sr-only">Destination or place</span>
-                        <input
-                            id="destination-search"
-                            className={inputClasses}
-                            value={query}
-                            onChange={(event) => setQuery(event.target.value)}
-                            placeholder="Try Kyoto, Lisbon, or a neighborhood"
-                            autoComplete="off"
-                        />
-                    </label>
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="border-foreground bg-foreground text-14 text-background shrink-0 border px-5 py-3 transition-opacity hover:opacity-75 disabled:cursor-wait disabled:opacity-50"
-                    >
-                        {loading ? "Searching" : "Search"}
-                    </button>
-                </form>
-                {error ? (
-                    <p className="border-foreground text-14 text-foreground mt-5 border-l-2 pl-3" role="alert">
-                        {error}
-                    </p>
-                ) : null}
-            </div>
-
-            {results.length > 0 ? (
-                <div className="mt-14 grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Destination results">
-                    {results.map((destination) => (
-                        <button
-                            key={destination.id}
-                            type="button"
-                            onClick={() => void chooseDestination(destination)}
-                            className="border-line hover:border-foreground focus-visible:outline-foreground border p-5 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
-                        >
-                            <span className="text-10 tracking-label text-graphite font-bold uppercase">
-                                {destination.placeType}
-                            </span>
-                            <strong className="font-display text-24 text-foreground mt-4 block leading-tight">
-                                {destination.name}
-                            </strong>
-                            <span className="text-14 text-graphite mt-2 block leading-6">{destination.address}</span>
-                            <span className="text-12 text-foreground mt-5 block">
-                                {contextLoading ? "Loading brief..." : "Open destination brief ->"}
-                            </span>
-                        </button>
-                    ))}
-                </div>
-            ) : null}
-
-            {!loading && query.trim().length >= 2 && results.length === 0 && !error ? (
-                <p className="text-14 text-graphite mt-14">
-                    No destinations found. Try a city, landmark, or neighborhood.
-                </p>
-            ) : null}
-
-            {selected ? <DestinationBrief context={selected} /> : null}
+                </nav>
+            </motion.div>
+            <p role="status" className="sr-only">
+                {leaving
+                    ? "Opening destination."
+                    : loading
+                      ? "Searching destinations."
+                      : error
+                        ? error
+                        : searched
+                          ? `${results.length} destinations found.`
+                          : ""}
+            </p>
         </section>
-    );
-}
-
-function DestinationBrief({ context }: { context: DestinationContext }) {
-    const { destination, weather, article, image, unavailable } = context;
-    return (
-        <article className="border-foreground mt-16 border-t pt-8" aria-labelledby="brief-heading">
-            <div className="grid gap-10 lg:grid-cols-[1fr_1.2fr]">
-                <div>
-                    <p className="text-10 tracking-label text-graphite font-bold uppercase">Selected destination</p>
-                    <h2 id="brief-heading" className="font-display text-36 text-foreground mt-4 leading-none font-bold">
-                        {destination.name}
-                    </h2>
-                    <p className="text-15 text-graphite mt-4 leading-7">{destination.address}</p>
-                    <p className="text-12 text-graphite mt-2">
-                        {destination.latitude.toFixed(4)}, {destination.longitude.toFixed(4)}
-                    </p>
-                    {article ? (
-                        <div className="mt-10">
-                            <h3 className="font-display text-22 text-foreground font-bold">A little context</h3>
-                            <p className="text-15 text-graphite mt-3 leading-7">{article.description}</p>
-                            <a
-                                className="text-12 text-foreground mt-4 inline-block underline underline-offset-4"
-                                href={article.url}
-                                target="_blank"
-                                rel="noreferrer"
-                            >
-                                Read {article.title} on Wikipedia
-                            </a>
-                        </div>
-                    ) : null}
-                </div>
-                <div>
-                    {image ? (
-                        <figure>
-                            <img className="aspect-video w-full object-cover" src={image.url} alt={image.alt} />
-                            <figcaption className="text-12 text-graphite mt-2">
-                                Photo by{" "}
-                                <a
-                                    className="underline underline-offset-4"
-                                    href={image.photographerUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                >
-                                    {image.photographer}
-                                </a>{" "}
-                                on{" "}
-                                <a
-                                    className="underline underline-offset-4"
-                                    href={image.sourceUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                >
-                                    Unsplash
-                                </a>
-                            </figcaption>
-                        </figure>
-                    ) : (
-                        <div className="bg-faint text-14 text-graphite grid aspect-video place-items-center px-6 text-center">
-                            Add an Unsplash key to show destination imagery.
-                        </div>
-                    )}
-                    {weather ? (
-                        <section className="mt-10" aria-labelledby="weather-heading">
-                            <div className="flex items-baseline justify-between gap-4">
-                                <h3 id="weather-heading" className="font-display text-22 text-foreground font-bold">
-                                    Five-day weather
-                                </h3>
-                                <span className="text-12 text-graphite">{weather.timezone}</span>
-                            </div>
-                            <div className="border-line mt-4 grid grid-cols-5 gap-2 border-y py-4">
-                                {weather.dates.map((date, index) => (
-                                    <div key={date} className="min-w-0">
-                                        <p className="text-10 tracking-label text-graphite font-bold uppercase">
-                                            {formatDate(date)}
-                                        </p>
-                                        <p className="font-display text-20 text-foreground mt-3">
-                                            {Math.round(weather.maximums[index] ?? 0)}°
-                                        </p>
-                                        <p className="text-12 text-graphite">
-                                            {Math.round(weather.minimums[index] ?? 0)}° /{" "}
-                                            {weather.precipitation[index] ?? 0}% rain
-                                        </p>
-                                    </div>
-                                ))}
-                            </div>
-                        </section>
-                    ) : (
-                        <p className="text-14 text-graphite mt-10">Weather is temporarily unavailable.</p>
-                    )}
-                </div>
-            </div>
-            {unavailable.length > 0 ? (
-                <p className="text-12 text-graphite mt-8">
-                    Some optional details are unavailable right now: {unavailable.join(", ")}.
-                </p>
-            ) : null}
-        </article>
     );
 }
