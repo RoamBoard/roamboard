@@ -5,6 +5,8 @@ export type AuthUser = {
     profilePictureUrl?: string | null;
 };
 
+export type GuestAccount = AuthUser;
+
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 type ApiError = {
@@ -84,6 +86,42 @@ export async function signInWithGoogle(credential: string): Promise<{ user: Auth
         publishAccountUpdate(payload.data.user);
     }
     return payload.data;
+}
+
+export async function listGuestAccounts(): Promise<GuestAccount[]> {
+    const response = await fetch(`${apiUrl}/api/v1/auth/guests`, { credentials: "include", cache: "no-store" });
+    if (!response.ok) throw new Error("Guest list unavailable. Refresh to retry.");
+    const payload = (await response.json()) as { data: GuestAccount[] };
+    return payload.data;
+}
+
+async function guestRequest(path: string, body: object): Promise<{ user: AuthUser; isNew: boolean }> {
+    const logoutGeneration = accountState.logoutGeneration;
+    const response = await fetch(`${apiUrl}/api/v1/auth/${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(body)
+    });
+    if (!response.ok) {
+        const payload = (await response.json().catch(() => ({}))) as ApiError;
+        throw new Error(payload.error?.message ?? "Guest sign-in failed. Please try again.");
+    }
+    const payload = (await response.json()) as { data: { user: AuthUser; isNew: boolean } };
+    if (logoutGeneration === accountState.logoutGeneration) {
+        accountState.generation += 1;
+        accountState.signedOut = false;
+        publishAccountUpdate(payload.data.user);
+    }
+    return payload.data;
+}
+
+export function createGuestAccount(username: string): Promise<{ user: AuthUser; isNew: boolean }> {
+    return guestRequest("guests", { username });
+}
+
+export function signInAsGuest(userId: string): Promise<{ user: AuthUser; isNew: boolean }> {
+    return guestRequest("guests/sign-in", { userId });
 }
 
 export async function getCurrentUser(): Promise<AuthUser | null> {

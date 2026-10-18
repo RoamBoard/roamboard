@@ -14,6 +14,15 @@ const origin = "http://localhost:3000";
 const cookie = "roamboard_session=owner-token";
 const user = { userId: "owner", username: "owner", displayName: "Owner" };
 const repository: AuthRepository = {
+    async listGuestAccounts() {
+        return [];
+    },
+    async createGuestAccount() {
+        return null;
+    },
+    async findGuestAccount() {
+        return null;
+    },
     async findUserById() {
         return user;
     },

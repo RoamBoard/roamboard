@@ -16,19 +16,41 @@ function cookieOptions() {
 
 export interface AuthController {
     signIn: RequestHandler;
+    listGuests: RequestHandler;
+    createGuest: RequestHandler;
+    signInAsGuest: RequestHandler;
     me: RequestHandler;
     signOut: RequestHandler;
 }
 
 export function createAuthController(service: AuthService): AuthController {
+    const setSession = (response: Parameters<RequestHandler>[1], token: string) => {
+        response.cookie(sessionCookieName(), token, { ...cookieOptions(), maxAge: SESSION_MAX_AGE_MS });
+    };
+
     const signIn: RequestHandler = async (request, response) => {
         const { credential } = request.body as { credential: string };
         const result = await service.signIn(credential);
-        response.cookie(sessionCookieName(), result.sessionToken, {
-            ...cookieOptions(),
-            maxAge: SESSION_MAX_AGE_MS
-        });
+        setSession(response, result.sessionToken);
         response.status(200).json({ data: { user: result.user, isNew: result.isNew } });
+    };
+
+    const listGuests: RequestHandler = async (_request, response) => {
+        response.json({ data: await service.listGuestAccounts() });
+    };
+
+    const createGuest: RequestHandler = async (request, response) => {
+        const { username } = request.body as { username: string };
+        const result = await service.createGuestAccount(username);
+        setSession(response, result.sessionToken);
+        response.status(201).json({ data: { user: result.user, isNew: result.isNew } });
+    };
+
+    const signInAsGuest: RequestHandler = async (request, response) => {
+        const { userId } = request.body as { userId: string };
+        const result = await service.signInAsGuest(userId);
+        setSession(response, result.sessionToken);
+        response.json({ data: { user: result.user, isNew: result.isNew } });
     };
 
     const me: RequestHandler = async (request, response) => {
@@ -45,5 +67,5 @@ export function createAuthController(service: AuthService): AuthController {
         response.status(204).send();
     };
 
-    return { signIn, me, signOut };
+    return { signIn, listGuests, createGuest, signInAsGuest, me, signOut };
 }

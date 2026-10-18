@@ -1,0 +1,5 @@
+CREATE TABLE guest_account (
+  user_id VARCHAR(500) PRIMARY KEY REFERENCES app_user (user_id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+

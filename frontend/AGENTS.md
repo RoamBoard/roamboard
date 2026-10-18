@@ -372,9 +372,11 @@ Do not mix package managers or create another package manager's lockfile. Keep `
 
 ### Account interface preview
 
-The user has chosen Google-only sign-in. Email/password forms are not part of the planned login flow. The supplied requirements describe Google sign-in as conditional; this decision selects it for the implementation.
+The user has chosen Google sign-in plus development guest accounts. Email/password forms are not part of the login flow. Guest accounts have usernames and no passwords, are shared across the team, and keep their data between sessions.
 
 `/login` and `/signup` use Google's rendered sign-in button. The browser sends the Google credential to `POST /api/v1/auth/google` with credentials; the backend verifies it and sets an HTTP-only session cookie. The frontend reads the current user through `GET /api/v1/auth/me` and signs out through `POST /api/v1/auth/logout`. `ProfileControl` shows the authenticated user's display name, handle, saved profile photo when available, and an active logout option. Confirmed profile saves, photo changes and removals notify mounted account controls immediately; stale initial session reads cannot overwrite those updates. Logout invalidates pending account notifications, and profile saves started before logout cannot repopulate signed-out controls or a later login. `/dev/account` still uses a fictional preview user and keeps its logout button disabled.
+
+In development, `/login` also lets a visitor create a persistent guest account or select one from a dropdown. The client calls `GET/POST /api/v1/auth/guests` and `POST /api/v1/auth/guests/sign-in`; the backend sets the same HTTP-only session cookie. The old visual-only Rowan demo shortcut was removed. Migration 008 must be applied to the development database before these controls work.
 
 Stable Roamboard user IDs and Google verification belong in the backend. The Google web client ID is shared through `NEXT_PUBLIC_GOOGLE_CLIENT_ID`; the Express API base URL is `NEXT_PUBLIC_API_URL`. Both are set in the ignored `frontend/.env.local` for local work. The client ID is public, while the Google client secret is not used by this flow.
 

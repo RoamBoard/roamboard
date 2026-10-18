@@ -46,10 +46,10 @@ public search features run here. See
 [API_FEATURES_CONTRACT.md](API_FEATURES_CONTRACT.md) for routes, permissions,
 budgets and errors; the creator uses [BOARD_API_CONTRACT.md](BOARD_API_CONTRACT.md).
 
-Apply unapplied migrations through `007_profile_tag_catalog.sql` in numeric order to an
+Apply unapplied migrations through `008_guest_accounts.sql` in numeric order to an
 independent local database. The shared Azure database already has the consolidated 004
 schema, image-library 005, and reconciled profile changes in 006; do not rerun those
-files there. Migration 007 is pending on Azure until a fresh backup is confirmed. See
+files there. Migration 007 is applied; do not rerun it. Migration 008 remains pending on Azure. See
 [the migration log](db/MIGRATION_LOG.md) for the remaining profile column-length difference.
 Integration tests apply the files only inside temporary test schemas.
 
@@ -179,9 +179,9 @@ follow [the shared database deployment guide](deploy/README.md). The existing
    punctuation, URL-encode it in `DATABASE_URL`.
 3. Apply unapplied migrations in order: `001_initial.sql`, `002_auth_session.sql`,
    `003_board_creator.sql`, `004_api_features.sql`, `005_image_library.sql`,
-   `006_profile.sql`, and `007_profile_tag_catalog.sql`. Apply only missing migrations.
+   `006_profile.sql`, `007_profile_tag_catalog.sql`, and `008_guest_accounts.sql`. Apply only missing migrations.
    The shared Azure database already has 004, 005, and the reconciled profile changes
-   from 006; do not rerun them there. Apply 007 there only after a fresh backup is confirmed.
+   from 006; do not rerun them there. Migration 007 is also applied. Apply only 008 there after a fresh backup is confirmed.
    From `backend/`, for an independent database missing 006:
 
     ```powershell
