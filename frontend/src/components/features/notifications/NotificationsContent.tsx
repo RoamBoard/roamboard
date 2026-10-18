@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Bell, UserRound } from "lucide-react";
@@ -17,10 +17,15 @@ export default function NotificationsContent({ initialRequests }: { initialReque
     const [requests, setRequests] = useState<FriendRequest[]>(initialRequests ?? []);
     const [loading, setLoading] = useState(false);
     const [loadError, setLoadError] = useState<string | null>(null);
-    const [sessionUser, setSessionUser] = useState<AuthUser | null>(null);
+    const [sessionUser, setSessionUser] = useState<AuthUser | null>(
+        initialRequests ? ({ userId: "initial-session", username: "", displayName: "" } as AuthUser) : null
+    );
     const [actionInProgress, setActionInProgress] = useState<Record<number, "accepting" | "rejecting">>({});
     const [actionError, setActionError] = useState<string | null>(null);
     const [failedAvatars, setFailedAvatars] = useState<Record<number, boolean>>({});
+
+    const activeUserIdRef = useRef<string | null>(initialRequests ? "initial-session" : null);
+    const requestVersionRef = useRef(0);
 
     const apiOrigin = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
     const resolveAvatarUrl = (url: string | null) => {
@@ -34,37 +39,54 @@ export default function NotificationsContent({ initialRequests }: { initialReque
 
     useEffect(() => {
         return subscribeToFriendRequestUpdates((event) => {
+            requestVersionRef.current += 1;
             setRequests((prev) => prev.filter((r) => r.requestId !== event.requestId));
         });
     }, []);
 
-    const fetchRequests = useCallback(() => {
+    const fetchRequests = useCallback((targetUserId?: string) => {
+        const expectedUserId = targetUserId ?? activeUserIdRef.current;
+        if (!expectedUserId) return;
         setLoading(true);
         setLoadError(null);
+        const version = requestVersionRef.current;
         void loadFriendRequests()
             .then((data) => {
-                setRequests(data);
+                if (activeUserIdRef.current === expectedUserId && version === requestVersionRef.current) {
+                    setRequests(data);
+                }
             })
             .catch(() => {
-                setLoadError("Failed to load friend requests. Please check your connection.");
+                if (activeUserIdRef.current === expectedUserId && version === requestVersionRef.current) {
+                    setLoadError("Failed to load friend requests. Please check your connection.");
+                }
             })
             .finally(() => {
-                setLoading(false);
+                if (activeUserIdRef.current === expectedUserId) {
+                    setLoading(false);
+                }
             });
     }, []);
 
     useEffect(() => {
         return observeCurrentUser((user) => {
-            setSessionUser(user);
-            if (!user && !initialRequests) {
+            if (!user) {
+                activeUserIdRef.current = null;
+                requestVersionRef.current += 1;
+                setSessionUser(null);
                 setRequests([]);
-            } else if (user) {
-                fetchRequests();
+                setLoading(false);
+                setLoadError(null);
+            } else {
+                activeUserIdRef.current = user.userId;
+                setSessionUser(user);
+                fetchRequests(user.userId);
             }
         });
-    }, [initialRequests, fetchRequests]);
+    }, [fetchRequests]);
 
     const handleAccept = async (requestId: number) => {
+        requestVersionRef.current += 1;
         setActionInProgress((prev) => ({ ...prev, [requestId]: "accepting" }));
         setActionError(null);
         try {
@@ -82,6 +104,7 @@ export default function NotificationsContent({ initialRequests }: { initialReque
     };
 
     const handleReject = async (requestId: number) => {
+        requestVersionRef.current += 1;
         setActionInProgress((prev) => ({ ...prev, [requestId]: "rejecting" }));
         setActionError(null);
         try {
@@ -110,7 +133,7 @@ export default function NotificationsContent({ initialRequests }: { initialReque
                             <h1 className="font-display text-48 sm:text-60 text-foreground font-bold tracking-tight uppercase">
                                 NOTIFICATIONS
                             </h1>
-                            {requests.length > 0 && (
+                            {sessionUser && requests.length > 0 && (
                                 <span className="border-line text-12 text-muted-foreground bg-faint rounded-[2px] border px-2.5 py-1 font-medium">
                                     {requests.length} pending
                                 </span>
@@ -195,7 +218,7 @@ export default function NotificationsContent({ initialRequests }: { initialReque
                         </div>
                     )}
 
-                    {requests.length > 0 && (
+                    {sessionUser && requests.length > 0 && (
                         <section aria-label="Friend requests list">
                             <div className="border-line mb-4 border-b pb-2">
                                 <h2 className="text-12 tracking-label text-muted-foreground font-bold uppercase">
@@ -242,7 +265,7 @@ export default function NotificationsContent({ initialRequests }: { initialReque
                                         <div className="flex items-center gap-2.5 sm:shrink-0">
                                             <button
                                                 type="button"
-                                                onClick={() => void handleAccept(req.requestId)}
+                                                onClick={() => handleAccept(req.requestId)}
                                                 disabled={Boolean(actionInProgress[req.requestId])}
                                                 aria-label={`Accept friend request from ${req.requester.displayName}`}
                                                 className="bg-foreground text-background font-body text-12 cursor-pointer rounded-[2px] px-4 py-2 font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
@@ -253,7 +276,7 @@ export default function NotificationsContent({ initialRequests }: { initialReque
                                             </button>
                                             <button
                                                 type="button"
-                                                onClick={() => void handleReject(req.requestId)}
+                                                onClick={() => handleReject(req.requestId)}
                                                 disabled={Boolean(actionInProgress[req.requestId])}
                                                 aria-label={`Reject friend request from ${req.requester.displayName}`}
                                                 className="border-line text-muted-foreground hover:text-foreground hover:border-foreground font-body text-12 cursor-pointer rounded-[2px] border px-4 py-2 font-medium transition-colors disabled:opacity-50"

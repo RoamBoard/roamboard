@@ -443,14 +443,19 @@ export default function ProfileHero({ profile, stats, isOwner = true, friendship
                     title={`Unfriend ${profile.displayName}?`}
                     description={`Are you sure you want to remove @${profile.username} from your friends? You will no longer see each other's friends-only boards.`}
                     confirmLabel="Unfriend"
-                    onCancel={() => setConfirmUnfriendOpen(false)}
-                    onConfirm={async () => {
+                    error={actionError}
+                    loading={pending}
+                    onCancel={() => {
                         setConfirmUnfriendOpen(false);
+                        setActionError(null);
+                    }}
+                    onConfirm={async () => {
                         setPending(true);
                         setActionError(null);
                         try {
                             await removeFriendByHandle(profile.username);
                             setActionStatus("none");
+                            setConfirmUnfriendOpen(false);
                         } catch (caught) {
                             setActionError(
                                 caught instanceof Error

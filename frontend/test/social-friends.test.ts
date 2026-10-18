@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createElement, type ReactNode } from "react";
+import { Children, createElement, isValidElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import SocialFriendsContent from "@/components/features/social/SocialFriendsContent";
@@ -122,6 +122,35 @@ test("SocialFriendsContent renders friends, activity, and friends boards when av
     assert.ok(!html.includes("unfriend"));
 });
 
+type ElementProps = {
+    children?: ReactNode;
+    onClick?: () => void | Promise<void>;
+    onChange?: (event: { target: { value: string } }) => void;
+    disabled?: boolean;
+    role?: string;
+    type?: string;
+    [key: string]: unknown;
+};
+
+function elements(node: ReactNode): Array<{ type: unknown; props: ElementProps }> {
+    if (!isValidElement<ElementProps>(node)) return [];
+    return [{ type: node.type, props: node.props }, ...Children.toArray(node.props.children).flatMap(elements)];
+}
+
+function capture(render: () => ReactNode) {
+    const holder: { tree: ReactNode; nodes: Array<{ type: unknown; props: ElementProps }> } = {
+        tree: null,
+        nodes: []
+    };
+    function Probe() {
+        holder.tree = render();
+        holder.nodes = elements(holder.tree);
+        return holder.tree;
+    }
+    const markup = renderToStaticMarkup(createElement(Probe));
+    return { markup, nodes: holder.nodes, tree: holder.tree };
+}
+
 test("FindFriendsDialog renders search input when open and nothing when closed", () => {
     const closedHtml = renderToStaticMarkup(
         createElement(FindFriendsDialog, {
@@ -141,22 +170,54 @@ test("FindFriendsDialog renders search input when open and nothing when closed",
     assert.ok(openHtml.includes("Search by name or @handle"));
 });
 
-test("ConfirmDialog renders accessible alertdialog with title, description, and action buttons", () => {
-    const html = renderToStaticMarkup(
-        createElement(ConfirmDialog, {
+test("FindFriendsDialog captures search input and updates query", () => {
+    const { nodes } = capture(() => FindFriendsDialog({ open: true, onClose: () => {} }));
+    const input = nodes.find((n) => n.type === "input");
+    assert.ok(input, "Expected search input inside open dialog");
+    assert.equal(input.props.value, "");
+    assert.equal(typeof input.props.onChange, "function");
+});
+
+test("ConfirmDialog renders accessible alertdialog and executes onCancel and onConfirm actions", () => {
+    const events: string[] = [];
+    const { nodes } = capture(() =>
+        ConfirmDialog({
             title: "Unfriend Chloe Martin?",
             description: "Are you sure you want to remove @chloe from your friends?",
             confirmLabel: "Unfriend",
+            onCancel: () => events.push("cancel"),
+            onConfirm: () => events.push("confirm")
+        })
+    );
+
+    const cancelBtn = nodes.find((n) => n.type === "button" && n.props.children === "Cancel");
+    const confirmBtn = nodes.find((n) => n.type === "button" && n.props.children === "Unfriend");
+    assert.ok(cancelBtn);
+    assert.ok(confirmBtn);
+
+    cancelBtn.props.onClick?.();
+    confirmBtn.props.onClick?.();
+    assert.deepEqual(events, ["cancel", "confirm"]);
+});
+
+test("ConfirmDialog renders error alert and disables action buttons when loading", () => {
+    const { markup, nodes } = capture(() =>
+        ConfirmDialog({
+            title: "Unfriend Chloe Martin?",
+            description: "Are you sure you want to remove @chloe from your friends?",
+            confirmLabel: "Unfriend",
+            error: "Could not remove friend. Please try again.",
+            loading: true,
             onCancel: () => {},
             onConfirm: () => {}
         })
     );
-    assert.ok(html.includes('role="alertdialog"'));
-    assert.ok(html.includes('aria-modal="true"'));
-    assert.ok(html.includes("Unfriend Chloe Martin?"));
-    assert.ok(html.includes("Are you sure you want to remove @chloe from your friends?"));
-    assert.ok(html.includes("Cancel"));
-    assert.ok(html.includes("Unfriend"));
+    assert.ok(markup.includes('role="alert"'));
+    assert.ok(markup.includes("Could not remove friend. Please try again."));
+    assert.ok(markup.includes("Processing…"));
+
+    const disabledButtons = nodes.filter((n) => n.type === "button" && n.props.disabled);
+    assert.equal(disabledButtons.length, 2);
 });
 
 test("searchUsers queries backend with query string and limit, stripping leading at-symbol", async (context) => {

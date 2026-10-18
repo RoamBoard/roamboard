@@ -116,31 +116,63 @@ export default function SocialFriendsContent({
     const [boards, setBoards] = useState<FriendBoardSummary[]>(initialBoards ?? []);
     const [activities, setActivities] = useState<FriendActivityItem[]>(initialActivities ?? []);
     const [loading, setLoading] = useState(!initialFriends);
-    const [loadErrors, setLoadErrors] = useState<string[]>([]);
+    const [friendsError, setFriendsError] = useState<string | null>(null);
+    const [boardsError, setBoardsError] = useState<string | null>(null);
+    const [activitiesError, setActivitiesError] = useState<string | null>(null);
     const [searchOpen, setSearchOpen] = useState(false);
+
+    const reloadFriends = async () => {
+        setFriendsError(null);
+        try {
+            const data = await loadFriends();
+            setFriends(data);
+        } catch {
+            setFriendsError("Failed to load your travel pals.");
+        }
+    };
+
+    const reloadBoards = async () => {
+        setBoardsError(null);
+        try {
+            const data = await loadFriendsBoards(12);
+            setBoards(data);
+        } catch {
+            setBoardsError("Failed to load friends' boards.");
+        }
+    };
+
+    const reloadActivities = async () => {
+        setActivitiesError(null);
+        try {
+            const data = await loadFriendsActivity(10);
+            setActivities(data);
+        } catch {
+            setActivitiesError("Failed to load recent friend activity.");
+        }
+    };
 
     const refreshData = () => {
         setLoading(true);
-        setLoadErrors([]);
+        setFriendsError(null);
+        setBoardsError(null);
+        setActivitiesError(null);
         void Promise.allSettled([loadFriends(), loadFriendsBoards(12), loadFriendsActivity(10)])
             .then(([friendsRes, boardsRes, activitiesRes]) => {
-                const errors: string[] = [];
                 if (friendsRes.status === "fulfilled") {
                     setFriends(friendsRes.value);
                 } else {
-                    errors.push("Failed to load your travel pals.");
+                    setFriendsError("Failed to load your travel pals.");
                 }
                 if (boardsRes.status === "fulfilled") {
                     setBoards(boardsRes.value);
                 } else {
-                    errors.push("Failed to load friends' boards.");
+                    setBoardsError("Failed to load friends' boards.");
                 }
                 if (activitiesRes.status === "fulfilled") {
                     setActivities(activitiesRes.value);
                 } else {
-                    errors.push("Failed to load recent friend activity.");
+                    setActivitiesError("Failed to load recent friend activity.");
                 }
-                setLoadErrors(errors);
             })
             .finally(() => {
                 setLoading(false);
@@ -153,23 +185,21 @@ export default function SocialFriendsContent({
         void Promise.allSettled([loadFriends(), loadFriendsBoards(12), loadFriendsActivity(10)])
             .then(([friendsRes, boardsRes, activitiesRes]) => {
                 if (!tracker.active) return;
-                const errors: string[] = [];
                 if (friendsRes.status === "fulfilled") {
                     setFriends(friendsRes.value);
                 } else {
-                    errors.push("Failed to load your travel pals.");
+                    setFriendsError("Failed to load your travel pals.");
                 }
                 if (boardsRes.status === "fulfilled") {
                     setBoards(boardsRes.value);
                 } else {
-                    errors.push("Failed to load friends' boards.");
+                    setBoardsError("Failed to load friends' boards.");
                 }
                 if (activitiesRes.status === "fulfilled") {
                     setActivities(activitiesRes.value);
                 } else {
-                    errors.push("Failed to load recent friend activity.");
+                    setActivitiesError("Failed to load recent friend activity.");
                 }
-                setLoadErrors(errors);
             })
             .finally(() => {
                 if (tracker.active) setLoading(false);
@@ -204,18 +234,18 @@ export default function SocialFriendsContent({
                         />
                     </header>
 
-                    {loadErrors.length > 0 && (
+                    {(friendsError || boardsError || activitiesError) && (
                         <div
                             role="alert"
                             className="border-line bg-background text-12 text-muted-foreground mb-8 flex items-center justify-between rounded-[2px] border p-4 font-medium"
                         >
-                            <span>{loadErrors.join(" ")}</span>
+                            <span>{[friendsError, boardsError, activitiesError].filter(Boolean).join(" ")}</span>
                             <button
                                 type="button"
                                 onClick={refreshData}
                                 className="text-foreground cursor-pointer font-medium underline underline-offset-4 hover:opacity-80"
                             >
-                                Retry
+                                Retry all
                             </button>
                         </div>
                     )}
@@ -244,9 +274,19 @@ export default function SocialFriendsContent({
                             <div className="border-line bg-background rounded-[2px] border p-8 text-center">
                                 <p className="text-12 text-muted-foreground font-body">Loading travel pals…</p>
                             </div>
-                        ) : loadErrors.some((e) => e.includes("travel pals")) ? (
-                            <div className="border-line bg-background text-12 text-muted-foreground rounded-[2px] border p-8 text-center font-medium">
-                                <p>Could not load friends.</p>
+                        ) : friendsError ? (
+                            <div
+                                role="alert"
+                                className="border-line bg-background text-12 text-muted-foreground rounded-[2px] border p-8 text-center font-medium"
+                            >
+                                <p className="mb-2 text-red-500">{friendsError}</p>
+                                <button
+                                    type="button"
+                                    onClick={() => void reloadFriends()}
+                                    className="text-foreground cursor-pointer font-medium underline underline-offset-4 hover:opacity-80"
+                                >
+                                    Retry
+                                </button>
                             </div>
                         ) : friends.length === 0 ? (
                             <div className="border-line bg-background rounded-[2px] border p-8 text-center sm:p-10">
@@ -321,7 +361,27 @@ export default function SocialFriendsContent({
                                     </p>
                                 </div>
 
-                                {activities.length === 0 ? (
+                                {loading && activities.length === 0 ? (
+                                    <div className="border-line bg-background rounded-[2px] border p-8 text-center">
+                                        <p className="text-12 text-muted-foreground font-body">
+                                            Loading recent activity…
+                                        </p>
+                                    </div>
+                                ) : activitiesError ? (
+                                    <div
+                                        role="alert"
+                                        className="border-line bg-background text-12 text-muted-foreground rounded-[2px] border p-8 text-center font-medium"
+                                    >
+                                        <p className="mb-2 text-red-500">{activitiesError}</p>
+                                        <button
+                                            type="button"
+                                            onClick={() => void reloadActivities()}
+                                            className="text-foreground cursor-pointer font-medium underline underline-offset-4 hover:opacity-80"
+                                        >
+                                            Retry
+                                        </button>
+                                    </div>
+                                ) : activities.length === 0 ? (
                                     <div className="border-line bg-background rounded-[2px] border p-8 text-center">
                                         <p className="text-12 text-muted-foreground font-body">
                                             No recent activity yet. When your friends publish boards or share trips,
@@ -459,7 +519,25 @@ export default function SocialFriendsContent({
                             </div>
                         </div>
 
-                        {boards.length === 0 ? (
+                        {loading && boards.length === 0 ? (
+                            <div className="border-line bg-background rounded-[2px] border p-8 text-center">
+                                <p className="text-12 text-muted-foreground font-body">Loading friends&apos; boards…</p>
+                            </div>
+                        ) : boardsError ? (
+                            <div
+                                role="alert"
+                                className="border-line bg-background text-12 text-muted-foreground rounded-[2px] border p-8 text-center font-medium"
+                            >
+                                <p className="mb-2 text-red-500">{boardsError}</p>
+                                <button
+                                    type="button"
+                                    onClick={() => void reloadBoards()}
+                                    className="text-foreground cursor-pointer font-medium underline underline-offset-4 hover:opacity-80"
+                                >
+                                    Retry
+                                </button>
+                            </div>
+                        ) : boards.length === 0 ? (
                             <div className="border-line bg-background rounded-[2px] border p-8 text-center">
                                 <p className="text-12 text-muted-foreground font-body">
                                     No friends&apos; boards yet. When your friends publish boards, they will appear

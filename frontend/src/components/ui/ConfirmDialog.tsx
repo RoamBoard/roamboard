@@ -9,6 +9,8 @@ type Props = {
     description: string;
     confirmLabel: string;
     confirmVariant?: "default" | "destructive";
+    error?: string | null;
+    loading?: boolean;
     onCancel: () => void;
     onConfirm: () => void;
 };
@@ -18,6 +20,8 @@ export default function ConfirmDialog({
     description,
     confirmLabel,
     confirmVariant,
+    error,
+    loading,
     onCancel,
     onConfirm
 }: Props) {
@@ -60,24 +64,35 @@ export default function ConfirmDialog({
                 <p id="confirm-description" className="text-14 text-muted-foreground mt-3 leading-6">
                     {description}
                 </p>
+                {error && (
+                    <div
+                        role="alert"
+                        className="text-12 mt-4 rounded-[2px] border border-red-500/30 bg-red-500/10 p-2.5 font-medium text-red-500"
+                    >
+                        {error}
+                    </div>
+                )}
+
                 <div className="mt-7 flex flex-col justify-end gap-3 sm:flex-row">
                     <button
                         type="button"
+                        disabled={loading}
                         onClick={onCancel}
-                        className="border-line text-13 text-muted-foreground hover:text-foreground hover:bg-faint hover:border-foreground/30 cursor-pointer rounded-[2px] border px-5 py-3 font-medium transition-all focus-visible:outline-2 focus-visible:outline-offset-4"
+                        className="border-line text-13 text-muted-foreground hover:text-foreground hover:bg-faint hover:border-foreground/30 cursor-pointer rounded-[2px] border px-5 py-3 font-medium transition-all focus-visible:outline-2 focus-visible:outline-offset-4 disabled:opacity-50"
                     >
                         Cancel
                     </button>
                     <button
                         type="button"
+                        disabled={loading}
                         onClick={onConfirm}
                         className={
                             isDestructive
-                                ? "text-13 cursor-pointer rounded-[2px] border border-red-600 bg-red-600 px-5 py-3 font-medium text-white shadow-xs transition-all hover:border-red-700 hover:bg-red-700 hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-4"
-                                : "border-foreground bg-foreground text-background hover:bg-foreground/85 text-13 cursor-pointer rounded-[2px] border px-5 py-3 font-medium shadow-xs transition-all hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-4"
+                                ? "text-13 cursor-pointer rounded-[2px] border border-red-600 bg-red-600 px-5 py-3 font-medium text-white shadow-xs transition-all hover:border-red-700 hover:bg-red-700 hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-4 disabled:opacity-50"
+                                : "border-foreground bg-foreground text-background hover:bg-foreground/85 text-13 cursor-pointer rounded-[2px] border px-5 py-3 font-medium shadow-xs transition-all hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-4 disabled:opacity-50"
                         }
                     >
-                        {confirmLabel}
+                        {loading ? "Processing…" : confirmLabel}
                     </button>
                 </div>
             </div>

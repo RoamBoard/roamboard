@@ -74,6 +74,8 @@ export default function ProfilePageContent() {
     const saved = useSyncExternalStore(savedStore.subscribe, savedStore.getSnapshot, savedStore.getSnapshot);
     const [friends, setFriends] = useState<FriendUser[]>([]);
     const [confirmUnfriendTarget, setConfirmUnfriendTarget] = useState<FriendUser | null>(null);
+    const [unfriendError, setUnfriendError] = useState<string | null>(null);
+    const [unfriendLoading, setUnfriendLoading] = useState(false);
     const [destinations, setDestinations] = useState<MapDestination[]>([]);
     const [searchOpen, setSearchOpen] = useState(false);
     const [error, setError] = useState("");
@@ -369,21 +371,29 @@ export default function ProfilePageContent() {
                     title={`Unfriend ${confirmUnfriendTarget.displayName}?`}
                     description={`Are you sure you want to remove @${confirmUnfriendTarget.username} from your friends? You will no longer see each other's friends-only boards.`}
                     confirmLabel="Unfriend"
-                    onCancel={() => setConfirmUnfriendTarget(null)}
+                    error={unfriendError}
+                    loading={unfriendLoading}
+                    onCancel={() => {
+                        setConfirmUnfriendTarget(null);
+                        setUnfriendError(null);
+                    }}
                     onConfirm={async () => {
                         const target = confirmUnfriendTarget;
-                        setConfirmUnfriendTarget(null);
+                        setUnfriendLoading(true);
+                        setUnfriendError(null);
                         try {
                             await removeFriend(target.userId);
                             setFriends((prev) => prev.filter((f) => f.userId !== target.userId));
                             setStats((prev) => (prev ? { ...prev, friends: Math.max(0, prev.friends - 1) } : null));
+                            setConfirmUnfriendTarget(null);
                         } catch (caught) {
-                            setSectionErrors((prev) => [
-                                ...prev,
+                            setUnfriendError(
                                 caught instanceof Error
                                     ? caught.message
                                     : `Failed to remove ${target.displayName} from friends.`
-                            ]);
+                            );
+                        } finally {
+                            setUnfriendLoading(false);
                         }
                     }}
                 />

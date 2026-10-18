@@ -27,6 +27,8 @@ export default function FindFriendsDialog({ open, onClose, onFriendAdded }: Find
     const [error, setError] = useState<string | null>(null);
     const [actionState, setActionState] = useState<Record<string, "pending" | "done">>({});
     const [confirmUnfriendUser, setConfirmUnfriendUser] = useState<UserSearchResult | null>(null);
+    const [unfriendError, setUnfriendError] = useState<string | null>(null);
+    const [unfriendLoading, setUnfriendLoading] = useState(false);
     const [failedAvatars, setFailedAvatars] = useState<Record<string, boolean>>({});
     const inputRef = useRef<HTMLInputElement>(null);
     const dialogRef = useRef<HTMLDivElement>(null);
@@ -35,6 +37,8 @@ export default function FindFriendsDialog({ open, onClose, onFriendAdded }: Find
         setQuery("");
         setResults([]);
         setError(null);
+        setUnfriendError(null);
+        setUnfriendLoading(false);
         setActionState({});
         setFailedAvatars({});
         onClose();
@@ -321,10 +325,16 @@ export default function FindFriendsDialog({ open, onClose, onFriendAdded }: Find
                     title={`Unfriend ${confirmUnfriendUser.displayName}?`}
                     description={`Are you sure you want to remove @${confirmUnfriendUser.username} from your friends? You will no longer see each other's friends-only boards.`}
                     confirmLabel="Unfriend"
-                    onCancel={() => setConfirmUnfriendUser(null)}
+                    error={unfriendError}
+                    loading={unfriendLoading}
+                    onCancel={() => {
+                        setConfirmUnfriendUser(null);
+                        setUnfriendError(null);
+                    }}
                     onConfirm={async () => {
                         const target = confirmUnfriendUser;
-                        setConfirmUnfriendUser(null);
+                        setUnfriendLoading(true);
+                        setUnfriendError(null);
                         setActionState((prev) => ({ ...prev, [target.userId]: "pending" }));
                         try {
                             await removeFriend(target.userId);
@@ -332,11 +342,13 @@ export default function FindFriendsDialog({ open, onClose, onFriendAdded }: Find
                                 prev.map((u) => (u.userId === target.userId ? { ...u, friendshipStatus: "none" } : u))
                             );
                             onFriendAdded?.();
+                            setConfirmUnfriendUser(null);
                         } catch (caught) {
-                            setError(
+                            setUnfriendError(
                                 caught instanceof Error ? caught.message : "Could not remove friend. Please try again."
                             );
                         } finally {
+                            setUnfriendLoading(false);
                             setActionState((prev) => {
                                 const next = { ...prev };
                                 delete next[target.userId];

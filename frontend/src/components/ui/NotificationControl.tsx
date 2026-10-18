@@ -88,11 +88,13 @@ export default function NotificationControl({
             .then((data) => {
                 if (request.active && version === requestVersionRef.current) {
                     setRequests(data);
-                    setLoading(false);
                 }
             })
             .catch(() => {
-                if (request.active && version === requestVersionRef.current) {
+                // Ignore background load error
+            })
+            .finally(() => {
+                if (request.active) {
                     setLoading(false);
                 }
             });

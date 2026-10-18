@@ -221,7 +221,7 @@ alphanumeric plus dots and underscores). It returns `{ data: PublicProfileView }
 - `profile`: `{ username, displayName, description, location, occupation, languages, interests, profilePicture }`
 - `isOwner`: boolean (`true` when the caller session matches the profile owner)
 - `friendshipStatus`: `"none" | "pending_sent" | "pending_received" | "accepted"` (`"none"` for anonymous callers or viewing own profile; otherwise reflects relation between caller and user)
-- `stats`: `{ countriesVisited, citiesExplored, continentsCovered, photosUploaded, boardsCreated }`
+- `stats`: `{ countriesVisited, citiesExplored, continentsCovered, photosUploaded, boardsCreated, friends, activitiesSaved }`
 - `boards`: public published boards owned by user
 - `destinations`: list of completed board destinations with coordinates, city, and country code
 
@@ -229,21 +229,22 @@ Missing handles return `404 NOT_FOUND`. Invalid handle formats return `400 INVAL
 
 ## Friendships and Social Hub
 
-Friendship routes are under `/api/v1/users`. Read routes require a signed-in session;
-mutation routes (POST, PUT, DELETE) additionally require a matching frontend `Origin` header.
+Friendship routes are under `/api/v1/users`. Read routes require a signed-in session (`401 UNAUTHENTICATED`);
+mutation routes (POST, PUT, DELETE) additionally require a matching frontend `Origin` header (`403 ORIGIN_NOT_ALLOWED`).
+All JSON response bodies follow `{ "data": ... }` on success and `{ "error": { "code": "...", "message": "..." } }` on failure.
 
-| Method | Path                                    | Input and behavior                                                                                                                                                   |
-| ------ | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/me/friends`                           | List accepted friends for the caller: `[{ userId, username, displayName, profilePictureUrl, bio, location }]`                                                        |
-| DELETE | `/me/friends/:targetUserId`             | Remove friendship with `targetUserId`; returns `204 NO_CONTENT`. Returns `404 NOT_FOUND` if friendship does not exist                                                |
-| DELETE | `/by-handle/:handle/friend`             | Remove friendship with user by handle; returns `204 NO_CONTENT`. Returns `404 NOT_FOUND` if user or friendship does not exist                                        |
-| POST   | `/by-handle/:handle/friend-request`     | Send friend request to target handle; returns `201 CREATED` with `{ requestId, status }`. Supports crossed-request mutual acceptance (see details below)             |
-| GET    | `/me/friend-requests`                   | List pending incoming requests for the caller: `[{ requestId, createdAt, requester: { userId, username, displayName, profilePictureUrl } }]`                         |
-| PUT    | `/me/friend-requests/:requestId/accept` | Accept pending incoming request; returns `{ requestId, status: "accepted" }`. Returns `404 NOT_FOUND` if request missing or not addressed to caller                  |
-| DELETE | `/me/friend-requests/:requestId`        | Reject/cancel incoming request; returns `204 NO_CONTENT`. Returns `404 NOT_FOUND` if request missing or not addressed to caller                                      |
-| GET    | `/search`                               | Search travelers by display name or handle prefix/substring: `q` (max 100 chars, default `""`), `limit` (1–50, default 20); returns `UserSearchResult[]`             |
-| GET    | `/me/friends/boards`                    | Published boards owned by caller's accepted friends, ordered by `COALESCE(b.published_at, b.created_at) DESC`; `limit` (1–50, default 20)                            |
-| GET    | `/me/friends/activity`                  | Recent friend publications (`activityType: "published_board"`), ordered and timestamped by `COALESCE(b.published_at, b.created_at) DESC`; `limit` (1–50, default 20) |
+| Method | Path                                    | Permissions               | Input and behavior                                                                                                                                                   |
+| ------ | --------------------------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/me/friends`                           | Session                   | List accepted friends for the caller: `[{ userId, username, displayName, profilePictureUrl, bio, location }]`                                                        |
+| DELETE | `/me/friends/:targetUserId`             | Session + Frontend Origin | Remove friendship with `targetUserId`; returns `204 NO_CONTENT`. Returns `404 NOT_FOUND` if friendship does not exist                                                |
+| DELETE | `/by-handle/:handle/friend`             | Session + Frontend Origin | Remove friendship with user by handle; returns `204 NO_CONTENT`. Returns `404 NOT_FOUND` if user or friendship does not exist                                        |
+| POST   | `/by-handle/:handle/friend-request`     | Session + Frontend Origin | Send friend request to target handle; returns `201 CREATED` with `{ requestId, status }`. Supports crossed-request mutual acceptance (see details below)             |
+| GET    | `/me/friend-requests`                   | Session                   | List pending incoming requests for the caller: `[{ requestId, createdAt, requester: { userId, username, displayName, profilePictureUrl } }]`                         |
+| PUT    | `/me/friend-requests/:requestId/accept` | Session + Frontend Origin | Accept pending incoming request; returns `{ requestId, status: "accepted" }`. Returns `404 NOT_FOUND` if request missing or not addressed to caller                  |
+| DELETE | `/me/friend-requests/:requestId`        | Session + Frontend Origin | Reject/cancel incoming request; returns `204 NO_CONTENT`. Returns `404 NOT_FOUND` if request missing or not addressed to caller                                      |
+| GET    | `/search`                               | Session                   | Search travelers by display name or handle prefix/substring: `q` (max 100 chars, default `""`), `limit` (1–50, default 20); returns `UserSearchResult[]`             |
+| GET    | `/me/friends/boards`                    | Session                   | Published boards owned by caller's accepted friends, ordered by `COALESCE(b.published_at, b.created_at) DESC`; `limit` (1–50, default 20)                            |
+| GET    | `/me/friends/activity`                  | Session                   | Recent friend publications (`activityType: "published_board"`), ordered and timestamped by `COALESCE(b.published_at, b.created_at) DESC`; `limit` (1–50, default 20) |
 
 ### Friend request mechanics and crossed requests
 
@@ -251,8 +252,8 @@ Sending a friend request via `POST /api/v1/users/by-handle/:handle/friend-reques
 
 - Self-requests return `400 INVALID_REQUEST` ("Cannot add yourself as a friend").
 - If no existing relation exists, creates a pending friendship row and returns `{ requestId, status: "pending_sent" }`.
-- If an existing relation is already accepted, returns `409 ALREADY_FRIENDS`.
-- If the caller already sent a pending request, returns `409 REQUEST_ALREADY_SENT`.
+- If an existing relation is already accepted, returns `409 ALREADY_FRIENDS` ("Already friends").
+- If the caller already sent a pending request, returns `409 REQUEST_ALREADY_SENT` ("Friend request already sent").
 - If the recipient had previously sent a pending request to the caller (crossed request), the service automatically
   marks the friendship as accepted and returns `{ requestId, status: "accepted" }`.
 - Concurrent simultaneous requests that race through initial lookups are handled via the unique index constraint
@@ -265,6 +266,15 @@ Both `/me/friends/boards` and `/me/friends/activity` validate the `limit` query 
 (integers from 1 to 50, defaulting to 20). Values out of range or non-integers return `400 INVALID_REQUEST`.
 Feeds sort items by `COALESCE(b.published_at, b.created_at) DESC`, guaranteeing that boards drafted earlier and published
 later appear at the top of the feed at their actual publication time rather than their draft creation time.
+
+### Endpoint error codes and statuses
+
+- `400 INVALID_REQUEST`: Self-requests, invalid UUID or handle parameters, invalid request bodies, or non-integer / out-of-range limit queries (e.g., `-1`, `1.5`, `999`).
+- `401 UNAUTHENTICATED`: Missing or invalid session cookie on protected routes.
+- `403 ORIGIN_NOT_ALLOWED`: Mutation requests (POST, PUT, DELETE) where the `Origin` header does not match the configured `CLIENT_ORIGIN`.
+- `404 NOT_FOUND`: Target user handle, user ID, friendship pair, or friend request ID does not exist or is not addressed to the caller.
+- `409 ALREADY_FRIENDS`: Friendship is already accepted between caller and target.
+- `409 REQUEST_ALREADY_SENT`: A pending request has already been sent to this user.
 
 ## Developer Board list and public search
 
