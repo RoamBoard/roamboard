@@ -15,6 +15,7 @@ export default async function NewBoardPage({
     searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
     const params = await searchParams;
+
     return (
         <AppShell activeHref="/create">
             <BoardCreator

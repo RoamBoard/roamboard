@@ -8,10 +8,23 @@ export interface ImagesController {
     createIntent: RequestHandler;
     complete: RequestHandler;
     content: RequestHandler;
+    readPresentation: RequestHandler;
+    savePresentation: RequestHandler;
 }
 
 export function createImagesController(service: ImagesService): ImagesController {
     return {
+        readPresentation: async (_req, res) =>
+            res.json({ data: await service.readPresentation(res.locals.user.userId, res.locals.params.imageId) }),
+        savePresentation: async (req, res) =>
+            res.json({
+                data: await service.savePresentation(
+                    res.locals.user.userId,
+                    res.locals.params.imageId,
+                    req.body.revision,
+                    req.body.edit
+                )
+            }),
         createIntent: async (request, response) => {
             const user = response.locals.user as AppUser;
             response.json({ data: await service.createIntent(user.userId, request.body as UploadIntentWrite) });
@@ -24,7 +37,7 @@ export function createImagesController(service: ImagesService): ImagesController
         content: async (_request, response, next) => {
             const { imageId } = response.locals.params as { imageId: number };
             const { variant, boardId, profileHandle } = response.locals.query as {
-                variant: "display" | "thumbnail";
+                variant: "display" | "thumbnail" | "original";
                 boardId?: number;
                 profileHandle?: string;
             };

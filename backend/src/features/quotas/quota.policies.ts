@@ -16,18 +16,9 @@ export function createQuotaPolicies(): QuotaPolicy[] {
         }))
     });
     return [
-        policy("mapbox.map_loads", [
-            ["month", 49500],
-            ["day", 1540]
-        ]),
-        policy("mapbox.geocoding", [
-            ["month", 99000],
-            ["day", 3090]
-        ]),
-        policy("mapbox.directions", [
-            ["month", 99000],
-            ["day", 3090]
-        ]),
+        policy("mapbox.map_loads", [["month", 49500]]),
+        policy("mapbox.geocoding", [["month", 99000]]),
+        policy("mapbox.directions", [["month", 99000]]),
         // Separate billing SKU; deliberately conservative until the team's allowance is confirmed.
         policy("mapbox.search_box", [
             ["month", 495],
@@ -36,7 +27,6 @@ export function createQuotaPolicies(): QuotaPolicy[] {
         // Historical ID retained for existing geocoding and place-confirmation usage.
         policy("geoapify.geocoding", [
             ["second", 2],
-            ["hour", 118],
             ["day", 2970]
         ]),
         policy("google.places_text_search_pro", [["month", 4950]], "America/Los_Angeles"),

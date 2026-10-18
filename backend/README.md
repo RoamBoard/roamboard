@@ -46,14 +46,10 @@ public search features run here. See
 [API_FEATURES_CONTRACT.md](API_FEATURES_CONTRACT.md) for routes, permissions,
 budgets and errors; the creator uses [BOARD_API_CONTRACT.md](BOARD_API_CONTRACT.md).
 
-Destination guides let readers explore sights and start a Board from a selected sight.
-There is no save-location action in the frontend. The unused saved-place API and its
-existing database records are retained while the team decides whether to keep account saving.
-
-Apply unapplied migrations through `008_saved_places.sql` in numeric order to an
+Apply unapplied migrations through `010_guest_accounts.sql` in numeric order to an
 independent local database. The shared Azure database already has the consolidated 004
 schema, image-library 005, and reconciled profile changes in 006; do not rerun those
-files there. Migration 007 is pending on Azure until a fresh backup is confirmed. See
+files there. Migration 007 is applied; do not rerun it. Destination migration 008 and photo presentation migration 009 are also recorded as applied; do not rerun them. Guest migration 010 remains pending on Azure. See
 [the migration log](db/MIGRATION_LOG.md) for the remaining profile column-length difference.
 The shared database also has the saved-place table from the file originally named
 `005_saved_places.sql`, now `008_saved_places.sql`; do not rerun it there.
@@ -187,7 +183,7 @@ follow [the shared database deployment guide](deploy/README.md). The existing
    `003_board_creator.sql`, `004_api_features.sql`, `005_image_library.sql`,
    `006_profile.sql`, `007_profile_tag_catalog.sql`, and `008_saved_places.sql`. Apply only missing migrations.
    The shared Azure database already has 004, 005, and the reconciled profile changes
-   from 006; do not rerun them there. Apply 007 there only after a fresh backup is confirmed.
+   from 006; do not rerun them there. Migration 007 is also applied. Destination migration 008 and photo presentation migration 009 are also recorded as applied. Apply only guest migration 010 there after a fresh backup is confirmed.
    From `backend/`, for an independent database missing 006:
 
     ```powershell
@@ -221,12 +217,31 @@ follow [the shared database deployment guide](deploy/README.md). The existing
 - `POST /api/v1/auth/google` accepts JSON `{ "credential": "<Google ID token>" }`
   from `CLIENT_ORIGIN`. It finds or creates the user and sets a seven-day,
   HTTP-only session cookie. It returns
-  `{ "data": { "user": { "userId": "...", "username": "...", "displayName": "..." }, "isNew": true } }`;
+  `{ "data": { "user": { "userId": "...", "username": "...", "displayName": "...", "profilePictureUrl": null }, "isNew": true } }`;
   `isNew` is false for a returning user. The frontend sends requests with
   credentials.
 - `GET /api/v1/auth/me` returns the current user from that cookie, or `401`.
 - `POST /api/v1/auth/logout` revokes the session and clears the cookie. It
   requires `CLIENT_ORIGIN`.
+
+New Google accounts receive normalized handles such as `ada_lovelace`, then `ada_lovelace_1`,
+`ada_lovelace_2`, using the lowest available suffix. Allocation uses a transaction lock and the existing
+username uniqueness constraint. On their next Google sign-in, existing handles matching the old normalized-name plus ten hex characters
+are replaced with an available clean handle. Their public profile URLs change; custom handles are preserved.
+Display names default to Google's given and family names together. On later sign-ins, the old first-name-only
+default is expanded to the full name; other edited display names are preserved.
+
+When no profile picture is saved, sign-in imports Google's verified photo claim into authenticated Cloudinary
+storage and links it through the existing uploaded-image tables. An upload intent is committed before sending
+the file, then completed into an orphan image before profile linking. Timeouts and failed profile transactions
+remain tracked for the existing cleanup job. No schema migration is needed. Downloads accept
+only HTTPS `lh<number>.googleusercontent.com` URLs without redirects, supported raster types, and at most 10 MB.
+Google imports request a 1024-pixel source rather than the small sign-in thumbnail. Previously imported thumbnails
+are upgraded on a later sign-in only when provider metadata identifies the old Google import; uploaded photos are
+preserved, and concurrent photo edits take precedence. Refreshed imports use a dedicated storage prefix to avoid
+re-importing them on every login. A missing photo or failed import leaves sign-in working and retries on a
+later sign-in. Auth responses include a nullable `profilePictureUrl`; the frontend loads it directly with the
+session cookie. The welcome page displays `displayName`, while profile links continue using `username`.
 
 The cookie is `SameSite=Lax`, host-only, and `Secure` in production. The
 frontend Google button calls these endpoints. Google email is not stored. Expired session rows may
@@ -274,3 +289,11 @@ test against `TEST_DATABASE_URL` or the local `.env` `DATABASE_URL`. It creates
 and removes its own temporary schema, leaving normal application tables
 untouched. Live Cloudinary uploads still need an end-to-end check with the
 project's credentials before production use.
+
+Board destination migration 008_board_destination.sql adds the optional primary location and kind. Fresh databases
+apply it after the existing migrations. It is already applied to shared development (2026-10-18), after backup;
+do not rerun it there. See db/MIGRATION_LOG.md for the exact backup and verification. Migration 007 was subsequently applied after a verified backup; see the migration log.
+
+Migration 009_image_presentation.sql adds non-destructive crop/resize settings and revisions for user uploads.
+Apply after prior migrations on fresh databases. It is already applied to shared development (2026-10-18) after
+a verified backup; do not rerun it there. See the migration log.

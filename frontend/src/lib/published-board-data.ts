@@ -88,6 +88,15 @@ export function toPublishedBoardData(document: BoardDocument): PublishedBoardDat
         })
     );
     const countries = new Map<string, { country: string; countryCode: string; cities: string[] }>();
+    if (document.destination) {
+        const country = findCountry(document.destination.country);
+        if (country)
+            countries.set(country.code, {
+                country: country.name,
+                countryCode: country.code,
+                cities: document.destination.kind === "country" ? [] : [document.destination.name]
+            });
+    }
     for (const activity of document.days.flatMap((day) => day.activities)) {
         const location = activity.location;
         const country = location?.country ? findCountry(location.country) : undefined;

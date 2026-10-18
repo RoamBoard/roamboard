@@ -34,31 +34,35 @@ test("API-backed feature boundaries use the configured backend and signed-in ses
             assert.equal(calls.at(-1)?.init?.method, "POST");
         });
 
-        await t.test("Home destination search and context forward cancellation and coordinates", async () => {
-            const controller = new AbortController();
-            response.data = { data: [] };
-            assert.deepEqual(await destinations.searchDestinations("New York", controller.signal), []);
-            assert.equal(calls.at(-1)?.url.pathname, "/api/v1/destinations/search");
-            assert.equal(calls.at(-1)?.url.searchParams.get("q"), "New York");
-            assert.equal(calls.at(-1)?.init?.signal, controller.signal);
-            const destination = {
-                id: "nyc",
-                name: "New York",
-                address: "NY, US",
-                latitude: 40.71,
-                longitude: -74,
-                placeType: "city",
-                context: [],
-                country: "United States",
-                countryCode: "USA",
-                city: "New York"
-            };
-            response.data = { data: { destination, unavailable: ["weather"] } };
-            const result = await destinations.loadDestinationContext(destination, controller.signal);
-            assert.deepEqual(result.unavailable, ["weather"]);
-            assert.equal(calls.at(-1)?.url.pathname, "/api/v1/destinations/context");
-            assert.equal(calls.at(-1)?.url.searchParams.get("longitude"), "-74");
-        });
+        await t.test(
+            "Roam destination search requests at most three suggestions and preserves cancellation and coordinates",
+            async () => {
+                const controller = new AbortController();
+                response.data = { data: [] };
+                assert.deepEqual(await destinations.searchDestinations("New York", controller.signal), []);
+                assert.equal(calls.at(-1)?.url.pathname, "/api/v1/destinations/search");
+                assert.equal(calls.at(-1)?.url.searchParams.get("q"), "New York");
+                assert.equal(calls.at(-1)?.url.searchParams.get("limit"), "3");
+                assert.equal(calls.at(-1)?.init?.signal, controller.signal);
+                const destination = {
+                    id: "nyc",
+                    name: "New York",
+                    address: "NY, US",
+                    latitude: 40.71,
+                    longitude: -74,
+                    placeType: "city",
+                    context: [],
+                    country: "United States",
+                    countryCode: "USA",
+                    city: "New York"
+                };
+                response.data = { data: { destination, unavailable: ["weather"] } };
+                const result = await destinations.loadDestinationContext(destination, controller.signal);
+                assert.deepEqual(result.unavailable, ["weather"]);
+                assert.equal(calls.at(-1)?.url.pathname, "/api/v1/destinations/context");
+                assert.equal(calls.at(-1)?.url.searchParams.get("longitude"), "-74");
+            }
+        );
 
         await t.test("search preserves filters and suggestions cancellation", async () => {
             const result = { hits: [], total: 0, page: 1, limit: 10 };

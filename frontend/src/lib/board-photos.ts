@@ -19,7 +19,7 @@ const queryKey = (query: string) => cleanQuery(query).toLowerCase();
 
 // This cache avoids repeated searches within a browser tab. The backend still counts every upstream request.
 export function createBoardPhotoSource(
-    search: PhotoSearch = (query) => searchUnsplashProvider(query, 10),
+    search: PhotoSearch = (query) => searchUnsplashProvider(query, 20),
     now: () => number = Date.now
 ): PhotoSearch {
     const cache = new Map<string, CacheEntry>();
@@ -66,20 +66,22 @@ export function getBoardPhotoSlots(board: Board, tagLabels: string[] = []): Phot
         ? { place: destination.cities?.[0] ?? "", country: destination.country }
         : locationContext(located?.location);
     const tag = tagLabels[0] ?? "";
-    function makeSlot(id: string, location?: BoardLocation, dayNumber?: number): PhotoSlot {
-        const context = location ? locationContext(location) : overall;
+    function makeSlot(id: string, dayNumber?: number): PhotoSlot {
+        const context = overall;
         // Search saved locations and tags. Board titles and private notes stay out of provider queries.
         const primary = cleanQuery([context.place, context.country].filter(Boolean).join(" "));
-        const backup = cleanQuery([context.country, tag, ...(tag ? ["travel"] : [])].filter(Boolean).join(" "));
+        const backup =
+            context.place || context.country || tag
+                ? cleanQuery([context.place, context.country, tag, "travel"].filter(Boolean).join(" "))
+                : "";
         const query = primary.length >= 2 ? primary : backup.length >= 2 ? backup : null;
         return {
             id,
             dayNumber,
-            label:
-                location?.name || [context.place, context.country].filter(Boolean).join(", ") || board.title || "Board",
+            label: [context.place, context.country].filter(Boolean).join(", ") || "Travel inspiration",
             query,
             backupQuery: backup.length >= 2 && queryKey(backup) !== queryKey(query ?? "") ? backup : null,
-            enabled: id !== "cover" || !board.coverImage?.url
+            enabled: id === "cover" ? !board.coverImage?.url : Boolean(query)
         };
     }
     return [
@@ -89,8 +91,8 @@ export function getBoardPhotoSlots(board: Board, tagLabels: string[] = []): Phot
             if (!activities.length) return [];
             // The desktop design has photo spaces beside the first and fourth activities.
             return [
-                makeSlot(`day-${day.number}-first`, activities[0].location, day.number),
-                ...(activities[3] ? [makeSlot(`day-${day.number}-second`, activities[3].location, day.number)] : [])
+                makeSlot(`day-${day.number}-first`, day.number),
+                ...(activities[3] ? [makeSlot(`day-${day.number}-second`, day.number)] : [])
             ];
         })
     ];
@@ -110,7 +112,8 @@ function imageIdentity(url: string): string | null {
 export async function resolveBoardPhotos(
     board: Board,
     slots: PhotoSlot[],
-    search: PhotoSearch = searchBoardPhotos
+    search: PhotoSearch = searchBoardPhotos,
+    random: () => number = Math.random
 ): Promise<Record<string, BoardImage>> {
     const savedImages = [
         ...(board.coverImage ? [board.coverImage] : []),
@@ -147,10 +150,14 @@ export async function resolveBoardPhotos(
             const query = backup ? slot.backupQuery : slot.query;
             if (!query) continue;
             // Exclude saved photos and earlier selections so each automatic space gets a different image.
-            const photo = pools.get(queryKey(query))?.find((candidate) => {
-                const identity = imageIdentity(candidate.url);
-                return candidate.id && identity && !usedIds.has(candidate.id) && !usedUrls.has(identity);
-            });
+            const candidates = pools
+                .get(queryKey(query))
+                ?.slice(0, 20)
+                .filter((candidate) => {
+                    const identity = imageIdentity(candidate.url);
+                    return candidate.id && identity && !usedIds.has(candidate.id) && !usedUrls.has(identity);
+                });
+            const photo = candidates?.[Math.floor(random() * candidates.length)];
             if (!photo) continue;
             usedIds.add(photo.id);
             usedUrls.add(imageIdentity(photo.url)!);

@@ -148,10 +148,10 @@ including previous-window fields. With user approval, the former local migration
 005 and 006 were consolidated into 004 on 2026-10-15. The shared Azure database
 already has that final schema; do not rerun 004 or rebuild it. See the
 [migration log](../db/MIGRATION_LOG.md) for reconciliation and verification.
-Fresh databases apply 001 through 008 once, in numeric order. Migration 005 adds the editorial image catalog and
+Fresh databases apply 001 through 010 once, in numeric order. Migration 005 adds the editorial image catalog and
 revision history and is already applied to the shared database. The shared database was reconciled with the profile
 changes in 006 on 2026-10-17; do not rerun it there. See the migration log for verification and the remaining
-column-length difference. Migration 007 is pending there until a fresh backup is confirmed.
+column-length difference. Migration 007 is applied; do not rerun it. Destination migration 008 and photo presentation migration 009 are also recorded as applied; do not rerun them. Guest migration 010 remains pending until a fresh backup is confirmed.
 PostgreSQL backups contain image references, not Cloudinary files. Preserve the same Cloudinary account and its public
 editorial/authenticated user assets, or migrate those files separately before changing credentials. See the
 [image recovery workflow](../../docs/IMAGE_WORKFLOW.md#missing-files-and-recovery).
@@ -283,3 +283,11 @@ URL, run `npm run check:setup`, and verify sign-in plus Board reads/writes. Then
 the team reconnect, re-enable the backup cron entry, and create a fresh backup.
 Preserve the original database until recovery is accepted. PostgreSQL dumps include all saved Board and search data; search reads the restored database directly. Do not rerun migrations already contained
 in the archive; compare the restored schema with the application version first.
+
+Board destination migration 008_board_destination.sql adds the optional primary location and kind. Fresh databases
+apply it after the existing migrations. It is already applied to shared development (2026-10-18), after backup;
+do not rerun it there. See db/MIGRATION_LOG.md for the exact backup and verification. Migration 007 was subsequently applied after a verified backup; see the migration log.
+
+Migration 009_image_presentation.sql adds non-destructive crop/resize settings and revisions for user uploads.
+Apply after prior migrations on fresh databases. It is already applied to shared development (2026-10-18) after
+a verified backup; do not rerun it there. See the migration log.

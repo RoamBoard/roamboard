@@ -11,10 +11,13 @@ export type MapPoint = {
     latitude: number;
     longitude: number;
     color?: string;
+    sequence?: number;
 };
 
 type Props = {
     token?: string;
+    cooperativeGestures?: boolean;
+    className?: string;
     points: MapPoint[];
     routeGeometry: Array<[number, number]>;
     onMapClick?: (latitude: number, longitude: number) => void;
@@ -36,7 +39,9 @@ export default function InteractiveMap({
     selectedPointId,
     initialCenter,
     fillHeight = false,
-    scrollZoom = true
+    scrollZoom = true,
+    cooperativeGestures = false,
+    className
 }: Props) {
     const containerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<MapboxMap | null>(null);
@@ -66,7 +71,8 @@ export default function InteractiveMap({
                 container: containerRef.current,
                 style: "mapbox://styles/mapbox/streets-v12",
                 center: [initialLongitude, initialLatitude],
-                zoom: 11
+                zoom: 11,
+                cooperativeGestures
             });
             if (!scrollZoom) map.scrollZoom.disable();
             map.addControl(new mapboxgl.NavigationControl(), "top-right");
@@ -104,7 +110,7 @@ export default function InteractiveMap({
             mapRef.current?.remove();
             mapRef.current = null;
         };
-    }, [token, scrollZoom, initialLatitude, initialLongitude]);
+    }, [token, scrollZoom, initialLatitude, initialLongitude, cooperativeGestures]);
 
     useEffect(() => {
         markersRef.current.forEach((marker) => marker.remove());
@@ -117,7 +123,7 @@ export default function InteractiveMap({
             pin.className = "provider-map-pin";
             if (point.color) pin.style.backgroundColor = point.color;
             const label = document.createElement("span");
-            label.textContent = String(index + 1);
+            label.textContent = String(point.sequence ?? index + 1);
             pin.append(label);
             element.append(pin);
             element.title = point.label;
@@ -209,7 +215,7 @@ export default function InteractiveMap({
         <div className={fillHeight ? "relative h-full min-h-0" : "relative"}>
             <div
                 ref={containerRef}
-                className={fillHeight ? "h-full w-full" : "h-96 w-full sm:h-120"}
+                className={className ?? (fillHeight ? "h-full w-full" : "h-96 w-full sm:h-120")}
                 aria-label="Interactive Mapbox map"
             />
             {mapError ? (

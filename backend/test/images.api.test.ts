@@ -29,12 +29,25 @@ function fakeAuth(): { repository: AuthRepository; googleVerifier: GoogleVerifie
     ]);
     return {
         repository: {
+            async listGuestAccounts() {
+                return [];
+            },
+            async createGuestAccount() {
+                return null;
+            },
+            async findGuestAccount() {
+                return null;
+            },
             async findUserById() {
                 return null;
             },
             async createUser() {
                 return null;
             },
+            async findGooglePhotoStorageKey() {
+                return null;
+            },
+            async saveGoogleDefaults() {},
             async createSession() {
                 /* not used */
             },
@@ -273,7 +286,7 @@ test("photo upload intent, completion, idempotence, ownership and streaming acce
     assert.equal(ownerImage.headers["cross-origin-resource-policy"], "cross-origin");
     assert.equal((ownerImage.body as Buffer).toString(), "jpeg-data");
     assert.equal(fake.getOpened(), 1);
-    assert.equal((await api.get("/api/v1/images/12/content?variant=original").set("Cookie", ownerCookie)).status, 400);
+    assert.equal((await api.get("/api/v1/images/12/content?variant=raw").set("Cookie", ownerCookie)).status, 400);
 
     fake.images.get(12)!.profileOwnerUserId = "owner";
     fake.images.get(12)!.profileOwnerUsername = "owner";
@@ -339,4 +352,93 @@ test("Cloudinary authorization fixes the asset ID, authenticated type and eager 
         if (previous.secret === undefined) delete process.env.CLOUDINARY_API_SECRET;
         else process.env.CLOUDINARY_API_SECRET = previous.secret;
     }
+});
+
+test("photo presentation edits require ownership, validate bounds, keep EXIF and apply only to edited variants", async () => {
+    const fake = setup();
+    const image: UploadedImage = {
+        imageId: 12,
+        storageKey: "roamboard/original",
+        uploaderUserId: "owner",
+        boardId: 1,
+        capturedAt: new Date("2026-05-01T10:00:00Z"),
+        latitude: -8.8,
+        longitude: 115.1
+    };
+    fake.images.set(12, image);
+    fake.setBoard("published", "public");
+    fake.imagesRepository.savePresentation = async (id, user, revision, edit) => {
+        const current = fake.images.get(id);
+        if (!current || current.uploaderUserId !== user || (current.presentationRevision ?? 0) !== revision)
+            return false;
+        fake.images.set(id, { ...current, presentationEdit: edit, presentationRevision: revision + 1 });
+        return true;
+    };
+    const edit = { x: 0.25, y: 0.1, width: 0.5, height: 0.7, outputWidth: 800, outputHeight: 600 };
+    const api = request(fake.app);
+    assert.equal((await api.get("/api/v1/images/12/presentation")).status, 401);
+    assert.equal((await api.get("/api/v1/images/12/presentation").set("Cookie", otherCookie)).status, 404);
+    assert.equal((await api.get("/api/v1/images/12/presentation").set("Cookie", ownerCookie)).body.data.revision, 0);
+    assert.equal(
+        (
+            await api
+                .put("/api/v1/images/12/presentation")
+                .set("Cookie", ownerCookie)
+                .set("Origin", "https://other.example")
+                .send({ revision: 0, edit })
+        ).status,
+        403
+    );
+    for (const bad of [
+        { ...edit, x: 0.9 },
+        { ...edit, height: 0 },
+        { ...edit, outputWidth: 5000 }
+    ])
+        assert.equal(
+            (
+                await api
+                    .put("/api/v1/images/12/presentation")
+                    .set("Cookie", ownerCookie)
+                    .set("Origin", origin)
+                    .send({ revision: 0, edit: bad })
+            ).status,
+            400
+        );
+    const saved = await api
+        .put("/api/v1/images/12/presentation")
+        .set("Cookie", ownerCookie)
+        .set("Origin", origin)
+        .send({ revision: 0, edit });
+    assert.equal(saved.status, 200);
+    assert.deepEqual(saved.body.data, { edit, revision: 1 });
+    assert.equal(fake.images.get(12)?.latitude, -8.8);
+    assert.equal(fake.images.get(12)?.capturedAt?.toISOString(), "2026-05-01T10:00:00.000Z");
+    const seen: Array<unknown> = [];
+    const previous = fake.provider.openVariant;
+    fake.provider.openVariant = async (key, variant, crop) => {
+        seen.push({ variant, crop });
+        return previous(key, variant, crop);
+    };
+    assert.equal((await api.get("/api/v1/images/12/content?variant=display&v=1")).status, 200);
+    assert.deepEqual(seen[0], { variant: "display", crop: edit });
+    assert.equal((await api.get("/api/v1/images/12/content?variant=original")).status, 404);
+    assert.equal((await api.get("/api/v1/images/12/content?variant=original").set("Cookie", ownerCookie)).status, 200);
+    assert.deepEqual(seen[1], { variant: "original", crop: null });
+    assert.equal(
+        (
+            await api
+                .put("/api/v1/images/12/presentation")
+                .set("Cookie", ownerCookie)
+                .set("Origin", origin)
+                .send({ revision: 0, edit: null })
+        ).status,
+        409
+    );
+    const reset = await api
+        .put("/api/v1/images/12/presentation")
+        .set("Cookie", ownerCookie)
+        .set("Origin", origin)
+        .send({ revision: 1, edit: null });
+    assert.equal(reset.status, 200);
+    assert.deepEqual(reset.body.data, { edit: null, revision: 2 });
 });

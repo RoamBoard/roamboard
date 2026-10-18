@@ -1,7 +1,9 @@
+import type { ActivityPhotoRequest } from "./provider.schemas.js";
 import type { RequestHandler } from "express";
 
 import type {
     BoardDestinationSearchRequest,
+    BoardLocationSearchRequest,
     CloudinaryDeliveryRequest,
     CloudinaryMetadataRequest,
     DeleteGooglePlaceRequest,
@@ -18,11 +20,15 @@ export interface ProviderController {
     mapboxMapSession: RequestHandler;
     mapboxSearch: RequestHandler;
     mapboxBoardSearch: RequestHandler;
+    boardAreaSearch: RequestHandler;
+    suggestBoardArea: RequestHandler;
     mapboxDestinationSearch: RequestHandler;
     mapboxReverse: RequestHandler;
     mapboxBoardReverse: RequestHandler;
     mapboxRoute: RequestHandler;
     unsplashSearch: RequestHandler;
+    unsplashActivityPhoto: RequestHandler;
+    selectActivityPhoto: RequestHandler;
     googlePlacesSearch: RequestHandler;
     googlePlaceDetails: RequestHandler;
     saveGooglePlace: RequestHandler;
@@ -45,12 +51,27 @@ export function createProviderController(service: ProviderService): ProviderCont
         config: (_req, res) => res.json({ data: service.config() }),
         mapboxMapSession: async (_req, res) => res.json({ data: await service.mapboxMapSession() }),
         mapboxSearch: search(service.mapboxSearch),
-        mapboxBoardSearch: search(service.mapboxBoardSearch),
+        suggestBoardArea: async (req, res) => res.json({ data: await service.suggestBoardArea(req.body) }),
+        boardAreaSearch: search(service.boardAreaSearch),
+        mapboxBoardSearch: async (_request, response) => {
+            const query = response.locals.query as BoardLocationSearchRequest;
+            response.json({
+                data: await service.mapboxBoardSearch(
+                    query.q,
+                    query.limit,
+                    query.latitude === undefined ? undefined : { latitude: query.latitude, longitude: query.longitude! }
+                )
+            });
+        },
         mapboxDestinationSearch: async (req, res) => {
             const query = res.locals.query as BoardDestinationSearchRequest;
             res.json({ data: await service.mapboxDestinationSearch(query.country, query.city, query.limit) });
         },
         unsplashSearch: search(service.unsplashSearch),
+        unsplashActivityPhoto: async (_req, res) =>
+            res.json({ data: await service.unsplashActivityPhoto(res.locals.query as ActivityPhotoRequest) }),
+        selectActivityPhoto: async (req, res) =>
+            res.json({ data: await service.unsplashActivityPhoto(req.body as ActivityPhotoRequest, true) }),
         googlePlacesSearch: search(service.googlePlacesSearch),
         googlePlaceDetails: async (req, res) => {
             const params = res.locals.params as GooglePlaceDetailsRequest;

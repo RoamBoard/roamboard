@@ -27,8 +27,13 @@ Run `pnpm install` and `pnpm dev` here, then open
 posts its ID token to Express. The frontend sends the resulting session cookie
 on API requests. See `../backend/README.md` for the API and migration setup.
 
-Before submitting frontend changes, run `pnpm lint`, `pnpm exec tsc --noEmit`,
-and `pnpm build`.
+Before submitting frontend changes, run `pnpm lint`, `pnpm test`, `pnpm exec tsc --noEmit`,
+and `pnpm build`. Frontend CI runs these checks on pull requests.
+
+The destination-search interaction tests render the production search content and drive its input, keyboard,
+form and click handlers against the real request store and API helper. Only the fetch transport is simulated;
+no live provider requests or additional test dependencies are needed. Browser focus, native form submission and
+animation timing remain outside these presenter-level tests.
 
 The existing `/dev/providers`, Home destination search, `/dev/profile`,
 `/dev/boards` and Board creator use the new backend and the same

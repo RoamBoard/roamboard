@@ -24,7 +24,7 @@ function draft(): BoardCreatorPayload {
 
 function savedBoard(status: BoardStatus = "draft"): BoardDocument {
     return {
-        ...toBoardWrite(draft(), [], new Set()),
+        ...toBoardWrite(draft(), []),
         status,
         boardId: 35,
         author: { username: "owner", bio: "", photo: null },
@@ -254,6 +254,13 @@ function tagInput(markup: string) {
     return input;
 }
 
+test("board picker offers current profile tags while preserving a selected retired tag", () => {
+    const markup = tagMarkup({ values: ["Food"], suggestions: ["Food", "Museums", "Foodie", "Hidden Gems"] });
+    assert.match(markup, /aria-label="Remove Food"/);
+    const options = [...markup.matchAll(/role="option"[^>]*>([^<]*)<\/div>/g)].map((match) => match[1]);
+    assert.deepEqual(options, ["Foodie", "Hidden Gems"]);
+});
+
 test("tag search shows controlled selections and exposes accessible catalog search", () => {
     const markup = tagMarkup();
     assert.match(markup, /aria-label="1 of 3 tags selected"/);
@@ -334,22 +341,19 @@ test("tag vocabulary comes from the API and selected names become backend-genera
     });
     const vocabulary = await listBoardTags();
     const source = { ...draft(), tags: ["Coffee", "Museums"], visibility: "friends" as const };
-    const write = toBoardWrite(source, vocabulary, new Set());
+    const write = toBoardWrite(source, vocabulary);
     assert.deepEqual(requests, ["/api/v1/tags"]);
     assert.deepEqual(write.tagIds, [43, 811]);
     assert.equal(write.visibility, "friends");
     assert.equal(write.title, "");
     assert.deepEqual(write.days[0].activities, []);
-    assert.throws(
-        () => toBoardWrite({ ...source, tags: ["Unlisted custom tag"] }, vocabulary, new Set()),
-        /allowed list/
-    );
+    assert.throws(() => toBoardWrite({ ...source, tags: ["Unlisted custom tag"] }, vocabulary), /allowed list/);
     assert.deepEqual(source.tags, ["Coffee", "Museums"]);
 });
 
 test("save helper sends the saved revision and current visibility without mutating edits on conflict", async (t) => {
     const board = savedBoard();
-    const input = toBoardWrite({ ...draft(), title: "My revised itinerary", visibility: "public" }, [], new Set());
+    const input = toBoardWrite({ ...draft(), title: "My revised itinerary", visibility: "public" }, []);
     const before = structuredClone(input);
     const calls: Array<{ path: string; method?: string; body: Record<string, unknown> }> = [];
     t.mock.method(globalThis, "fetch", async (url: string, init: RequestInit) => {

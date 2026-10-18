@@ -1,5 +1,15 @@
 # Shared development database migration log
 
+## Pending guest account migration
+
+`010_guest_accounts.sql` adds the `guest_account` table. It has not been applied to the shared Azure database. It was renamed from `008_guest_accounts.sql` during merge reconciliation because 008 and 009 were already used by the applied Board destination and photo presentation migrations. Apply 010 after the team's backup and migration checks; do not rerun previously applied files.
+
+## Profile tag catalog — 2026-10-18
+
+The user reports applying `007_profile_tag_catalog.sql` to the shared Azure database. A read-only call to the live
+`GET /api/v1/tags` endpoint returned all 24 names from that migration (64 tags total). Do not rerun 007. The backup
+details for this application were not independently verified here.
+
 ## Editorial image library — 2026-10-17
 
 Applied additive migration `005_image_library.sql` through the guarded image importer after checking database access
@@ -114,3 +124,31 @@ The saved-places file was later renamed to `008_saved_places.sql` when the branc
 were combined, because 005 is used by the image library. This is the same SQL and
 does not need to run again on the shared database. Fresh databases use the current
 filename after 007.
+## Explicit Board destination - 2026-10-18
+
+Applied only 008_board_destination.sql to the configured shared development database after verifying both columns
+were absent. It adds primary_location_id, primary_location_kind, a paired-value constraint and an index; no
+existing Board content was rewritten. Verified both columns after the transaction. Migration 007 was still pending at this point; it was applied separately later that day, as recorded below.
+
+Before application, pg_dump created backend/backups/pre-008-2026-10-18T152146856Z.dump in custom format.
+pg_restore --list verified its archive listing; restoration and off-machine retention were not tested.
+An isolated-schema PostgreSQL integration test verified destination save/read/change/clear and preservation by
+an older write omitting the new property.
+
+## Non-destructive upload presentation - 2026-10-18
+
+Applied only 009_image_presentation.sql after checking the columns were absent and verifying a custom-format backup
+archive with pg_restore --list. Added presentation_edit and presentation_revision; source images, capture metadata
+and Board/photo links were retained. Verified both columns after committing the additive migration.
+Backup: backend/backups/pre-009-2026-10-18T155028513Z.dump (Git-ignored). Restore and off-machine retention were not
+tested. Migration 007 was still pending at this point; its later application is recorded below. Isolated-schema tests exercise save/read/reset and stale edits.
+
+## Shared profile and Board tag catalog — 2026-10-18
+
+Verified all current names against `shared/roamboard-tags.json`, then applied only `007_profile_tag_catalog.sql`
+in a transaction after verifying a fresh custom-format backup with `pg_restore --list`.
+All 40 current profile tag names are now present. Existing legacy names and integer IDs were verified unchanged,
+so existing Board and profile selections remain valid. This supersedes the pending-007 notes above.
+Backup: `backend/backups/pre-007-2026-10-18T161334007Z.dump` (Git-ignored). Restoration and off-machine retention
+were not tested. Board choices now use the same editorial catalog as profile choices, restricted to persisted names;
+retired database names are retained for existing selections but are not offered as new Board choices.

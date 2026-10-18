@@ -1,3 +1,5 @@
+import { createSmartCreateModule } from "./features/smart-create/smart-create.module.js";
+import type { SmartCreateResolver } from "./features/smart-create/smart-create.service.js";
 import express, { type Express } from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -25,6 +27,7 @@ import { createSavedPlacesModule } from "./features/saved-places/saved-places.mo
 import type { SavedPlacesRepository } from "./features/saved-places/saved-places.types.js";
 
 export interface AppOptions extends AuthModuleOptions {
+    smartCreateResolver?: SmartCreateResolver;
     libraryRepository?: LibraryRepository;
     libraryProvider?: LibraryProvider;
     boardRepository?: BoardRepository;
@@ -64,9 +67,9 @@ export function createApp(options: AppOptions = {}): Express {
         }
     });
 
-    const auth = createAuthModule(options);
-    const attachUser = attachSessionUser(auth.service);
     const quota = options.quotaService ?? createQuotaService(createPostgresQuotaRepository(), createQuotaPolicies());
+    const auth = createAuthModule({ ...options, quotaService: quota });
+    const attachUser = attachSessionUser(auth.service);
     const providers = createProviderModule(quota, attachUser);
     const destinations = createDestinationModule(quota);
     const search = createSearchModule(options.searchRepository, options.searchProvider);
@@ -92,6 +95,11 @@ export function createApp(options: AppOptions = {}): Express {
     app.use("/api/v1/saved-places", createSavedPlacesModule(attachUser, options.savedPlacesRepository).router);
     app.use("/api/v1", boards.router);
     app.use("/api/v1", images.router);
+    app.use(
+        "/api/v1",
+        createSmartCreateModule(attachUser, images.repository, quota, options.smartCreateResolver, images.provider)
+            .router
+    );
     app.use((_request, response) => {
         response.status(404).json({ error: { code: "NOT_FOUND", message: "Not found" } });
     });

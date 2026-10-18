@@ -1,4 +1,8 @@
 "use client";
+import BoardPlanMap from "./BoardPlanMap";
+import { suggestMainDestination } from "@/lib/board-creator-api";
+import BoardDestinationSearch from "./BoardDestinationSearch";
+import type { BoardDestinationDraft } from "@/types/board-creator";
 
 import { movePlannerPin, reorderPlannerPin } from "@/lib/board-planner";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
@@ -32,6 +36,8 @@ import type {
     BoardPinDraft,
     BoardStatus
 } from "@/types/board-creator";
+import { buildSmartCreatePlan, type SmartCreatePlan } from "@/lib/smart-create";
+import SmartCreateReviewDialog from "./SmartCreateReviewDialog";
 import { loadProfile } from "@/lib/profile";
 import { findCountry } from "@/lib/countries";
 import type { StartingPlace } from "@/lib/destination-places";
@@ -48,34 +54,6 @@ function normalizePinOrder(pins: BoardPinDraft[]): BoardPinDraft[] {
     return pins.map((pin, order) => ({ ...pin, order }));
 }
 
-function addPhotoSuggestions(current: BoardDayDraft[], uploads: UploadedBoardImage[]): BoardDayDraft[] {
-    return uploads.reduce((days, upload) => {
-        if (!upload.suggestedPin) return days;
-        const suggestedPin = upload.suggestedPin;
-        const matchingIndex = upload.suggestedDate ? days.findIndex((day) => day.date === upload.suggestedDate) : 0;
-        const reusableFirstDay = days.length === 1 && days[0]?.pins.length === 0 && days[0].date === null;
-        const targetIndex = matchingIndex >= 0 ? matchingIndex : reusableFirstDay ? 0 : days.length;
-        if (targetIndex === days.length) {
-            return [
-                ...days,
-                {
-                    ...newDay(days.length + 1, upload.suggestedDate),
-                    pins: [{ ...suggestedPin, order: 0 }]
-                }
-            ];
-        }
-        return days.map((day, index) =>
-            index === targetIndex
-                ? {
-                      ...day,
-                      date: day.date ?? upload.suggestedDate,
-                      pins: normalizePinOrder([...day.pins, { ...suggestedPin, order: day.pins.length }])
-                  }
-                : day
-        );
-    }, current);
-}
-
 export default function BoardCreator({
     initialBoardId,
     expectedStatus = "draft",
@@ -87,17 +65,24 @@ export default function BoardCreator({
     initialMode?: "smart" | "scratch";
     initialPlace?: StartingPlace;
 }) {
+    const [smartStartDate, setSmartStartDate] = useState<string | null>(null);
+    const [pendingPlan, setPendingPlan] = useState<SmartCreatePlan | null>(null);
     const [leaveHref, setLeaveHref] = useState<string | null>(null);
     const saveToastId = useId();
     const saveInFlight = useRef(false);
-    const [mode, setMode] = useState(initialMode);
     const [title, setTitle] = useState(
         initialPlace && initialBoardId === undefined ? `${initialPlace.city} board` : ""
     );
+    const destinationTouched = useRef(false);
+    const destinationLookupKey = useRef("");
+    const [destinationSuggested, setDestinationSuggested] = useState(false);
+    const [destinationGeneration, setDestinationGeneration] = useState(0);
+    const [destination, setDestination] = useState<BoardDestinationDraft | null>(null);
     const [description, setDescription] = useState("");
     const [images, setImages] = useState<BoardImageDraft[]>([]);
     const [selectedCoverImageId, setSelectedCoverImageId] = useState<number | null>(null);
     const initialDayId = useId();
+    const [mapActivityId, setMapActivityId] = useState<string | null>(null);
     // A discovered place starts as an editable Day 1 activity. Nothing is saved until the user saves the Board.
     const [days, setDays] = useState<BoardDayDraft[]>(() => [
         {
@@ -136,7 +121,6 @@ export default function BoardCreator({
     const visibilityTouched = useRef(false);
     const [preferenceLoading, setPreferenceLoading] = useState(initialBoardId === undefined);
     const [preferenceError, setPreferenceError] = useState(false);
-    const [confirmedPhotoPins, setConfirmedPhotoPins] = useState<Set<string>>(() => new Set());
     const [saving, setSaving] = useState<BoardStatus | null>(null);
     const [boardUploading, setBoardUploading] = useState(false);
     const [activityUploading, setActivityUploading] = useState(false);
@@ -152,21 +136,11 @@ export default function BoardCreator({
     const [savedFingerprint, setSavedFingerprint] = useState<string | null>(null);
     const [savedBoard, setSavedBoard] = useState<BoardDocument | null>(null);
     const editorDisabled =
+        pendingPlan !== null ||
         saving !== null ||
         draftLoading ||
         (initialBoardId !== undefined && !savedBoard) ||
         (savedBoard?.status === "published" && expectedStatus !== "published");
-    const showSmartIntro = initialBoardId === undefined && mode === "smart";
-
-    function switchMode() {
-        const nextMode = mode === "smart" ? "scratch" : "smart";
-        setMode(nextMode);
-        const url = new URL(window.location.href);
-        if (nextMode === "scratch") url.searchParams.set("mode", "scratch");
-        else url.searchParams.delete("mode");
-        window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
-    }
-
     const loadTags = useCallback(
         () =>
             listBoardTags()
@@ -190,24 +164,23 @@ export default function BoardCreator({
                 if (!board.permissions.canEditContent) throw new Error("You cannot edit this Board.");
                 const restored = fromBoardDocument(board);
                 setSavedFingerprint(
-                    boardEditorFingerprint(
-                        {
-                            title: board.title,
-                            description: board.description ?? "",
-                            status: board.status,
-                            visibility: board.visibility,
-                            coverImageId:
-                                board.coverImageId ??
-                                restored.images.find((image) => image.source === "upload")?.uploadedImageId ??
-                                null,
-                            tags: board.tags.map((tag) => tag.name),
-                            days: restored.days,
-                            images: restored.images
-                        },
-                        restored.confirmedPhotoPins
-                    )
+                    boardEditorFingerprint({
+                        destination: restored.destination,
+                        title: board.title,
+                        description: board.description ?? "",
+                        status: board.status,
+                        visibility: board.visibility,
+                        coverImageId:
+                            board.coverImageId ??
+                            restored.images.find((image) => image.source === "upload")?.uploadedImageId ??
+                            null,
+                        tags: board.tags.map((tag) => tag.name),
+                        days: restored.days,
+                        images: restored.images
+                    })
                 );
                 setSavedBoard(board);
+                setDestination(restored.destination);
                 setTitle(board.title);
                 setDescription(board.description ?? "");
                 setVisibility(board.visibility);
@@ -215,7 +188,6 @@ export default function BoardCreator({
                 setDays(restored.days);
                 setImages(restored.images);
                 setSelectedCoverImageId(board.coverImageId);
-                setConfirmedPhotoPins(restored.confirmedPhotoPins);
             })
             .catch((caught: unknown) =>
                 setError(caught instanceof Error ? caught.message : "Board could not be loaded.")
@@ -230,6 +202,7 @@ export default function BoardCreator({
 
     const payload = useMemo<BoardCreatorPayload>(
         () => ({
+            destination,
             title,
             description,
             status: "draft",
@@ -239,10 +212,56 @@ export default function BoardCreator({
             days,
             images
         }),
-        [coverImageId, days, description, images, tags, title, visibility]
+        [coverImageId, days, description, destination, images, tags, title, visibility]
     );
 
-    const fingerprint = boardEditorFingerprint(payload, confirmedPhotoPins);
+    const activityPoints = JSON.stringify(
+        days
+            .flatMap((day) =>
+                day.pins.flatMap((pin) =>
+                    pin.location
+                        ? [
+                              {
+                                  latitude: pin.location.latitude,
+                                  longitude: pin.location.longitude,
+                                  city: pin.location.city,
+                                  country: pin.location.countryCode ?? pin.location.country
+                              }
+                          ]
+                        : []
+                )
+            )
+            .slice(0, 100)
+    );
+    useEffect(() => {
+        if (destination || draftLoading || destinationTouched.current) return;
+        const points = JSON.parse(activityPoints) as Array<{
+            latitude: number;
+            longitude: number;
+            city: string | null;
+            country: string | null;
+        }>;
+        if (points.length < 3 || destinationLookupKey.current === activityPoints) return;
+        const controller = new AbortController();
+        const timer = window.setTimeout(() => {
+            destinationLookupKey.current = activityPoints;
+            void suggestMainDestination(points, controller.signal)
+                .then((place) => {
+                    if (place && !controller.signal.aborted && !destinationTouched.current) {
+                        setDestination(place);
+                        setDestinationSuggested(true);
+                        setDestinationGeneration((current) => current + 1);
+                    }
+                })
+                .catch(() => {});
+        }, 1000);
+        return () => {
+            window.clearTimeout(timer);
+            controller.abort();
+        };
+    }, [activityPoints, destination, draftLoading]);
+
+    const fingerprint = boardEditorFingerprint(payload);
     const initialPayload = useRef(payload);
     const [initialFingerprint, setInitialFingerprint] = useState(fingerprint);
     useEffect(() => {
@@ -252,10 +271,10 @@ export default function BoardCreator({
                 if (!visibilityTouched.current) {
                     setVisibility(profile.defaultBoardVisibility);
                     setInitialFingerprint(
-                        boardEditorFingerprint(
-                            { ...initialPayload.current, visibility: profile.defaultBoardVisibility },
-                            new Set()
-                        )
+                        boardEditorFingerprint({
+                            ...initialPayload.current,
+                            visibility: profile.defaultBoardVisibility
+                        })
                     );
                 }
             })
@@ -268,7 +287,10 @@ export default function BoardCreator({
             .finally(() => setPreferenceLoading(false));
     }, [initialBoardId]);
     const dirty = fingerprint !== (savedFingerprint ?? initialFingerprint);
-    useBoardLeaveWarning((!editorDisabled && dirty) || saving !== null || uploading, setLeaveHref);
+    useBoardLeaveWarning(
+        ((!editorDisabled || pendingPlan !== null) && dirty) || saving !== null || uploading,
+        setLeaveHref
+    );
     useEffect(
         () => () => {
             toast.dismiss(saveToastId);
@@ -276,27 +298,39 @@ export default function BoardCreator({
         [saveToastId]
     );
 
-    function handleUploads(items: UploadedBoardImage[]) {
-        setImages((current) =>
-            [...current, ...items.map((item) => item.image)]
-                .sort((first, second) =>
-                    first.capturedAt === null
-                        ? second.capturedAt === null
-                            ? 0
-                            : 1
-                        : second.capturedAt === null
-                          ? -1
-                          : first.capturedAt.localeCompare(second.capturedAt)
-                )
-                .map((image, order) => ({ ...image, order }))
-        );
-        setDays((current) => addPhotoSuggestions(current, items));
+    function applySmartPlan(plan: SmartCreatePlan) {
+        setSmartStartDate(plan.startDate);
+        setDays(plan.days);
+        setImages(plan.images);
+        setPendingPlan(null);
         setMessage(
-            items.some((item) => item.suggestedPin)
-                ? "Images uploaded. Pins suggested from embedded GPS and capture times—please confirm them before publishing."
-                : "Images uploaded. No usable GPS metadata was found, so no pins were created automatically."
+            [
+                plan.createdCount + " activities created. You can edit their places in your day plan.",
+                ...plan.warnings
+            ].join(" ")
         );
+    }
+    function handleUploads(items: UploadedBoardImage[]) {
+        // Scratch mode keeps uploaded photos available for manual activity attachment.
+        if (initialBoardId !== undefined || initialMode === "scratch") {
+            setImages((current) => [
+                ...current,
+                ...items.map((item, index) => ({ ...item.image, pinId: null, order: current.length + index }))
+            ]);
+            setMessage("Photos uploaded. Open an activity to attach them.");
+            return;
+        }
+        const plan = buildSmartCreatePlan(days, images, items, smartStartDate);
         setError("");
+        if (plan.requiresConfirmation || !plan.canApply) {
+            // Uploads are retained even when the user declines a timeline change.
+            setImages((current) => [
+                ...current,
+                ...items.map((item, index) => ({ ...item.image, pinId: null, order: current.length + index }))
+            ]);
+            if (plan.canApply) setPendingPlan(plan);
+            else setMessage(plan.warnings.join(" "));
+        } else applySmartPlan(plan);
     }
 
     function removeImage(imageId: string) {
@@ -343,7 +377,6 @@ export default function BoardCreator({
                 image.pinId === pinId ? { ...image, pinId: null, activityOrder: undefined } : image
             )
         );
-        setConfirmedPhotoPins((current) => new Set([...current].filter((item) => item !== pinId)));
     }
 
     function removeDay(dayId: string) {
@@ -358,7 +391,6 @@ export default function BoardCreator({
                     : image
             )
         );
-        setConfirmedPhotoPins((current) => new Set([...current].filter((pinId) => !removedPinIds.has(pinId))));
     }
 
     function addActivityImage(image: BoardImageDraft) {
@@ -423,18 +455,9 @@ export default function BoardCreator({
             setSaveError("Wait for Board preferences or choose a visibility option above before saving.");
             return;
         }
-        const unconfirmedPhotoPin = days
-            .flatMap((day) => day.pins)
-            .find((pin) => pin.source === "photo" && !confirmedPhotoPins.has(pin.id));
-        if (status === "published" && unconfirmedPhotoPin) {
-            const detail = `Confirm the photo location for “${unconfirmedPhotoPin.title}” before publishing.`;
-            setSaveError(detail);
-            toast.error("Review your Board before publishing", {
-                ...creatorToastOptions,
-                id: saveToastId,
-                description: detail
-            });
-            setSaveMessage("");
+        if (status === "published" && !destination) {
+            setSaveError("Choose a main destination in Board Basics before publishing.");
+            document.getElementById("board-basics")?.scrollIntoView({ behavior: "smooth" });
             return;
         }
         saveInFlight.current = true;
@@ -455,6 +478,7 @@ export default function BoardCreator({
                 pendingUploadRef.current = null;
             }
             const currentPayload = {
+                destination,
                 title,
                 description,
                 status,
@@ -464,7 +488,7 @@ export default function BoardCreator({
                 days,
                 images
             };
-            const write = toBoardWrite(currentPayload, allowedTags, confirmedPhotoPins);
+            const write = toBoardWrite(currentPayload, allowedTags);
             const sentDays = days;
             const expectedRevision = savedBoard ? savedBoard.revision + 1 : 1;
             const board = await saveBoardDocument(write, savedBoard);
@@ -474,7 +498,7 @@ export default function BoardCreator({
                 );
             }
             setSavedBoard(board);
-            setSavedFingerprint(boardEditorFingerprint(currentPayload, confirmedPhotoPins));
+            setSavedFingerprint(boardEditorFingerprint(currentPayload));
             toast.success(
                 expectedStatus === "published"
                     ? "Board changes saved"
@@ -517,6 +541,18 @@ export default function BoardCreator({
     return (
         <article className="font-body bg-background text-foreground relative min-w-0 overflow-x-clip">
             <CreatorNotifications />
+            {pendingPlan ? (
+                <SmartCreateReviewDialog
+                    plan={pendingPlan}
+                    onConfirm={() => applySmartPlan(pendingPlan)}
+                    onCancel={() => {
+                        setPendingPlan(null);
+                        setMessage(
+                            "Your day plan is unchanged. New photos remain uploaded and available for manual assignment."
+                        );
+                    }}
+                />
+            ) : null}
             {leaveHref ? <CreatorLeaveDialog href={leaveHref} onClose={() => setLeaveHref(null)} /> : null}
             <CreatorProgress
                 dirty={dirty}
@@ -525,28 +561,13 @@ export default function BoardCreator({
                 saving={saving}
                 uploading={uploading}
             />
-            {showSmartIntro ? (
-                <header className="px-5 pt-16 pb-16 text-center sm:px-10 sm:pt-24 sm:pb-28">
-                    <h1 className="font-display text-[clamp(2.5rem,5.6vw,6rem)] leading-[1.02] font-bold tracking-[-0.035em]">
-                        SMART CREATE
-                    </h1>
-                    <p className="text-muted-foreground mx-auto mt-4 max-w-[38rem] text-xs leading-relaxed sm:text-sm">
-                        Drop in your photos and we’ll turn metadata into editable beginnings for a Board. Review every
-                        suggestion before anything is published.
-                    </p>
-                    <p className="text-muted-foreground/70 mt-6 text-[10px] sm:text-xs">
-                        Powered by Roamboard Intelligence Engine
-                    </p>
-                </header>
-            ) : (
-                <h1 className="sr-only">
-                    {initialBoardId === undefined
-                        ? "Create a new Board"
-                        : expectedStatus === "published"
-                          ? "Edit published Board"
-                          : "Edit Board draft"}
-                </h1>
-            )}
+            <h1 className="sr-only">
+                {initialBoardId === undefined
+                    ? "Create a new Board"
+                    : expectedStatus === "published"
+                      ? "Edit published Board"
+                      : "Edit Board draft"}
+            </h1>
 
             <div>
                 <fieldset
@@ -559,7 +580,7 @@ export default function BoardCreator({
                         coverImageId={coverImageId}
                         disabled={editorDisabled || activityUploading}
                         loading={draftLoading}
-                        showDropZone={showSmartIntro}
+                        showDropZone={initialBoardId === undefined && initialMode === "smart"}
                         onUploadingChange={setBoardUploading}
                         onUploadPromise={(promise) => {
                             pendingUploadRef.current = promise;
@@ -567,85 +588,107 @@ export default function BoardCreator({
                         onSelectCover={setSelectedCoverImageId}
                         onUploaded={handleUploads}
                         onRemove={removeImage}
-                    />
-
-                    <div className="mx-auto mt-10 max-w-4xl px-5 text-center sm:mt-12">
-                        <p className="font-display text-muted-foreground text-xs uppercase sm:text-sm lg:text-base">
-                            {initialBoardId === undefined
-                                ? "Board creator"
-                                : expectedStatus === "published"
-                                  ? "Board editor"
-                                  : "Board draft"}
-                        </p>
-                        <label htmlFor="board-title" className="sr-only">
-                            Board title
-                        </label>
-                        <input
-                            id="board-title"
-                            style={{ scrollMarginTop: "9rem" }}
-                            value={title}
-                            onChange={(event) => setTitle(event.target.value)}
-                            placeholder={draftLoading ? "LOADING BOARD…" : "BOARD TITLE"}
-                            className="font-display placeholder:text-foreground focus-visible:outline-foreground mt-3 min-h-12 w-full min-w-0 bg-transparent py-1 text-center text-[clamp(1.75rem,3.8vw,4rem)] leading-[1.02] font-bold tracking-[-0.035em] uppercase focus-visible:outline-1 focus-visible:outline-offset-4"
-                        />
-                        {initialBoardId === undefined ? (
-                            <button
-                                type="button"
-                                onClick={switchMode}
-                                className="text-muted-foreground hover:text-foreground mt-4 min-h-11 cursor-pointer px-3 text-xs underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4"
-                            >
-                                {mode === "smart" ? "Switch to Start from Scratch" : "Switch to Smart Create"}
-                            </button>
-                        ) : null}
-                    </div>
-
-                    {message ? (
-                        <p className="border-foreground text-13 mx-auto mt-7 max-w-3xl border-l-2 pl-4" role="status">
-                            {message}
-                        </p>
-                    ) : null}
-                    {draftLoading ? (
-                        <p className="text-13 mx-auto mt-7 max-w-3xl" role="status">
-                            Loading Board...
-                        </p>
-                    ) : null}
-                    {error ? (
-                        <p className="border-foreground text-13 mx-auto mt-7 max-w-3xl border-l-2 pl-4" role="alert">
-                            {error}
-                        </p>
-                    ) : null}
-
-                    <section id="board-basics" className={`${chapterClasses} mt-20 sm:mt-28 lg:mt-36 lg:min-h-[22rem]`}>
-                        <CreatorSectionIntro
-                            number="01"
-                            title="BOARD BASICS"
-                            description="Let’s start with the essentials to set the scene for everything you’re about to plan."
-                        />
-                        <label className="text-foreground/80 text-20 sm:text-24 block max-w-3xl min-w-0 font-bold">
-                            Description
-                            <textarea
-                                value={description}
-                                onChange={(event) => setDescription(event.target.value)}
-                                placeholder="type here..."
-                                rows={7}
-                                className="border-line text-foreground font-body text-14 placeholder:text-muted-foreground focus:border-foreground focus-visible:outline-foreground mt-3 w-full resize-y border-0 border-b bg-transparent py-3 leading-6 font-normal focus-visible:outline-1 focus-visible:outline-offset-4 sm:text-base"
+                    >
+                        <div className="mx-auto mt-10 max-w-4xl px-5 text-center sm:mt-12">
+                            <p className="font-display text-muted-foreground text-xs uppercase sm:text-sm lg:text-base">
+                                {initialBoardId === undefined
+                                    ? "Board creator"
+                                    : expectedStatus === "published"
+                                      ? "Board editor"
+                                      : "Board draft"}
+                            </p>
+                            <label htmlFor="board-title" className="sr-only">
+                                Board title
+                            </label>
+                            <input
+                                id="board-title"
+                                style={{ scrollMarginTop: "9rem" }}
+                                value={title}
+                                onChange={(event) => setTitle(event.target.value)}
+                                placeholder={draftLoading ? "LOADING BOARD…" : "BOARD TITLE"}
+                                className="font-display placeholder:text-foreground focus-visible:outline-foreground mt-3 min-h-12 w-full min-w-0 bg-transparent py-1 text-center text-[clamp(1.75rem,3.8vw,4rem)] leading-[1.02] font-bold tracking-[-0.035em] uppercase focus-visible:outline-1 focus-visible:outline-offset-4"
                             />
-                        </label>
-                    </section>
+                        </div>
 
-                    <section id="day-plan" className={fullChapterClasses}>
+                        {message ? (
+                            <p
+                                className="border-foreground text-13 mx-auto mt-7 max-w-3xl border-l-2 pl-4"
+                                role="status"
+                            >
+                                {message}
+                            </p>
+                        ) : null}
+                        {draftLoading ? (
+                            <p className="text-13 mx-auto mt-7 max-w-3xl" role="status">
+                                Loading Board...
+                            </p>
+                        ) : null}
+                        {error ? (
+                            <p
+                                className="border-foreground text-13 mx-auto mt-7 max-w-3xl border-l-2 pl-4"
+                                role="alert"
+                            >
+                                {error}
+                            </p>
+                        ) : null}
+
+                        <section
+                            id="board-basics"
+                            className={`${chapterClasses} mt-20 sm:mt-28 lg:mt-36 lg:min-h-[22rem]`}
+                        >
+                            <CreatorSectionIntro
+                                number="01"
+                                title="BOARD BASICS"
+                                description="Let’s start with the essentials to set the scene for everything you’re about to plan."
+                            />
+                            <div className="max-w-3xl min-w-0">
+                                <BoardDestinationSearch
+                                    key={`${savedBoard?.boardId ?? "new"}-${destinationGeneration}`}
+                                    value={destination}
+                                    suggested={destinationSuggested}
+                                    onChange={(place) => {
+                                        destinationTouched.current = true;
+                                        setDestinationSuggested(false);
+                                        setDestination(place);
+                                    }}
+                                />
+                                <label className="text-foreground/80 text-20 sm:text-24 block max-w-3xl min-w-0 font-bold">
+                                    Description
+                                    <textarea
+                                        value={description}
+                                        onChange={(event) => setDescription(event.target.value)}
+                                        placeholder="type here..."
+                                        rows={7}
+                                        className="border-line text-foreground font-body text-14 placeholder:text-muted-foreground focus:border-foreground focus-visible:outline-foreground mt-3 w-full resize-y border-0 border-b bg-transparent py-3 leading-6 font-normal focus-visible:outline-1 focus-visible:outline-offset-4 sm:text-base"
+                                    />
+                                </label>
+                            </div>
+                        </section>
+                    </BoardImageIntake>
+
+                    <section
+                        id="day-plan"
+                        className="mx-auto w-full max-w-[96rem] scroll-mt-36 px-5 pb-20 sm:px-8 lg:px-12 lg:pb-28"
+                    >
                         <CreatorSectionIntro
                             number="02"
-                            title="BUILD YOUR DAY PLAN"
-                            description="Shape the trip. Add and arrange places, restaurants, notes, and more."
+                            title="Build your day plan"
+                            description="Add and arrange your activities. Click an open space in a day to add a location."
                         />
                         <div className="min-w-0">
                             <DayPlanner
+                                destination={destination}
+                                openActivityId={mapActivityId}
+                                onActivityOpened={() => setMapActivityId(null)}
                                 disabled={editorDisabled || boardUploading}
                                 onActivityUploadingChange={setActivityUploading}
                                 days={days}
                                 images={images}
-                                onAddDay={() => setDays((current) => [...current, newDay(current.length + 1)])}
+                                onAddDay={() =>
+                                    setDays((current) =>
+                                        current.length >= 31 ? current : [...current, newDay(current.length + 1)]
+                                    )
+                                }
                                 onRemoveDay={removeDay}
                                 onAddPin={addPin}
                                 onUpdatePin={updatePin}
@@ -654,21 +697,37 @@ export default function BoardCreator({
                                     setDays((current) => reorderPlannerPin(current, pinId, direction))
                                 }
                                 onRemovePin={removePin}
+                                onImageMetadataChange={(imageId, metadata) =>
+                                    setImages((current) =>
+                                        current.map((image) =>
+                                            image.uploadedImageId === imageId ? { ...image, ...metadata } : image
+                                        )
+                                    )
+                                }
                                 onAddActivityImage={addActivityImage}
                                 onAssignActivityImage={assignActivityImage}
                                 onSetActivityCover={setActivityCover}
                                 onReorderActivityImage={reorderActivityImage}
-                                confirmedPhotoPins={confirmedPhotoPins}
-                                onConfirmPhotoPin={(pinId) =>
-                                    setConfirmedPhotoPins((current) => new Set([...current, pinId]))
-                                }
                             />
                         </div>
                     </section>
 
+                    <section
+                        id="board-map"
+                        className="mx-auto w-full max-w-[96rem] scroll-mt-36 px-5 pb-20 sm:px-8 lg:px-12 lg:pb-28"
+                    >
+                        <BoardPlanMap
+                            days={days}
+                            onOpenActivity={(activityId) => {
+                                if (editorDisabled || boardUploading) return;
+                                setMapActivityId(activityId);
+                            }}
+                        />
+                    </section>
+
                     <section id="details-discovery" className={fullChapterClasses}>
                         <CreatorSectionIntro
-                            number="03"
+                            number="04"
                             title="DETAILS & DISCOVERY"
                             description="Give your Board more context to keep plans organized and make it easier for others to discover."
                         />
@@ -701,11 +760,11 @@ export default function BoardCreator({
                     </section>
                 </fieldset>
 
-                <BoardPreviewSection board={payload} confirmedPhotoPins={confirmedPhotoPins} />
+                <BoardPreviewSection board={payload} />
 
                 <section id="publish" className={`${fullChapterClasses} mb-20 sm:mb-32`}>
                     <CreatorSectionIntro
-                        number="05"
+                        number="06"
                         title="PUBLISH"
                         description="Save it for yourself, or share it if you feel like it."
                     />

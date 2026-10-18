@@ -8,44 +8,57 @@ import { getDiscoverDestination } from "@/data/discover-destinations";
 import { getDiscoverBoardsByDestination } from "@/data/discover-boards";
 import { getDestinationGuideInput } from "@/lib/destination-guides";
 import DestinationGuide from "@/components/features/destinations/DestinationGuide";
+import { DestinationReady } from "@/components/features/destinations/DestinationTransitionProvider";
+import { destinationSelectionMatches, type DestinationSelectionParams } from "@/lib/destination-search";
 
-type Props = {
-    params: Promise<{ slug: string }>;
-    searchParams?: Promise<Record<string, string | string[] | undefined>>;
-};
+type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<DestinationSelectionParams> };
 
-export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
+async function resolveDestination({ params, searchParams }: Props) {
     const slug = (await params).slug;
-    const input = getDestinationGuideInput(slug, await searchParams);
-    const destination = input ?? getDiscoverDestination(slug);
-    if (!destination) notFound();
-    return {
-        title: `${destination.name} | Roamboard`,
-        description: input
-            ? `Explore ${input.name}: a city introduction, photos and public travel boards.`
-            : getDiscoverDestination(slug)?.description
-    };
+    const selection = (await searchParams) ?? {};
+    const guide = getDestinationGuideInput(slug, selection);
+    const destination = getDiscoverDestination(slug);
+    // Cities carry their full identity. Country pages keep main's namesake checks.
+    if (!guide && (!destination || !destinationSelectionMatches(destination, "country", selection))) notFound();
+    const query = new URLSearchParams();
+    Object.entries(selection).forEach(([key, value]) => {
+        if (Array.isArray(value)) value.forEach((entry) => query.append(key, entry));
+        else if (value !== undefined) query.set(key, value);
+    });
+    const href = `/discover/destinations/${encodeURIComponent(slug)}${query.size ? `?${query}` : ""}`;
+    return { guide, destination, href };
 }
 
-export default async function DestinationPage({ params, searchParams }: Props) {
-    const slug = (await params).slug;
-    const guide = getDestinationGuideInput(slug, await searchParams);
+export async function generateMetadata(props: Props): Promise<Metadata> {
+    const { guide, destination } = await resolveDestination(props);
+    if (guide)
+        return {
+            title: `${guide.name} | Roamboard`,
+            description: `Explore ${guide.name}: a city introduction, photos and public travel boards.`
+        };
+    if (!destination) notFound();
+    return { title: `${destination.name} | Roamboard`, description: destination.description };
+}
+
+export default async function DestinationPage(props: Props) {
+    const { guide, destination, href } = await resolveDestination(props);
     if (guide)
         return (
-            // Attribution is inside the closing panel so the guide stays exactly one viewport tall.
+            // Attribution stays inside the guide so the page remains one viewport tall.
             <div className="[&+footer]:hidden [&>div]:min-h-0">
                 <AppShell activeHref="/discover" discover={{ collapsed: true }}>
-                    {/* A full city identity keeps same-name cities and their in-flight reads separate. */}
+                    {/* Finish the route transition; the guide handles its own API loading state. */}
+                    <DestinationReady href={href} />
                     <DestinationGuide key={JSON.stringify(guide)} input={guide} />
                 </AppShell>
             </div>
         );
-    const destination = getDiscoverDestination(slug);
     if (!destination) notFound();
     const { boards, available } = await getDiscoverBoardsByDestination(destination.countryCode);
 
     return (
         <AppShell activeHref="/discover" discover={{ collapsed: true }}>
+            <DestinationReady href={href} />
             <div className="min-h-dvh py-12 pr-5 pl-24 md:py-16 md:pr-12 md:pl-36">
                 <Link
                     href="/discover#trending-title"

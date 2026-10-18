@@ -14,16 +14,17 @@ export default function CreatorProgress({
     uploading: boolean;
 }) {
     return (
-        <div className="border-line bg-background/95 sticky top-0 z-30 border-b px-5 py-3 backdrop-blur-md sm:px-8">
+        <div className="border-line bg-background sticky top-0 z-30 border-b px-5 py-3 sm:px-8">
             <div className="mx-auto flex max-w-[90rem] flex-wrap items-center justify-between gap-x-8 gap-y-2">
                 <nav aria-label="Board editor chapters" className="min-w-0 overflow-x-auto">
                     <ol className="flex gap-5 text-[11px] whitespace-nowrap sm:gap-7 sm:text-xs">
                         {[
                             ["board-basics", "01 Basics"],
                             ["day-plan", "02 Day plan"],
-                            ["details-discovery", "03 Details"],
-                            ["board-preview", "04 Preview"],
-                            ["publish", "05 Publish"]
+                            ["board-map", "03 Map"],
+                            ["details-discovery", "04 Details"],
+                            ["board-preview", "05 Preview"],
+                            ["publish", "06 Publish"]
                         ].map(([id, label]) => (
                             <li key={id}>
                                 <a

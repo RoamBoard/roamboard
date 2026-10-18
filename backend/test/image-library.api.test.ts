@@ -57,12 +57,25 @@ test("editorial catalog imports and replacements preserve public reads, developm
     };
     const app = createApp({
         repository: {
+            async listGuestAccounts() {
+                return [];
+            },
+            async createGuestAccount() {
+                return null;
+            },
+            async findGuestAccount() {
+                return null;
+            },
             async findUserById() {
                 return null;
             },
             async createUser() {
                 return null;
             },
+            async findGooglePhotoStorageKey() {
+                return null;
+            },
+            async saveGoogleDefaults() {},
             async createSession() {},
             async deleteSession() {},
             async findUserBySession() {

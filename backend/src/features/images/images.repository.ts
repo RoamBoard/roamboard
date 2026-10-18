@@ -114,6 +114,8 @@ export function createImagesRepository(): ImagesRepository {
                 storage_key: string;
                 uploaded_by_user_id: string;
                 board_id: number | null;
+                presentation_edit: import("./images.schemas.js").ImagePresentationEdit | null;
+                presentation_revision: number;
                 // The current profile link determines whose avatar this image is.
                 profile_owner_user_id: string | null;
                 profile_owner_username: string | null;
@@ -122,7 +124,7 @@ export function createImagesRepository(): ImagesRepository {
                 longitude: string | null;
             }>(
                 `SELECT i.uploaded_image_id, i.storage_key, i.uploaded_by_user_id,
-                  bi.board_id, i.captured_at, i.latitude, i.longitude,
+                  bi.board_id, i.captured_at, i.latitude, i.longitude,i.presentation_edit,i.presentation_revision,
                   profile_owner.user_id AS profile_owner_user_id,
                   profile_owner.username AS profile_owner_username
                  FROM uploaded_image i
@@ -138,6 +140,8 @@ export function createImagesRepository(): ImagesRepository {
                       storageKey: row.storage_key,
                       uploaderUserId: row.uploaded_by_user_id,
                       boardId: row.board_id,
+                      presentationEdit: row.presentation_edit,
+                      presentationRevision: row.presentation_revision,
                       profileOwnerUserId: row.profile_owner_user_id,
                       profileOwnerUsername: row.profile_owner_username,
                       capturedAt: row.captured_at,
@@ -145,6 +149,42 @@ export function createImagesRepository(): ImagesRepository {
                       longitude: row.longitude === null ? null : Number(row.longitude)
                   }
                 : null;
+        },
+        async savePresentation(imageId, userId, revision, edit) {
+            const result = await getPool().query(
+                "UPDATE uploaded_image SET presentation_edit=$1,presentation_revision=presentation_revision+1 WHERE uploaded_image_id=$2 AND uploaded_by_user_id=$3 AND presentation_revision=$4",
+                [edit === null ? null : JSON.stringify(edit), imageId, userId, revision]
+            );
+            return result.rowCount === 1;
+        },
+        async updateMetadata(imageId, asset) {
+            await getPool().query(
+                "UPDATE uploaded_image SET captured_at=$1,latitude=$2,longitude=$3 WHERE uploaded_image_id=$4",
+                [asset.capturedAt, asset.latitude, asset.longitude, imageId]
+            );
+        },
+        async findImages(imageIds) {
+            const result = await getPool().query<{
+                uploaded_image_id: number;
+                storage_key: string;
+                uploaded_by_user_id: string;
+                board_id: number | null;
+                captured_at: Date | null;
+                latitude: string | null;
+                longitude: string | null;
+            }>(
+                "SELECT i.uploaded_image_id,i.storage_key,i.uploaded_by_user_id,bi.board_id,i.captured_at,i.latitude,i.longitude FROM uploaded_image i LEFT JOIN board_image bi ON bi.uploaded_image_id=i.uploaded_image_id WHERE i.uploaded_image_id=ANY($1::int[])",
+                [imageIds]
+            );
+            return result.rows.map((row) => ({
+                imageId: row.uploaded_image_id,
+                storageKey: row.storage_key,
+                uploaderUserId: row.uploaded_by_user_id,
+                boardId: row.board_id,
+                capturedAt: row.captured_at,
+                latitude: row.latitude === null ? null : Number(row.latitude),
+                longitude: row.longitude === null ? null : Number(row.longitude)
+            }));
         },
         async listCleanupCandidates(before, limit) {
             const result = await getPool().query<{

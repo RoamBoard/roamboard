@@ -144,7 +144,27 @@ Missing keys return `503 PROVIDER_UNAVAILABLE`; upstream rejection/timeout retur
 files return `413 IMAGE_TOO_LARGE`; exhausted budgets return `429 PROVIDER_QUOTA_EXHAUSTED`
 before an upstream call.
 
-`GET /api/v1/destinations/search?q=...&limit=6` returns temporary Mapbox locations.
+`GET /api/v1/destinations/search?q=...&limit=3` returns temporary Mapbox destination results.
+One Geocoding v6 request forwards the user's query unchanged with `types=country,region,place`, autocomplete and
+no proximity, country or bounding-box restriction. This includes travel provinces, states and countries as well as
+cities; regions/countries keep their actual `placeType` and have `city: null`. Country codes remain ISO alpha-3.
+There is no curated destination catalog or population threshold. Ranking uses case/accent/punctuation-normalized
+display names and provider aliases, with a leading English "The" ignored:
+
+1. Exact names (four or more normalized characters) and complete name-plus-country/region qualifiers.
+2. Close whole-name spellings for queries of five or more characters: normalized edit similarity at least 0.8,
+   including adjacent transpositions. Higher similarity wins within this group.
+3. Prefix matches. Short inputs retain provider order rather than forcing a tiny exact namesake above prominent prefixes.
+4. Provider-ranked fuzzy results when none of the stronger groups is present.
+
+Only the strongest available group is returned, without padding with weaker results. Provider order breaks ties,
+preserving Mapbox prominence where textual strength is equal. One winner per normalized displayed name and provider ID
+is retained before applying the requested limit. Alias/qualifier/ranking metadata remains internal; the public response
+shape is unchanged. A generic transport label filter excludes airports, aerodromes, airfields, heliports,
+railway/train/bus stations and bus/ferry terminals, including facilities misclassified as places. This is best effort,
+not an authoritative geographic classification or Google-equivalent ranking. Mapbox v6 exposes no population or
+non-address confidence field for this purpose. No additional provider requests, caching or persistence are introduced.
+The separate provider Search Box/POI search is unchanged.
 `GET /api/v1/destinations/context` accepts the selected `id`, `name`, `address`,
 `latitude`, `longitude`, `placeType`. It returns the selected destination,
 optional Open-Meteo weather, Wikipedia article and Unsplash image, plus
@@ -207,7 +227,7 @@ protected images; the full API record stays unmodified.
 `page` (default 1), `limit` (default 10, maximum 50), within the first 1,000 results.
 It returns `{ hits: [{ document, score }], total, page, limit }`.
 `GET /api/v1/search/suggestions?q=...&limit=6` returns distinct current Board
-titles. Queries have 2?100 characters. Search reads PostgreSQL records on each
+titles. Queries have 2 to 100 characters. Search reads PostgreSQL records on each
 request. The API ranks matching words with title, city and country weighting and
 bounded edit distance for typos; suggestions match title word prefixes. Country
 and category filters and pagination retain the response shape above. Ranking is
@@ -242,7 +262,11 @@ without a per-request log. It can block earlier and up to a bucket longer than a
 exact sliding window. Open-Meteo's month guard is a fixed 31-day duration, not an
 assumed provider calendar month. Rows use explicit `:rolling:` names for these guards.
 
-There is no per-period history or cleanup job. The current policies use at most 20
+Mapbox map loads, geocoding and directions use their monthly budgets without extra daily application caps.
+Geoapify uses its daily and second guards without an extra hourly application cap. Provider-published rate
+windows remain for other APIs, and upstream rate-limit/cooldown feedback is always honored.
+
+There is no per-period history or cleanup job. The current policies use at most 16
 counter rows plus 11 `provider:cooldown` rows, independent of request volume.
 Cooldown rows use `window_end` as the next permitted attempt time; `window_start`
 is negative infinity and `used` stays zero. Every reservation locks its policy's
@@ -259,7 +283,7 @@ are distinguished from conservative application guards below.
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Google Places | Free usage resets on the first of the month at midnight US Pacific time. Calendar months use `America/Los_Angeles`, including DST. [Google pricing overview](https://developers.google.com/maps/billing-and-pricing/overview).                                                                                                                                                                                                                                                                                                     |
 | Mapbox        | Calendar-month free usage; usage reporting is UTC. Monthly application counters use UTC. Other application guards are rolling. HTTP 429/reset feedback respects `X-Rate-Limit-Reset`; it describes a short rate interval, not the monthly billing allowance. [Billing](https://docs.mapbox.com/accounts/guides/invoices/), [UTC usage](https://docs.mapbox.com/accounts/guides/statistics/), [rate-limit headers](https://docs.mapbox.com/api/guides/#rate-limit-headers).                                                         |
-| Geoapify      | Daily credits and requests/second are published, but an exact daily reset timezone was not established. Rolling 24-hour and second guards avoid guessing midnight; the hourly guard is an additional application budget. Honor `Retry-After` when returned. [Pricing](https://www.geoapify.com/pricing/), [rate limiting](https://www.geoapify.com/how-to-avoid-429-too-many-requests-with-api-rate-limiting/).                                                                                                                    |
+| Geoapify      | Daily credits and requests/second are published, but an exact daily reset timezone was not established. Rolling 24-hour and second guards avoid guessing midnight; there is no additional hourly application budget. Honor `Retry-After` when returned. [Pricing](https://www.geoapify.com/pricing/), [rate limiting](https://www.geoapify.com/how-to-avoid-429-too-many-requests-with-api-rate-limiting/).                                                                                                                        |
 | Unsplash      | Team-confirmed production allowance is 1,000/hour; application cap is 990. No exact hourly boundary was established from the docs, so use a conservative trailing-hour guard. Observe remaining/reset headers when present; zero remaining without a reset pauses for an hour. [Unsplash documentation](https://unsplash.com/documentation#rate-limiting).                                                                                                                                                                         |
 | Open-Meteo    | Publishes minute/hour/day/month allowances without precise reset boundaries on its pricing page. Use trailing-duration guards (including 31 days for the month); honor upstream `Retry-After`. The current five-day, three-variable request counts as one call; expanded weather requests may cost multiple units and must update accounting. [Pricing and call calculation](https://open-meteo.com/en/pricing).                                                                                                                   |
 | Wikipedia     | Per-minute limits depend on client identification, not a monthly billing reset. Use a rolling minute guard and a meaningful server `User-Agent` with a project contact URL. Honor `Retry-After`; unknown 429 cooldown defaults to five seconds. [Wikimedia limits](https://www.mediawiki.org/wiki/Wikimedia_APIs/Rate_limits).                                                                                                                                                                                                     |
@@ -307,3 +331,51 @@ frontend tests verify URLs, cookies, payloads and errors. `npm run test:db` appl
 all migrations in temporary schemas and checks persistence, permissions and
 concurrent quota rollback without changing shared application tables. Live
 provider accounts, browser flows and deployment migrations need environment checks.
+
+### Contextual saved-location search
+
+GET /api/v1/locations/search accepts both context coordinates or neither; partial or out-of-range pairs return 400.
+Coordinates are a soft preference, never a hard restriction. Exact generic terms such as cafe or restaurant with
+context use Geoapify Places discovery; named queries use text geocoding with the same bias. Provider relevance
+order is preserved without category boosts. Results suggest the existing activity category. The frontend uses
+current-day area, then Board area, and labels this Search location. Mapbox remains the map renderer.
+See [Geoapify geocoding bias](https://apidocs.geoapify.com/docs/geocoding/) and
+[Places proximity bias](https://apidocs.geoapify.com/docs/places/).
+
+### Main destinations and activity photos
+
+GET /api/v1/providers/locations/areas takes q and optional limit, using Geoapify type=locality through the shared
+geocoding budget for persistent cities, regions and states. Temporary Mapbox Home search data is not stored.
+
+GET /api/v1/providers/unsplash/activity-photo takes name, latitude, longitude and optional city/country, returning
+a canonical photo or null. POST with the same JSON requires session and exact Origin and records a selection.
+Invalid/missing GPS returns 400. A single specific search inspects at most three photo-detail records, without
+broadening to the city/country. GPS within 100m or exact place-name plus city/country metadata supports a match;
+GPS over 3km away rejects it. Coordinates are never inferred from search rank. Missing confident evidence returns
+null. Each upstream search, detail and download-equivalent selection consumes the existing Unsplash budget; no
+automatic retries or increased quotas. Hotlinks and photographer/Unsplash referral credits are retained.
+See [Unsplash photo details and selection](https://unsplash.com/documentation#get-a-photo) and
+[Geoapify locality search](https://apidocs.geoapify.com/docs/geocoding/forward-geocoding/).
+
+### Uploaded photo presentation
+
+GET /api/v1/images/:imageId/presentation returns {edit,revision} for the uploader. PUT accepts the same JSON, with
+exact frontend Origin, and saves only for the uploader at that expected revision. edit is null (reset), or normalized
+x/y/width/height crop bounds inside the original and integer outputWidth/outputHeight limits from 32 to 4096.
+Invalid bounds return 400, missing sessions 401, inaccessible IDs 404 and stale edits 409. Originals, capture
+metadata, image IDs and Board links stay unchanged. Edits affect every use of the upload, independently of Board
+field saves. Content variant=original is uploader-only and bypasses edits, providing a bounded 4096px source for the
+editor. Display/thumbnail delivery applies edits before existing size limits; optional v is a cache-busting revision.
+No raw Cloudinary URL or arbitrary transformation input is accepted.
+
+POST /api/v1/providers/locations/suggest-area requires session/Origin and {points:[{latitude,longitude,city?,country?}]}
+with 3 to 100 points. At least three points and 60% of the batch must share a country-compatible cluster within 120km.
+The medoid supplies one Geoapify reverse lookup: state for multiple cities or spread over 25km, otherwise city.
+Ambiguous input returns null without upstream calls. Responses do not persist a Board destination. Quota limits and
+feedback remain unchanged. See [Cloudinary crop coordinates](https://cloudinary.com/documentation/transformation_reference#c_crop).
+
+### Destination illustration pools
+
+GET /api/v1/providers/unsplash/search accepts limit 1 to 20 (default 5). Other provider search limits remain unchanged.
+Board decorative spaces share destination/country results rather than making exact hotel/POI requests. Shared
+Unsplash request quotas are unchanged; rendering illustrations does not persist them as activity images.

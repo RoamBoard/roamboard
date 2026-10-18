@@ -530,8 +530,7 @@ test("continuing a published Board saves to the original identity and revision w
             tags: selected.tags.map((tag) => tag.name),
             ...restored
         },
-        selected.tags,
-        restored.confirmedPhotoPins
+        selected.tags
     );
     await saveBoardDocument(write, selected);
     assert.deepEqual(

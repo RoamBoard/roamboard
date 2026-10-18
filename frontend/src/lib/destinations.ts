@@ -52,7 +52,7 @@ async function request<T>(path: string, signal?: AbortSignal): Promise<T> {
 }
 
 export function searchDestinations(query: string, signal?: AbortSignal) {
-    const params = new URLSearchParams({ q: query, limit: "6" });
+    const params = new URLSearchParams({ q: query, limit: "3" });
     return request<Destination[]>(`/api/v1/destinations/search?${params.toString()}`, signal);
 }
 

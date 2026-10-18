@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { signInWithGoogle } from "@/lib/auth";
 import { setMockAuthState } from "@/data/mock-social";
+import GuestAuthPanel from "./GuestAuthPanel";
 
 type Props = {
     mode: "login" | "signup";
@@ -68,11 +69,6 @@ export default function GoogleAuthPanel({ mode }: Props) {
         });
     }
 
-    function handleDemoLogin() {
-        setMockAuthState(true);
-        router.push("/home");
-    }
-
     return (
         <section aria-labelledby="auth-title" className="text-foreground mx-auto w-full max-w-sm">
             <h1 id="auth-title" className="font-display text-36">
@@ -104,19 +100,9 @@ export default function GoogleAuthPanel({ mode }: Props) {
                 </p>
             ) : null}
             {!clientId && !error ? (
-                <div className="space-y-4">
-                    <button
-                        type="button"
-                        onClick={handleDemoLogin}
-                        className="border-foreground bg-foreground text-background hover:bg-foreground/90 text-13 w-full cursor-pointer rounded-[2px] border px-4 py-3 text-center font-bold tracking-wider uppercase transition-colors"
-                    >
-                        {isSignup ? "Sign up (Demo)" : "Log in as Rowan (Demo)"}
-                    </button>
-                    <p id="auth-preview" className="text-11 text-muted-foreground mt-2 text-center">
-                        Google sign-in is not configured. Demo login enabled.
-                    </p>
-                </div>
+                <p className="text-muted-foreground text-13">Google sign-in is not configured.</p>
             ) : null}
+            {!isSignup && process.env.NODE_ENV !== "production" ? <GuestAuthPanel /> : null}
 
             <p className="text-14 mt-8">
                 {isSignup ? "Already have an account? " : "New to Roamboard? "}

@@ -179,3 +179,154 @@ body {
 .provider-map-pin span {
     transform: rotate(45deg);
 }
+
+/* Roam homepage: large line studies framed around a protected central column. */
+.roam-world {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    user-select: none;
+}
+
+.roam-world-moment {
+    --roam-size: clamp(380px, 36vw, 560px);
+    --roam-offset: -34px;
+    position: absolute;
+    width: calc(var(--roam-size) * var(--roam-scale));
+    text-align: center;
+}
+.roam-world-inset {
+    --roam-offset: 16px;
+}
+.roam-world-northwest,
+.roam-world-southwest {
+    left: calc(50% - 310px - var(--roam-size) * var(--roam-scale) + var(--roam-offset));
+}
+.roam-world-northeast,
+.roam-world-southeast {
+    right: calc(50% - 310px - var(--roam-size) * var(--roam-scale) + var(--roam-offset));
+}
+.roam-world-northwest {
+    top: -12%;
+}
+.roam-world-northeast {
+    top: -19%;
+}
+.roam-world-southwest {
+    bottom: -24%;
+}
+.roam-world-southeast {
+    bottom: -18%;
+}
+.roam-world-drawing {
+    width: 100%;
+    height: auto;
+}
+/* Keep identifying crowns/domes inside the upper edge; crop bases and flanks. */
+.roam-world-tower {
+    --roam-size: clamp(360px, 32vw, 500px);
+}
+.roam-world-tower.roam-world-northwest,
+.roam-world-dome.roam-world-northwest,
+.roam-world-sculpture.roam-world-northwest {
+    top: 1%;
+}
+.roam-world-tower.roam-world-northeast,
+.roam-world-dome.roam-world-northeast,
+.roam-world-sculpture.roam-world-northeast {
+    top: -1%;
+}
+.roam-world-bridge.roam-world-northwest,
+.roam-world-bridge.roam-world-northeast {
+    top: -3%;
+}
+.roam-world-tower.roam-world-northwest,
+.roam-world-tower.roam-world-southwest {
+    left: max(
+        calc(50% - 310px - var(--roam-size) * var(--roam-scale) + var(--roam-offset)),
+        calc(var(--roam-size) * var(--roam-scale) * -0.35)
+    );
+}
+.roam-world-tower.roam-world-northeast,
+.roam-world-tower.roam-world-southeast {
+    right: max(
+        calc(50% - 310px - var(--roam-size) * var(--roam-scale) + var(--roam-offset)),
+        calc(var(--roam-size) * var(--roam-scale) * -0.35)
+    );
+}
+
+/* Low, broad buildings need less vertical cropping than the taller studies. */
+.roam-world-wide.roam-world-northwest,
+.roam-world-wide.roam-world-northeast {
+    top: -3%;
+}
+.roam-world-wide.roam-world-southwest,
+.roam-world-wide.roam-world-southeast {
+    bottom: -4%;
+}
+
+@media (width < 1280px) {
+    .roam-world-moment {
+        --roam-size: clamp(320px, 45vw, 440px);
+        max-height: calc(50dvh - 100px);
+        overflow: hidden;
+    }
+    .roam-world-moment.roam-world-northwest {
+        top: -4%;
+        left: -12%;
+    }
+    .roam-world-moment.roam-world-southeast {
+        right: -11%;
+        bottom: -8%;
+    }
+    .roam-world-wide.roam-world-southeast {
+        bottom: -3%;
+    }
+    .roam-world-northeast,
+    .roam-world-southwest {
+        display: none;
+    }
+}
+
+@media (width < 768px) {
+    .roam-world-moment {
+        --roam-size: clamp(270px, 78vw, 340px);
+    }
+    .roam-world-moment.roam-world-northwest {
+        top: 0%;
+        left: -24%;
+    }
+    .roam-world-moment.roam-world-southeast {
+        right: -26%;
+        bottom: -5%;
+    }
+    .roam-world-wide.roam-world-southeast {
+        bottom: -2%;
+    }
+    .roam-world-inset.roam-world-northwest {
+        left: -17%;
+    }
+    .roam-world-inset.roam-world-southeast {
+        right: -18%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce), (height < 620px) {
+    .roam-world {
+        display: none;
+    }
+}
+@media (width < 768px) and (height < 740px) {
+    .roam-world {
+        display: none;
+    }
+}
+
+/* Native menus must use the current theme as well as the closed field. */
+select,
+select option,
+select optgroup {
+    background-color: var(--background);
+    color: var(--foreground);
+}

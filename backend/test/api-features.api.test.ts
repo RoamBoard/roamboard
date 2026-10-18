@@ -14,12 +14,25 @@ const origin = "http://localhost:3000";
 const cookie = "roamboard_session=owner-token";
 const user = { userId: "owner", username: "owner", displayName: "Owner" };
 const repository: AuthRepository = {
+    async listGuestAccounts() {
+        return [];
+    },
+    async createGuestAccount() {
+        return null;
+    },
+    async findGuestAccount() {
+        return null;
+    },
     async findUserById() {
         return user;
     },
     async createUser() {
         return user;
     },
+    async findGooglePhotoStorageKey() {
+        return null;
+    },
+    async saveGoogleDefaults() {},
     async createSession() {},
     async deleteSession() {},
     async findUserBySession(hash) {
@@ -158,9 +171,11 @@ test("location and photo search map real provider payloads to the frontend contr
     assert.equal(locations.body.data[0].city, "Tokyo");
     assert.equal(locations.body.data[0].countryCode, "JPN");
     assert.equal(locations.body.data[0].placeType, "place");
-    const photos = await request(app).get("/api/v1/providers/unsplash/search?q=Tokyo");
+    const photos = await request(app).get("/api/v1/providers/unsplash/search?q=Tokyo&limit=20");
     assert.equal(photos.status, 200);
     assert.equal(photos.body.data[0].photographer, "Photographer");
+    assert.deepEqual(policies, ["geoapify.geocoding", "unsplash.requests"]);
+    assert.equal((await request(app).get("/api/v1/providers/unsplash/search?q=Tokyo&limit=21")).status, 400);
     assert.deepEqual(policies, ["geoapify.geocoding", "unsplash.requests"]);
 });
 

@@ -4,6 +4,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import WelcomeTransitionProvider from "@/components/features/welcome/WelcomeTransitionProvider";
 import "./globals.css";
 import { ImageLibraryProvider } from "@/components/images/LibraryImage";
+import DestinationTransitionProvider from "@/components/features/destinations/DestinationTransitionProvider";
 
 // Both typefaces are from Fontshare (fontshare.com). Download the variable
 // .woff2 files and place them in src/fonts/.
@@ -48,11 +49,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <body className={`${cabinet.variable} ${satoshi.variable} antialiased`}>
                 <ImageLibraryProvider>
                     <WelcomeTransitionProvider>
-                        {children}
-                        <footer className="text-12 text-graphite px-6 py-3">
-                            Location data: <a href="https://www.geoapify.com/">Powered by Geoapify</a> &middot;{" "}
-                            <a href="https://www.openstreetmap.org/copyright">&copy; OpenStreetMap contributors</a>
-                        </footer>
+                        <DestinationTransitionProvider>{children}</DestinationTransitionProvider>
                     </WelcomeTransitionProvider>
                 </ImageLibraryProvider>
             </body>
