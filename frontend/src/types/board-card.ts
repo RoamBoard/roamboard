@@ -1,6 +1,8 @@
 export type BoardCardImage = {
     src: string;
     alt: string;
+    // Provider photos can keep their returned URL instead of using Next's image proxy.
+    unoptimized?: boolean;
     position?: string;
     // Optional crop of the original image, expressed relative to its slot.
     crop?: { width: number; height: number; left: number; top: number };

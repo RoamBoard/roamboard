@@ -1,8 +1,6 @@
 "use client";
 
-import { destinationPages, destinationPageHref } from "@/data/destination-atlas";
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowUpRight, MapPin, Layers } from "lucide-react";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
@@ -10,6 +8,8 @@ import TagIcon from "@/components/ui/TagIcon";
 import { boardTags, boardTagHref } from "@/data/board-tags";
 import { discoverCollections, discoverCollectionHref } from "@/data/discover-collections";
 import { discoverDestinations, discoverDestinationHref } from "@/data/discover-destinations";
+import { searchDestinations, type Destination } from "@/lib/destinations";
+import { destinationGuideHref, featuredDestinationGuides } from "@/lib/destination-guides";
 
 function normalizeSearch(text: string) {
     return text
@@ -23,6 +23,43 @@ export default function DiscoverSearch() {
     const router = useRouter();
     const [query, setQuery] = useState("");
     const [open, setOpen] = useState(false);
+    const [citySearch, setCitySearch] = useState<{ query: string; destinations: Destination[]; error: string } | null>(
+        null
+    );
+    const [attempt, setAttempt] = useState(0);
+    const search = query.trim();
+    const canSearch = search.length >= 2 && search.length <= 100;
+    const currentSearch = citySearch?.query === search ? citySearch : null;
+
+    useEffect(() => {
+        if (!open || !canSearch) return;
+        const controller = new AbortController();
+        // Suggestions need only city identities. Wikipedia and photos load after selection.
+        const timer = setTimeout(() => {
+            searchDestinations(search, controller.signal)
+                .then((destinations) => {
+                    if (!controller.signal.aborted)
+                        setCitySearch({
+                            query: search,
+                            destinations: destinations.filter((city) => destinationGuideHref(city)),
+                            error: ""
+                        });
+                })
+                .catch((error: unknown) => {
+                    if (!controller.signal.aborted)
+                        setCitySearch({
+                            query: search,
+                            destinations: [],
+                            error: error instanceof Error ? error.message : "Cities could not be loaded."
+                        });
+                });
+        }, 400);
+        return () => {
+            clearTimeout(timer);
+            controller.abort();
+        };
+    }, [search, canSearch, open, attempt]);
+
     function navigate(href: string) {
         setOpen(false);
         router.push(href);
@@ -64,7 +101,55 @@ export default function DiscoverSearch() {
                     aria-expanded={open}
                 />
                 <CommandList hidden={!open} className="border-line border-b">
-                    <CommandEmpty>No matching categories or destinations. Try another name.</CommandEmpty>
+                    {!canSearch ? (
+                        <CommandEmpty>No matching categories or destinations. Try another name.</CommandEmpty>
+                    ) : null}
+                    {canSearch ? (
+                        <>
+                            <div role="status" className="text-muted-foreground px-3 py-2 text-xs">
+                                {!currentSearch
+                                    ? "Searching cities..."
+                                    : currentSearch.error
+                                      ? currentSearch.error
+                                      : !currentSearch.destinations.length
+                                        ? "No matching cities found."
+                                        : "Select a city to open its guide."}
+                                {currentSearch?.error ? (
+                                    <button
+                                        type="button"
+                                        className="ml-3 min-h-11 underline underline-offset-4"
+                                        onKeyDown={(event) => {
+                                            // cmdk handles Enter as item selection; this button must keep its native action.
+                                            if (event.key === "Enter") event.stopPropagation();
+                                        }}
+                                        onClick={() => {
+                                            setCitySearch(null);
+                                            setAttempt((value) => value + 1);
+                                        }}
+                                    >
+                                        Retry city search
+                                    </button>
+                                ) : null}
+                            </div>
+                            <CommandGroup heading="City guides">
+                                {currentSearch?.destinations.map((city) => (
+                                    <CommandItem
+                                        key={city.id}
+                                        value={`city:${city.id}`}
+                                        keywords={[search, city.name, city.address]}
+                                        onSelect={() => navigate(destinationGuideHref(city)!)}
+                                    >
+                                        <MapPin size={16} aria-hidden="true" />
+                                        <span>
+                                            {city.name}
+                                            <span className="text-muted-foreground ml-2 text-xs">{city.address}</span>
+                                        </span>
+                                        <ArrowUpRight className="ml-auto" size={14} aria-hidden="true" />
+                                    </CommandItem>
+                                ))}
+                            </CommandGroup>
+                        </>
+                    ) : null}
                     <CommandGroup heading="Collections">
                         {discoverCollections.map((collection) => (
                             <CommandItem
@@ -79,20 +164,22 @@ export default function DiscoverSearch() {
                             </CommandItem>
                         ))}
                     </CommandGroup>
-                    <CommandGroup heading="Destination guides">
-                        {destinationPages.map((destination) => (
-                            <CommandItem
-                                key={destination.slug}
-                                value={`guide:${destination.slug}`}
-                                keywords={[destination.name, destination.country, ...destination.aliases]}
-                                onSelect={() => navigate(destinationPageHref(destination))}
-                            >
-                                <MapPin size={16} aria-hidden="true" />
-                                <span>{destination.name}</span>
-                                <ArrowUpRight className="ml-auto" size={14} aria-hidden="true" />
-                            </CommandItem>
-                        ))}
-                    </CommandGroup>
+                    {!canSearch ? (
+                        <CommandGroup heading="Destination guides">
+                            {featuredDestinationGuides.map((destination) => (
+                                <CommandItem
+                                    key={destination.slug}
+                                    value={`guide:${destination.slug}`}
+                                    keywords={[destination.name, destination.country]}
+                                    onSelect={() => navigate(`/discover/destinations/${destination.slug}`)}
+                                >
+                                    <MapPin size={16} aria-hidden="true" />
+                                    <span>{destination.name}</span>
+                                    <ArrowUpRight className="ml-auto" size={14} aria-hidden="true" />
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    ) : null}
                     <CommandGroup heading="Destinations">
                         {discoverDestinations.map((destination) => (
                             <CommandItem
@@ -124,11 +211,10 @@ export default function DiscoverSearch() {
                 </CommandList>
             </Command>
             <p id="discover-search-note" className="text-muted-foreground text-12 mt-4">
-                Explore vibes, collections, and destinations. Public Board search is coming soon.
+                Search a city and select a match to build its guide with photos and public boards.
             </p>
             <p id="discover-preview-note" className="text-muted-foreground text-12 mt-3">
-                Board counts and editorial selections are sample content. Opening and saving Boards are not connected
-                yet.
+                Editorial selections and counts on Discover are samples. City guides load real public boards.
             </p>
         </section>
     );

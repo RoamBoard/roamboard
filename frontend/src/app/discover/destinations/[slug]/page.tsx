@@ -6,8 +6,8 @@ import DiscoverPhoto from "@/components/features/discover/DiscoverPhoto";
 import DiscoverBoardCard from "@/components/features/discover/DiscoverBoardCard";
 import { getDiscoverDestination } from "@/data/discover-destinations";
 import { getDiscoverBoardsByDestination } from "@/data/discover-boards";
-import { getDestinationPage } from "@/data/destination-atlas";
-import { DestinationPage as DestinationExperience } from "@/components/features/destinations/DestinationPage";
+import { getDestinationGuideInput } from "@/lib/destination-guides";
+import DestinationGuide from "@/components/features/destinations/DestinationGuide";
 import { DestinationReady } from "@/components/features/destinations/DestinationTransitionProvider";
 import { destinationSelectionMatches, type DestinationSelectionParams } from "@/lib/destination-search";
 
@@ -15,10 +15,11 @@ type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<Destina
 
 async function resolveDestination({ params, searchParams }: Props) {
     const slug = (await params).slug;
-    const guide = getDestinationPage(slug);
-    const destination = guide ?? getDiscoverDestination(slug);
     const selection = (await searchParams) ?? {};
-    if (!destination || !destinationSelectionMatches(destination, guide ? "place" : "country", selection)) notFound();
+    const guide = getDestinationGuideInput(slug, selection);
+    const destination = getDiscoverDestination(slug);
+    // Cities carry their full identity. Country pages keep main's namesake checks.
+    if (!guide && (!destination || !destinationSelectionMatches(destination, "country", selection))) notFound();
     const query = new URLSearchParams();
     Object.entries(selection).forEach(([key, value]) => {
         if (Array.isArray(value)) value.forEach((entry) => query.append(key, entry));
@@ -29,25 +30,29 @@ async function resolveDestination({ params, searchParams }: Props) {
 }
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
-    const { destination } = await resolveDestination(props);
-    return {
-        title: `${destination.name} | Roamboard`,
-        description: "introduction" in destination ? destination.introduction : destination.description
-    };
+    const { guide, destination } = await resolveDestination(props);
+    if (guide)
+        return {
+            title: `${guide.name} | Roamboard`,
+            description: `Explore ${guide.name}: a city introduction, photos and public travel boards.`
+        };
+    if (!destination) notFound();
+    return { title: `${destination.name} | Roamboard`, description: destination.description };
 }
 
 export default async function DestinationPage(props: Props) {
-    const { guide, destination: resolved, href } = await resolveDestination(props);
+    const { guide, destination, href } = await resolveDestination(props);
     if (guide)
         return (
-            <div className="[&+footer]:pl-20 [&+footer]:transition-colors [&+footer]:duration-500 motion-reduce:[&+footer]:transition-none md:[&+footer]:pl-28 [&:has([href='#atlas'][aria-current='location'])+footer]:bg-[var(--atlas-background)] [&:has([href='#atlas'][aria-current='location'])+footer]:text-[var(--atlas-muted)] [&>div]:min-h-0">
+            // Attribution stays inside the guide so the page remains one viewport tall.
+            <div className="[&+footer]:hidden [&>div]:min-h-0">
                 <AppShell activeHref="/discover" discover={{ collapsed: true }}>
+                    {/* Finish the route transition; the guide handles its own API loading state. */}
                     <DestinationReady href={href} />
-                    <DestinationExperience key={guide.slug} destination={guide} />
+                    <DestinationGuide key={JSON.stringify(guide)} input={guide} />
                 </AppShell>
             </div>
         );
-    const destination = "description" in resolved ? resolved : undefined;
     if (!destination) notFound();
     const { boards, available } = await getDiscoverBoardsByDestination(destination.countryCode);
 

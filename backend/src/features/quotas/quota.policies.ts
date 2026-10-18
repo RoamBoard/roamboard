@@ -24,6 +24,7 @@ export function createQuotaPolicies(): QuotaPolicy[] {
             ["month", 495],
             ["second", 9]
         ]),
+        // Historical ID retained for existing geocoding and place-confirmation usage.
         policy("geoapify.geocoding", [
             ["second", 2],
             ["day", 2970]
@@ -37,6 +38,7 @@ export function createQuotaPolicies(): QuotaPolicy[] {
             ["day", 9900],
             ["month", 297000]
         ]),
+        // Wikipedia and Wikivoyage share the existing Wikimedia request budget.
         policy("wikipedia.action_api", [["minute", 190]]),
         policy("cloudinary.admin", [["hour", 495]])
     ];

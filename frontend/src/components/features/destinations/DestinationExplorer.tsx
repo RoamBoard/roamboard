@@ -1,8 +1,9 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState, useSyncExternalStore, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { destinationGuideHref } from "@/lib/destination-guides";
 import { ArrowRight } from "lucide-react";
 import { AnimatePresence, motion, useAnimationControls, useReducedMotion } from "motion/react";
 import { destinationPages, destinationPageHref } from "@/data/destination-atlas";
@@ -98,8 +99,13 @@ export function DestinationExplorerContent({
     const showSuggestions = open && query.trim().length >= 2;
 
     function choose(destination: Destination) {
-        if (!leaving)
-            onNavigate((signal) => resolveDestinationSearchHref(destination, query, results, signal), destination.name);
+        if (leaving) return;
+        // City results keep their exact identity in the dynamic guide URL.
+        const guideHref = destinationGuideHref(destination);
+        onNavigate(
+            guideHref ?? ((signal) => resolveDestinationSearchHref(destination, query, results, signal)),
+            destination.name
+        );
     }
 
     function submit(event: FormEvent) {
