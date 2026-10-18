@@ -77,11 +77,46 @@ export default function NotificationControl({
     }, []);
 
     const fetchRequests = useCallback(() => {
-        if (!sessionUser) return () => {};
+        if (!sessionUser) return Promise.resolve();
         const request = { active: true };
         const version = requestVersionRef.current;
         setLoading(true);
         setLoadError(null);
+        return loadFriendRequests()
+            .then((data) => {
+                if (request.active && version === requestVersionRef.current) {
+                    setRequests(data);
+                    setLoadError(null);
+                }
+            })
+            .catch(() => {
+                if (request.active && version === requestVersionRef.current) {
+                    setLoadError("Failed to load notifications. Please try again.");
+                }
+            })
+            .finally(() => {
+                if (request.active) {
+                    setLoading(false);
+                }
+            });
+    }, [sessionUser]);
+
+    useEffect(() => {
+        return observeCurrentUser((user) => {
+            setSessionUser(user);
+            if (!user && !initialRequests) {
+                setRequests([]);
+                setLoadError(null);
+            } else if (user && !initialRequests) {
+                setLoading(true);
+            }
+        });
+    }, [initialRequests]);
+
+    useEffect(() => {
+        if (!sessionUser || initialRequests) return;
+        const request = { active: true };
+        const version = requestVersionRef.current;
         void loadFriendRequests()
             .then((data) => {
                 if (request.active && version === requestVersionRef.current) {
@@ -102,28 +137,28 @@ export default function NotificationControl({
         return () => {
             request.active = false;
         };
-    }, [sessionUser]);
+    }, [sessionUser, initialRequests]);
 
     useEffect(() => {
-        return observeCurrentUser((user) => {
-            setSessionUser(user);
-            if (!user && !initialRequests) {
-                setRequests([]);
-                setLoadError(null);
-            }
-        });
-    }, [initialRequests]);
-
-    useEffect(() => {
-        if (!sessionUser || initialRequests) return;
-        return fetchRequests();
-    }, [sessionUser, initialRequests, fetchRequests]);
-
-    useEffect(() => {
-        if (isOpen && sessionUser) {
-            return fetchRequests();
-        }
-    }, [isOpen, sessionUser, fetchRequests]);
+        if (!isOpen || !sessionUser) return;
+        const request = { active: true };
+        const version = requestVersionRef.current;
+        void loadFriendRequests()
+            .then((data) => {
+                if (request.active && version === requestVersionRef.current) {
+                    setRequests(data);
+                    setLoadError(null);
+                }
+            })
+            .catch(() => {
+                if (request.active && version === requestVersionRef.current) {
+                    setLoadError("Failed to load notifications. Please try again.");
+                }
+            });
+        return () => {
+            request.active = false;
+        };
+    }, [isOpen, sessionUser]);
 
     const handleAccept = async (requestId: number) => {
         requestVersionRef.current += 1;
