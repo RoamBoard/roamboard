@@ -1,5 +1,17 @@
 import { ProfileApiError, saveBoardBookmark, unsaveBoardBookmark } from "./profile";
 
+// Collection callbacks run only after the existing account store confirms a state change.
+export async function toggleBoardSave(
+    store: ReturnType<typeof createBoardSaveStore>,
+    onSavedChange?: (saved: boolean) => void
+) {
+    const before = store.getSnapshot();
+    if (before.pending || before.saved === undefined) return;
+    await store.toggle();
+    const after = store.getSnapshot();
+    if (!after.error && after.saved !== undefined && after.saved !== before.saved) onSavedChange?.(after.saved);
+}
+
 type BoardSaveState = {
     saved: boolean | undefined;
     pending: boolean;

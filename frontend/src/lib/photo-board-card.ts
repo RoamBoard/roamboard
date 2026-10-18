@@ -1,6 +1,53 @@
 import type { BoardDocument, DraftSummary } from "./board-creator-api";
 import type { CollageBoardCardData, PhotoBoardCardData } from "../types/board-card";
 import { findCountry } from "./countries";
+import type { SavedBoardSummary, PublishedBoardSummary } from "./profile";
+
+export function toSavedPhotoBoardCard(board: SavedBoardSummary): PhotoBoardCardData {
+    return {
+        id: String(board.boardId),
+        title: board.title.trim() || "Untitled Board",
+        author: board.owner.username || board.owner.displayName,
+        destination: "",
+        destinationLabel: "",
+        description: board.description,
+        status: "published",
+        image: board.coverImageUrl
+            ? {
+                  src: new URL(
+                      board.coverImageUrl,
+                      process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"
+                  ).toString(),
+                  alt: `Cover of ${board.title || "Untitled Board"}`
+              }
+            : undefined
+    };
+}
+
+export function toProfilePhotoBoardCard(
+    board: PublishedBoardSummary,
+    author: string,
+    publicView = false
+): PhotoBoardCardData {
+    return {
+        id: String(board.boardId),
+        title: board.title.trim() || "Untitled Board",
+        author,
+        destination: "",
+        destinationLabel: "",
+        status: "published",
+        visibility: publicView ? "public" : board.visibility,
+        image: board.coverImageUrl
+            ? {
+                  src: new URL(
+                      board.coverImageUrl,
+                      process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"
+                  ).toString(),
+                  alt: `Cover of ${board.title || "Untitled Board"}`
+              }
+            : undefined
+    };
+}
 
 // List summaries do not supply author, itinerary or tags. Keep those absent until an existing preview read resolves.
 export function toSummaryPhotoBoardCard(
