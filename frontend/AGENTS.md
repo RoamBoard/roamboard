@@ -114,6 +114,12 @@ smaller country labels in autocomplete and Kyoto, Paris and Copenhagen links. Au
 at most the three highest-ranked filtered suggestions. There is no promotional copy or visible
 keyboard instruction. The URL remains `/home` for existing navigation and welcome flows.
 Debounced, cancellable search forwards destination queries to Mapbox without a hardcoded catalog or geographic bias.
+`src/lib/destination-search-store.ts` owns request cancellation, debounce, results, keyboard selection and same-query
+failure retry. `DestinationExplorer` subscribes to that store and renders `DestinationExplorerContent`; its integration
+tests render the production content and invoke its real input, keyboard, form and option/link handlers through the
+credentialed API helper. These tests use the installed Node test runner and React server renderer without a DOM library.
+They do not verify browser focus/default-event behavior or animation timing. Frontend CI runs `pnpm test` alongside
+lint, TypeScript and build checks.
 Countries and regions/provinces/states are included alongside cities. The backend ranks exact/qualified matches above
 close whole-name spellings, prefixes and fuzzy fallback, returning only the strongest available group. Mapbox order
 breaks ties and repeated displayed names/provider IDs are removed. Short queries preserve provider prefix ordering.
@@ -135,8 +141,18 @@ The horizontal exhibition uses native trackpad/touch/Shift-wheel scrolling, chap
 Kyoto's opening copy, pins and tags are transcribed from Figma frame `55:1060`; other cities retain existing mock copy.
 The compact Credits disclosure retains destination navigation and photography attribution without an extra full-height panel.
 Place details support map/visitor links and previous/next browsing. Existing country destination routes remain available.
-Home routes recognized city search results to guides (matching city identity, ISO alpha-3 country and provider place type);
-other city results use a normalized city slug under the same destination route. General city detail-page support is
+Primary destinations use clean `/discover/destinations/<slug>` URLs. Existing editorial guides own their slugs;
+otherwise the highest-ranked unqualified Mapbox result owns the clean URL. Home reuses an exact-name autocomplete
+response or makes one unqualified-name request when selection came from a prefix/qualified query. There is no
+hardcoded prominence list or persistent Mapbox cache. Secondary cross-country namesakes use `?country=<ISO alpha-3>`;
+same-country namesakes retain country, provider ID, type and coordinates only when confirmed secondary. Ordinary
+selections, including unsupported destinations and failed/empty primary lookups, generate the clean slug directly.
+Opaque provider ID changes do not disambiguate the same named city at the same location. There are no cleanup redirects.
+Page rendering and metadata validate
+country-only selectors and continue validating legacy full identities (including city type and a 25km center tolerance).
+Incomplete, repeated or mismatched selectors return 404. General destination pages in the separate workstream must
+resolve clean URLs by unqualified provider ranking, country selectors within that country, and full identities by provider ID.
+Other search results use a normalized destination slug under the same route. General city detail-page support is
 handled separately and is not implemented by Home. Discover search and its Kyoto feature link to guides.
 The destination story gallery uses Motion to focus and rearrange unchanged V1 collage cards, with button, keyboard and drag selection. Its mock stories have no detail links or persistence; an optional real Board href is respected when supplied. Seasonal controls live in a separate white, ruled editorial interlude. The Trending destinations section uses a destination-specific asymmetric photo grid, a fixed near-black palette, animated filtering and shared-photo native-dialog details. The concluding Create panel returns to the page theme; Kyoto’s closing image rotation follows the Figma artwork. Create links open the existing
 blank `/boards/new` flow; destination prefill, activity saving and copying are future integrations. Editorial guide data

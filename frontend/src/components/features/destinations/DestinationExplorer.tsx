@@ -1,82 +1,103 @@
 ﻿"use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, LoaderCircle, Search } from "lucide-react";
 import { AnimatePresence, motion, useAnimationControls, useReducedMotion } from "motion/react";
 import { destinationPages, destinationPageHref } from "@/data/destination-atlas";
-import { destinationSearchHref } from "@/lib/destination-search";
+import { resolveDestinationSearchHref } from "@/lib/destination-search";
 import { destinationTransition } from "@/lib/destination-transition";
-import { searchDestinations, type Destination } from "@/lib/destinations";
+import type { Destination } from "@/lib/destinations";
+import {
+    createDestinationSearchStore,
+    type DestinationSearchState,
+    type DestinationSearchStore
+} from "@/lib/destination-search-store";
 
 export default function DestinationExplorer() {
     const router = useRouter();
     const reduced = useReducedMotion();
     const controls = useAnimationControls();
     const navigating = useRef(false);
-    const [query, setQuery] = useState("");
-    const [results, setResults] = useState<Destination[]>([]);
-    const [active, setActive] = useState(-1);
-    const [open, setOpen] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [searched, setSearched] = useState(false);
+    const navigationController = useRef<AbortController | null>(null);
+    const [actions] = useState(createDestinationSearchStore);
+    const state = useSyncExternalStore(actions.subscribe, actions.getSnapshot, actions.getSnapshot);
     const [leaving, setLeaving] = useState(false);
-    const [error, setError] = useState("");
-    const showSuggestions = open && query.trim().length >= 2;
 
     useEffect(() => {
-        if (query.trim().length < 2) return;
-        const controller = new AbortController();
-        const timer = window.setTimeout(() => {
-            void searchDestinations(query.trim(), controller.signal)
-                .then((places) => {
-                    if (controller.signal.aborted) return;
-                    setResults(places.slice(0, 3));
-                    setActive(places.length ? 0 : -1);
-                    setSearched(true);
-                })
-                .catch((caught: unknown) => {
-                    if (!controller.signal.aborted)
-                        setError(caught instanceof Error ? caught.message : "Search is unavailable. Please try again.");
-                })
-                .finally(() => {
-                    if (!controller.signal.aborted) setLoading(false);
-                });
-        }, 300);
+        actions.resume();
         return () => {
-            window.clearTimeout(timer);
-            controller.abort();
+            actions.dispose();
+            navigationController.current?.abort();
         };
-    }, [query]);
+    }, [actions]);
 
-    async function navigate(href: string) {
+    async function navigate(href: DestinationNavigationTarget) {
         if (navigating.current) return;
         navigating.current = true;
         setLeaving(true);
-        setOpen(false);
-        router.prefetch(href);
-        if (!reduced)
-            await controls.start({
-                opacity: 0,
-                y: -destinationTransition.distance,
-                transition: { duration: destinationTransition.duration, ease: destinationTransition.exitEase }
-            });
-        router.push(href);
+        actions.setOpen(false);
+        const controller = new AbortController();
+        navigationController.current = controller;
+        const pendingHref = typeof href === "string" ? href : href(controller.signal);
+        const exit = reduced
+            ? Promise.resolve()
+            : controls.start({
+                  opacity: 0,
+                  y: -destinationTransition.distance,
+                  transition: { duration: destinationTransition.duration, ease: destinationTransition.exitEase }
+              });
+        const target = await pendingHref;
+        if (controller.signal.aborted) return;
+        router.prefetch(target);
+        await exit;
+        if (!controller.signal.aborted) router.push(target);
     }
 
+    return (
+        <DestinationExplorerContent
+            state={state}
+            actions={actions}
+            leaving={leaving}
+            controls={controls}
+            reduced={Boolean(reduced)}
+            onNavigate={(href) => void navigate(href)}
+        />
+    );
+}
+
+type DestinationNavigationTarget = string | ((signal: AbortSignal) => Promise<string>);
+
+type DestinationExplorerContentProps = {
+    state: DestinationSearchState;
+    actions: DestinationSearchStore;
+    leaving: boolean;
+    reduced: boolean;
+    controls: ReturnType<typeof useAnimationControls>;
+    onNavigate: (href: DestinationNavigationTarget) => void;
+};
+
+export function DestinationExplorerContent({
+    state,
+    actions,
+    leaving,
+    reduced,
+    controls,
+    onNavigate
+}: DestinationExplorerContentProps) {
+    const { query, results, active, open, loading, searched, error } = state;
+    const showSuggestions = open && query.trim().length >= 2;
+
     function choose(destination: Destination) {
-        void navigate(destinationSearchHref(destination));
+        if (!leaving) onNavigate((signal) => resolveDestinationSearchHref(destination, query, results, signal));
     }
 
     function submit(event: FormEvent) {
         event.preventDefault();
         if (leaving) return;
-        if (!loading && results[active]) choose(results[active]);
-        else {
-            setOpen(true);
-            if (query.trim().length < 2) setError("Enter a destination name.");
-        }
+        const selected = actions.submit();
+        if (selected) choose(selected);
     }
 
     return (
@@ -111,7 +132,7 @@ export default function DestinationExplorer() {
                     onSubmit={submit}
                     className="relative"
                     onBlur={(event) => {
-                        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+                        if (!event.currentTarget.contains(event.relatedTarget)) actions.setOpen(false);
                     }}
                 >
                     <div className="group border-line/65 hover:border-muted-foreground/60 focus-within:border-foreground/60 relative flex min-h-16 items-center border-b transition-colors motion-reduce:transition-none md:min-h-20">
@@ -139,31 +160,16 @@ export default function DestinationExplorer() {
                             value={query}
                             placeholder="where would you like to go?"
                             className="text-14 placeholder:text-muted-foreground md:text-20 w-full min-w-0 bg-transparent px-4 py-5 text-center outline-none"
-                            onFocus={() => setOpen(true)}
-                            onChange={(event) => {
-                                const value = event.target.value;
-                                setQuery(value);
-                                setResults([]);
-                                setActive(-1);
-                                setSearched(false);
-                                setError("");
-                                setLoading(value.trim().length >= 2);
-                                setOpen(true);
-                            }}
+                            onFocus={() => actions.setOpen(true)}
+                            onChange={(event) => actions.setQuery(event.target.value)}
                             onKeyDown={(event) => {
                                 if (event.key === "Escape") {
-                                    setOpen(false);
+                                    actions.setOpen(false);
                                     return;
                                 }
                                 if (event.key === "ArrowDown" || event.key === "ArrowUp") {
                                     event.preventDefault();
-                                    setOpen(true);
-                                    if (results.length)
-                                        setActive(
-                                            (index) =>
-                                                (index + (event.key === "ArrowDown" ? 1 : -1) + results.length) %
-                                                results.length
-                                        );
+                                    actions.moveSelection(event.key === "ArrowDown" ? 1 : -1);
                                 }
                             }}
                         />
@@ -260,7 +266,7 @@ export default function DestinationExplorer() {
                                 )
                                     return;
                                 event.preventDefault();
-                                void navigate(destinationPageHref(destination));
+                                if (!leaving) onNavigate(destinationPageHref(destination));
                             }}
                             className="text-muted-foreground hover:text-foreground inline-flex min-h-11 items-center underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4"
                         >
