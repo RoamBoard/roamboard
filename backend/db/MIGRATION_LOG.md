@@ -1,5 +1,9 @@
 # Shared development database migration log
 
+## Pending board publication timestamp migration
+
+`011_board_published_at.sql` adds the `published_at` column to `board` and backfills it from `created_at` for published boards. It has not been applied to the shared Azure database. Apply 011 after 010.
+
 ## Pending guest account migration
 
 `010_guest_accounts.sql` adds the `guest_account` table. It has not been applied to the shared Azure database. It was renamed from `008_guest_accounts.sql` during merge reconciliation because 008 and 009 were already used by the applied Board destination and photo presentation migrations. Apply 010 after the team's backup and migration checks; do not rerun previously applied files.

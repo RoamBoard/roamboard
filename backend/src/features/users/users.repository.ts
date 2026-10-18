@@ -255,11 +255,16 @@ export function createUsersRepository(): UsersRepository {
                 const continent = continentForCountry(code);
                 if (continent) continents.add(continent);
             }
+            const countRow = counts.rows[0];
             return {
                 countriesVisited: countries.size,
                 citiesExplored: cities.size,
                 continentsCovered: continents.size,
-                ...counts.rows[0]
+                photosUploaded: countRow?.photosUploaded ?? 0,
+                boardsCreated: countRow?.boardsCreated ?? 0,
+                friends: countRow?.friends ?? 0,
+                activitiesSaved: countRow?.activitiesSaved ?? 0,
+                boardsSaved: countRow?.boardsSaved ?? 0
             };
         },
         async listSavedBoards(userId, page, limit) {
@@ -481,7 +486,7 @@ export function createUsersRepository(): UsersRepository {
             }>(
                 `SELECT b.board_id, b.title, b.description, b.owner_user_id,
                         u.username, u.display_name, u.profile_picture_image_id,
-                        b.cover_image_id, b.created_at
+                        b.cover_image_id, COALESCE(b.published_at, b.created_at) AS created_at
                  FROM board b
                  JOIN app_user u ON u.user_id = b.owner_user_id
                  JOIN friendship f ON (
@@ -491,7 +496,7 @@ export function createUsersRepository(): UsersRepository {
                  WHERE f.status = 'accepted'
                    AND b.status = 'published'
                    AND (b.visibility = 'public' OR b.visibility = 'friends')
-                 ORDER BY b.created_at DESC
+                 ORDER BY COALESCE(b.published_at, b.created_at) DESC
                  LIMIT $2`,
                 [userId, limit]
             );
@@ -522,11 +527,11 @@ export function createUsersRepository(): UsersRepository {
                 display_name: string;
                 profile_picture_image_id: number | null;
                 cover_image_id: number | null;
-                created_at: Date;
+                published_at: Date;
             }>(
                 `SELECT b.board_id, b.title, b.owner_user_id,
                         u.username, u.display_name, u.profile_picture_image_id,
-                        b.cover_image_id, b.created_at
+                        b.cover_image_id, COALESCE(b.published_at, b.created_at) AS published_at
                  FROM board b
                  JOIN app_user u ON u.user_id = b.owner_user_id
                  JOIN friendship f ON (
@@ -536,7 +541,7 @@ export function createUsersRepository(): UsersRepository {
                  WHERE f.status = 'accepted'
                    AND b.status = 'published'
                    AND (b.visibility = 'public' OR b.visibility = 'friends')
-                 ORDER BY b.created_at DESC
+                 ORDER BY COALESCE(b.published_at, b.created_at) DESC
                  LIMIT $2`,
                 [userId, limit]
             );
@@ -555,7 +560,7 @@ export function createUsersRepository(): UsersRepository {
                 },
                 coverImageUrl:
                     row.cover_image_id === null ? null : `/api/v1/images/${row.cover_image_id}/content?variant=display`,
-                timestamp: row.created_at.toISOString()
+                timestamp: row.published_at.toISOString()
             }));
         },
         async removeFriend(userId, targetUserId) {

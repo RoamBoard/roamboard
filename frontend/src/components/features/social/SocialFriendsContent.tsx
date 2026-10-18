@@ -116,15 +116,31 @@ export default function SocialFriendsContent({
     const [boards, setBoards] = useState<FriendBoardSummary[]>(initialBoards ?? []);
     const [activities, setActivities] = useState<FriendActivityItem[]>(initialActivities ?? []);
     const [loading, setLoading] = useState(!initialFriends);
+    const [loadErrors, setLoadErrors] = useState<string[]>([]);
     const [searchOpen, setSearchOpen] = useState(false);
 
     const refreshData = () => {
         setLoading(true);
+        setLoadErrors([]);
         void Promise.allSettled([loadFriends(), loadFriendsBoards(12), loadFriendsActivity(10)])
             .then(([friendsRes, boardsRes, activitiesRes]) => {
-                if (friendsRes.status === "fulfilled") setFriends(friendsRes.value);
-                if (boardsRes.status === "fulfilled") setBoards(boardsRes.value);
-                if (activitiesRes.status === "fulfilled") setActivities(activitiesRes.value);
+                const errors: string[] = [];
+                if (friendsRes.status === "fulfilled") {
+                    setFriends(friendsRes.value);
+                } else {
+                    errors.push("Failed to load your travel pals.");
+                }
+                if (boardsRes.status === "fulfilled") {
+                    setBoards(boardsRes.value);
+                } else {
+                    errors.push("Failed to load friends' boards.");
+                }
+                if (activitiesRes.status === "fulfilled") {
+                    setActivities(activitiesRes.value);
+                } else {
+                    errors.push("Failed to load recent friend activity.");
+                }
+                setLoadErrors(errors);
             })
             .finally(() => {
                 setLoading(false);
@@ -137,9 +153,23 @@ export default function SocialFriendsContent({
         void Promise.allSettled([loadFriends(), loadFriendsBoards(12), loadFriendsActivity(10)])
             .then(([friendsRes, boardsRes, activitiesRes]) => {
                 if (!tracker.active) return;
-                if (friendsRes.status === "fulfilled") setFriends(friendsRes.value);
-                if (boardsRes.status === "fulfilled") setBoards(boardsRes.value);
-                if (activitiesRes.status === "fulfilled") setActivities(activitiesRes.value);
+                const errors: string[] = [];
+                if (friendsRes.status === "fulfilled") {
+                    setFriends(friendsRes.value);
+                } else {
+                    errors.push("Failed to load your travel pals.");
+                }
+                if (boardsRes.status === "fulfilled") {
+                    setBoards(boardsRes.value);
+                } else {
+                    errors.push("Failed to load friends' boards.");
+                }
+                if (activitiesRes.status === "fulfilled") {
+                    setActivities(activitiesRes.value);
+                } else {
+                    errors.push("Failed to load recent friend activity.");
+                }
+                setLoadErrors(errors);
             })
             .finally(() => {
                 if (tracker.active) setLoading(false);
@@ -174,6 +204,22 @@ export default function SocialFriendsContent({
                         />
                     </header>
 
+                    {loadErrors.length > 0 && (
+                        <div
+                            role="alert"
+                            className="border-line bg-background text-12 text-muted-foreground mb-8 flex items-center justify-between rounded-[2px] border p-4 font-medium"
+                        >
+                            <span>{loadErrors.join(" ")}</span>
+                            <button
+                                type="button"
+                                onClick={refreshData}
+                                className="text-foreground cursor-pointer font-medium underline underline-offset-4 hover:opacity-80"
+                            >
+                                Retry
+                            </button>
+                        </div>
+                    )}
+
                     {/* Section 1: My Friends */}
                     <section aria-label="My friends" className="mb-12">
                         <div className="mb-4 flex items-end justify-between">
@@ -197,6 +243,10 @@ export default function SocialFriendsContent({
                         {loading && friends.length === 0 ? (
                             <div className="border-line bg-background rounded-[2px] border p-8 text-center">
                                 <p className="text-12 text-muted-foreground font-body">Loading travel pals…</p>
+                            </div>
+                        ) : loadErrors.some((e) => e.includes("travel pals")) ? (
+                            <div className="border-line bg-background text-12 text-muted-foreground rounded-[2px] border p-8 text-center font-medium">
+                                <p>Could not load friends.</p>
                             </div>
                         ) : friends.length === 0 ? (
                             <div className="border-line bg-background rounded-[2px] border p-8 text-center sm:p-10">

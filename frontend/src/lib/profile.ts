@@ -339,15 +339,42 @@ export function loadFriendRequests() {
     );
 }
 
-export function acceptFriendRequest(requestId: number) {
-    return apiRequest<{ requestId: number; status: "accepted" }>(
+export type FriendRequestEvent = {
+    type: "accept" | "reject";
+    requestId: number;
+};
+
+const friendRequestListeners = new Set<(event: FriendRequestEvent) => void>();
+
+export function subscribeToFriendRequestUpdates(listener: (event: FriendRequestEvent) => void): () => void {
+    friendRequestListeners.add(listener);
+    return () => {
+        friendRequestListeners.delete(listener);
+    };
+}
+
+export function notifyFriendRequestAction(event: FriendRequestEvent): void {
+    friendRequestListeners.forEach((listener) => {
+        try {
+            listener(event);
+        } catch {
+            // noop
+        }
+    });
+}
+
+export async function acceptFriendRequest(requestId: number) {
+    const result = await apiRequest<{ requestId: number; status: "accepted" }>(
         `/api/v1/users/me/friend-requests/${requestId}/accept`,
         { method: "PUT" }
     );
+    notifyFriendRequestAction({ type: "accept", requestId });
+    return result;
 }
 
-export function rejectFriendRequest(requestId: number) {
-    return apiRequest<void>(`/api/v1/users/me/friend-requests/${requestId}`, { method: "DELETE" });
+export async function rejectFriendRequest(requestId: number) {
+    await apiRequest<void>(`/api/v1/users/me/friend-requests/${requestId}`, { method: "DELETE" });
+    notifyFriendRequestAction({ type: "reject", requestId });
 }
 
 export function removeFriend(targetUserId: string) {

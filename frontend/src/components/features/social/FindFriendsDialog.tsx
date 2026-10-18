@@ -11,6 +11,7 @@ import {
     removeFriend,
     type UserSearchResult
 } from "@/lib/profile";
+import { useDialogFocus } from "@/lib/use-dialog-focus";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 export type FindFriendsDialogProps = {
@@ -39,18 +40,12 @@ export default function FindFriendsDialog({ open, onClose, onFriendAdded }: Find
         onClose();
     }, [onClose]);
 
+    useDialogFocus(dialogRef, handleClose, open && confirmUnfriendUser === null);
+
     const handleQueryChange = (val: string) => {
         setQuery(val);
         setError(null);
     };
-
-    useEffect(() => {
-        if (!open) return;
-        const timer = setTimeout(() => {
-            inputRef.current?.focus();
-        }, 50);
-        return () => clearTimeout(timer);
-    }, [open]);
 
     useEffect(() => {
         if (!open) return;
@@ -67,9 +62,11 @@ export default function FindFriendsDialog({ open, onClose, onFriendAdded }: Find
                             setResults(data);
                         }
                     })
-                    .catch(() => {
+                    .catch((caught) => {
                         if (request.active) {
-                            setError("Failed to search users. Please try again.");
+                            setError(
+                                caught instanceof Error ? caught.message : "Failed to search users. Please try again."
+                            );
                         }
                     })
                     .finally(() => {
@@ -87,31 +84,20 @@ export default function FindFriendsDialog({ open, onClose, onFriendAdded }: Find
         };
     }, [query, open]);
 
-    useEffect(() => {
-        if (!open) return;
-        const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.key === "Escape") {
-                handleClose();
-            }
-        };
-        window.addEventListener("keydown", handleKeyDown);
-        return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [open, handleClose]);
-
     if (!open) return null;
 
     const handleSendRequest = async (handle: string, userId: string) => {
         setActionState((prev) => ({ ...prev, [userId]: "pending" }));
         setError(null);
         try {
-            await sendFriendRequest(handle);
+            const result = await sendFriendRequest(handle);
             setActionState((prev) => ({ ...prev, [userId]: "done" }));
             setResults((prev) =>
-                prev.map((u) => (u.userId === userId ? { ...u, friendshipStatus: "pending_sent" } : u))
+                prev.map((u) => (u.userId === userId ? { ...u, friendshipStatus: result.status } : u))
             );
             onFriendAdded?.();
-        } catch {
-            setError("Could not send friend request. Please try again.");
+        } catch (caught) {
+            setError(caught instanceof Error ? caught.message : "Could not send friend request. Please try again.");
             setActionState((prev) => {
                 const next = { ...prev };
                 delete next[userId];
@@ -346,8 +332,10 @@ export default function FindFriendsDialog({ open, onClose, onFriendAdded }: Find
                                 prev.map((u) => (u.userId === target.userId ? { ...u, friendshipStatus: "none" } : u))
                             );
                             onFriendAdded?.();
-                        } catch {
-                            // noop
+                        } catch (caught) {
+                            setError(
+                                caught instanceof Error ? caught.message : "Could not remove friend. Please try again."
+                            );
                         } finally {
                             setActionState((prev) => {
                                 const next = { ...prev };

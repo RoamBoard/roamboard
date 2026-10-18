@@ -37,7 +37,8 @@ test(
                 "006_profile.sql",
                 "008_board_destination.sql",
                 "009_image_presentation.sql",
-                "010_guest_accounts.sql"
+                "010_guest_accounts.sql",
+                "011_board_published_at.sql"
             ]) {
                 await getPool().query(
                     await readFile(new URL(`../db/migrations/${migration}`, import.meta.url), "utf8")

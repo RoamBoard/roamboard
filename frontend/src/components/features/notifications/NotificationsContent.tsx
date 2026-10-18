@@ -1,15 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Bell, UserRound } from "lucide-react";
 import { observeCurrentUser, type AuthUser } from "@/lib/auth";
-import { loadFriendRequests, acceptFriendRequest, rejectFriendRequest, type FriendRequest } from "@/lib/profile";
+import {
+    loadFriendRequests,
+    acceptFriendRequest,
+    rejectFriendRequest,
+    subscribeToFriendRequestUpdates,
+    type FriendRequest
+} from "@/lib/profile";
 
 export default function NotificationsContent({ initialRequests }: { initialRequests?: FriendRequest[] }) {
     const [requests, setRequests] = useState<FriendRequest[]>(initialRequests ?? []);
     const [loading, setLoading] = useState(false);
+    const [loadError, setLoadError] = useState<string | null>(null);
     const [sessionUser, setSessionUser] = useState<AuthUser | null>(null);
     const [actionInProgress, setActionInProgress] = useState<Record<number, "accepting" | "rejecting">>({});
     const [actionError, setActionError] = useState<string | null>(null);
@@ -26,33 +33,36 @@ export default function NotificationsContent({ initialRequests }: { initialReque
     };
 
     useEffect(() => {
+        return subscribeToFriendRequestUpdates((event) => {
+            setRequests((prev) => prev.filter((r) => r.requestId !== event.requestId));
+        });
+    }, []);
+
+    const fetchRequests = useCallback(() => {
+        setLoading(true);
+        setLoadError(null);
+        void loadFriendRequests()
+            .then((data) => {
+                setRequests(data);
+            })
+            .catch(() => {
+                setLoadError("Failed to load friend requests. Please check your connection.");
+            })
+            .finally(() => {
+                setLoading(false);
+            });
+    }, []);
+
+    useEffect(() => {
         return observeCurrentUser((user) => {
             setSessionUser(user);
             if (!user && !initialRequests) {
                 setRequests([]);
             } else if (user) {
-                setLoading(true);
+                fetchRequests();
             }
         });
-    }, [initialRequests]);
-
-    useEffect(() => {
-        if (!sessionUser) return;
-        const request = { active: true };
-        void loadFriendRequests()
-            .then((data) => {
-                if (request.active) {
-                    setRequests(data);
-                    setLoading(false);
-                }
-            })
-            .catch(() => {
-                if (request.active) setLoading(false);
-            });
-        return () => {
-            request.active = false;
-        };
-    }, [sessionUser]);
+    }, [initialRequests, fetchRequests]);
 
     const handleAccept = async (requestId: number) => {
         setActionInProgress((prev) => ({ ...prev, [requestId]: "accepting" }));
@@ -117,6 +127,22 @@ export default function NotificationsContent({ initialRequests }: { initialReque
                         </div>
                     )}
 
+                    {loadError && (
+                        <div
+                            role="alert"
+                            className="border-line bg-background text-12 text-muted-foreground mb-6 flex items-center justify-between rounded-[2px] border p-4 font-medium"
+                        >
+                            <span>{loadError}</span>
+                            <button
+                                type="button"
+                                onClick={fetchRequests}
+                                className="text-foreground cursor-pointer font-medium underline underline-offset-4 hover:opacity-80"
+                            >
+                                Retry
+                            </button>
+                        </div>
+                    )}
+
                     {!sessionUser && !loading && (
                         <div className="border-line bg-background rounded-[2px] border p-8 text-center sm:p-12">
                             <div className="bg-muted text-muted-foreground mx-auto mb-4 flex size-12 items-center justify-center rounded-full">
@@ -143,7 +169,7 @@ export default function NotificationsContent({ initialRequests }: { initialReque
                         </div>
                     )}
 
-                    {sessionUser && !loading && requests.length === 0 && (
+                    {sessionUser && !loading && !loadError && requests.length === 0 && (
                         <div className="border-line bg-background rounded-[2px] border p-8 text-center sm:p-12">
                             <div className="bg-muted text-muted-foreground mx-auto mb-4 flex size-12 items-center justify-center rounded-full">
                                 <Bell size={24} strokeWidth={1.5} />

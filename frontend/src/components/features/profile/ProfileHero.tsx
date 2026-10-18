@@ -50,6 +50,7 @@ function useOptionalRouter() {
 export default function ProfileHero({ profile, stats, isOwner = true, friendshipStatus }: Props) {
     const router = useOptionalRouter();
     const [actionStatus, setActionStatus] = useState<FriendshipStatus | null>(null);
+    const [actionError, setActionError] = useState<string | null>(null);
     const [pending, setPending] = useState(false);
     const [confirmUnfriendOpen, setConfirmUnfriendOpen] = useState(false);
 
@@ -60,12 +61,15 @@ export default function ProfileHero({ profile, stats, isOwner = true, friendship
     const handleFriendAction = async () => {
         if (pending || currentStatus === "accepted" || currentStatus === "pending_sent") return;
         setPending(true);
+        setActionError(null);
         try {
             const res = await sendFriendRequest(profile.username);
             setActionStatus(res.status);
         } catch (caught) {
             if (caught instanceof ProfileApiError && caught.status === 401) {
                 router?.push("/login");
+            } else {
+                setActionError(caught instanceof Error ? caught.message : "Failed to send friend request.");
             }
         } finally {
             setPending(false);
@@ -225,6 +229,11 @@ export default function ProfileHero({ profile, stats, isOwner = true, friendship
                                     </button>
                                 )}
                             </div>
+                        )}
+                        {actionError && (
+                            <p role="alert" className="text-12 mt-1.5 font-medium text-red-500">
+                                {actionError}
+                            </p>
                         )}
                     </div>
 
@@ -438,11 +447,16 @@ export default function ProfileHero({ profile, stats, isOwner = true, friendship
                     onConfirm={async () => {
                         setConfirmUnfriendOpen(false);
                         setPending(true);
+                        setActionError(null);
                         try {
                             await removeFriendByHandle(profile.username);
                             setActionStatus("none");
-                        } catch {
-                            // noop
+                        } catch (caught) {
+                            setActionError(
+                                caught instanceof Error
+                                    ? caught.message
+                                    : `Failed to remove @${profile.username} from friends.`
+                            );
                         } finally {
                             setPending(false);
                         }

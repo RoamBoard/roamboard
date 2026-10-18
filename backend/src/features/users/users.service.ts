@@ -87,7 +87,9 @@ export function createUsersService(
                 isOwner: viewerId === userId,
                 friendshipStatus,
                 stats: {
-                    ...userStats,
+                    friends: userStats.friends ?? 0,
+                    activitiesSaved: userStats.activitiesSaved ?? 0,
+                    boardsSaved: userStats.boardsSaved ?? 0,
                     countriesVisited: countries.size,
                     citiesExplored: cities.size,
                     continentsCovered: continents.size,
@@ -167,8 +169,26 @@ export function createUsersService(
                 await repository.acceptFriendRequest(requesterId, existing.friendshipId);
                 return { requestId: existing.friendshipId, status: "accepted" as const };
             }
-            const requestId = await repository.sendFriendRequest(requesterId, recipientId);
-            return { requestId, status: "pending_sent" as const };
+            try {
+                const requestId = await repository.sendFriendRequest(requesterId, recipientId);
+                return { requestId, status: "pending_sent" as const };
+            } catch (error: unknown) {
+                const pgError = error as { code?: string; message?: string };
+                if (pgError.code === "23505" || pgError.message?.includes("uq_friendship_pair")) {
+                    const winning = await repository.getFriendship(requesterId, recipientId);
+                    if (winning) {
+                        if (winning.status === "accepted") {
+                            return { requestId: winning.friendshipId, status: "accepted" as const };
+                        }
+                        if (winning.requesterUserId === recipientId) {
+                            await repository.acceptFriendRequest(requesterId, winning.friendshipId);
+                            return { requestId: winning.friendshipId, status: "accepted" as const };
+                        }
+                        return { requestId: winning.friendshipId, status: "pending_sent" as const };
+                    }
+                }
+                throw error;
+            }
         },
         listFriendRequests: (userId: string) => repository.listIncomingFriendRequests(userId),
         async acceptFriendRequest(userId: string, requestId: number) {

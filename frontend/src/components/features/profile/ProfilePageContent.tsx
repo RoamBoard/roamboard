@@ -377,8 +377,13 @@ export default function ProfilePageContent() {
                             await removeFriend(target.userId);
                             setFriends((prev) => prev.filter((f) => f.userId !== target.userId));
                             setStats((prev) => (prev ? { ...prev, friends: Math.max(0, prev.friends - 1) } : null));
-                        } catch {
-                            // noop
+                        } catch (caught) {
+                            setSectionErrors((prev) => [
+                                ...prev,
+                                caught instanceof Error
+                                    ? caught.message
+                                    : `Failed to remove ${target.displayName} from friends.`
+                            ]);
                         }
                     }}
                 />

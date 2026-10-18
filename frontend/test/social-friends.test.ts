@@ -7,6 +7,16 @@ import SocialFriendsContent from "@/components/features/social/SocialFriendsCont
 import FindFriendsDialog from "@/components/features/social/FindFriendsDialog";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import type { FriendUser, FriendBoardSummary, FriendActivityItem } from "@/lib/profile";
+import {
+    searchUsers,
+    sendFriendRequest,
+    acceptFriendRequest,
+    rejectFriendRequest,
+    removeFriend,
+    removeFriendByHandle,
+    subscribeToFriendRequestUpdates,
+    ProfileApiError
+} from "@/lib/profile";
 
 const mockRouter = {
     back: () => {},
@@ -147,4 +157,190 @@ test("ConfirmDialog renders accessible alertdialog with title, description, and 
     assert.ok(html.includes("Are you sure you want to remove @chloe from your friends?"));
     assert.ok(html.includes("Cancel"));
     assert.ok(html.includes("Unfriend"));
+});
+
+test("searchUsers queries backend with query string and limit, stripping leading at-symbol", async (context) => {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {
+        calls.push({ url: String(input), init });
+        return Response.json({
+            data: [
+                {
+                    userId: "u-traveler",
+                    username: "traveler",
+                    displayName: "World Traveler",
+                    profilePictureUrl: null,
+                    bio: "Exploring every corner",
+                    location: "Tokyo, Japan",
+                    friendshipStatus: "none"
+                }
+            ]
+        });
+    });
+
+    const results = await searchUsers("@traveler", 10);
+    assert.equal(results.length, 1);
+    assert.equal(results[0].userId, "u-traveler");
+    assert.equal(results[0].friendshipStatus, "none");
+    assert.ok(calls[0].url.endsWith("/api/v1/users/search?q=traveler&limit=10"));
+    assert.equal(calls[0].init?.credentials, "include");
+
+    await searchUsers("", 20);
+    assert.ok(calls[1].url.endsWith("/api/v1/users/search?limit=20"));
+});
+
+test("searchUsers handles API errors and network failures", async (context) => {
+    context.mock.method(globalThis, "fetch", async () => {
+        return Response.json(
+            { error: { code: "INVALID_REQUEST", message: "Query too long" } },
+            { status: 400, headers: { "content-type": "application/json" } }
+        );
+    });
+
+    await assert.rejects(
+        () => searchUsers("very-long-invalid-query"),
+        (err: Error) => {
+            assert.ok(err instanceof ProfileApiError);
+            assert.equal(err.status, 400);
+            assert.equal(err.code, "INVALID_REQUEST");
+            assert.equal(err.message, "Query too long");
+            return true;
+        }
+    );
+});
+
+test("sendFriendRequest handles pending and crossed-request accepted statuses", async (context) => {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const state = { status: "pending_sent" as "pending_sent" | "accepted" };
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {
+        calls.push({ url: String(input), init });
+        return Response.json(
+            { data: { requestId: 101, status: state.status } },
+            { status: 201, headers: { "content-type": "application/json" } }
+        );
+    });
+
+    const pendingResult = await sendFriendRequest("elena");
+    assert.equal(pendingResult.requestId, 101);
+    assert.equal(pendingResult.status, "pending_sent");
+    assert.ok(calls[0].url.endsWith("/api/v1/users/by-handle/elena/friend-request"));
+    assert.equal(calls[0].init?.method, "POST");
+
+    state.status = "accepted";
+    const acceptedResult = await sendFriendRequest("marco");
+    assert.equal(acceptedResult.status, "accepted");
+    assert.ok(calls[1].url.endsWith("/api/v1/users/by-handle/marco/friend-request"));
+});
+
+test("sendFriendRequest rejects when user is already a friend or request already sent", async (context) => {
+    context.mock.method(globalThis, "fetch", async () => {
+        return Response.json(
+            { error: { code: "ALREADY_FRIENDS", message: "Already friends" } },
+            { status: 409, headers: { "content-type": "application/json" } }
+        );
+    });
+
+    await assert.rejects(
+        () => sendFriendRequest("existing_friend"),
+        (err: Error) => {
+            assert.ok(err instanceof ProfileApiError);
+            assert.equal(err.status, 409);
+            assert.equal(err.code, "ALREADY_FRIENDS");
+            return true;
+        }
+    );
+});
+
+test("acceptFriendRequest sends PUT and notifies subscribers, unsubscribing stops events", async (context) => {
+    const events: Array<{ type: string; requestId: number }> = [];
+    const unsubscribe = subscribeToFriendRequestUpdates((e) => events.push(e));
+    context.after(unsubscribe);
+
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {
+        calls.push({ url: String(input), init });
+        return Response.json(
+            { data: { requestId: 77, status: "accepted" } },
+            { headers: { "content-type": "application/json" } }
+        );
+    });
+
+    const result = await acceptFriendRequest(77);
+    assert.equal(result.requestId, 77);
+    assert.equal(result.status, "accepted");
+    assert.ok(calls[0].url.endsWith("/api/v1/users/me/friend-requests/77/accept"));
+    assert.equal(calls[0].init?.method, "PUT");
+    assert.deepEqual(events, [{ type: "accept", requestId: 77 }]);
+
+    unsubscribe();
+    await acceptFriendRequest(78);
+    assert.equal(events.length, 1);
+});
+
+test("acceptFriendRequest does not notify subscribers when request fails", async (context) => {
+    const events: Array<{ type: string; requestId: number }> = [];
+    const unsubscribe = subscribeToFriendRequestUpdates((e) => events.push(e));
+    context.after(unsubscribe);
+
+    context.mock.method(globalThis, "fetch", async () => {
+        return Response.json(
+            { error: { code: "NOT_FOUND", message: "Friend request not found" } },
+            { status: 404, headers: { "content-type": "application/json" } }
+        );
+    });
+
+    await assert.rejects(() => acceptFriendRequest(999));
+    assert.equal(events.length, 0);
+});
+
+test("rejectFriendRequest sends DELETE and notifies subscribers", async (context) => {
+    const events: Array<{ type: string; requestId: number }> = [];
+    const unsubscribe = subscribeToFriendRequestUpdates((e) => events.push(e));
+    context.after(unsubscribe);
+
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {
+        calls.push({ url: String(input), init });
+        return new Response(null, { status: 204 });
+    });
+
+    await rejectFriendRequest(88);
+    assert.ok(calls[0].url.endsWith("/api/v1/users/me/friend-requests/88"));
+    assert.equal(calls[0].init?.method, "DELETE");
+    assert.deepEqual(events, [{ type: "reject", requestId: 88 }]);
+});
+
+test("removeFriend and removeFriendByHandle send DELETE requests and handle errors", async (context) => {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {
+        calls.push({ url: String(input), init });
+        return new Response(null, { status: 204 });
+    });
+
+    await removeFriend("u-chloe");
+    assert.ok(calls[0].url.endsWith("/api/v1/users/me/friends/u-chloe"));
+    assert.equal(calls[0].init?.method, "DELETE");
+
+    await removeFriendByHandle("chloe");
+    assert.ok(calls[1].url.endsWith("/api/v1/users/by-handle/chloe/friend"));
+    assert.equal(calls[1].init?.method, "DELETE");
+});
+
+test("removeFriend rejects when friendship is not found", async (context) => {
+    context.mock.method(globalThis, "fetch", async () => {
+        return Response.json(
+            { error: { code: "NOT_FOUND", message: "Friendship not found" } },
+            { status: 404, headers: { "content-type": "application/json" } }
+        );
+    });
+
+    await assert.rejects(
+        () => removeFriend("u-unknown"),
+        (err: Error) => {
+            assert.ok(err instanceof ProfileApiError);
+            assert.equal(err.status, 404);
+            assert.equal(err.code, "NOT_FOUND");
+            return true;
+        }
+    );
 });

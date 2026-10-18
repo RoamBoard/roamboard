@@ -78,12 +78,12 @@ export function createUsersController(service: ReturnType<typeof createUsersServ
             const { q, limit } = response.locals.query as { q: string; limit: number };
             response.json({ data: await service.searchUsers(response.locals.user.userId, q, limit) });
         },
-        friendsBoards: async (request, response) => {
-            const limit = Number(request.query.limit) || 20;
+        friendsBoards: async (_request, response) => {
+            const { limit } = response.locals.query as { limit: number };
             response.json({ data: await service.listFriendsBoards(response.locals.user.userId, limit) });
         },
-        friendsActivity: async (request, response) => {
-            const limit = Number(request.query.limit) || 20;
+        friendsActivity: async (_request, response) => {
+            const { limit } = response.locals.query as { limit: number };
             response.json({ data: await service.listFriendsActivity(response.locals.user.userId, limit) });
         },
         removeFriend: async (_request, response) => {

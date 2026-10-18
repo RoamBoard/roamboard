@@ -10,6 +10,7 @@ import {
     mapQuerySchema,
     friendRequestIdParamsSchema,
     userSearchQuerySchema,
+    friendsQuerySchema,
     targetUserParamsSchema
 } from "./users.schemas.js";
 import { createUsersController } from "./users.controller.js";
@@ -56,8 +57,8 @@ export function createUsersRouter(
         validateParams(targetUserParamsSchema),
         controller.removeFriend
     );
-    router.get("/me/friends/boards", controller.friendsBoards);
-    router.get("/me/friends/activity", controller.friendsActivity);
+    router.get("/me/friends/boards", validateQuery(friendsQuerySchema), controller.friendsBoards);
+    router.get("/me/friends/activity", validateQuery(friendsQuerySchema), controller.friendsActivity);
     router.get("/me/friend-requests", controller.listFriendRequests);
     router.put(
         "/me/friend-requests/:requestId/accept",

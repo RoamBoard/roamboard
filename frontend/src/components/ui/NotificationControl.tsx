@@ -6,7 +6,13 @@ import Image from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Bell, UserRound } from "lucide-react";
 import { observeCurrentUser, type AuthUser } from "@/lib/auth";
-import { loadFriendRequests, acceptFriendRequest, rejectFriendRequest, type FriendRequest } from "@/lib/profile";
+import {
+    loadFriendRequests,
+    acceptFriendRequest,
+    rejectFriendRequest,
+    subscribeToFriendRequestUpdates,
+    type FriendRequest
+} from "@/lib/profile";
 
 export type NotificationControlProps = {
     sidebar?: boolean;
@@ -54,6 +60,15 @@ export default function NotificationControl({
         [onOpenChange]
     );
 
+    const requestVersionRef = useRef(0);
+
+    useEffect(() => {
+        return subscribeToFriendRequestUpdates((event) => {
+            requestVersionRef.current += 1;
+            setRequests((prev) => prev.filter((r) => r.requestId !== event.requestId));
+        });
+    }, []);
+
     useEffect(() => {
         return observeCurrentUser((user) => {
             setSessionUser(user);
@@ -68,15 +83,16 @@ export default function NotificationControl({
     useEffect(() => {
         if (!sessionUser) return;
         const request = { active: true };
+        const version = requestVersionRef.current;
         void loadFriendRequests()
             .then((data) => {
-                if (request.active) {
+                if (request.active && version === requestVersionRef.current) {
                     setRequests(data);
                     setLoading(false);
                 }
             })
             .catch(() => {
-                if (request.active) {
+                if (request.active && version === requestVersionRef.current) {
                     setLoading(false);
                 }
             });
@@ -88,9 +104,10 @@ export default function NotificationControl({
     useEffect(() => {
         if (isOpen && sessionUser) {
             const request = { active: true };
+            const version = requestVersionRef.current;
             void loadFriendRequests()
                 .then((data) => {
-                    if (request.active) setRequests(data);
+                    if (request.active && version === requestVersionRef.current) setRequests(data);
                 })
                 .catch(() => {
                     // Ignore background refresh errors
@@ -102,6 +119,7 @@ export default function NotificationControl({
     }, [isOpen, sessionUser]);
 
     const handleAccept = async (requestId: number) => {
+        requestVersionRef.current += 1;
         setActionInProgress((prev) => ({ ...prev, [requestId]: "accepting" }));
         setActionError(null);
         try {
@@ -119,6 +137,7 @@ export default function NotificationControl({
     };
 
     const handleReject = async (requestId: number) => {
+        requestVersionRef.current += 1;
         setActionInProgress((prev) => ({ ...prev, [requestId]: "rejecting" }));
         setActionError(null);
         try {
