@@ -105,7 +105,15 @@ test("accepting a friend request calls PUT /api/v1/users/me/friend-requests/:id/
         }
     ];
 
-    const { nodes } = capture(() => NotificationsContent({ initialRequests: sampleRequests }));
+    const tracker = { requests: sampleRequests };
+    const { nodes } = capture(() =>
+        NotificationsContent({
+            initialRequests: sampleRequests,
+            onRequestsChange: (reqs) => {
+                tracker.requests = reqs;
+            }
+        })
+    );
     const acceptBtn = nodes.find((n) => n.type === "button" && n.props.children === "accept");
     assert.ok(acceptBtn, "Expected accept button to exist");
 
@@ -115,6 +123,7 @@ test("accepting a friend request calls PUT /api/v1/users/me/friend-requests/:id/
     assert.ok(calls[0].url.endsWith("/api/v1/users/me/friend-requests/101/accept"));
     assert.equal(calls[0].method, "PUT");
     assert.deepEqual(events, [{ type: "accept", requestId: 101 }]);
+    assert.equal(tracker.requests.length, 0);
 });
 
 test("rejecting a friend request calls DELETE /api/v1/users/me/friend-requests/:id and broadcasts update", async (context) => {
@@ -140,7 +149,15 @@ test("rejecting a friend request calls DELETE /api/v1/users/me/friend-requests/:
         }
     ];
 
-    const { nodes } = capture(() => NotificationsContent({ initialRequests: sampleRequests }));
+    const tracker = { requests: sampleRequests };
+    const { nodes } = capture(() =>
+        NotificationsContent({
+            initialRequests: sampleRequests,
+            onRequestsChange: (reqs) => {
+                tracker.requests = reqs;
+            }
+        })
+    );
     const rejectBtn = nodes.find((n) => n.type === "button" && n.props.children === "reject");
     assert.ok(rejectBtn, "Expected reject button to exist");
 
@@ -150,6 +167,7 @@ test("rejecting a friend request calls DELETE /api/v1/users/me/friend-requests/:
     assert.ok(calls[0].url.endsWith("/api/v1/users/me/friend-requests/101"));
     assert.equal(calls[0].method, "DELETE");
     assert.deepEqual(events, [{ type: "reject", requestId: 101 }]);
+    assert.equal(tracker.requests.length, 0);
 });
 
 test("accept friend request failure displays error and does not broadcast update", async (context) => {
@@ -176,12 +194,66 @@ test("accept friend request failure displays error and does not broadcast update
         }
     ];
 
-    const { nodes } = capture(() => NotificationsContent({ initialRequests: sampleRequests }));
+    const tracker = { error: null as string | null };
+    const { nodes } = capture(() =>
+        NotificationsContent({
+            initialRequests: sampleRequests,
+            onActionErrorChange: (err) => {
+                tracker.error = err;
+            }
+        })
+    );
     const acceptBtn = nodes.find((n) => n.type === "button" && n.props.children === "accept");
     assert.ok(acceptBtn);
 
     await acceptBtn.props.onClick?.();
     assert.equal(events.length, 0);
+    assert.equal(tracker.error, "Failed to accept friend request");
+});
+
+test("reject friend request failure displays error and does not broadcast update", async (context) => {
+    const events: Array<{ type: string; requestId: number }> = [];
+    const unsubscribe = subscribeToFriendRequestUpdates((e) => events.push(e));
+    context.after(unsubscribe);
+
+    context.mock.method(globalThis, "fetch", async () => {
+        return Response.json(
+            { error: { code: "SERVER_ERROR", message: "Server database unavailable" } },
+            { status: 500, headers: { "content-type": "application/json" } }
+        );
+    });
+
+    const sampleRequests: FriendRequest[] = [
+        {
+            requestId: 101,
+            requester: {
+                userId: "user-101",
+                username: "sammy",
+                displayName: "Sammy Explorer",
+                profilePictureUrl: null
+            }
+        }
+    ];
+
+    const tracker = { error: null as string | null, requests: sampleRequests };
+    const { nodes } = capture(() =>
+        NotificationsContent({
+            initialRequests: sampleRequests,
+            onActionErrorChange: (err) => {
+                tracker.error = err;
+            },
+            onRequestsChange: (reqs) => {
+                tracker.requests = reqs;
+            }
+        })
+    );
+    const rejectBtn = nodes.find((n) => n.type === "button" && n.props.children === "reject");
+    assert.ok(rejectBtn);
+
+    await rejectBtn.props.onClick?.();
+    assert.equal(events.length, 0);
+    assert.equal(tracker.error, "Failed to reject friend request");
+    assert.equal(tracker.requests.length, 1);
 });
 
 test("NotificationsContent hides friend requests list when signed out", () => {

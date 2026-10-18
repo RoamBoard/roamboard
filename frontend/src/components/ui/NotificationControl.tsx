@@ -21,6 +21,8 @@ export type NotificationControlProps = {
     onOpenChange?: (open: boolean) => void;
     initialRequests?: FriendRequest[];
     initialError?: string | null;
+    onRequestsChange?: (requests: FriendRequest[]) => void;
+    onActionErrorChange?: (error: string | null) => void;
 };
 
 export default function NotificationControl({
@@ -29,7 +31,9 @@ export default function NotificationControl({
     open,
     onOpenChange,
     initialRequests,
-    initialError = null
+    initialError = null,
+    onRequestsChange,
+    onActionErrorChange
 }: NotificationControlProps) {
     const [internalOpen, setInternalOpen] = useState(false);
     const isOpen = open ?? internalOpen;
@@ -197,11 +201,15 @@ export default function NotificationControl({
         requestVersionRef.current += 1;
         setActionInProgress((prev) => ({ ...prev, [requestId]: "accepting" }));
         setActionError(null);
+        onActionErrorChange?.(null);
         try {
             await acceptFriendRequest(requestId);
-            setRequests((prev) => prev.filter((r) => r.requestId !== requestId));
+            const next = requests.filter((r) => r.requestId !== requestId);
+            setRequests(next);
+            onRequestsChange?.(next);
         } catch {
             setActionError("Failed to accept friend request");
+            onActionErrorChange?.("Failed to accept friend request");
         } finally {
             setActionInProgress((prev) => {
                 const next = { ...prev };
@@ -216,11 +224,15 @@ export default function NotificationControl({
         requestVersionRef.current += 1;
         setActionInProgress((prev) => ({ ...prev, [requestId]: "rejecting" }));
         setActionError(null);
+        onActionErrorChange?.(null);
         try {
             await rejectFriendRequest(requestId);
-            setRequests((prev) => prev.filter((r) => r.requestId !== requestId));
+            const next = requests.filter((r) => r.requestId !== requestId);
+            setRequests(next);
+            onRequestsChange?.(next);
         } catch {
             setActionError("Failed to reject friend request");
+            onActionErrorChange?.("Failed to reject friend request");
         } finally {
             setActionInProgress((prev) => {
                 const next = { ...prev };

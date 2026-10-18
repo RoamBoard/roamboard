@@ -181,6 +181,83 @@ test("FindFriendsDialog captures search input and updates query", () => {
     });
 });
 
+test("FindFriendsDialog runs searchUsers on Enter and updates results with friendship status", async (context) => {
+    const calls: Array<{ url: string }> = [];
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+        calls.push({ url: String(input) });
+        return Response.json({
+            data: [
+                {
+                    userId: "u-alice",
+                    username: "alice",
+                    displayName: "Alice Wonderland",
+                    profilePictureUrl: null,
+                    bio: "Adventurer",
+                    location: "Oxford",
+                    friendshipStatus: "none"
+                }
+            ]
+        });
+    });
+
+    const state = { results: [] as UserSearchResult[] };
+    const { nodes } = capture(() =>
+        FindFriendsDialog({
+            open: true,
+            onClose: () => {},
+            onResultsChange: (r) => {
+                state.results = r;
+            }
+        })
+    );
+    const input = nodes.find((n) => n.type === "input");
+    assert.ok(input);
+
+    input.props.onChange?.({ target: { value: "alice" } });
+    await (input.props.onKeyDown as (e: unknown) => Promise<void>)?.({
+        key: "Enter",
+        target: { value: "alice" },
+        preventDefault: () => {}
+    });
+
+    assert.equal(calls.length, 1);
+    assert.ok(calls[0].url.endsWith("/api/v1/users/search?q=alice&limit=20"));
+    assert.equal(state.results.length, 1);
+    assert.equal(state.results[0].username, "alice");
+    assert.equal(state.results[0].friendshipStatus, "none");
+});
+
+test("FindFriendsDialog displays visible error alert when searchUsers fails", async (context) => {
+    context.mock.method(globalThis, "fetch", async () => {
+        return Response.json(
+            { error: { code: "SERVER_ERROR", message: "Search database offline" } },
+            { status: 500, headers: { "content-type": "application/json" } }
+        );
+    });
+
+    const state = { error: null as string | null };
+    const { nodes } = capture(() =>
+        FindFriendsDialog({
+            open: true,
+            onClose: () => {},
+            onErrorChange: (err) => {
+                state.error = err;
+            }
+        })
+    );
+    const input = nodes.find((n) => n.type === "input");
+    assert.ok(input);
+
+    input.props.onChange?.({ target: { value: "timeout_user" } });
+    await (input.props.onKeyDown as (e: unknown) => Promise<void>)?.({
+        key: "Enter",
+        target: { value: "timeout_user" },
+        preventDefault: () => {}
+    });
+
+    assert.equal(state.error, "Search database offline");
+});
+
 test("FindFriendsDialog sends friend request and updates row to request sent", async (context) => {
     const calls: Array<{ url: string; method?: string }> = [];
     context.mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {
@@ -203,13 +280,16 @@ test("FindFriendsDialog sends friend request and updates row to request sent", a
         }
     ];
 
-    const tracker = { friendAddedCalled: false };
+    const tracker = { friendAddedCalled: false, results: [] as UserSearchResult[] };
     const { nodes } = capture(() =>
         FindFriendsDialog({
             open: true,
             onClose: () => {},
             onFriendAdded: () => {
                 tracker.friendAddedCalled = true;
+            },
+            onResultsChange: (r) => {
+                tracker.results = r;
             },
             initialResults: sampleResults
         })
@@ -224,6 +304,8 @@ test("FindFriendsDialog sends friend request and updates row to request sent", a
     assert.ok(calls[0].url.endsWith("/api/v1/users/by-handle/traveler/friend-request"));
     assert.equal(calls[0].method, "POST");
     assert.equal(tracker.friendAddedCalled, true);
+    assert.equal(tracker.results.length, 1);
+    assert.equal(tracker.results[0].friendshipStatus, "pending_sent");
 });
 
 test("FindFriendsDialog handles crossed friend request and updates row to accepted", async (context) => {
@@ -248,10 +330,14 @@ test("FindFriendsDialog handles crossed friend request and updates row to accept
         }
     ];
 
+    const tracker = { results: [] as UserSearchResult[] };
     const { nodes } = capture(() =>
         FindFriendsDialog({
             open: true,
             onClose: () => {},
+            onResultsChange: (r) => {
+                tracker.results = r;
+            },
             initialResults: sampleResults
         })
     );
@@ -264,6 +350,8 @@ test("FindFriendsDialog handles crossed friend request and updates row to accept
     assert.equal(calls.length, 1);
     assert.ok(calls[0].url.endsWith("/api/v1/users/by-handle/crossed/friend-request"));
     assert.equal(calls[0].method, "POST");
+    assert.equal(tracker.results.length, 1);
+    assert.equal(tracker.results[0].friendshipStatus, "accepted");
 });
 
 test("FindFriendsDialog displays visible error alert when sendFriendRequest fails", async (context) => {
@@ -286,10 +374,14 @@ test("FindFriendsDialog displays visible error alert when sendFriendRequest fail
         }
     ];
 
+    const tracker = { error: null as string | null };
     const { nodes } = capture(() =>
         FindFriendsDialog({
             open: true,
             onClose: () => {},
+            onErrorChange: (err) => {
+                tracker.error = err;
+            },
             initialResults: sampleResults
         })
     );
@@ -298,6 +390,7 @@ test("FindFriendsDialog displays visible error alert when sendFriendRequest fail
     assert.ok(addBtn);
 
     await addBtn.props.onClick?.();
+    assert.equal(tracker.error, "Failed to create friendship");
 });
 
 test("FindFriendsDialog accepts incoming request and calls onFriendAdded", async (context) => {
@@ -323,13 +416,16 @@ test("FindFriendsDialog accepts incoming request and calls onFriendAdded", async
         }
     ];
 
-    const tracker = { friendAddedCalled: false };
+    const tracker = { friendAddedCalled: false, results: [] as UserSearchResult[] };
     const { nodes } = capture(() =>
         FindFriendsDialog({
             open: true,
             onClose: () => {},
             onFriendAdded: () => {
                 tracker.friendAddedCalled = true;
+            },
+            onResultsChange: (r) => {
+                tracker.results = r;
             },
             initialResults: sampleResults
         })
@@ -344,6 +440,48 @@ test("FindFriendsDialog accepts incoming request and calls onFriendAdded", async
     assert.ok(calls[0].url.endsWith("/api/v1/users/me/friend-requests/505/accept"));
     assert.equal(calls[0].method, "PUT");
     assert.equal(tracker.friendAddedCalled, true);
+    assert.equal(tracker.results.length, 1);
+    assert.equal(tracker.results[0].friendshipStatus, "accepted");
+});
+
+test("FindFriendsDialog displays visible error alert when acceptFriendRequest fails", async (context) => {
+    context.mock.method(globalThis, "fetch", async () => {
+        return Response.json(
+            { error: { code: "NOT_FOUND", message: "Request expired" } },
+            { status: 404, headers: { "content-type": "application/json" } }
+        );
+    });
+
+    const sampleResults: UserSearchResult[] = [
+        {
+            userId: "u-requester",
+            username: "requester",
+            displayName: "Requester User",
+            profilePictureUrl: null,
+            bio: null,
+            location: null,
+            friendshipStatus: "pending_received",
+            requestId: 505
+        }
+    ];
+
+    const tracker = { error: null as string | null };
+    const { nodes } = capture(() =>
+        FindFriendsDialog({
+            open: true,
+            onClose: () => {},
+            onErrorChange: (err) => {
+                tracker.error = err;
+            },
+            initialResults: sampleResults
+        })
+    );
+
+    const acceptBtn = nodes.find((n) => n.type === "button" && n.props.children === "accept request");
+    assert.ok(acceptBtn);
+
+    await acceptBtn.props.onClick?.();
+    assert.equal(tracker.error, "Could not accept friend request. Please try again.");
 });
 
 test("FindFriendsDialog unfriend opens confirmation and displays error on failure", async (context) => {
@@ -366,12 +504,16 @@ test("FindFriendsDialog unfriend opens confirmation and displays error on failur
         }
     ];
 
+    const tracker = { unfriendError: null as string | null };
     const { nodes } = capture(() =>
         FindFriendsDialog({
             open: true,
             onClose: () => {},
             initialResults: sampleResults,
-            initialConfirmUnfriendUser: sampleResults[0]
+            initialConfirmUnfriendUser: sampleResults[0],
+            onUnfriendErrorChange: (err) => {
+                tracker.unfriendError = err;
+            }
         })
     );
 
@@ -379,6 +521,7 @@ test("FindFriendsDialog unfriend opens confirmation and displays error on failur
     assert.ok(confirmDialog, "Expected ConfirmDialog to be rendered");
 
     await (confirmDialog.props as { onConfirm: () => Promise<void> }).onConfirm();
+    assert.equal(tracker.unfriendError, "Failed to delete friendship");
 });
 
 test("FindFriendsDialog unfriend succeeds and calls onFriendAdded", async (context) => {
@@ -400,13 +543,16 @@ test("FindFriendsDialog unfriend succeeds and calls onFriendAdded", async (conte
         }
     ];
 
-    const tracker = { friendAddedCalled: false };
+    const tracker = { friendAddedCalled: false, results: [] as UserSearchResult[] };
     const { nodes } = capture(() =>
         FindFriendsDialog({
             open: true,
             onClose: () => {},
             onFriendAdded: () => {
                 tracker.friendAddedCalled = true;
+            },
+            onResultsChange: (r) => {
+                tracker.results = r;
             },
             initialResults: sampleResults,
             initialConfirmUnfriendUser: sampleResults[0]
@@ -422,6 +568,8 @@ test("FindFriendsDialog unfriend succeeds and calls onFriendAdded", async (conte
     assert.ok(calls[0].url.endsWith("/api/v1/users/me/friends/u-friend"));
     assert.equal(calls[0].method, "DELETE");
     assert.equal(tracker.friendAddedCalled, true);
+    assert.equal(tracker.results.length, 1);
+    assert.equal(tracker.results[0].friendshipStatus, "none");
 });
 
 test("SocialFriendsContent retry handlers track loading state and keep empty state hidden", async (context) => {

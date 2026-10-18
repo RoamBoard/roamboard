@@ -7,7 +7,7 @@ import ProfileControl from "../src/components/ui/ProfileControl";
 import NotificationControl from "../src/components/ui/NotificationControl";
 import Sidebar from "../src/components/layout/Sidebar";
 import { getMockAuthState, getMockAuthStateServerSnapshot, setMockAuthState } from "../src/data/mock-social";
-import { subscribeToFriendRequestUpdates } from "../src/lib/profile";
+import { subscribeToFriendRequestUpdates, type FriendRequest } from "../src/lib/profile";
 
 const mockRouter = {
     back: () => {},
@@ -243,12 +243,16 @@ test("NotificationControl accepting a friend request calls PUT /api/v1/users/me/
         }
     ];
 
+    const tracker: { requests: FriendRequest[] } = { requests };
     const { nodes } = capture(() =>
         NotificationControl({
             sidebar: true,
             iconOnly: false,
             open: true,
-            initialRequests: requests
+            initialRequests: requests,
+            onRequestsChange: (reqs) => {
+                tracker.requests = reqs;
+            }
         })
     );
 
@@ -261,6 +265,7 @@ test("NotificationControl accepting a friend request calls PUT /api/v1/users/me/
     assert.ok(calls[0].url.endsWith("/api/v1/users/me/friend-requests/42/accept"));
     assert.equal(calls[0].method, "PUT");
     assert.deepEqual(events, [{ type: "accept", requestId: 42 }]);
+    assert.equal(tracker.requests.length, 0);
 });
 
 test("NotificationControl rejecting a friend request calls DELETE /api/v1/users/me/friend-requests/:id and broadcasts update", async (context) => {
@@ -288,12 +293,16 @@ test("NotificationControl rejecting a friend request calls DELETE /api/v1/users/
         }
     ];
 
+    const tracker: { requests: FriendRequest[] } = { requests };
     const { nodes } = capture(() =>
         NotificationControl({
             sidebar: true,
             iconOnly: false,
             open: true,
-            initialRequests: requests
+            initialRequests: requests,
+            onRequestsChange: (reqs) => {
+                tracker.requests = reqs;
+            }
         })
     );
 
@@ -306,6 +315,7 @@ test("NotificationControl rejecting a friend request calls DELETE /api/v1/users/
     assert.ok(calls[0].url.endsWith("/api/v1/users/me/friend-requests/42"));
     assert.equal(calls[0].method, "DELETE");
     assert.deepEqual(events, [{ type: "reject", requestId: 42 }]);
+    assert.equal(tracker.requests.length, 0);
 });
 
 test("NotificationControl accept failure does not broadcast update", async (context) => {
@@ -334,12 +344,16 @@ test("NotificationControl accept failure does not broadcast update", async (cont
         }
     ];
 
+    const tracker = { error: null as string | null };
     const { nodes } = capture(() =>
         NotificationControl({
             sidebar: true,
             iconOnly: false,
             open: true,
-            initialRequests: requests
+            initialRequests: requests,
+            onActionErrorChange: (err) => {
+                tracker.error = err;
+            }
         })
     );
 
@@ -348,6 +362,58 @@ test("NotificationControl accept failure does not broadcast update", async (cont
 
     await acceptBtn.props.onClick?.();
     assert.equal(events.length, 0);
+    assert.equal(tracker.error, "Failed to accept friend request");
+});
+
+test("NotificationControl reject failure does not broadcast update and displays error", async (context) => {
+    const events: Array<{ type: string; requestId: number }> = [];
+    const unsubscribe = subscribeToFriendRequestUpdates((e) => {
+        events.push(e);
+    });
+    context.after(unsubscribe);
+
+    context.mock.method(globalThis, "fetch", async () => {
+        return Response.json(
+            { error: { code: "SERVER_ERROR", message: "Failed to reject friend request" } },
+            { status: 500, headers: { "content-type": "application/json" } }
+        );
+    });
+
+    const requests = [
+        {
+            requestId: 42,
+            requester: {
+                userId: "user-1",
+                username: "alice",
+                displayName: "Alice Wonderland",
+                profilePictureUrl: null
+            }
+        }
+    ];
+
+    const tracker: { error: string | null; requests: FriendRequest[] } = { error: null, requests };
+    const { nodes } = capture(() =>
+        NotificationControl({
+            sidebar: true,
+            iconOnly: false,
+            open: true,
+            initialRequests: requests,
+            onActionErrorChange: (err) => {
+                tracker.error = err;
+            },
+            onRequestsChange: (reqs) => {
+                tracker.requests = reqs;
+            }
+        })
+    );
+
+    const rejectBtn = nodes.find((n) => n.type === "button" && n.props.children === "reject");
+    assert.ok(rejectBtn);
+
+    await rejectBtn.props.onClick?.();
+    assert.equal(events.length, 0);
+    assert.equal(tracker.error, "Failed to reject friend request");
+    assert.equal(tracker.requests.length, 1);
 });
 
 test("NotificationControl hides requests and counter when signed out", () => {

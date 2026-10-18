@@ -24,6 +24,8 @@ type Props = {
     isOwner?: boolean;
     friendshipStatus?: FriendshipStatus;
     initialConfirmUnfriendOpen?: boolean;
+    onFriendshipStatusChange?: (status: FriendshipStatus) => void;
+    onActionErrorChange?: (error: string | null) => void;
 };
 
 function getNameStyle(nameStr: string): string {
@@ -53,7 +55,9 @@ export default function ProfileHero({
     stats,
     isOwner = true,
     friendshipStatus,
-    initialConfirmUnfriendOpen = false
+    initialConfirmUnfriendOpen = false,
+    onFriendshipStatusChange,
+    onActionErrorChange
 }: Props) {
     const router = useOptionalRouter();
     const [actionStatus, setActionStatus] = useState<FriendshipStatus | null>(null);
@@ -69,14 +73,18 @@ export default function ProfileHero({
         if (pending || currentStatus === "accepted" || currentStatus === "pending_sent") return;
         setPending(true);
         setActionError(null);
+        onActionErrorChange?.(null);
         try {
             const res = await sendFriendRequest(profile.username);
             setActionStatus(res.status);
+            onFriendshipStatusChange?.(res.status);
         } catch (caught) {
             if (caught instanceof ProfileApiError && caught.status === 401) {
                 router?.push("/login");
             } else {
-                setActionError(caught instanceof Error ? caught.message : "Failed to send friend request.");
+                const errMsg = caught instanceof Error ? caught.message : "Failed to send friend request.";
+                setActionError(errMsg);
+                onActionErrorChange?.(errMsg);
             }
         } finally {
             setPending(false);
@@ -227,7 +235,7 @@ export default function ProfileHero({
                                 ) : (
                                     <button
                                         type="button"
-                                        onClick={() => void handleFriendAction()}
+                                        onClick={handleFriendAction}
                                         disabled={pending || currentStatus === "pending_sent"}
                                         aria-label="Add friend"
                                         className="border-line text-12 text-muted-foreground hover:text-foreground hover:border-foreground font-body disabled:hover:text-muted-foreground disabled:hover:border-line inline-flex h-7 cursor-pointer items-center justify-center rounded-[2px] border px-3.5 font-medium transition-colors disabled:cursor-default disabled:opacity-60"
@@ -459,16 +467,19 @@ export default function ProfileHero({
                     onConfirm={async () => {
                         setPending(true);
                         setActionError(null);
+                        onActionErrorChange?.(null);
                         try {
                             await removeFriendByHandle(profile.username);
                             setActionStatus("none");
+                            onFriendshipStatusChange?.("none");
                             setConfirmUnfriendOpen(false);
                         } catch (caught) {
-                            setActionError(
+                            const errMsg =
                                 caught instanceof Error
                                     ? caught.message
-                                    : `Failed to remove @${profile.username} from friends.`
-                            );
+                                    : `Failed to remove @${profile.username} from friends.`;
+                            setActionError(errMsg);
+                            onActionErrorChange?.(errMsg);
                         } finally {
                             setPending(false);
                         }

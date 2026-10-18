@@ -228,12 +228,16 @@ test("ProfileHero sends friend request through real API wiring and transitions s
         profilePicture: null
     };
 
+    const tracker = { status: "none" };
     const { nodes } = capture(() =>
         ProfileHero({
             profile,
             stats: null,
             isOwner: false,
-            friendshipStatus: "none"
+            friendshipStatus: "none",
+            onFriendshipStatusChange: (status) => {
+                tracker.status = status;
+            }
         })
     );
 
@@ -245,6 +249,7 @@ test("ProfileHero sends friend request through real API wiring and transitions s
     assert.equal(calls.length, 1);
     assert.ok(calls[0].url.endsWith("/api/v1/users/by-handle/elena/friend-request"));
     assert.equal(calls[0].method, "POST");
+    assert.equal(tracker.status, "pending_sent");
 });
 
 test("ProfileHero displays visible error when sendFriendRequest fails", async (context) => {
@@ -266,12 +271,16 @@ test("ProfileHero displays visible error when sendFriendRequest fails", async (c
         profilePicture: null
     };
 
+    const tracker = { error: null as string | null };
     const { nodes } = capture(() =>
         ProfileHero({
             profile,
             stats: null,
             isOwner: false,
-            friendshipStatus: "none"
+            friendshipStatus: "none",
+            onActionErrorChange: (err) => {
+                tracker.error = err;
+            }
         })
     );
 
@@ -279,6 +288,7 @@ test("ProfileHero displays visible error when sendFriendRequest fails", async (c
     assert.ok(addBtn);
 
     await addBtn.props.onClick?.();
+    assert.equal(tracker.error, "Failed to create friendship request");
 });
 
 test("ProfileHero unfriend confirms removal via removeFriendByHandle", async (context) => {
@@ -299,13 +309,17 @@ test("ProfileHero unfriend confirms removal via removeFriendByHandle", async (co
         profilePicture: null
     };
 
+    const tracker = { status: "accepted" };
     const { nodes } = capture(() =>
         ProfileHero({
             profile,
             stats: null,
             isOwner: false,
             friendshipStatus: "accepted",
-            initialConfirmUnfriendOpen: true
+            initialConfirmUnfriendOpen: true,
+            onFriendshipStatusChange: (status) => {
+                tracker.status = status;
+            }
         })
     );
 
@@ -317,6 +331,7 @@ test("ProfileHero unfriend confirms removal via removeFriendByHandle", async (co
     assert.equal(calls.length, 1);
     assert.ok(calls[0].url.endsWith("/api/v1/users/by-handle/chloe/friend"));
     assert.equal(calls[0].method, "DELETE");
+    assert.equal(tracker.status, "none");
 });
 
 test("ProfileHero unfriend failure keeps ConfirmDialog open and sets error", async (context) => {
@@ -338,13 +353,17 @@ test("ProfileHero unfriend failure keeps ConfirmDialog open and sets error", asy
         profilePicture: null
     };
 
+    const tracker = { error: null as string | null };
     const { nodes } = capture(() =>
         ProfileHero({
             profile,
             stats: null,
             isOwner: false,
             friendshipStatus: "accepted",
-            initialConfirmUnfriendOpen: true
+            initialConfirmUnfriendOpen: true,
+            onActionErrorChange: (err) => {
+                tracker.error = err;
+            }
         })
     );
 
@@ -352,4 +371,5 @@ test("ProfileHero unfriend failure keeps ConfirmDialog open and sets error", asy
     assert.ok(confirmDialog, "Expected ConfirmDialog to be open");
 
     await (confirmDialog.props as { onConfirm: () => Promise<void> }).onConfirm();
+    assert.equal(tracker.error, "Could not remove friendship");
 });

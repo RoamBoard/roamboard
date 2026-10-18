@@ -21,6 +21,9 @@ export type FindFriendsDialogProps = {
     initialResults?: UserSearchResult[];
     initialConfirmUnfriendUser?: UserSearchResult | null;
     initialError?: string | null;
+    onResultsChange?: (results: UserSearchResult[]) => void;
+    onErrorChange?: (error: string | null) => void;
+    onUnfriendErrorChange?: (error: string | null) => void;
 };
 
 export default function FindFriendsDialog({
@@ -29,7 +32,10 @@ export default function FindFriendsDialog({
     onFriendAdded,
     initialResults,
     initialConfirmUnfriendUser = null,
-    initialError = null
+    initialError = null,
+    onResultsChange,
+    onErrorChange,
+    onUnfriendErrorChange
 }: FindFriendsDialogProps) {
     const [query, setQuery] = useState("");
     const [results, setResults] = useState<UserSearchResult[]>(initialResults ?? []);
@@ -47,21 +53,46 @@ export default function FindFriendsDialog({
     const handleClose = useCallback(() => {
         setQuery("");
         setResults(initialResults ?? []);
+        onResultsChange?.(initialResults ?? []);
         setError(null);
+        onErrorChange?.(null);
         setSearchRetry(0);
         setUnfriendError(null);
+        onUnfriendErrorChange?.(null);
         setUnfriendLoading(false);
         setActionState({});
         setFailedAvatars({});
         onClose();
-    }, [initialResults, onClose]);
+    }, [initialResults, onClose, onErrorChange, onResultsChange, onUnfriendErrorChange]);
 
     useDialogFocus(dialogRef, handleClose, open && confirmUnfriendUser === null);
 
     const handleQueryChange = (val: string) => {
         setQuery(val);
         setError(null);
+        onErrorChange?.(null);
     };
+
+    const executeSearch = useCallback(
+        async (searchQuery: string) => {
+            const trimmed = searchQuery.trim();
+            setLoading(true);
+            setError(null);
+            onErrorChange?.(null);
+            try {
+                const data = await searchUsers(trimmed);
+                setResults(data);
+                onResultsChange?.(data);
+            } catch (caught) {
+                const message = caught instanceof Error ? caught.message : "Failed to search users. Please try again.";
+                setError(message);
+                onErrorChange?.(message);
+            } finally {
+                setLoading(false);
+            }
+        },
+        [onErrorChange, onResultsChange]
+    );
 
     useEffect(() => {
         if (!open) return;
@@ -73,17 +104,20 @@ export default function FindFriendsDialog({
             () => {
                 setLoading(true);
                 setError(null);
+                onErrorChange?.(null);
                 searchUsers(trimmed)
                     .then((data) => {
                         if (request.active) {
                             setResults(data);
+                            onResultsChange?.(data);
                         }
                     })
                     .catch((caught) => {
                         if (request.active) {
-                            setError(
-                                caught instanceof Error ? caught.message : "Failed to search users. Please try again."
-                            );
+                            const message =
+                                caught instanceof Error ? caught.message : "Failed to search users. Please try again.";
+                            setError(message);
+                            onErrorChange?.(message);
                         }
                     })
                     .finally(() => {
@@ -99,22 +133,28 @@ export default function FindFriendsDialog({
             request.active = false;
             clearTimeout(handle);
         };
-    }, [query, open, initialResults, searchRetry]);
+    }, [query, open, initialResults, searchRetry, onErrorChange, onResultsChange]);
 
     if (!open) return null;
 
     const handleSendRequest = async (handle: string, userId: string) => {
         setActionState((prev) => ({ ...prev, [userId]: "pending" }));
         setError(null);
+        onErrorChange?.(null);
         try {
             const result = await sendFriendRequest(handle);
             setActionState((prev) => ({ ...prev, [userId]: "done" }));
-            setResults((prev) =>
-                prev.map((u) => (u.userId === userId ? { ...u, friendshipStatus: result.status } : u))
+            const next: UserSearchResult[] = results.map((u): UserSearchResult =>
+                u.userId === userId ? { ...u, friendshipStatus: result.status } : u
             );
+            setResults(next);
+            onResultsChange?.(next);
             onFriendAdded?.();
         } catch (caught) {
-            setError(caught instanceof Error ? caught.message : "Could not send friend request. Please try again.");
+            const message =
+                caught instanceof Error ? caught.message : "Could not send friend request. Please try again.";
+            setError(message);
+            onErrorChange?.(message);
             setActionState((prev) => {
                 const next = { ...prev };
                 delete next[userId];
@@ -126,13 +166,20 @@ export default function FindFriendsDialog({
     const handleAcceptRequest = async (requestId: number, userId: string) => {
         setActionState((prev) => ({ ...prev, [userId]: "pending" }));
         setError(null);
+        onErrorChange?.(null);
         try {
             await acceptFriendRequest(requestId);
             setActionState((prev) => ({ ...prev, [userId]: "done" }));
-            setResults((prev) => prev.map((u) => (u.userId === userId ? { ...u, friendshipStatus: "accepted" } : u)));
+            const next: UserSearchResult[] = results.map((u): UserSearchResult =>
+                u.userId === userId ? { ...u, friendshipStatus: "accepted" } : u
+            );
+            setResults(next);
+            onResultsChange?.(next);
             onFriendAdded?.();
         } catch {
-            setError("Could not accept friend request. Please try again.");
+            const message = "Could not accept friend request. Please try again.";
+            setError(message);
+            onErrorChange?.(message);
             setActionState((prev) => {
                 const next = { ...prev };
                 delete next[userId];
@@ -180,6 +227,13 @@ export default function FindFriendsDialog({
                             type="text"
                             value={query}
                             onChange={(e) => handleQueryChange(e.target.value)}
+                            onKeyDown={async (e) => {
+                                if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    const targetValue = (e.target as HTMLInputElement | null)?.value ?? query;
+                                    await executeSearch(targetValue);
+                                }
+                            }}
                             placeholder="Search by name or @handle…"
                             aria-label="Search travelers"
                             className="font-body text-14 text-foreground placeholder:text-muted-foreground/60 w-full bg-transparent focus:outline-none"
@@ -216,7 +270,7 @@ export default function FindFriendsDialog({
                             <p className="text-12 font-body mb-2 text-red-500">{error}</p>
                             <button
                                 type="button"
-                                onClick={() => setSearchRetry((v) => v + 1)}
+                                onClick={() => void executeSearch(query)}
                                 className="text-12 text-foreground cursor-pointer font-medium underline underline-offset-4 hover:opacity-80"
                             >
                                 Retry search
@@ -360,15 +414,18 @@ export default function FindFriendsDialog({
                         setActionState((prev) => ({ ...prev, [target.userId]: "pending" }));
                         try {
                             await removeFriend(target.userId);
-                            setResults((prev) =>
-                                prev.map((u) => (u.userId === target.userId ? { ...u, friendshipStatus: "none" } : u))
+                            const next: UserSearchResult[] = results.map((u): UserSearchResult =>
+                                u.userId === target.userId ? { ...u, friendshipStatus: "none" } : u
                             );
+                            setResults(next);
+                            onResultsChange?.(next);
                             onFriendAdded?.();
                             setConfirmUnfriendUser(null);
                         } catch (caught) {
-                            setUnfriendError(
-                                caught instanceof Error ? caught.message : "Could not remove friend. Please try again."
-                            );
+                            const message =
+                                caught instanceof Error ? caught.message : "Could not remove friend. Please try again.";
+                            setUnfriendError(message);
+                            onUnfriendErrorChange?.(message);
                         } finally {
                             setUnfriendLoading(false);
                             setActionState((prev) => {
