@@ -489,8 +489,12 @@ test("ConfirmDialog renders accessible alertdialog and executes onCancel and onC
             title: "Unfriend Chloe Martin?",
             description: "Are you sure you want to remove @chloe from your friends?",
             confirmLabel: "Unfriend",
-            onCancel: () => events.push("cancel"),
-            onConfirm: () => events.push("confirm")
+            onCancel: () => {
+                events.push("cancel");
+            },
+            onConfirm: () => {
+                events.push("confirm");
+            }
         })
     );
 

@@ -11,8 +11,8 @@ type Props = {
     confirmVariant?: "default" | "destructive";
     error?: string | null;
     loading?: boolean;
-    onCancel: () => void;
-    onConfirm: () => void | Promise<void>;
+    onCancel: () => unknown;
+    onConfirm: () => unknown;
 };
 
 export default function ConfirmDialog({
