@@ -33,6 +33,8 @@ import type {
     BoardStatus
 } from "@/types/board-creator";
 import { loadProfile } from "@/lib/profile";
+import { findCountry } from "@/lib/countries";
+import type { StartingPlace } from "@/lib/destination-places";
 
 const chapterClasses =
     "mx-auto grid w-full max-w-[96rem] scroll-mt-36 gap-8 px-5 pb-20 sm:gap-10 sm:px-8 lg:grid-cols-[21rem_minmax(0,1fr)] lg:gap-16 lg:px-12 lg:pb-28";
@@ -77,22 +79,57 @@ function addPhotoSuggestions(current: BoardDayDraft[], uploads: UploadedBoardIma
 export default function BoardCreator({
     initialBoardId,
     expectedStatus = "draft",
-    initialMode = "smart"
+    initialMode = "smart",
+    initialPlace
 }: {
     initialBoardId?: number;
     expectedStatus?: BoardStatus;
     initialMode?: "smart" | "scratch";
+    initialPlace?: StartingPlace;
 }) {
     const [leaveHref, setLeaveHref] = useState<string | null>(null);
     const saveToastId = useId();
     const saveInFlight = useRef(false);
     const [mode, setMode] = useState(initialMode);
-    const [title, setTitle] = useState("");
+    const [title, setTitle] = useState(
+        initialPlace && initialBoardId === undefined ? `${initialPlace.city} board` : ""
+    );
     const [description, setDescription] = useState("");
     const [images, setImages] = useState<BoardImageDraft[]>([]);
     const [selectedCoverImageId, setSelectedCoverImageId] = useState<number | null>(null);
     const initialDayId = useId();
-    const [days, setDays] = useState<BoardDayDraft[]>(() => [{ id: initialDayId, dayNumber: 1, date: null, pins: [] }]);
+    // A discovered place starts as an editable Day 1 activity. Nothing is saved until the user saves the Board.
+    const [days, setDays] = useState<BoardDayDraft[]>(() => [
+        {
+            id: initialDayId,
+            dayNumber: 1,
+            date: null,
+            pins:
+                initialPlace && initialBoardId === undefined
+                    ? [
+                          {
+                              id: `${initialDayId}-place`,
+                              order: 0,
+                              time: "",
+                              title: initialPlace.name,
+                              description: "",
+                              category: "activity",
+                              source: initialPlace.id.startsWith("wikivoyage:") ? "manual" : "geoapify",
+                              location: {
+                                  name: initialPlace.name,
+                                  address: initialPlace.address,
+                                  latitude: initialPlace.latitude,
+                                  longitude: initialPlace.longitude,
+                                  city: initialPlace.city,
+                                  country: findCountry(initialPlace.country)?.name ?? null,
+                                  countryCode: initialPlace.country,
+                                  mapboxId: initialPlace.id
+                              }
+                          }
+                      ]
+                    : []
+        }
+    ]);
     const [tags, setTags] = useState<string[]>([]);
     const [allowedTags, setAllowedTags] = useState<Array<{ tagId: number; name: string }>>([]);
     const [visibility, setVisibility] = useState<BoardCreatorPayload["visibility"]>("collaborators");

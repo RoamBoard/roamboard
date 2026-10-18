@@ -19,11 +19,25 @@ type Props = {
     routeGeometry: Array<[number, number]>;
     onMapClick?: (latitude: number, longitude: number) => void;
     onPointClick?: (point: MapPoint) => void;
+    selectedPointId?: string;
+    initialCenter?: { latitude: number; longitude: number };
+    fillHeight?: boolean;
+    scrollZoom?: boolean;
 };
 
 const routeSource = "roamboard-provider-route";
 
-export default function InteractiveMap({ token, points, routeGeometry, onMapClick, onPointClick }: Props) {
+export default function InteractiveMap({
+    token,
+    points,
+    routeGeometry,
+    onMapClick,
+    onPointClick,
+    selectedPointId,
+    initialCenter,
+    fillHeight = false,
+    scrollZoom = true
+}: Props) {
     const containerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<MapboxMap | null>(null);
     const markersRef = useRef<Marker[]>([]);
@@ -31,6 +45,8 @@ export default function InteractiveMap({ token, points, routeGeometry, onMapClic
     const onPointClickRef = useRef(onPointClick);
     const [mapError, setMapError] = useState("");
     const [mapReady, setMapReady] = useState(false);
+    const initialLatitude = initialCenter?.latitude ?? 59.3293;
+    const initialLongitude = initialCenter?.longitude ?? 18.0686;
 
     useEffect(() => {
         onMapClickRef.current = onMapClick;
@@ -49,9 +65,10 @@ export default function InteractiveMap({ token, points, routeGeometry, onMapClic
             const map = new mapboxgl.Map({
                 container: containerRef.current,
                 style: "mapbox://styles/mapbox/streets-v12",
-                center: [18.0686, 59.3293],
+                center: [initialLongitude, initialLatitude],
                 zoom: 11
             });
+            if (!scrollZoom) map.scrollZoom.disable();
             map.addControl(new mapboxgl.NavigationControl(), "top-right");
             map.on("load", () => {
                 map.addSource(routeSource, {
@@ -87,7 +104,7 @@ export default function InteractiveMap({ token, points, routeGeometry, onMapClic
             mapRef.current?.remove();
             mapRef.current = null;
         };
-    }, [token]);
+    }, [token, scrollZoom, initialLatitude, initialLongitude]);
 
     useEffect(() => {
         markersRef.current.forEach((marker) => marker.remove());
@@ -95,11 +112,14 @@ export default function InteractiveMap({ token, points, routeGeometry, onMapClic
         if (!map || !mapReady) return;
         markersRef.current = points.map((point, index) => {
             const element = document.createElement("div");
-            element.className = "provider-map-pin";
-            if (point.color) element.style.backgroundColor = point.color;
+            // Mapbox positions the outer element with a transform; rotate only the inner pin.
+            const pin = document.createElement("div");
+            pin.className = "provider-map-pin";
+            if (point.color) pin.style.backgroundColor = point.color;
             const label = document.createElement("span");
             label.textContent = String(index + 1);
-            element.append(label);
+            pin.append(label);
+            element.append(pin);
             element.title = point.label;
             if (onPointClickRef.current) {
                 element.setAttribute("role", "button");
@@ -144,6 +164,32 @@ export default function InteractiveMap({ token, points, routeGeometry, onMapClic
     }, [points, mapReady]);
 
     useEffect(() => {
+        const point = points.find((item) => item.id === selectedPointId);
+        if (!mapReady) return;
+        // Keep every marker visible while centering the selected sight. Other map users retain their old behavior.
+        markersRef.current.forEach((marker, index) => {
+            const selected = points[index]?.id === selectedPointId;
+            const element = marker.getElement();
+            if (onPointClickRef.current) element.setAttribute("aria-pressed", String(selected));
+            const pin = element.querySelector<HTMLElement>(".provider-map-pin");
+            if (pin) {
+                pin.style.backgroundColor = selected ? "#e7e7e7" : (points[index]?.color ?? "#161616");
+                pin.style.color = selected ? "#161616" : "#ffffff";
+                pin.style.borderColor = selected ? "#161616" : "#ffffff";
+            }
+        });
+        if (!point) return;
+        mapRef.current?.easeTo({ center: [point.longitude, point.latitude], zoom: 14 });
+    }, [selectedPointId, points, mapReady]);
+
+    useEffect(() => {
+        if (!containerRef.current) return;
+        const observer = new ResizeObserver(() => mapRef.current?.resize());
+        observer.observe(containerRef.current);
+        return () => observer.disconnect();
+    }, []);
+
+    useEffect(() => {
         const source = mapRef.current?.getSource(routeSource) as mapboxgl.GeoJSONSource | undefined;
         if (!source) return;
         source.setData({
@@ -160,8 +206,12 @@ export default function InteractiveMap({ token, points, routeGeometry, onMapClic
             </div>
         );
     return (
-        <div className="relative">
-            <div ref={containerRef} className="h-96 w-full sm:h-120" aria-label="Interactive Mapbox map" />
+        <div className={fillHeight ? "relative h-full min-h-0" : "relative"}>
+            <div
+                ref={containerRef}
+                className={fillHeight ? "h-full w-full" : "h-96 w-full sm:h-120"}
+                aria-label="Interactive Mapbox map"
+            />
             {mapError ? (
                 <p className="text-12 text-foreground absolute right-3 bottom-3 left-3 bg-white/95 p-3" role="alert">
                     {mapError}

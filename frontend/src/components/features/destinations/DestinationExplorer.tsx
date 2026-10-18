@@ -4,7 +4,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { destinationPages, destinationPageHref, findDestinationPage } from "@/data/destination-atlas";
+import { destinationGuideHref, featuredDestinationGuides } from "@/lib/destination-guides";
 import type { FormEvent } from "react";
 import {
     loadDestinationContext,
@@ -54,9 +54,9 @@ export default function DestinationExplorer() {
     }
 
     async function chooseDestination(destination: Destination) {
-        const guide = findDestinationPage(destination);
-        if (guide) {
-            router.push(destinationPageHref(guide));
+        const guideHref = destinationGuideHref(destination);
+        if (guideHref) {
+            router.push(guideHref);
             return;
         }
         setContextLoading(true);
@@ -85,11 +85,11 @@ export default function DestinationExplorer() {
                 <p className="text-15 text-graphite mt-6 max-w-xl leading-7">
                     Search a place to explore its destination guide or compact travel brief.
                 </p>
-                <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm" aria-label="Editorial destination guides">
-                    {destinationPages.map((destination) => (
+                <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm" aria-label="Destination guide shortcuts">
+                    {featuredDestinationGuides.map((destination) => (
                         <Link
                             key={destination.slug}
-                            href={destinationPageHref(destination)}
+                            href={`/discover/destinations/${destination.slug}`}
                             className="inline-flex min-h-11 items-center underline underline-offset-4"
                         >
                             {destination.name} ↗
@@ -140,7 +140,11 @@ export default function DestinationExplorer() {
                             </strong>
                             <span className="text-14 text-graphite mt-2 block leading-6">{destination.address}</span>
                             <span className="text-12 text-foreground mt-5 block">
-                                {contextLoading ? "Loading brief..." : "Open destination brief ->"}
+                                {contextLoading
+                                    ? "Loading brief..."
+                                    : destinationGuideHref(destination)
+                                      ? "Open city guide ->"
+                                      : "Open destination brief ->"}
                             </span>
                         </button>
                     ))}

@@ -7,6 +7,7 @@ import type {
     DestinationResult,
     DestinationWeather
 } from "./destination.types.js";
+import type { GuideDestination, GuideArticle } from "./destination.types.js";
 
 interface MapboxFeature {
     id?: unknown;
@@ -31,6 +32,17 @@ function stringValue(value: unknown, fallback = ""): string {
 
 function numberValue(value: unknown): number | undefined {
     return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+// Guide matching and travel-guide sights compare real distances, regardless of city-name spelling.
+export function distanceKm(latitude1: number, longitude1: number, latitude2: number, longitude2: number): number {
+    const radians = (degrees: number) => (degrees * Math.PI) / 180;
+    const haversine =
+        Math.sin(radians(latitude2 - latitude1) / 2) ** 2 +
+        Math.cos(radians(latitude1)) *
+            Math.cos(radians(latitude2)) *
+            Math.sin(radians(longitude2 - longitude1) / 2) ** 2;
+    return 6371 * 2 * Math.asin(Math.sqrt(Math.min(1, haversine)));
 }
 
 async function readJson(response: Response): Promise<unknown> {
@@ -176,6 +188,95 @@ export async function fetchWikipedia(query: string, observe?: QuotaObserver): Pr
               thumbnailUrl: stringValue(objectValue(page.thumbnail).source) || undefined
           }
         : undefined;
+}
+
+export function cityName(value: string): string {
+    return value
+        .normalize("NFD")
+        .replace(/\p{Diacritic}/gu, "")
+        .toLowerCase()
+        .replace(/\s*\([^)]*\)/g, "")
+        .split(",")[0]!
+        .replace(/^city of\s+|\s+city$/g, "")
+        .trim();
+}
+
+// Keep the guide brief without rewriting the source or cutting a sentence unless it alone exceeds the limit.
+export function guideExcerpt(text: string, sentenceLimit = 3, wordLimit = 80): string {
+    const sentences = Array.from(new Intl.Segmenter("en", { granularity: "sentence" }).segment(text)).slice(
+        0,
+        sentenceLimit
+    );
+    let excerpt = "";
+    for (const sentence of sentences) {
+        const candidate = excerpt + sentence.segment;
+        if (candidate.trim().split(/\s+/).length > wordLimit)
+            return excerpt.trim()
+                ? `${excerpt.trim()}...`
+                : `${candidate.trim().split(/\s+/).slice(0, wordLimit).join(" ")}...`;
+        excerpt = candidate;
+    }
+    return excerpt.trim();
+}
+
+export async function fetchWikivoyageGuide(
+    destination: GuideDestination,
+    observe?: QuotaObserver
+): Promise<GuideArticle | null> {
+    const url = new URL("https://en.wikivoyage.org/w/api.php");
+    const parameters = {
+        action: "query",
+        generator: "search",
+        gsrsearch: `${destination.name} ${destination.country}`,
+        gsrnamespace: "0",
+        gsrlimit: "5",
+        prop: "extracts|coordinates|pageprops|info",
+        inprop: "url",
+        exintro: "1",
+        explaintext: "1",
+        exlimit: "5",
+        coprimary: "primary",
+        colimit: "1",
+        ppprop: "disambiguation",
+        format: "json",
+        formatversion: "2"
+    };
+    for (const [name, value] of Object.entries(parameters)) url.searchParams.set(name, value);
+    const response = await fetch(url, {
+        headers: { "User-Agent": "Roamboard/1.0 (https://github.com/RoamBoard/roamboard; student travel project)" },
+        signal: AbortSignal.timeout(8_000)
+    });
+    await observeProviderResponse(response, observe);
+    if (!response.ok) throw new Error(`Wikivoyage returned ${response.status}`);
+    const body = objectValue(await readJson(response));
+    if (body.error) throw new Error("Wikivoyage could not complete the guide search");
+    const pages = objectValue(body.query).pages;
+    let article: GuideArticle | null = null;
+    let nearest = 50;
+    for (const candidate of Array.isArray(pages) ? pages : []) {
+        const page = objectValue(candidate);
+        if (
+            "disambiguation" in objectValue(page.pageprops) ||
+            cityName(stringValue(page.title)) !== cityName(destination.name)
+        )
+            continue;
+        const coordinates = Array.isArray(page.coordinates) ? page.coordinates : [];
+        const coordinate = coordinates.map(objectValue).find((item) => item.primary === true || item.primary === "");
+        if (!coordinate || (coordinate.globe !== undefined && coordinate.globe !== "earth")) continue;
+        const latitude = numberValue(coordinate.lat);
+        const longitude = numberValue(coordinate.lon);
+        if (latitude === undefined || longitude === undefined || Math.abs(latitude) > 90 || Math.abs(longitude) > 180)
+            continue;
+        const distance = distanceKm(destination.latitude, destination.longitude, latitude, longitude);
+        const title = stringValue(page.title);
+        const description = stringValue(page.extract);
+        const articleUrl = stringValue(page.fullurl);
+        if (distance <= nearest && title && description && articleUrl.startsWith("https://en.wikivoyage.org/wiki/")) {
+            nearest = distance;
+            article = { title, description: guideExcerpt(description), url: articleUrl };
+        }
+    }
+    return article;
 }
 
 export async function fetchUnsplash(

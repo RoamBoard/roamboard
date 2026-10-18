@@ -6,29 +6,37 @@ import DiscoverPhoto from "@/components/features/discover/DiscoverPhoto";
 import DiscoverBoardCard from "@/components/features/discover/DiscoverBoardCard";
 import { getDiscoverDestination } from "@/data/discover-destinations";
 import { getDiscoverBoardsByDestination } from "@/data/discover-boards";
-import { getDestinationPage } from "@/data/destination-atlas";
-import { DestinationPage as DestinationExperience } from "@/components/features/destinations/DestinationPage";
+import { getDestinationGuideInput } from "@/lib/destination-guides";
+import DestinationGuide from "@/components/features/destinations/DestinationGuide";
 
-type Props = { params: Promise<{ slug: string }> };
+type Props = {
+    params: Promise<{ slug: string }>;
+    searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
     const slug = (await params).slug;
-    const destination = getDestinationPage(slug) ?? getDiscoverDestination(slug);
+    const input = getDestinationGuideInput(slug, await searchParams);
+    const destination = input ?? getDiscoverDestination(slug);
     if (!destination) notFound();
     return {
         title: `${destination.name} | Roamboard`,
-        description: "introduction" in destination ? destination.introduction : destination.description
+        description: input
+            ? `Explore ${input.name}: a city introduction, photos and public travel boards.`
+            : getDiscoverDestination(slug)?.description
     };
 }
 
-export default async function DestinationPage({ params }: Props) {
+export default async function DestinationPage({ params, searchParams }: Props) {
     const slug = (await params).slug;
-    const guide = getDestinationPage(slug);
+    const guide = getDestinationGuideInput(slug, await searchParams);
     if (guide)
         return (
-            <div className="[&+footer]:pl-20 [&+footer]:transition-colors [&+footer]:duration-500 motion-reduce:[&+footer]:transition-none md:[&+footer]:pl-28 [&:has([href='#atlas'][aria-current='location'])+footer]:bg-[var(--atlas-background)] [&:has([href='#atlas'][aria-current='location'])+footer]:text-[var(--atlas-muted)] [&>div]:min-h-0">
+            // Attribution is inside the closing panel so the guide stays exactly one viewport tall.
+            <div className="[&+footer]:hidden [&>div]:min-h-0">
                 <AppShell activeHref="/discover" discover={{ collapsed: true }}>
-                    <DestinationExperience key={guide.slug} destination={guide} />
+                    {/* A full city identity keeps same-name cities and their in-flight reads separate. */}
+                    <DestinationGuide key={JSON.stringify(guide)} input={guide} />
                 </AppShell>
             </div>
         );

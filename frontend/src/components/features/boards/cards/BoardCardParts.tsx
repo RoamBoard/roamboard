@@ -3,6 +3,7 @@ import LibraryImage from "@/components/images/LibraryImage";
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
 import type { BoardCardActions, BoardCardImage, BoardCardSummary } from "@/types/board-card";
+import BoardPhoto from "../BoardPhoto";
 
 export const cardAsset = (name: string) => `/images/board-cards/${name}`;
 
@@ -57,8 +58,17 @@ export function BoardCardPhoto({
     className?: string;
     sizes: string;
 }) {
+    // Live guide photos use the existing cookie-aware image and failure placeholder.
+    if (image.unoptimized)
+        return (
+            <BoardPhoto
+                image={{ id: image.src, url: image.src, alt: image.alt, source: "application" }}
+                placeholderLabel={image.alt}
+                className={className}
+                sizes={sizes}
+            />
+        );
     const Photo = image.src.startsWith("library:") ? LibraryImage : Image;
-
     return (
         <div className={`relative overflow-hidden ${className}`}>
             <div
@@ -79,7 +89,7 @@ export function BoardCardPhoto({
                     alt={image.alt}
                     fill
                     sizes={sizes}
-                    unoptimized={!image.src.startsWith("https://images.unsplash.com/")}
+                    unoptimized={image.unoptimized ?? !image.src.startsWith("https://images.unsplash.com/")}
                     className="object-cover"
                     style={{ objectPosition: image.position ?? "center" }}
                 />
