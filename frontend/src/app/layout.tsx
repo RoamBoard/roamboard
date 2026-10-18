@@ -4,6 +4,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import WelcomeTransitionProvider from "@/components/features/welcome/WelcomeTransitionProvider";
 import "./globals.css";
 import { ImageLibraryProvider } from "@/components/images/LibraryImage";
+import DestinationTransitionProvider from "@/components/features/destinations/DestinationTransitionProvider";
 
 // Both typefaces are from Fontshare (fontshare.com). Download the variable
 // .woff2 files and place them in src/fonts/.
@@ -47,7 +48,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </head>
             <body className={`${cabinet.variable} ${satoshi.variable} antialiased`}>
                 <ImageLibraryProvider>
-                    <WelcomeTransitionProvider>{children}</WelcomeTransitionProvider>
+                    <WelcomeTransitionProvider>
+                        <DestinationTransitionProvider>{children}</DestinationTransitionProvider>
+                    </WelcomeTransitionProvider>
                 </ImageLibraryProvider>
             </body>
         </html>

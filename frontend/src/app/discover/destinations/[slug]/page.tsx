@@ -8,6 +8,7 @@ import { getDiscoverDestination } from "@/data/discover-destinations";
 import { getDiscoverBoardsByDestination } from "@/data/discover-boards";
 import { getDestinationPage } from "@/data/destination-atlas";
 import { DestinationPage as DestinationExperience } from "@/components/features/destinations/DestinationPage";
+import { DestinationReady } from "@/components/features/destinations/DestinationTransitionProvider";
 import { destinationSelectionMatches, type DestinationSelectionParams } from "@/lib/destination-search";
 
 type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<DestinationSelectionParams> };
@@ -18,7 +19,13 @@ async function resolveDestination({ params, searchParams }: Props) {
     const destination = guide ?? getDiscoverDestination(slug);
     const selection = (await searchParams) ?? {};
     if (!destination || !destinationSelectionMatches(destination, guide ? "place" : "country", selection)) notFound();
-    return { guide, destination };
+    const query = new URLSearchParams();
+    Object.entries(selection).forEach(([key, value]) => {
+        if (Array.isArray(value)) value.forEach((entry) => query.append(key, entry));
+        else if (value !== undefined) query.set(key, value);
+    });
+    const href = `/discover/destinations/${encodeURIComponent(slug)}${query.size ? `?${query}` : ""}`;
+    return { guide, destination, href };
 }
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
@@ -30,11 +37,12 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 }
 
 export default async function DestinationPage(props: Props) {
-    const { guide, destination: resolved } = await resolveDestination(props);
+    const { guide, destination: resolved, href } = await resolveDestination(props);
     if (guide)
         return (
             <div className="[&+footer]:pl-20 [&+footer]:transition-colors [&+footer]:duration-500 motion-reduce:[&+footer]:transition-none md:[&+footer]:pl-28 [&:has([href='#atlas'][aria-current='location'])+footer]:bg-[var(--atlas-background)] [&:has([href='#atlas'][aria-current='location'])+footer]:text-[var(--atlas-muted)] [&>div]:min-h-0">
                 <AppShell activeHref="/discover" discover={{ collapsed: true }}>
+                    <DestinationReady href={href} />
                     <DestinationExperience key={guide.slug} destination={guide} />
                 </AppShell>
             </div>
@@ -45,6 +53,7 @@ export default async function DestinationPage(props: Props) {
 
     return (
         <AppShell activeHref="/discover" discover={{ collapsed: true }}>
+            <DestinationReady href={href} />
             <div className="min-h-dvh py-12 pr-5 pl-24 md:py-16 md:pr-12 md:pl-36">
                 <Link
                     href="/discover#trending-title"
