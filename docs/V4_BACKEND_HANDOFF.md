@@ -1,145 +1,80 @@
 # V4 frontend–backend handoff
 
-Stages 2 and 3 Batches 1–4 — shared enhancement and gallery adoption. Updated 2026-10-19.
-No backend contracts, endpoints or schemas changed. Batch 4 awaits review; Batch 5 has not begun.
+Final Stage 3 / Batch 5 review, 2026-10-19. V1–V4 names and persisted identifiers are unchanged.
+No backend code, endpoint, access rule, schema or migration was changed for this work.
+See [the final QA report](V4_QA_REPORT.md) for the usage inventory, browser coverage and verification limits.
 
-## Already implemented and connected
+## A. Already supported and connected
 
-- V4 account saving uses existing `PUT/DELETE /api/v1/boards/{boardId}/save` through `saveBoardBookmark` and
-  `unsaveBoardBookmark`. `AccountPhotoBoardCard` shares the local save integration across summaries and the document adapter.
-  `BoardDocumentPhotoCard` reuses an already-loaded document, accepts `savedByMe`, prevents duplicate requests, retains state on failure,
-  and offers `/login` after 401. The server still enforces session, Origin, ownership and access.
-- `toPhotoBoardCard` consumes canonical title, author, selected cover, confirmed locations, tags, days, status and
-  visibility. Protected images retain direct API delivery; external photo fallback retains credits. No count is fabricated.
-- Management permission identifies the owner; content-edit permission does not. Draft visibility is always owner-only.
-- My Boards featured and Recently Created V4 cards reuse documents already loaded through the authenticated
-  owner-published list (`GET /api/v1/boards?scope=published` and existing Board reads). Explicit owner-list context
-  supplies ownership; document status/visibility supplies the indicator. No author-name inference or extra requests.
-- Batch 1 preserves existing loading, partial-failure retries, search and pagination. Destination stories and Archive
-  remain labelled editorial samples with no persistence, account controls, invented Board links or save counts.
-  No new blocking backend capability was encountered in this batch.
+**Connected in code does not mean successfully tested against a live account.** The following integrations use existing
+credentialed services and controlled-response regression tests. Local persisted-account verification remains blocked.
 
-- Batch 2 Continue and Draft selection use the same canonical V4 adapter. Existing draft/published owner-list
-  endpoints, first-five preview reads, separate pagination and targeted retries remain unchanged. Continue editor
-  links still require a fresh document's `canEditContent`; drafts retain `/boards/drafts/{id}` and published edits
-  `/boards/{id}/edit`. No extra per-card requests or backend writes were added.
+| Capability                                    | Existing contract / integration                                                     | Current frontend behavior                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| --------------------------------------------- | ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Save another owner's readable published Board | `PUT /api/v1/boards/{id}/save`; `contracts/profile.md`; `saveBoardBookmark`         | `AccountPhotoBoardCard` / `createBoardSaveStore` require reliable ownership, positive persistent ID and known membership. PUT confirmation must match the Board and `saved: true`. Pending writes cannot duplicate; failures retain state; 401 offers sign-in.                                                                                                                                                                                                       |
+| Unsave                                        | `DELETE /api/v1/boards/{id}/save` → idempotent 204; `unsaveBoardBookmark`           | Only confirmed success changes membership. Saved collection rows exit after confirmation, become inert during exit, and move an active bookmark's focus to a remaining card or the list before removal.                                                                                                                                                                                                                                                              |
+| Saved collections                             | `GET /api/v1/users/me/saved-boards?page=&limit=`; `loadSavedBoardsPage`             | My Boards and own-profile saved previews use reliable membership for filled bookmarks. The API excludes caller-owned and currently inaccessible Boards. `saved-boards-store` refreshes page one after deletion to avoid offset skips, ignores stale in-flight pages, deduplicates rows and retains remaining rows with retry if refresh fails. This deliberately resets the loaded window. The profile's visible saved total decrements only after confirmed unsave. |
+| Draft and owned published lists               | `GET /api/v1/boards?scope=drafts\|published&page=`; `backend/BOARD_API_CONTRACT.md` | Continue, Drafts, My Boards and `/boards/mine` retain real IDs, pagination, hydration and retries. `/boards/mine` has card View navigation plus separate View/Edit links. Summary fields remain truthful; no per-card metadata requests were added.                                                                                                                                                                                                                  |
+| Canonical document / permissions              | `GET /api/v1/boards/{id}`; `loadBoardDocument`, `BoardDocumentPhotoCard`            | Existing preview reads supply author, cover, confirmed places, tags, days, status, visibility and `savedByMe`. Management permission establishes ownership; editor permission alone does not. Continue requires a fresh document's edit permission before opening the editor. Drafts reopen at `/boards/drafts/{id}`, published edits at `/boards/{id}/edit`.                                                                                                        |
+| Ownership and visibility                      | Owner-list context; canonical `permissions.canManageBoard`; public handle `isOwner` | Owners see actual existing visibility instead of Save. Draft status overrides selected visibility and says “only you.” Unknown ownership has no account action. Owned summary visibility already exists; the frontend profile type now retains it.                                                                                                                                                                                                                   |
+| Public profile cards                          | `GET /api/v1/users/by-handle/{handle}`; `contracts/profile.md` handle amendment     | Only public summaries and public profile data are shown to other viewers. Profile username supplies the actual author; no edit controls or private fields are introduced. Missing saved membership remains explicitly unavailable, not false.                                                                                                                                                                                                                        |
+| Creator preview                               | Existing local creator state and canonical creation/edit services                   | Cover View and permanently expanded Details View share one derived Board state. Title, cover, tags, duration and confirmed places update from that state. Annotation links focus the existing editor controls. The preview never saves independently.                                                                                                                                                                                                                |
+| Discover presentation                         | Existing sample sources; `DiscoverBoardCard`; RoamFlow source                       | Vibe samples retain real tag navigation without invented Board URLs or account actions. Country/collection populated branches use V4 but currently show honest coming-soon states. RoamFlow remains its existing fictional editorial preview; V3 Featured remains unchanged.                                                                                                                                                                                         |
 
-- Batch 3 migrated the creator preview, including its fixed Cover View / Details View composition. It reuses local
-  creator data and existing cover selection; the preview does not save independently.
-- Batch 4 migrates saved Boards on My Boards and own profiles, `/boards/mine`, own/public profile published Boards,
-  and Discover result presenters. All use the same V4 visual component. `/boards/mine` retains separate View/Edit links.
-- Saved lists use `GET /api/v1/users/me/saved-boards` with existing page/limit parameters. Membership initializes a
-  filled bookmark. The endpoint excludes caller-owned Boards, providing reliable other-owner context. Only a confirmed
-  DELETE removes a card; failures retain it with feedback. A short exit transition respects reduced motion.
-- `saved-boards-store` is page-local, not a global cache. A confirmed removal disables stale load-more offsets and
-  refreshes page one, deduplicating rows and ignoring any in-flight pre-removal page. This intentionally resets the
-  loaded window rather than skipping shifted rows. Failed refreshes keep remaining rows and offer retry. Own-profile
-  saved totals decrement only after confirmed unsave; the three-card preview refills through the existing list endpoint.
-- Owned-list summaries already expose visibility. The profile summary type now retains that existing optional field;
-  public handle summaries omit it. Ownership comes from authenticated owner-list context or the handle response's
-  `isOwner`, never an author-name comparison. No per-card metadata/document requests were added.
-- Discover vibe results remain labelled samples with real tag/category links, no Board links or save controls.
-  Collection/country populated branches use V4, but their source still returns unavailable/empty. Category tiles,
-  full document viewers, unused legacy components and development prototypes are deliberately retained.
+Current environment diagnosis:
 
-## Existing capabilities requiring later frontend adoption
+- Frontend `127.0.0.1:3000` and backend `:3001` are listening. `/health/db` returns `{"status":"unavailable"}`
+  (503 in the existing health handler).
+- The configured `DATABASE_URL` points to loopback port **15432**, with no listener. The existing read-only setup check,
+  run outside the sandbox to distinguish tool restrictions, fails with **ECONNREFUSED**. This matches the missing SSH
+  tunnel described in `backend/README.md`.
+- `DATABASE_URL`, frontend API URL and Google IDs are present; `CLIENT_ORIGIN` is `http://localhost:3000` and the
+  backend/frontend Google client IDs match. Database credentials, schema and migrations cannot be validated until
+  connectivity returns. The browser's cached account name is not evidence of a fresh authenticated database read.
+- Real saved, owned, Continue, Draft and profile routes expose loading/error/retry states. Successful account saving,
+  unsaving, pagination/refill, restoration and permission enforcement still need a live end-to-end check. This is an
+  **environment verification blocker**, not evidence those endpoints are missing. No tunnel or configuration was changed.
 
-- Remix creation remains unavailable; this batch does not implement it.
-- Public search's `popularity` is the existing per-Board save count. A future search-card adapter can map this to
-  `PhotoBoardCardData.savedCount`; it is not an account-level total.
+## B. Backend work required
 
-## Missing summary data; frontend prepared
+These gaps block the named intended behavior, not rendering V4 itself. Expected additions below describe the capability
+needed, **not an agreed new response shape or endpoint**. Existing save/list/draft APIs do not need reimplementation.
 
-- **Per-Board saves outside public search:** canonical documents and ordinary summaries have no save count.
-  The optional `savedCount` presentation field is ready; absent values are omitted. A backend decision on exposing
-  the actual count is needed only if these surfaces must display it. No new endpoint is assumed.
-- **Initial bookmark state outside documents/saved lists:** many summaries do not contain `savedByMe`.
-  `PhotoBoardSave.state` supports `unknown` and disables toggling until membership is resolved. Summary enrichment
-  could remove that limitation at scale; response shape and access semantics require agreement. V4 makes no extra
-  document/list requests solely to infer that an unlisted Board is unsaved.
+| Missing capability                                                                    | Relevant existing endpoint / contract                                                                                            | Expected behavior                                                                                                                                                                                             | Frontend consumer / readiness                                                                                                                                                                                                                   | Blocking scope                                                                                                                       |
+| ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Reliable initial saved membership and viewer eligibility for public-profile summaries | `GET /api/v1/users/by-handle/{handle}`; public-profile amendment in `contracts/profile.md`                                       | Resolve whether the viewer may save each Board and whether it is already saved. Agree summary enrichment or a scalable existing-service composition. Never treat an omitted value as false.                   | `LiveBoardCard` → `toProfilePhotoBoardCard` → `AccountPhotoBoardCard` already supports known/unknown membership and persistent mutations. Summary mapping is pending agreement; the current control is disabled with “Save status unavailable.” | Required **to enable saving from public-profile cards**; non-blocking for safe viewing/navigation.                                   |
+| Agreed live Discover Board source / mapping                                           | `getPublicDiscoverBoards()` is unavailable; existing public `/api/v1/search` is documented in `backend/API_FEATURES_CONTRACT.md` | Agree whether existing search is the source and how real numeric IDs, cover/author, destination/tag filters, pagination and viewer state map into Discover. Do not equate fixture IDs with persistent Boards. | Shared V4 presenter/adapters are ready; live fetching/mapping and account actions are not connected. Current category links and samples remain honest.                                                                                          | Required **to replace Discover samples/coming-soon results with persistent Boards**; non-blocking for the current editorial preview. |
 
-- **Optional metadata on summary-only selection cards:** owner-list summaries do not include authors, tags,
-  confirmed destinations or itinerary length. `toSummaryPhotoBoardCard` / `toDraftPhotoBoardCard` omit them; existing
-  preview documents enrich only the cards already hydrated. If metadata reveal is required across every loaded
-  library card without additional reads, enrich the existing `GET /api/v1/boards?scope=drafts|published` responses.
-  This is optional, not blocking. Published-summary visibility is consumed when supplied; draft access remains owner-only.
+Before declaring live account QA complete, restore the already documented local database connection through the normal
+team workflow, then rerun the account checks in the QA report. This is operational follow-up, not a requested backend
+feature or authorization to change infrastructure.
 
-## Batch 4 summary limitations
+## C. Contract decisions
 
-- Saved summaries supply title, description, owner identity, cover and saved date. They do not supply confirmed
-  destinations, tags, itinerary length, visibility or per-Board saves. These stay absent rather than being derived
-  from titles or account totals. Own published summaries similarly omit most metadata; own profiles supply the
-  already-loaded profile username as author.
-- Public handle summaries supply only ID/title/cover/updated date. The response establishes public access and
-  other ownership, but does not resolve viewer authentication/eligibility or `savedByMe`. Their bookmark is therefore
-  disabled with “Save status unavailable,” rather than falsely unsaved. Enabling account saving here needs reliable
-  membership and viewer context through an agreed summary enrichment or existing scalable integration. V4 does not
-  fetch every document or scan the viewer's entire saved collection to infer missing state.
-- `getPublicDiscoverBoards()` remains unavailable. Migrating its presentation does not connect a live discovery feed.
-  Agree a mapping to real numeric Board IDs, navigation, filters/pagination and viewer save state before enabling
-  persistent interactions. Public search exists, but this batch does not declare it the agreed Discover data source.
+Roamboard is **not implementing collaborative editing, invitations or member-management UI**. The current backend
+nevertheless accepts `collaborators | friends | public`; existing members may read restricted published Boards,
+editors may edit content, and `friends` also admits members. Drafts are owner-only regardless of that field.
+V4 currently communicates “Restricted access” and “Friends” with those actual access explanations. The creator's
+existing “Private” choice still maps to `collaborators`; it explicitly explains invited-member access.
 
-## Contract decision requiring discussion
+A possible future vocabulary is **Public / Friends / Private**, with genuinely owner-only Private access. This needs a
+joint product/backend decision before implementation: define treatment of existing members/editor permissions, existing
+restricted Boards, the friends rule, defaults, compatibility and any migration. Renaming the frontend label alone would
+misrepresent current permissions. No such change is implemented or presumed approved here.
 
-- Product decision: no collaborative Board editing, invitations, or member-management features. Existing backend
-  `collaborators` visibility nevertheless permits the owner and existing Board members; `friends` also admits members.
-  V4 accurately labels these “Restricted access” and “Friends” with accessible explanations. Drafts say “only you.”
-  Backend teammates must agree on any future access/vocabulary changes. The frontend has not changed permissions,
-  treated `collaborators` as owner-only, or added collaboration workflows.
+## D. Optional future improvements
 
-## Integration boundaries and verification
+These improve information density or consistency and are **not required for the migrated cards to work safely**:
 
-- Presentation: `PhotoBoardCard` and `PhotoBoardCardData`; controlled save presentation: `PhotoBoardSave`.
-- Account integration: `AccountPhotoBoardCard`, `BoardDocumentPhotoCard`, `createBoardSaveStore`; summary adapters
-  `toSavedPhotoBoardCard`, `toProfilePhotoBoardCard`; collection state `createSavedBoardsStore`.
-- No additional backend capability is needed to use the current save/unsave controls with a known Board document.
-- Automated tests cover real API helper calls with controlled responses, confirmed state, errors, authentication,
-  ownership and adapters. Live saving could not be verified: the local API returned an error and the documented SSH database tunnel on
-  port 15432 was not listening. No account save was claimed or database configuration changed.
-- Batch 1 browser review covered `/boards` and all three destination routes, desktop and narrow layouts, both themes,
-  keyboard selection/disclosure, spring rearrangement, dragging, carousel controls and horizontal wheel navigation.
-  The local owned-list failure displayed labelled samples; canonical owner controls and real navigation were verified
-  through production-component/API-helper tests rather than claimed as live account verification. Physical touch
-  hardware was unavailable; whole-card disclosure and first-touch preview before linked navigation are independently tested alongside pointer/keyboard controls. The visible Details/Close control was removed following Batch 1 feedback.
-
-- Batch 2 live routes still returned API errors locally. Browser checks use the real routes for error/retry feedback
-  and a development-only, labelled `/dev/board-selection` presentation harness for populated galleries, dark/light
-  layouts, keyboard/tilt/promotion and draft carousel behavior. Fixture links cannot open or save account Boards.
-  Real document restoration, fresh permissions, hydration limits and retry/pagination are verified through the existing
-  API helpers with controlled responses; live persisted editor restoration remains unverified until the API is available.
-
-## Backend teammate action list
-
-Required to unlock currently unavailable behavior (agreement first; no new endpoint is presumed):
-
-- Resolve public-profile card viewer eligibility and initial saved membership at summary level so the frontend can
-  enable truthful save/unsave controls without per-card document reads.
-- Agree the real Discover Board source and its identity, filters/pagination and viewer-state mapping; fixture cards
-  cannot become navigable or persist saves until this exists.
-- Discuss the existing `collaborators`/member access semantics against the no-collaborative-editing product direction.
-  Preserve current permissions until an explicit contract decision; no collaboration interface is requested.
-
-Optional enrichment, not a blocker for the migrated cards:
-
-- Expose actual per-Board save counts outside public search if those contexts should show them; public search already
-  has `popularity`. Never use profile aggregate totals as card counts.
-- Add author, confirmed destinations, tags and itinerary length to relevant summaries if every hover should show them
-  without hydration. Owned-list visibility already exists and needs no new backend implementation.
-
-Batch 4 verification:
-
-- Full frontend tests, independently authored Batch 4 regressions, frontend TypeScript, root formatting/check and
-  root frontend/backend lint pass. The production webpack build passes. No backend or schema changes were made.
-- Browser review covered desktop and 390px/320px layouts, light/dark themes, keyboard focus/Escape, saved-card
-  filtering/removal transitions, owned View/Edit targets, own/public profile card controls, and Discover disclosure
-  and real tag navigation. Reduced-motion emulation was confirmed active while testing immediate fixture removal;
-  temporary motion/viewport/theme overrides were restored. A narrow development-selector overflow was corrected.
-- Real My Boards saved-list, `/boards/mine` and profile routes still fail locally; error/retry feedback was inspected.
-  Populated account layouts were inspected through the labelled `/dev/board-collections` harness. Country and
-  collection coming-soon states remain unchanged. Contract-response tests do not establish live account persistence:
-  successful saved-list pagination, unsave persistence and refill still need a working API/account session to verify
-  end to end. Fixture actions cannot mutate account Boards. Physical touch hardware was unavailable; existing
-  touch-preview handlers remain covered by automated tests.
-- RoamFlow, Featured V3, the forced dual-state creator preview and full document viewer have no Batch 4 edits;
-  existing regression tests pass. The focused audit retained category tiles, unused V1/V2 wrappers and development
-  prototypes rather than treating them as active compact Board displays.
+- Consistent `savedByMe` in other Board summaries when future non-owner surfaces need bookmarking. Canonical reads
+  already expose it; saved-list membership already resolves it. The specific public-profile gap in B is required only
+  for enabling that surface's action, not a mandate to enrich every summary.
+- Actual per-Board save counts in canonical/summary responses if those contexts should display them. Existing public
+  search already supplies `popularity`; the V4 `savedCount` presentation field is ready. Account aggregate totals
+  must never substitute for a Board count.
+- Author, confirmed destinations, tags and itinerary length in summary-only lists if every expanded card should show
+  them without document hydration. Saved summaries currently provide title, description, owner, cover and saved date;
+  public handle summaries provide ID/title/cover/updated date. Missing fields are omitted. Owned visibility already
+  exists and requires no new backend work.
+- Reassess search indexing and very large gallery virtualization once a real, larger public collection is connected.
+  Current RoamFlow reserves image geometry and lazy-loads, but is not a virtualized list.

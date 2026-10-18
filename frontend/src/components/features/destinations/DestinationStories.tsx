@@ -32,7 +32,7 @@ export function DestinationStories({ destination }: { destination: DestinationPa
                 <p className="text-muted-foreground text-[10px] tracking-[0.2em] uppercase">Trending boards</p>
                 <h2
                     id="destination-boards-heading"
-                    className="font-display mt-5 text-[clamp(2.7rem,min(5vw,9dvh),5.5rem)] leading-[0.95] tracking-[-0.055em]"
+                    className="font-display mt-5 text-[clamp(2.7rem,min(4vw,8dvh),4.75rem)] leading-[0.95] tracking-[-0.055em] [overflow-wrap:anywhere]"
                 >
                     Trending boards for {destination.name}
                 </h2>
@@ -148,7 +148,7 @@ export function DestinationStories({ destination }: { destination: DestinationPa
                         >
                             <ArrowLeft size={20} strokeWidth={1} />
                         </button>
-                        <span className="text-muted-foreground text-[10px] tabular-nums">
+                        <span className="text-muted-foreground shrink-0 text-[10px] whitespace-nowrap tabular-nums">
                             {String(selected + 1).padStart(2, "0")} / {String(boards.length).padStart(2, "0")}
                         </span>
                         <button

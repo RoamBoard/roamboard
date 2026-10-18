@@ -401,7 +401,7 @@ The frontend uses `pnpm test` for its Node/TSX integration tests. Documentation-
 `src/components/features/boards/cards/BoardCard.tsx` selects four independent layouts: `collage`, `compact`,
 `landscape`, and `photo`. Their presentation types live in `src/types/board-card.ts`; they are not backend response
 contracts. Cards use explicit Satoshi/Cabinet Grotesk fonts, local Figma assets, scoped theme tokens, and container
-units to preserve their compositions at different widths. `SocialBoardCard` adapts the profile's existing mock
+units to preserve their compositions at different widths. `SocialBoardCard` is a retained, currently unused adapter from the old profile mock
 model to the shared collage layout.
 
 `/dev/board-cards` renders all twelve Figma fixtures from `src/data/board-card-examples.ts` at their reference sizes
@@ -427,7 +427,7 @@ rules until the backend team agrees on changes; do not label restricted publishe
 existing save/unsave services. Only server-confirmed writes change saved state. Unknown membership is disabled rather
 than assumed unsaved. `/dev/boards` includes this connected V4 preview inside expanded records; documents are not
 fetched just to populate cards. `/dev/board-cards` retains all variants and adds labelled V4 control/size/metadata studies.
-Stage 3 Batches 1–4 migrate the My Boards featured/Recently Created/Archive, destination-story galleries, Continue, Draft selection, creator preview, saved/owned lists, profile collections and Discover result presenters. Batch 4 awaits review; Batch 5 has not begun. Summary adapters omit unavailable metadata. Saved membership supplies initial bookmarks; own-list context supplies ownership and existing visibility. Public-profile membership remains unknown and disabled. Discover samples retain tag links without invented Board navigation or saving. Gallery `selection`
+Stage 3 Batches 1–4 migrate the My Boards featured/Recently Created/Archive, destination-story galleries, Continue, Draft selection, creator preview, saved/owned lists, profile collections and Discover result presenters. Batch 5 completes the final usage audit and targeted QA; see [the final QA report](../docs/V4_QA_REPORT.md) and the backend handoff for verification limits. Summary adapters omit unavailable metadata. Saved membership supplies initial bookmarks; own-list context supplies ownership and existing visibility. Public-profile membership remains unknown and disabled. Discover samples retain tag links without invented Board navigation or saving. Gallery `selection`
 uses a native V4 card button that also toggles metadata when selected; navigation remains a separate gallery action. Inactive cards leave
 the tab order, save controls keep their own keyboard interaction, and pan selection returns focus to the gallery region. Linked V4 cards preview metadata on the first touch and navigate on the next; mouse and keyboard retain normal link activation. There is no visible Details/Close button.
 See [V4 backend handoff](../docs/V4_BACKEND_HANDOFF.md) for cumulative gaps.
@@ -514,6 +514,6 @@ focus/navigation and persistence checks. The fixture route is unavailable in pro
 `/dev/board-collections` is a development-only visual review of production saved, owned, profile and Discover card
 presenters. Fixtures use existing reference photos; account mutations and fixture Board links are intercepted. The
 fixture removal button only demonstrates exit/layout transitions. `saved-boards-store` is page-local and uses the
-existing credentialed saved-list service; confirmed unsaves refresh page one to avoid offset-pagination skips.
+existing credentialed saved-list service; confirmed unsaves refresh page one to avoid offset-pagination skips. Exiting saved rows become inert; a focused bookmark moves to another card or the saved list before its row is removed.
 Independent tests cover real helper calls with controlled responses, failures, duplicate guards, permissions and
 pagination. The harness is not evidence of persisted-account save behavior.
