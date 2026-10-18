@@ -158,7 +158,7 @@ export default function NotificationsContent({ initialRequests }: { initialReque
                             <span>{loadError}</span>
                             <button
                                 type="button"
-                                onClick={fetchRequests}
+                                onClick={() => void fetchRequests()}
                                 className="text-foreground cursor-pointer font-medium underline underline-offset-4 hover:opacity-80"
                             >
                                 Retry
