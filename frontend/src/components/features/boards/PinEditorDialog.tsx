@@ -82,9 +82,7 @@ export default function PinEditorDialog({
     async function upload(files: File[]) {
         if (uploadLock.current || files.length === 0) return;
         if (files.length > remainingUploads) {
-            setError(
-                `You can upload ${remainingUploads} more image${remainingUploads === 1 ? "" : "s"} to this Board.`
-            );
+            setError(`Choose up to ${remainingUploads} photos per batch. You can add another batch afterwards.`);
             return;
         }
         uploadLock.current = true;

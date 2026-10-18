@@ -62,7 +62,7 @@ const dateSchema = z
 const daySchema = z
     .object({
         dayId: id.optional(),
-        dayNumber: z.number().int().positive(),
+        dayNumber: z.number().int().positive().max(31),
         date: dateSchema.nullable(),
         activities: z.array(activitySchema)
     })
@@ -75,9 +75,9 @@ const boardFields = {
     description: optionalText,
     visibility: z.enum(["collaborators", "friends", "public"]),
     tagIds: z.array(id).max(3),
-    imageIds: z.array(id).max(10),
+    imageIds: z.array(id),
     coverImageId: id.nullable().optional(),
-    days: z.array(daySchema)
+    days: z.array(daySchema).max(31)
 };
 
 export const createBoardSchema = z

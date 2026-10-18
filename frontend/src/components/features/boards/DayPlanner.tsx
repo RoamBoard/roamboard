@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import AddPinDialog from "@/components/features/boards/AddPinDialog";
 import PinEditorDialog from "@/components/features/boards/PinEditorDialog";
@@ -53,6 +53,40 @@ export default function DayPlanner({
     onConfirmPhotoPin
 }: Props) {
     const stripRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        const strip = stripRef.current;
+        if (!strip) return;
+
+        const onWheel = (event: WheelEvent) => {
+            // Keep browser zoom available; ordinary wheel gestures belong to this planner.
+            if (event.ctrlKey || (!event.deltaX && !event.deltaY)) return;
+            event.preventDefault();
+
+            const horizontal = event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY);
+            if (horizontal) {
+                const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? strip.clientWidth : 1;
+                strip.scrollLeft += (event.deltaX || event.deltaY) * unit;
+                return;
+            }
+
+            const day = event.target instanceof Element ? event.target.closest("[data-planner-day]") : null;
+            const hoveredActivities = day?.querySelector<HTMLOListElement>("[data-planner-activities]");
+            const activities =
+                hoveredActivities ??
+                Array.from(strip.querySelectorAll<HTMLOListElement>("[data-planner-activities]")).find((column) => {
+                    const bounds = column.getBoundingClientRect();
+                    const viewport = strip.getBoundingClientRect();
+                    return bounds.right > viewport.left && bounds.left < viewport.right;
+                });
+            if (!activities) return;
+            const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? activities.clientHeight : 1;
+            activities.scrollTop += event.deltaY * unit;
+        };
+
+        // React's delegated wheel listener is passive; cancellation needs a native listener.
+        strip.addEventListener("wheel", onWheel, { passive: false });
+        return () => strip.removeEventListener("wheel", onWheel);
+    }, []);
     const [dialogDayId, setDialogDayId] = useState<string | null>(null);
     const [editingPinId, setEditingPinId] = useState<string | null>(null);
     const [removingDayId, setRemovingDayId] = useState<string | null>(null);
@@ -120,7 +154,7 @@ export default function DayPlanner({
             </div>
             <div
                 ref={stripRef}
-                className="flex snap-x snap-mandatory items-start gap-7 overflow-x-auto pb-6 sm:gap-10"
+                className="flex snap-x snap-mandatory items-start gap-7 overflow-x-auto overscroll-contain pb-6 sm:gap-10"
                 aria-label="Board day plans"
             >
                 {days.map((day, dayIndex) => (
@@ -159,16 +193,18 @@ export default function DayPlanner({
                 ))}
                 <button
                     type="button"
+                    disabled={disabled || days.length >= 31}
                     onClick={onAddDay}
                     className="border-line text-muted-foreground hover:border-foreground hover:text-foreground mt-20 flex min-h-64 w-36 shrink-0 snap-start flex-col items-center justify-center gap-4 border border-dashed text-xs focus-visible:outline-2 focus-visible:outline-offset-2 sm:w-44"
                 >
                     <Plus size={28} strokeWidth={1} aria-hidden="true" />
-                    add day
+                    {days.length >= 31 ? "31-day maximum" : "add day"}
                 </button>
             </div>
             <p className="text-muted-foreground mt-2 max-w-xl text-[11px] leading-relaxed">
                 Drag activities to change day and time in 30-minute steps. Use an activity’s move menu to change its
-                position without changing its time. Each day scrolls independently.
+                position without changing its time. Scroll over a day to browse its activities; Shift-scroll moves
+                between days.
             </p>
             <p role="status" className="sr-only">
                 {announcement}
@@ -190,7 +226,7 @@ export default function DayPlanner({
                     pin={editingPin}
                     onUploadingChange={onActivityUploadingChange}
                     images={images}
-                    remainingUploads={10 - images.filter((image) => image.source === "upload").length}
+                    remainingUploads={30}
                     onClose={() => setEditingPinId(null)}
                     onSave={onUpdatePin}
                     onDelete={() => {

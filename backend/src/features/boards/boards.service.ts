@@ -24,6 +24,7 @@ function normalize(input: BoardWrite): BoardWrite {
 }
 
 async function validateDocument(repository: BoardRepository, input: BoardWrite): Promise<BoardWrite> {
+    if (input.days.length > 31) invalid();
     const normalized = normalize(input);
     if (new Set(input.tagIds).size !== input.tagIds.length) invalid();
     if (new Set(input.imageIds).size !== input.imageIds.length) invalid();

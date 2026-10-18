@@ -456,3 +456,28 @@ export function mergeServerImages(currentImages: BoardImageDraft[], savedBoard: 
         return img;
     });
 }
+
+export type SmartPhotoSuggestion = {
+    imageId: number;
+    location: {
+        id: string;
+        label: string;
+        detail: string;
+        address: string;
+        type: string;
+        latitude: number;
+        longitude: number;
+        country: string | null;
+        countryCode: string | null;
+        city: string | null;
+    } | null;
+    category: BoardPinDraft["category"];
+    warning: string | null;
+};
+export async function suggestBoardPhotos(imageIds: number[]): Promise<SmartPhotoSuggestion[]> {
+    const result = await request<{ photos: SmartPhotoSuggestion[] }>("/api/v1/images/smart-create", {
+        method: "POST",
+        body: JSON.stringify({ imageIds })
+    });
+    return result.photos;
+}

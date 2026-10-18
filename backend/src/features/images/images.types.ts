@@ -58,6 +58,7 @@ export interface ImagesRepository {
     findIntent(uploadId: string): Promise<UploadIntent | null>;
     completeIntent(intent: UploadIntent, asset: ProviderAsset): Promise<number>;
     findImage(imageId: number): Promise<UploadedImage | null>;
+    findImages?(imageIds: number[]): Promise<UploadedImage[]>;
     listCleanupCandidates(
         before: Date,
         limit: number

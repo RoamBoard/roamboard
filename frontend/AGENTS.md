@@ -186,13 +186,28 @@ The provider lab (/dev/providers) uses current backend Mapbox, Geoapify, Unsplas
 
 The `/create` landing follows Figma 3.0–3.1 with a local, credited Unsplash photograph, a curved hero, and circular
 creation choices. `BoardCreationChoices` owns only the New Board expansion state; Motion respects reduced motion,
-and Escape collapses the choices and restores trigger focus. Smart Create opens `/boards/new`; Scratch opens
-`/boards/new?mode=scratch`. Smart includes the circuit upload introduction; Scratch, reopened drafts, and published
-edits begin at the shared curved cover. New Boards can switch modes without discarding local edits or remounting
-the upload controller. The shared editor uses spacious numbered chapters, Cabinet display titles, and Satoshi
+and Escape collapses the choices and restores trigger focus. The left expanded circle opens Continue a Board;
+Start from Scratch opens `/boards/new`. Remix remains below the circles. All new Boards use the same curved-cover
+editor, including old `/boards/new?mode=scratch` links. The cover and title come first, followed by 01 Board Basics.
+Smart Create sits between 01 and 02, explaining editable metadata suggestions for photos from completed trips.
+Circuit traces rise from underneath its broad photo drop area, with hover guidance and a highlighted drag target.
+The top cover retains its image picker and points users to Smart Create below. Uploaded thumbnails can be dragged into this
+area to select the Board cover; the existing Set as cover buttons remain the keyboard/touch alternative.
+There is no creation mode switch. Reopened drafts and published edits retain plain cover uploads without the
+new-Board Smart Create introduction. Upload pickers accept 30 photos per batch, with repeat batches allowed.
+Smart Create calls the authenticated backend suggestions endpoint after uploads, uses capture dates only for
+numbered day offsets (maximum 31), and groups photos within 100m and two hours on the same camera day.
+The first user-uploaded photo is the activity cover; activity time is the earliest known group time.
+Earlier subsequent batches open a proposed day-plan confirmation before shifting existing days. Cancelling keeps
+new uploads unassigned. Existing field edits and manual photo order are retained. New Board days have no calendar date.
+See [the Smart Create contract](../contracts/smart-create.md) for missing metadata, provider failures, and overflow behavior.
+The shared editor uses spacious numbered chapters, Cabinet display titles, and Satoshi
 supporting text. Existing Boards lock editing while loading and remain locked after a failed load.
 The planner uses horizontally scrolling day columns with independent activity scrolling, compact photo cards,
-and circular category controls. Category menus reuse the existing activity vocabulary and shadcn/Radix radio
+and circular category controls. Wheel scrolling over the day-column viewport stays within the planner, including
+empty columns and scroll boundaries. Vertical gestures scroll the hovered day's activities; horizontal gestures
+and Shift-wheel browse days. Ctrl-wheel keeps browser zoom. Touch scrolling retains native overscroll containment.
+Category menus reuse the existing activity vocabulary and shadcn/Radix radio
 menus with typeahead; they do not use Board discovery tags or introduce new backend categories. Pointer drops
 retain 30-minute time placement. Activity move menus provide keyboard/touch reordering and cross-day moves
 without changing times, with focus restoration and live announcements. Explicit order is retained through edits,

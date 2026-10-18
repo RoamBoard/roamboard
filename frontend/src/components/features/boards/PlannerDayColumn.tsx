@@ -60,7 +60,11 @@ export default function PlannerDayColumn({
         scrollerRef.current?.scrollBy({ top, behavior: reducedMotion ? "auto" : "smooth" });
     }
     return (
-        <article className="w-[min(30rem,calc(100vw-7rem))] shrink-0 snap-start" aria-labelledby={`day-${day.id}`}>
+        <article
+            data-planner-day
+            className="w-[min(30rem,calc(100vw-7rem))] shrink-0 snap-start"
+            aria-labelledby={`day-${day.id}`}
+        >
             <header className="border-line mb-6 flex min-h-20 items-end justify-between gap-3 border-b pb-4 pl-12">
                 <div className="text-muted-foreground text-xs">
                     <span
@@ -68,7 +72,7 @@ export default function PlannerDayColumn({
                         className="mb-3 block h-1 w-8"
                         style={{ backgroundColor: dayColors[dayIndex % dayColors.length] }}
                     />
-                    {day.date ? <time dateTime={day.date}>{day.date}</time> : <span>Date open</span>}
+                    {day.date ? <time dateTime={day.date}>{day.date}</time> : null}
                 </div>
                 <div className="text-right">
                     <h3 id={`day-${day.id}`} className="text-foreground/80 text-24 sm:text-30 leading-none font-bold">
@@ -113,6 +117,7 @@ export default function PlannerDayColumn({
             </div>
             <ol
                 ref={scrollerRef}
+                data-planner-activities
                 className="relative h-[min(38rem,70svh)] min-h-72 overflow-y-auto overscroll-y-contain px-1 pt-3 pb-12"
                 aria-label={`Day ${day.dayNumber} activities`}
                 onDragOver={(event) => {

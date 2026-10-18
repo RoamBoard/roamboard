@@ -37,32 +37,30 @@ function controlTag(markup: string, selector: string): string {
     return tag;
 }
 
-test("new Board route defaults to Smart Create and preserves the complete editor", async () => {
-    const markup = editorMarkup(await NewBoardPage({ searchParams: Promise.resolve({}) }));
-    assert.match(markup, /<h1[^>]*>SMART CREATE<\/h1>/);
-    assert.match(markup, /drop your/);
-    assert.match(markup, /Switch to Start from Scratch/);
+test("new Boards place Smart Create after Board Basics and before the day planner", () => {
+    const markup = editorMarkup(NewBoardPage());
+    assert.match(markup, /SMART CREATE/);
+    assert.match(markup, /You can edit every suggestion/);
+    assert.match(markup, /Choose photos/);
+    assert.doesNotMatch(markup, /Switch to|Intelligence Engine/);
+    assert.match(markup, /Up to 30 photos per batch/);
+    assert.match(markup, /Add activity photos in Smart Create below/);
+    assert.match(markup, /Already back from your trip/);
+    const sections = [
+        'aria-label="Choose Board images"',
+        'id="board-title"',
+        'id="board-basics"',
+        'id="image-intake-heading"',
+        'id="day-plan"'
+    ];
+    for (const [index, section] of sections.entries()) {
+        assert.ok(markup.includes(section));
+        if (index > 0) assert.ok(markup.indexOf(sections[index - 1]) < markup.indexOf(section));
+    }
     sharedEditorControls(markup);
     assert.doesNotMatch(controlTag(markup, 'id="board-title"'), / disabled=""/);
     assert.doesNotMatch(controlTag(markup, 'aria-label="Upload Board images"'), / disabled=""/);
     assert.doesNotMatch(markup, /<fieldset[^>]* disabled=""/);
-});
-
-test("Scratch route omits Smart intake while retaining cover uploads, Board fields and later chapters", async () => {
-    const markup = editorMarkup(await NewBoardPage({ searchParams: Promise.resolve({ mode: "scratch" }) }));
-    assert.doesNotMatch(markup, /<h1[^>]*>SMART CREATE<\/h1>|drop your|Intelligence Engine/);
-    assert.match(markup, /Switch to Smart Create/);
-    sharedEditorControls(markup);
-    assert.doesNotMatch(controlTag(markup, 'aria-label="Choose Board images"'), / disabled=""/);
-    assert.doesNotMatch(markup, /<fieldset[^>]* disabled=""/);
-});
-
-test("unknown and repeated mode query values safely use Smart Create", async () => {
-    for (const mode of ["", "other", "Scratch", ["scratch"], ["scratch", "smart"]]) {
-        const markup = editorMarkup(await NewBoardPage({ searchParams: Promise.resolve({ mode }) }));
-        assert.match(markup, /<h1[^>]*>SMART CREATE<\/h1>/);
-        assert.match(markup, /drop your/);
-    }
 });
 
 test("reopening drafts and published Boards starts locked without creation-mode choices or sample cover", async () => {
@@ -144,12 +142,12 @@ test("both intake variants respect the controlled cover and retain uploaded-phot
     }
 });
 
-test("the ten-image limit disables new uploads in both variants without removing image management", () => {
-    const images = Array.from({ length: 10 }, (_, index) => uploadedImage(index + 1));
+test("existing uploads do not prevent another thirty-photo batch", () => {
+    const images = Array.from({ length: 31 }, (_, index) => uploadedImage(index + 1));
     for (const showDropZone of [true, false]) {
         const markup = intakeMarkup(images, 1, showDropZone);
-        assert.match(controlTag(markup, 'aria-label="Upload Board images"'), /disabled=""/);
-        assert.match(controlTag(markup, 'aria-label="Choose Board images"'), /disabled=""/);
+        assert.doesNotMatch(controlTag(markup, 'aria-label="Upload Board images"'), /disabled=""/);
+        assert.doesNotMatch(controlTag(markup, 'aria-label="Choose Board images"'), /disabled=""/);
         assert.doesNotMatch(controlTag(markup, 'aria-label="Remove image 10"'), / disabled=""/);
         assert.match(markup, /Set as cover/);
     }

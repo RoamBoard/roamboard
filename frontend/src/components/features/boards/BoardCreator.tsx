@@ -32,6 +32,8 @@ import type {
     BoardPinDraft,
     BoardStatus
 } from "@/types/board-creator";
+import { buildSmartCreatePlan, type SmartCreatePlan } from "@/lib/smart-create";
+import SmartCreateReviewDialog from "./SmartCreateReviewDialog";
 import { loadProfile } from "@/lib/profile";
 
 const chapterClasses =
@@ -46,47 +48,18 @@ function normalizePinOrder(pins: BoardPinDraft[]): BoardPinDraft[] {
     return pins.map((pin, order) => ({ ...pin, order }));
 }
 
-function addPhotoSuggestions(current: BoardDayDraft[], uploads: UploadedBoardImage[]): BoardDayDraft[] {
-    return uploads.reduce((days, upload) => {
-        if (!upload.suggestedPin) return days;
-        const suggestedPin = upload.suggestedPin;
-        const matchingIndex = upload.suggestedDate ? days.findIndex((day) => day.date === upload.suggestedDate) : 0;
-        const reusableFirstDay = days.length === 1 && days[0]?.pins.length === 0 && days[0].date === null;
-        const targetIndex = matchingIndex >= 0 ? matchingIndex : reusableFirstDay ? 0 : days.length;
-        if (targetIndex === days.length) {
-            return [
-                ...days,
-                {
-                    ...newDay(days.length + 1, upload.suggestedDate),
-                    pins: [{ ...suggestedPin, order: 0 }]
-                }
-            ];
-        }
-        return days.map((day, index) =>
-            index === targetIndex
-                ? {
-                      ...day,
-                      date: day.date ?? upload.suggestedDate,
-                      pins: normalizePinOrder([...day.pins, { ...suggestedPin, order: day.pins.length }])
-                  }
-                : day
-        );
-    }, current);
-}
-
 export default function BoardCreator({
     initialBoardId,
-    expectedStatus = "draft",
-    initialMode = "smart"
+    expectedStatus = "draft"
 }: {
     initialBoardId?: number;
     expectedStatus?: BoardStatus;
-    initialMode?: "smart" | "scratch";
 }) {
+    const [smartStartDate, setSmartStartDate] = useState<string | null>(null);
+    const [pendingPlan, setPendingPlan] = useState<SmartCreatePlan | null>(null);
     const [leaveHref, setLeaveHref] = useState<string | null>(null);
     const saveToastId = useId();
     const saveInFlight = useRef(false);
-    const [mode, setMode] = useState(initialMode);
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [images, setImages] = useState<BoardImageDraft[]>([]);
@@ -115,21 +88,11 @@ export default function BoardCreator({
     const [savedFingerprint, setSavedFingerprint] = useState<string | null>(null);
     const [savedBoard, setSavedBoard] = useState<BoardDocument | null>(null);
     const editorDisabled =
+        pendingPlan !== null ||
         saving !== null ||
         draftLoading ||
         (initialBoardId !== undefined && !savedBoard) ||
         (savedBoard?.status === "published" && expectedStatus !== "published");
-    const showSmartIntro = initialBoardId === undefined && mode === "smart";
-
-    function switchMode() {
-        const nextMode = mode === "smart" ? "scratch" : "smart";
-        setMode(nextMode);
-        const url = new URL(window.location.href);
-        if (nextMode === "scratch") url.searchParams.set("mode", "scratch");
-        else url.searchParams.delete("mode");
-        window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
-    }
-
     const loadTags = useCallback(
         () =>
             listBoardTags()
@@ -231,7 +194,10 @@ export default function BoardCreator({
             .finally(() => setPreferenceLoading(false));
     }, [initialBoardId]);
     const dirty = fingerprint !== (savedFingerprint ?? initialFingerprint);
-    useBoardLeaveWarning((!editorDisabled && dirty) || saving !== null || uploading, setLeaveHref);
+    useBoardLeaveWarning(
+        ((!editorDisabled || pendingPlan !== null) && dirty) || saving !== null || uploading,
+        setLeaveHref
+    );
     useEffect(
         () => () => {
             toast.dismiss(saveToastId);
@@ -239,27 +205,38 @@ export default function BoardCreator({
         [saveToastId]
     );
 
-    function handleUploads(items: UploadedBoardImage[]) {
-        setImages((current) =>
-            [...current, ...items.map((item) => item.image)]
-                .sort((first, second) =>
-                    first.capturedAt === null
-                        ? second.capturedAt === null
-                            ? 0
-                            : 1
-                        : second.capturedAt === null
-                          ? -1
-                          : first.capturedAt.localeCompare(second.capturedAt)
-                )
-                .map((image, order) => ({ ...image, order }))
-        );
-        setDays((current) => addPhotoSuggestions(current, items));
+    function applySmartPlan(plan: SmartCreatePlan) {
+        setSmartStartDate(plan.startDate);
+        setDays(plan.days);
+        setImages(plan.images);
+        setPendingPlan(null);
         setMessage(
-            items.some((item) => item.suggestedPin)
-                ? "Images uploaded. Pins suggested from embedded GPS and capture times—please confirm them before publishing."
-                : "Images uploaded. No usable GPS metadata was found, so no pins were created automatically."
+            [
+                plan.createdCount + " activities suggested. Review their places before publishing.",
+                ...plan.warnings
+            ].join(" ")
         );
+    }
+    function handleUploads(items: UploadedBoardImage[]) {
+        if (initialBoardId !== undefined) {
+            setImages((current) => [
+                ...current,
+                ...items.map((item, index) => ({ ...item.image, pinId: null, order: current.length + index }))
+            ]);
+            setMessage("Photos uploaded. Open an activity to attach them.");
+            return;
+        }
+        const plan = buildSmartCreatePlan(days, images, items, smartStartDate);
         setError("");
+        if (plan.requiresConfirmation || !plan.canApply) {
+            // Uploads are retained even when the user declines a timeline change.
+            setImages((current) => [
+                ...current,
+                ...items.map((item, index) => ({ ...item.image, pinId: null, order: current.length + index }))
+            ]);
+            if (plan.canApply) setPendingPlan(plan);
+            else setMessage(plan.warnings.join(" "));
+        } else applySmartPlan(plan);
     }
 
     function removeImage(imageId: string) {
@@ -480,6 +457,18 @@ export default function BoardCreator({
     return (
         <article className="font-body bg-background text-foreground relative min-w-0 overflow-x-clip">
             <CreatorNotifications />
+            {pendingPlan ? (
+                <SmartCreateReviewDialog
+                    plan={pendingPlan}
+                    onConfirm={() => applySmartPlan(pendingPlan)}
+                    onCancel={() => {
+                        setPendingPlan(null);
+                        setMessage(
+                            "Your day plan is unchanged. New photos remain uploaded and available for manual assignment."
+                        );
+                    }}
+                />
+            ) : null}
             {leaveHref ? <CreatorLeaveDialog href={leaveHref} onClose={() => setLeaveHref(null)} /> : null}
             <CreatorProgress
                 dirty={dirty}
@@ -488,28 +477,13 @@ export default function BoardCreator({
                 saving={saving}
                 uploading={uploading}
             />
-            {showSmartIntro ? (
-                <header className="px-5 pt-16 pb-16 text-center sm:px-10 sm:pt-24 sm:pb-28">
-                    <h1 className="font-display text-[clamp(2.5rem,5.6vw,6rem)] leading-[1.02] font-bold tracking-[-0.035em]">
-                        SMART CREATE
-                    </h1>
-                    <p className="text-muted-foreground mx-auto mt-4 max-w-[38rem] text-xs leading-relaxed sm:text-sm">
-                        Drop in your photos and we’ll turn metadata into editable beginnings for a Board. Review every
-                        suggestion before anything is published.
-                    </p>
-                    <p className="text-muted-foreground/70 mt-6 text-[10px] sm:text-xs">
-                        Powered by Roamboard Intelligence Engine
-                    </p>
-                </header>
-            ) : (
-                <h1 className="sr-only">
-                    {initialBoardId === undefined
-                        ? "Create a new Board"
-                        : expectedStatus === "published"
-                          ? "Edit published Board"
-                          : "Edit Board draft"}
-                </h1>
-            )}
+            <h1 className="sr-only">
+                {initialBoardId === undefined
+                    ? "Create a new Board"
+                    : expectedStatus === "published"
+                      ? "Edit published Board"
+                      : "Edit Board draft"}
+            </h1>
 
             <div>
                 <fieldset
@@ -522,7 +496,7 @@ export default function BoardCreator({
                         coverImageId={coverImageId}
                         disabled={editorDisabled || activityUploading}
                         loading={draftLoading}
-                        showDropZone={showSmartIntro}
+                        showDropZone={initialBoardId === undefined}
                         onUploadingChange={setBoardUploading}
                         onUploadPromise={(promise) => {
                             pendingUploadRef.current = promise;
@@ -530,71 +504,71 @@ export default function BoardCreator({
                         onSelectCover={setSelectedCoverImageId}
                         onUploaded={handleUploads}
                         onRemove={removeImage}
-                    />
-
-                    <div className="mx-auto mt-10 max-w-4xl px-5 text-center sm:mt-12">
-                        <p className="font-display text-muted-foreground text-xs uppercase sm:text-sm lg:text-base">
-                            {initialBoardId === undefined
-                                ? "Board creator"
-                                : expectedStatus === "published"
-                                  ? "Board editor"
-                                  : "Board draft"}
-                        </p>
-                        <label htmlFor="board-title" className="sr-only">
-                            Board title
-                        </label>
-                        <input
-                            id="board-title"
-                            style={{ scrollMarginTop: "9rem" }}
-                            value={title}
-                            onChange={(event) => setTitle(event.target.value)}
-                            placeholder={draftLoading ? "LOADING BOARD…" : "BOARD TITLE"}
-                            className="font-display placeholder:text-foreground focus-visible:outline-foreground mt-3 min-h-12 w-full min-w-0 bg-transparent py-1 text-center text-[clamp(1.75rem,3.8vw,4rem)] leading-[1.02] font-bold tracking-[-0.035em] uppercase focus-visible:outline-1 focus-visible:outline-offset-4"
-                        />
-                        {initialBoardId === undefined ? (
-                            <button
-                                type="button"
-                                onClick={switchMode}
-                                className="text-muted-foreground hover:text-foreground mt-4 min-h-11 cursor-pointer px-3 text-xs underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4"
-                            >
-                                {mode === "smart" ? "Switch to Start from Scratch" : "Switch to Smart Create"}
-                            </button>
-                        ) : null}
-                    </div>
-
-                    {message ? (
-                        <p className="border-foreground text-13 mx-auto mt-7 max-w-3xl border-l-2 pl-4" role="status">
-                            {message}
-                        </p>
-                    ) : null}
-                    {draftLoading ? (
-                        <p className="text-13 mx-auto mt-7 max-w-3xl" role="status">
-                            Loading Board...
-                        </p>
-                    ) : null}
-                    {error ? (
-                        <p className="border-foreground text-13 mx-auto mt-7 max-w-3xl border-l-2 pl-4" role="alert">
-                            {error}
-                        </p>
-                    ) : null}
-
-                    <section id="board-basics" className={`${chapterClasses} mt-20 sm:mt-28 lg:mt-36 lg:min-h-[22rem]`}>
-                        <CreatorSectionIntro
-                            number="01"
-                            title="BOARD BASICS"
-                            description="Let’s start with the essentials to set the scene for everything you’re about to plan."
-                        />
-                        <label className="text-foreground/80 text-20 sm:text-24 block max-w-3xl min-w-0 font-bold">
-                            Description
-                            <textarea
-                                value={description}
-                                onChange={(event) => setDescription(event.target.value)}
-                                placeholder="type here..."
-                                rows={7}
-                                className="border-line text-foreground font-body text-14 placeholder:text-muted-foreground focus:border-foreground focus-visible:outline-foreground mt-3 w-full resize-y border-0 border-b bg-transparent py-3 leading-6 font-normal focus-visible:outline-1 focus-visible:outline-offset-4 sm:text-base"
+                    >
+                        <div className="mx-auto mt-10 max-w-4xl px-5 text-center sm:mt-12">
+                            <p className="font-display text-muted-foreground text-xs uppercase sm:text-sm lg:text-base">
+                                {initialBoardId === undefined
+                                    ? "Board creator"
+                                    : expectedStatus === "published"
+                                      ? "Board editor"
+                                      : "Board draft"}
+                            </p>
+                            <label htmlFor="board-title" className="sr-only">
+                                Board title
+                            </label>
+                            <input
+                                id="board-title"
+                                style={{ scrollMarginTop: "9rem" }}
+                                value={title}
+                                onChange={(event) => setTitle(event.target.value)}
+                                placeholder={draftLoading ? "LOADING BOARD…" : "BOARD TITLE"}
+                                className="font-display placeholder:text-foreground focus-visible:outline-foreground mt-3 min-h-12 w-full min-w-0 bg-transparent py-1 text-center text-[clamp(1.75rem,3.8vw,4rem)] leading-[1.02] font-bold tracking-[-0.035em] uppercase focus-visible:outline-1 focus-visible:outline-offset-4"
                             />
-                        </label>
-                    </section>
+                        </div>
+
+                        {message ? (
+                            <p
+                                className="border-foreground text-13 mx-auto mt-7 max-w-3xl border-l-2 pl-4"
+                                role="status"
+                            >
+                                {message}
+                            </p>
+                        ) : null}
+                        {draftLoading ? (
+                            <p className="text-13 mx-auto mt-7 max-w-3xl" role="status">
+                                Loading Board...
+                            </p>
+                        ) : null}
+                        {error ? (
+                            <p
+                                className="border-foreground text-13 mx-auto mt-7 max-w-3xl border-l-2 pl-4"
+                                role="alert"
+                            >
+                                {error}
+                            </p>
+                        ) : null}
+
+                        <section
+                            id="board-basics"
+                            className={`${chapterClasses} mt-20 sm:mt-28 lg:mt-36 lg:min-h-[22rem]`}
+                        >
+                            <CreatorSectionIntro
+                                number="01"
+                                title="BOARD BASICS"
+                                description="Let’s start with the essentials to set the scene for everything you’re about to plan."
+                            />
+                            <label className="text-foreground/80 text-20 sm:text-24 block max-w-3xl min-w-0 font-bold">
+                                Description
+                                <textarea
+                                    value={description}
+                                    onChange={(event) => setDescription(event.target.value)}
+                                    placeholder="type here..."
+                                    rows={7}
+                                    className="border-line text-foreground font-body text-14 placeholder:text-muted-foreground focus:border-foreground focus-visible:outline-foreground mt-3 w-full resize-y border-0 border-b bg-transparent py-3 leading-6 font-normal focus-visible:outline-1 focus-visible:outline-offset-4 sm:text-base"
+                                />
+                            </label>
+                        </section>
+                    </BoardImageIntake>
 
                     <section id="day-plan" className={fullChapterClasses}>
                         <CreatorSectionIntro
@@ -608,7 +582,11 @@ export default function BoardCreator({
                                 onActivityUploadingChange={setActivityUploading}
                                 days={days}
                                 images={images}
-                                onAddDay={() => setDays((current) => [...current, newDay(current.length + 1)])}
+                                onAddDay={() =>
+                                    setDays((current) =>
+                                        current.length >= 31 ? current : [...current, newDay(current.length + 1)]
+                                    )
+                                }
                                 onRemoveDay={removeDay}
                                 onAddPin={addPin}
                                 onUpdatePin={updatePin}

@@ -78,16 +78,16 @@ export default function BoardCreationChoices() {
                             >
                                 {[
                                     {
-                                        title: "smart create",
-                                        description: "create with images",
-                                        href: "/boards/new",
+                                        title: "continue a board",
+                                        description: "pick up wherever you left off",
+                                        href: "/create/continue",
                                         position: "left-0 md:left-[1%]",
                                         direction: 1
                                     },
                                     {
                                         title: "start from scratch",
                                         description: "create with a clean slate",
-                                        href: "/boards/new?mode=scratch",
+                                        href: "/boards/new",
                                         position: "right-0 md:right-[1%]",
                                         direction: -1
                                     }
@@ -131,13 +131,6 @@ export default function BoardCreationChoices() {
             </motion.div>
 
             <motion.div layout={!reducedMotion} transition={transition} className="flex flex-col items-center">
-                <span aria-hidden="true" className="bg-line h-20 w-px sm:h-24" />
-                <BoardPathOption
-                    compact={expanded}
-                    href="/create/continue"
-                    title="continue a board"
-                    description="pick up wherever you left off"
-                />
                 <span aria-hidden="true" className="bg-line h-20 w-px sm:h-24" />
                 <BoardPathOption
                     compact={expanded}

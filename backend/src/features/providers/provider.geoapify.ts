@@ -178,3 +178,33 @@ export async function reverseGeoapify(
         city: place.city
     };
 }
+
+// A close named POI is only a suggestion, never proof the user visited it.
+export async function nearbyPhotoPlace(
+    latitude: number,
+    longitude: number,
+    key: string,
+    observe?: QuotaObserver
+): Promise<MapboxLocation | null> {
+    const url = new URL("https://api.geoapify.com/v2/places");
+    url.searchParams.set("categories", "tourism,catering,commercial,accommodation,leisure,entertainment");
+    url.searchParams.set("filter", `circle:${longitude},${latitude},75`);
+    url.searchParams.set("bias", `proximity:${longitude},${latitude}`);
+    url.searchParams.set("limit", "5");
+    const places = await request(url, key, observe);
+    const place = places.find((item) => item.poiName);
+    return place
+        ? {
+              id: place.id,
+              label: place.poiName,
+              detail: place.poiName,
+              address: place.address,
+              type: place.placeType,
+              latitude,
+              longitude,
+              country: place.country,
+              countryCode: place.countryCode,
+              city: place.city
+          }
+        : null;
+}

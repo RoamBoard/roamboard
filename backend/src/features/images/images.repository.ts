@@ -146,6 +146,29 @@ export function createImagesRepository(): ImagesRepository {
                   }
                 : null;
         },
+        async findImages(imageIds) {
+            const result = await getPool().query<{
+                uploaded_image_id: number;
+                storage_key: string;
+                uploaded_by_user_id: string;
+                board_id: number | null;
+                captured_at: Date | null;
+                latitude: string | null;
+                longitude: string | null;
+            }>(
+                "SELECT i.uploaded_image_id,i.storage_key,i.uploaded_by_user_id,bi.board_id,i.captured_at,i.latitude,i.longitude FROM uploaded_image i LEFT JOIN board_image bi ON bi.uploaded_image_id=i.uploaded_image_id WHERE i.uploaded_image_id=ANY($1::int[])",
+                [imageIds]
+            );
+            return result.rows.map((row) => ({
+                imageId: row.uploaded_image_id,
+                storageKey: row.storage_key,
+                uploaderUserId: row.uploaded_by_user_id,
+                boardId: row.board_id,
+                capturedAt: row.captured_at,
+                latitude: row.latitude === null ? null : Number(row.latitude),
+                longitude: row.longitude === null ? null : Number(row.longitude)
+            }));
+        },
         async listCleanupCandidates(before, limit) {
             const result = await getPool().query<{
                 image_id: number | null;

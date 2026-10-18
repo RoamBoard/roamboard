@@ -13,6 +13,17 @@ These instructions apply to `backend/`. Use `../layered-backend-demo1/` as the r
 - Keep `backend/.env` and credentials out of Git. Document new variables in `.env.example` and `README.md` without real secrets.
 - Team development uses a shared PostgreSQL container on Azure through SSH tunnels; the backend still runs locally. See `README.md` for onboarding and `deploy/README.md` for maintenance. Do not recreate the shared database or rerun applied migrations when onboarding. `npm run check:setup` checks auth configuration and database access without changing data. Backend `GOOGLE_CLIENT_ID` must match frontend `NEXT_PUBLIC_GOOGLE_CLIENT_ID`.
 
+## Smart Create
+
+The `smart-create` feature resolves up to 30 caller-owned completed image IDs per request through
+`POST /api/v1/images/smart-create`, requiring a session and exact frontend Origin. Cloudinary Admin inspection
+uses `media_metadata`; `images/photo-metadata.ts` normalizes EXIF GPS and preserves camera wall-clock time.
+Smart Create uses nearby Geoapify POIs (75m radius) then reverse addresses; every upstream request uses the
+existing shared `geoapify.geocoding` budget, with paced calls and no automatic provider retries or raised quotas.
+The endpoint does not persist activities. The creator proposes grouping and numbered days, and existing Board
+save endpoints persist the confirmed document. Board writes allow repeated photo batches and at most 31 days.
+No database migration is needed. See [the Smart Create contract](../contracts/smart-create.md).
+
 ## Editorial website image library
 
 See [the shared image workflow](../docs/IMAGE_WORKFLOW.md) for authoring, rendering and missing-file recovery.
