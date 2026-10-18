@@ -112,12 +112,27 @@ export async function resolveDestinationSearchHref(
     if (existingGuide(destination)) return destinationSearchHref(destination);
     if (destinationSlug(query.trim()) === destinationSlug(destination.name))
         return destinationSearchHref(destination, results[0]);
+    if (signal?.aborted) return destinationSearchHref(destination);
+    const controller = new AbortController();
+    const cancel = () => controller.abort();
+    const aborted = new Promise<undefined>((resolve) => {
+        controller.signal.addEventListener("abort", () => resolve(undefined), { once: true });
+    });
+    signal?.addEventListener("abort", cancel, { once: true });
+    const timer = setTimeout(cancel, 1000);
     try {
         // A qualified/prefix query cannot tell us which namesake owns the unqualified URL.
-        const primary = (await searchDestinations(destination.name, signal))[0];
+        // Race cancellation as well as aborting fetch, so even a stalled transport cannot block navigation.
+        const primary = await Promise.race([
+            searchDestinations(destination.name, controller.signal).then((places) => places[0]),
+            aborted
+        ]);
         return destinationSearchHref(destination, primary);
     } catch {
         // The default is a clean destination URL, independent of guide availability.
         return destinationSearchHref(destination);
+    } finally {
+        clearTimeout(timer);
+        signal?.removeEventListener("abort", cancel);
     }
 }

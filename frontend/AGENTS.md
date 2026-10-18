@@ -104,8 +104,8 @@ The `/dev` index links to the implemented frontend routes and explains how to op
 The Board creator now uses the versioned Board and image upload-intent endpoints with the session cookie. Existing drafts are listed at `/boards/drafts` and reopen at `/boards/drafts/[boardId]`; saving again sends the Board revision to the backend. `/create` contains the creation landing page and links to `/boards/mine`, which lists the signed-in owner's published Boards. Published Boards open for editing at `/boards/[boardId]/edit`; owners can edit content and visibility, while members with the editor role can edit content but not visibility. The creator has one selected Board cover and lets users attach several uploaded images to an activity, order them, and choose its activity cover. Unattached uploads can be assigned while editing an activity. The creator uses the backend's allowed tag list. Geoapify location search/reverse geocoding and Unsplash search are implemented in the current backend, with missing-key, quota and provider-failure states. Manual coordinates remain available. Vibe and Highlights controls are absent by agreement. The developer provider lab remains separate from persisted Board media.
 
 The `/home` route has a centered ROAMBOARD heading just above its search, using the Cabinet Grotesk typography and
-desktop sizing of MY BOARDS. ROAM and BOARD both use 90% foreground color, linking to `/discover` and `/boards`
-respectively. Both brighten to full foreground on hover without underlines and retain visible keyboard focus.
+desktop sizing of MY BOARDS. ROAM and BOARD both use full foreground color, linking to `/discover` and `/boards`
+respectively. Both dim to 90% foreground on hover without underlines and retain visible keyboard focus.
 Its horizontally centered destination search sits at the same upper-page height as the `/boards` search, rather than
 the viewport midpoint, and matches its dimensions:
 550px maximum width, 64px mobile / 80px desktop minimum height, and 14px mobile / 20px desktop input text.
@@ -143,8 +143,10 @@ The compact Credits disclosure retains destination navigation and photography at
 Place details support map/visitor links and previous/next browsing. Existing country destination routes remain available.
 Primary destinations use clean `/discover/destinations/<slug>` URLs. Existing editorial guides own their slugs;
 otherwise the highest-ranked unqualified Mapbox result owns the clean URL. Home reuses an exact-name autocomplete
-response or makes one unqualified-name request when selection came from a prefix/qualified query. There is no
-hardcoded prominence list or persistent Mapbox cache. Secondary cross-country namesakes use `?country=<ISO alpha-3>`;
+response or makes one unqualified-name request when selection came from a prefix/qualified query. This extra lookup
+has a one-second deadline: the request is aborted and navigation uses the clean fallback URL, even if the
+transport does not settle after cancellation. Leaving the page cancels this lookup; successful lookups clear its timer.
+There is no hardcoded prominence list or persistent Mapbox cache. Secondary cross-country namesakes use `?country=<ISO alpha-3>`;
 same-country namesakes retain country, provider ID, type and coordinates only when confirmed secondary. Ordinary
 selections, including unsupported destinations and failed/empty primary lookups, generate the clean slug directly.
 Opaque provider ID changes do not disambiguate the same named city at the same location. There are no cleanup redirects.

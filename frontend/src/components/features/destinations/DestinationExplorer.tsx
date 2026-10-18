@@ -114,14 +114,14 @@ export function DestinationExplorerContent({
                     <Link
                         href="/discover"
                         aria-label="Roam: discover destinations"
-                        className="text-foreground/90 hover:text-foreground transition-colors focus-visible:outline-1 focus-visible:outline-offset-4 motion-reduce:transition-none"
+                        className="text-foreground hover:text-foreground/90 transition-colors focus-visible:outline-1 focus-visible:outline-offset-4 motion-reduce:transition-none"
                     >
                         ROAM
                     </Link>
                     <Link
                         href="/boards"
                         aria-label="Board: view your Boards"
-                        className="text-foreground/90 hover:text-foreground transition-colors focus-visible:outline-1 focus-visible:outline-offset-4 motion-reduce:transition-none"
+                        className="text-foreground hover:text-foreground/90 transition-colors focus-visible:outline-1 focus-visible:outline-offset-4 motion-reduce:transition-none"
                     >
                         BOARD
                     </Link>

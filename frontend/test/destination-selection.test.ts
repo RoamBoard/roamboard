@@ -408,21 +408,95 @@ test("an exact secondary Portland preserves its identity when both cities share 
     });
 });
 
-test("the primary lookup forwards navigation cancellation to the real API request", async (context) => {
+test("aborting navigation cancels and settles a pending primary lookup even when fetch ignores its signal", async (context) => {
     const controller = new AbortController();
     const requests: AbortSignal[] = [];
-    context.mock.method(globalThis, "fetch", async (_input: string | URL | Request, init?: RequestInit) => {
-        assert.equal(init?.signal, controller.signal);
+    context.mock.method(globalThis, "fetch", (_input: string | URL | Request, init?: RequestInit) => {
+        assert.ok(init?.signal);
         requests.push(init.signal);
-        return Response.json({ data: [lagosNigeria, lagosPortugal] });
+        return new Promise<Response>(() => {});
+    });
+    const settled: string[] = [];
+    void resolveDestinationSearchHref(lagosPortugal, "Lagos Portugal", [lagosPortugal], controller.signal).then(
+        (href) => {
+            settled.push(href);
+        }
+    );
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0].aborted, false);
+    controller.abort();
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.equal(requests[0].aborted, true);
+    assert.deepEqual(settled, ["/discover/destinations/lagos"]);
+});
+
+test("an already cancelled navigation does not start a primary API lookup", async (context) => {
+    const controller = new AbortController();
+    controller.abort();
+    const requests: number[] = [];
+    context.mock.method(globalThis, "fetch", async () => {
+        requests.push(1);
+        return Response.json({ data: [lagosNigeria] });
     });
     assert.equal(
         await resolveDestinationSearchHref(lagosPortugal, "Lagos Portugal", [lagosPortugal], controller.signal),
-        "/discover/destinations/lagos?country=PRT"
+        "/discover/destinations/lagos"
     );
-    assert.equal(requests.length, 1);
+    assert.equal(requests.length, 0);
+});
+
+for (const lateOutcome of ["success", "failure"] as const) {
+    test(`a stalled primary lookup settles after one second and ignores late ${lateOutcome}`, async (context) => {
+        context.mock.timers.enable({ apis: ["setTimeout"] });
+        const pending: {
+            resolve?: (response: Response) => void;
+            reject?: (error: unknown) => void;
+            signal?: AbortSignal;
+        } = {};
+        context.mock.method(globalThis, "fetch", (_input: string | URL | Request, init?: RequestInit) => {
+            assert.ok(init?.signal);
+            pending.signal = init.signal;
+            return new Promise<Response>((resolve, reject) => {
+                Object.assign(pending, { resolve, reject });
+            });
+        });
+        const settled: string[] = [];
+        void resolveDestinationSearchHref(lagosPortugal, "Lagos Portugal", [lagosPortugal]).then((href) => {
+            settled.push(href);
+        });
+        context.mock.timers.tick(999);
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        assert.deepEqual(settled, []);
+        assert.equal(pending.signal?.aborted, false);
+        context.mock.timers.tick(1);
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        assert.equal(pending.signal?.aborted, true);
+        assert.deepEqual(settled, ["/discover/destinations/lagos"]);
+        if (lateOutcome === "success") pending.resolve!(Response.json({ data: [lagosNigeria] }));
+        else pending.reject!(new TypeError("Late provider error"));
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        assert.deepEqual(settled, ["/discover/destinations/lagos"]);
+    });
+}
+
+test("a primary lookup completed before its deadline keeps secondary disambiguation and removes cancellation work", async (context) => {
+    context.mock.timers.enable({ apis: ["setTimeout"] });
+    const controller = new AbortController();
+    const pending: { resolve?: (response: Response) => void; signal?: AbortSignal } = {};
+    context.mock.method(globalThis, "fetch", (_input: string | URL | Request, init?: RequestInit) => {
+        assert.ok(init?.signal);
+        pending.signal = init.signal;
+        return new Promise<Response>((resolve) => {
+            pending.resolve = resolve;
+        });
+    });
+    const result = resolveDestinationSearchHref(lagosPortugal, "Lagos Portugal", [lagosPortugal], controller.signal);
+    context.mock.timers.tick(999);
+    pending.resolve!(Response.json({ data: [lagosNigeria, lagosPortugal] }));
+    assert.equal(await result, "/discover/destinations/lagos?country=PRT");
+    context.mock.timers.tick(10000);
     controller.abort();
-    assert.equal(requests[0].aborted, true);
+    assert.equal(pending.signal?.aborted, false, "Completed requests must retain no timeout or caller abort listener");
 });
 
 for (const outcome of ["empty", "network", "provider"] as const) {

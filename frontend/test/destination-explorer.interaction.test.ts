@@ -369,6 +369,32 @@ for (const activation of ["submit", "option"] as const) {
     });
 }
 
+test("a stalled Stockholm primary lookup cannot leave production search navigation pending indefinitely", async (context) => {
+    const view = fixture(context);
+    const selected = {
+        ...destination("dXJuOm1ieHBsYzpTdG9ja2hvbG0", "Stockholm", "Sweden", "SWE"),
+        latitude: 59.324337,
+        longitude: 18.06902
+    };
+    view.type("Stockh");
+    view.startRequest();
+    await respond(view.requests[0], { data: [selected] });
+    view.submit();
+    assert.equal(view.requests.length, 2);
+    assert.equal(view.requests[1].url.searchParams.get("q"), "Stockholm");
+    context.mock.timers.tick(999);
+    await settle();
+    assert.deepEqual(view.navigations, []);
+    assert.equal(view.requests[1].init?.signal?.aborted, false);
+    context.mock.timers.tick(1);
+    await settle();
+    assert.equal(view.requests[1].init?.signal?.aborted, true);
+    assert.deepEqual(view.navigations, ["/discover/destinations/stockholm"]);
+    assert.equal(view.requests.length, 2);
+    await respond(view.requests[1], { data: [{ ...selected, id: "late-secondary", countryCode: "USA" }] });
+    assert.deepEqual(view.navigations, ["/discover/destinations/stockholm"]);
+});
+
 for (const activation of ["submit", "option"] as const) {
     for (const outcome of ["primary", "nearby-provider-identity", "empty", "network"] as const) {
         test(`Stockholm prefix ${activation} uses a single clean navigation after a ${outcome} primary lookup`, async (context) => {
