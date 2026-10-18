@@ -119,9 +119,14 @@ export default function HandleProfileContent({ handle }: { handle: string }) {
                     <p className="text-12 text-muted-foreground mt-0.5 font-medium">
                         public boards by {view.profile.displayName}
                     </p>
-                    <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-3">
+                    <div className="mt-8 grid grid-cols-1 items-start gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
                         {view.boards.map((board) => (
-                            <LiveBoardCard key={board.boardId} board={board} />
+                            <LiveBoardCard
+                                key={board.boardId}
+                                board={{ ...board, author: view.profile.username }}
+                                ownership="other"
+                                publicView
+                            />
                         ))}
                     </div>
                     {view.boards.length === 0 && (

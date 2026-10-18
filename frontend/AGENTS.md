@@ -99,7 +99,7 @@ This is a living project guide. Agents may and should update `AGENTS.md` when th
 
 `Sidebar` is shared by `AppShell` and `PublishedBoardShell`. It uses a fixed 64px mobile / 80px desktop rail; desktop expansion overlays content and is saved in `roamboard-sidebar-expanded` local storage. Navigation uses icons with lowercase labels on expansion and an underlined active destination, ordered Roam, Create, Discover, Boards, Social. Mobile expansion opens a native modal drawer. The sidebar account control expands its sign-in/profile, disabled Settings, and Light/Dark choices inline above the trigger, pushing Labs upward. Navigation scrolls at every height; the account panel has a viewport-based height bound and its own scrolling, with a rail scrolling fallback on very short screens. Active destinations are derived from the pathname, including nested creation, Board, Discover, profile, and developer routes. Discover keeps its own scroll-driven intro behavior independently of navigation expansion.
 
-The `/dev` index links to the implemented frontend routes and explains how to open `/boards/[boardId]` with a saved Board ID. The creation landing page is `/create`; `/boards` implements Boards Page 7.0: a featured Motion spatial gallery of up to five existing V1 collage cards and an independent shadcn/Embla V2 compact library with momentum dragging and snapping, keyboard/wheel navigation, a scroll indicator, and progressive loading near the end. It loads owner-published summaries and documents through the existing API, with paginated loading and local search over loaded Boards. A summary-list failure displays clearly labelled visual sample fixtures; samples have no detail links or persistence. The page request store (`src/lib/my-boards-store.ts`) keeps successful document reads when individual Boards are unavailable and retries only failed documents without discarding the current collection. Page/API regression tests render the production content and invoke its search, pagination, and retry handlers through the real request helpers. Recently Saved reuses the V1 gallery with an independent selection and side details. The grouped Archive / Saves area reuses V2 libraries. These saved/archive collections are explicitly labelled sample data until backend state APIs exist; they never persist fake changes. Search filters created, saved, and archived collections independently. The Board creator remains `/boards/new`. Creation and editing routes highlight Create; published Board viewing and `/boards/mine` highlight Boards.
+The `/dev` index links to the implemented frontend routes and explains how to open `/boards/[boardId]` with a saved Board ID. The creation landing page is `/create`; `/boards` uses shared V4 photographic cards in its featured Motion spatial gallery and independent shadcn/Embla Recently Created and Archive libraries. The featured fan retains spring positioning, pan selection, keyboard navigation and animated captions; libraries retain momentum dragging, snapping, keyboard/wheel navigation, a scroll indicator and progressive loading near the end. It loads owner-published summaries and documents through the existing API, with paginated loading and local search over loaded Boards. V4 reuses these documents for full author/metadata, selected covers and owner visibility; no extra card requests are made. A summary-list failure displays clearly labelled visual sample fixtures; samples have no detail links, account controls, fictional save totals or persistence. The page request store (`src/lib/my-boards-store.ts`) keeps successful document reads when individual Boards are unavailable and retries only failed documents without discarding the current collection. Page/API regression tests render the production content and invoke its search, pagination, and retry handlers through the real request helpers. Saved Boards uses the shared V4 grid with real saved-list membership, confirmed unsaving and page-one refresh after removal to avoid offset skips. Archive remains explicitly labelled sample data; it never persists fake archive changes. Search filters created, saved, and archived collections independently. The Board creator remains `/boards/new`. Creation and editing routes highlight Create; published Board viewing and `/boards/mine` highlight Boards.
 
 The Board creator now uses the versioned Board and image upload-intent endpoints with the session cookie. Existing drafts are listed at `/boards/drafts` and reopen at `/boards/drafts/[boardId]`; saving again sends the Board revision to the backend. `/create` contains the creation landing page and links to `/boards/mine`, which lists the signed-in owner's published Boards. Published Boards open for editing at `/boards/[boardId]/edit`; owners can edit content and visibility, while members with the editor role can edit content but not visibility. The creator has one selected Board cover and lets users attach several uploaded images to an activity, order them, and choose its activity cover. Unattached uploads can be assigned while editing an activity. The creator offers the same shared editorial tags as the profile, filtered to backend-persisted names. Retired database tags remain visible/removable on existing Boards but are not offered as new choices. Geoapify location search/reverse geocoding and Unsplash search are implemented in the current backend, with missing-key, quota and provider-failure states. Manual coordinates remain available. Vibe and Highlights controls are absent by agreement. The developer provider lab remains separate from persisted Board media.
 
@@ -151,17 +151,8 @@ readiness gates, failure, timeout, retry, cancellation and stale completion. Exi
 All API clients use NEXT_PUBLIC_API_URL and session cookies.
 
 `/discover/destinations/[slug]` renders city guides through the destination API. Home and Discover searches carry city name, country and coordinates in the URL. The guide uses short attributed Wikivoyage text, large credited Unsplash photos and fresh public Board summaries. It is one viewport tall, with native horizontal touch/keyboard navigation and wheel scrolling; no inner vertical panels or extra footer. Four full-viewport chapters contain the city artwork/introduction, places/map, public Board cards and closing creator. Native snapping and wheel/keyboard steps settle on whole chapters. On desktop the list and map share the second chapter; smaller screens switch between Places and Map within it. Loaded Boards remain reachable in a focusable horizontal gallery inside the third chapter. The list shows five sights per page (fewer only on the final page). Large arrow buttons and a page counter change pages; shorter screens use compact rows. Wikivoyage supplies travel-guide sights, including district listings when needed. The map loads when the guide opens and starts at the city even without sights. Selecting a sight tries to match it in Mapbox for temporary map display. A gray row and marker indicate selection; focus keeps the list/map section in view without revealing the neighboring dark Boards panel. Original travel-guide names and coordinates remain in Board links, with Wikivoyage source attribution. The Places panel shows travel-guide sights without a Saved places tab. The destination page has no account-save action or saved-place requests. Selecting a place can prefill an editable Day 1 activity in `/boards/new`; no Board is automatically saved. The closing "Start a {city} board" action opens the empty creator. Failed provider requests retain the guide and show retry/error feedback. About includes a short Wikivoyage Getting around tip when available. Selecting a sight loads its own plain-text listing description and a credited, adequately sized listing-linked Commons photo through `/destinations/place-details`; missing photos use the sight name. Details are display-only and preserve canonical Board-prefill coordinates. The old Atlas fixtures remain inactive references.
-`/discover/destinations/[slug]` renders the reusable Destination Atlas for Kyoto, Paris and Copenhagen from
-`src/data/destination-atlas.ts`. These are editorial mock guides with local, credited photography, destination-specific
-compositions, seasonal notes, category-filtered places and native modal place details with Motion photo transitions.
-The horizontal exhibition uses native trackpad/touch/Shift-wheel scrolling, chapter links, arrows and a single position slider; long information panels scroll vertically. Mouse-wheel input is not remapped. The bright introduction preserves the circular Figma hero, with an entrance rotation and compact typography in its wider reading panel.
-Kyoto's opening copy, pins and tags are transcribed from Figma frame `55:1060`; other cities retain existing mock copy.
-The compact Credits disclosure retains destination navigation and photography attribution without an extra full-height panel.
-Place details support map/visitor links and previous/next browsing. Existing country destination routes remain available.
-Destination descriptions and guide records are structured local editorial data. Country pages currently await
-`getDiscoverBoardsByDestination`, but its public-Boards source is an asynchronous unavailable placeholder, not a live
-backend request. The existing destination-context API helper is not consumed by these routes. Search and the image
-catalog are genuinely network-backed; general dynamic destination content remains future work.
+Country destination pages still use `getDiscoverBoardsByDestination`, whose public-Boards source remains an unavailable
+placeholder. City guides instead use the live destination-guide API; the old Atlas fixtures remain inactive.
 Primary destinations use clean `/discover/destinations/<slug>` URLs. Existing editorial guides own their slugs;
 otherwise the highest-ranked unqualified Mapbox result owns the clean URL. Home reuses an exact-name autocomplete
 response or makes one unqualified-name request when selection came from a prefix/qualified query. This extra lookup
@@ -177,9 +168,13 @@ Incomplete, repeated or mismatched selectors return 404. General destination pag
 resolve clean URLs by unqualified provider ranking, country selectors within that country, and full identities by provider ID.
 Other search results use a normalized destination slug under the same route. General city detail-page support is
 handled separately and is not implemented by Home. Discover search and its Kyoto feature link to guides.
-The destination story gallery uses Motion to focus and rearrange unchanged V1 collage cards, with button, keyboard and drag selection. Its mock stories have no detail links or persistence; an optional real Board href is respected when supplied. Seasonal controls live in a separate white, ruled editorial interlude. The Trending destinations section uses a destination-specific asymmetric photo grid, a fixed near-black palette, animated filtering and shared-photo native-dialog details. The concluding Create panel returns to the page theme; Kyoto’s closing image rotation follows the Figma artwork. Create links open the existing
-blank `/boards/new` flow; destination prefill, activity saving and copying are future integrations. Editorial guide data
-does not create backend destination/location records. Photo sources and rights notes live in `public/images/destinations/README.md`.
+The destination story gallery adapts real public Board summaries into shared V4 photographic cards in a height-aware
+Motion stack. Stable Board-ID selection survives pagination; buttons, keyboard Home/End/arrows, drag selection,
+animated captions and selected-card metadata remain. The selected Board opens its real numeric route. First-image
+cover order, direct API image delivery and supplied photo credits are preserved. Missing covers use the shared fallback.
+The page hook owns loading, pagination, de-duplication and retries; loaded cards remain available on later failures.
+Public summaries do not supply ownership, saved membership or save counts, so the gallery shows no account controls
+or invented totals. No additional canonical Board requests or account mutations are introduced.
 
 The developer Board browser (/dev/boards) lists paginated accessible Boards and inspects canonical days, activities, tags and protected images; deletion remains owner-only. The profile lab (/dev/profile) reads and edits the signed-in account, accepts owned uploaded image IDs for pictures, creates test Boards through the canonical Board endpoint, and reads statistics, recent owned Boards and activity-derived map destinations. Its globe retains planned/visited styling and obtains a quota-reserved Mapbox session. There is no seeded-user fallback or prototype identity header.
 
@@ -238,24 +233,32 @@ retain owner-only changes and explain that draft access remains owner-only. Publ
 typographic action and an underlined draft action; published editing offers Save changes and never a downgrade.
 Save status/errors appear beside these controls with review links, separately from upload/load feedback. All writes,
 revision checks, server ID reconciliation, and permission gates remain in `BoardCreator`.
-The creator preview reuses `CollageBoardCard` with an opt-in `preview` presentation that hides unsupported author,
-bookmark, saved-count, and Highlights content; default V1 cards retain their existing presentation. Its immutable
-adapter (`board-creation-preview.ts`) leads with the selected uploaded Board cover, de-duplicates collage URLs,
-and displays up to six photos without discarding other media records. The creator's opt-in quiet empty slots use
-faint outlines. `BoardPreviewSection` and the stateless `BoardPreviewDiagram` place the compact V1 card and floating
-annotations on one proportional desktop canvas, with original Figma connector masks. Below a 1100px container,
-annotations follow a readable flow without connectors. Motion respects reduced-motion preferences.
-All selected/generated activity locations contribute to destination/country lettering, and multi-country or unresolved country
-data produces no country watermark. Dates list actual recorded dates and identify undated days. Full title,
-description, tags, visibility, and source-edit links surround the collage; keyboard-accessible native disclosures
+The creator preview reuses `PhotoBoardCard` (V4) at 4:5 without save controls or a redundant visibility icon.
+Its immutable adapter (`board-creation-preview.ts`) uses the selected uploaded cover, otherwise an existing photo;
+missing/failed imagery keeps V4's architectural fallback. Author metadata comes from the creator's existing profile
+or canonical document read, with no additional requests. The retained V1 adapter is not actively rendered here.
+`BoardPreviewSection` and `BoardPreviewDiagram` show equal V4 cover and permanently expanded details views of the
+same live data. Explanatory annotations sit outside the pair, with edit icons beside their headings. Only fields
+visible on the cards are annotated: title/cover on the left, destination/tags/day count on the right.
+Missing destination/tags are omitted; duration is informational, with no date-edit affordance. Description/visibility
+remain in their existing editor chapters. Cards stay at or below 340px, where V4's existing description breakpoint
+keeps descriptions off the card. An SVG overlay measures real title/metadata elements and callout bounds for fine
+orthogonal connectors; hover and keyboard focus emphasize the related line. Below a 1100px container annotations
+flow without connectors; below 760px the two studies stack vertically.
+Source links scroll to and focus existing editor controls, with section/retry fallbacks when a control is unavailable. The destination annotation edits the explicit main-destination field when selected, otherwise the day plan; cover editing opens the shared cover picker.
+Loading/read-only previews have no editor links. Visibility permissions in the actual editor are unchanged. Motion respects
+reduced-motion preferences. Preview status reflects the loaded document without changing the save payload.
+The explicit main destination takes precedence in both V4 states; otherwise selected/generated activity locations
+supply the fallback, matching the current creator contract. Multi-country or unresolved fallback countries produce
+no country watermark. Revision-aware display/thumbnail URLs refresh both states after photo edits, while native disclosures
 retain every activity and photo, including source credits. This is a live local preview, not proof of persistence.
 Draft and My Boards navigation remain available; remixing remains
 explicitly deferred. Discover links to `/discover`. The shared sidebar is unchanged.
 
 The Create draft selection page (`/boards/drafts`) uses an editorial heading and title search, an installed
-shadcn/Embla recent-drafts carousel, and a ruled compact library. Search covers loaded summary titles only;
+shadcn/Embla recent-drafts carousel, and a ruled V4 photographic library. Search covers loaded summary titles only;
 explicit pagination remains available while searching. Only the first page's five most recent drafts request full
-documents for honest collage previews; library tiles use summary covers and never infer destinations or authors.
+documents for V4 previews; the library reuses those documents and otherwise uses summary covers without inferring destinations, authors or itinerary metadata. Empty drafts use the shared V4 architectural cover fallback; all owner draft cards show owner-only access, regardless of intended publication visibility.
 Drafts have no bookmark or Highlights controls. Preview failures retain all summary links and support targeted
 retries. `draft-boards-store.ts` owns page-local request guards, pagination de-duplication, and stale-response
 protection; it never substitutes sample data. Reopening still uses `/boards/drafts/[boardId]` and the shared
@@ -267,21 +270,20 @@ loaded-title search scope. `board-selection-store.ts` clears cached documents on
 and checks fresh document identity and `canEditContent` before showing an editor link. Drafts reopen at
 `/boards/drafts/[boardId]`; published Boards reopen at `/boards/[boardId]/edit`, preserving ID, revision, and status.
 Production APIs cannot enumerate shared editable Boards; a shared-link/ID lookup checks the canonical document
-permission instead. No developer listing endpoint is used. The shared presentation uses a Motion V1 collage
-focus gallery and a photo-card collection that promotes selected Boards into the same gallery, without duplicates.
-The naming transition is V1=`collage`, future V2=`landscape` (old V3), future V3=`photo` (old V4). The old `compact`
-variant is retired for these new pages; existing identifiers, assets, fixtures, and unrelated pages remain compatible.
-The Remix page is an honest unavailable state: there is no production account-saved Board list or remix-creation
-endpoint. Session preview bookmarks and My Boards sample saves are not an account collection. Completing remix
-requires an approved saved-list contract with ownership/source metadata and independent-copy/media rules; no
-original Board update or fake remix is performed. Photo cards omit the author line when author data is absent.
+permission instead. No developer listing endpoint is used. The shared presentation uses a Motion V4 photographic focus gallery and a smaller V4 collection that promotes selected Boards into the same gallery, without duplicates. It retains spring rearrangement, mouse-only 3D tilt, keyboard selection, animated annotations and fresh-document editor gates. V4 selection controls share the card surface; inactive featured cards leave the tab order. Ownership comes from the owner-list scope or canonical management permission; shared edit access does not imply ownership.
+V1=`collage`, V2=`compact`, V3=`landscape`, and V4=`photo` retain their existing names and identifiers.
+V4 is the primary card throughout the migrated product. Continue, Drafts, creator preview, saved/owned lists, profile collections and Discover results are migrated; Featured Boards intentionally retain V3. Legacy variants remain available in the development gallery.
+The Remix page remains an unavailable state. The production account-saved Board list now exists, but this page
+does not consume it yet; persistent remix creation is still unavailable. Session preview bookmarks are separate
+from account saves. Completing remix requires frontend saved-list integration and agreed independent-copy/media
+rules; no original Board update or fake remix is performed. Photo cards omit the author line when author data is absent.
 
 The creator's ruled sticky chapter navigation also shows its real loading/uploading/saving and unsaved state.
 `board-editor-safety.ts` compares persisted content, excluding transient IDs and protected-image URL refreshes.
 The baseline changes only after document loading or a confirmed save. A synchronous save latch rejects duplicate
 submissions. After publishing from the draft flow, the finished editor locks; published editing remains a separate route.
 Unsaved content or active operations register a native refresh/close warning and intercept same-window internal links
-with the existing confirmation dialog. Hash links, mode switches, new tabs and downloads remain usable. Same-document
+with the existing confirmation dialog. Hash links, new tabs and downloads remain usable. Same-document
 browser Back/Forward and arbitrary programmatic routing are not blocked; no history entries are fabricated and there
 is no autosave/recovery store. The publication panel explicitly advises saving before using browser history controls.
 Activity dialogs confirm discarding unfinished fields, preserve focus, and pause the outer focus trap during confirmation.
@@ -428,12 +430,36 @@ The frontend uses `pnpm test` for its Node/TSX integration tests. Documentation-
 `src/components/features/boards/cards/BoardCard.tsx` selects four independent layouts: `collage`, `compact`,
 `landscape`, and `photo`. Their presentation types live in `src/types/board-card.ts`; they are not backend response
 contracts. Cards use explicit Satoshi/Cabinet Grotesk fonts, local Figma assets, scoped theme tokens, and container
-units to preserve their compositions at different widths. `SocialBoardCard` adapts the profile's existing mock
+units to preserve their compositions at different widths. `SocialBoardCard` is a retained, currently unused adapter from the old profile mock
 model to the shared collage layout.
 
 `/dev/board-cards` renders all twelve Figma fixtures from `src/data/board-card-examples.ts` at their reference sizes
 or fitted to the available width. Its bookmarks only change local gallery state. Reusable cards accept an optional
 navigation URL and controlled bookmark callback; they perform no backend requests or persistence.
+
+### Shared V4 enhancement (Stage 2)
+
+`PhotoBoardCard` / `photo` retains the original 4:5 photographic cover by default. Opt-in `details` reveals supplied
+metadata on genuine hover, keyboard focus, or whole-card activation; Escape dismisses it. Internal typography,
+gradient and line transitions leave parent gallery transforms and image zoom untouched. Missing fields stay absent;
+missing/failed photos use a quiet architectural fallback. Parent widths remain responsible for readable card sizes.
+Optional `presentation="cover" | "details"` holds a state for editorial comparisons without disclosure controls or
+hover/focus/touch/Escape state changes. The default `interactive` presentation keeps existing gallery behavior.
+Fixed details displays the expanded frame without needing `details`; empty fields stay absent and its heading falls
+back to the existing Board title. Normal interactive cards with no detail metadata retain the cover presentation.
+`ownership` defaults to unknown: no account control is shown without reliable context. Owners get informational
+visibility icons; drafts are owner-only, while `collaborators` means restricted access including existing invited members.
+Roamboard is not developing collaborative editing, invitations or member-management UI. Preserve current API access
+rules until the backend team agrees on changes; do not label restricted published Boards as owner-only.
+
+`AccountPhotoBoardCard` shares a local `board-save-store` across summary cards and `BoardDocumentPhotoCard`, which adapts an already-loaded canonical document, through
+existing save/unsave services. Only server-confirmed writes change saved state. Unknown membership is disabled rather
+than assumed unsaved. `/dev/boards` includes this connected V4 preview inside expanded records; documents are not
+fetched just to populate cards. `/dev/board-cards` retains all variants and adds labelled V4 control/size/metadata studies.
+Stage 3 Batches 1–4 migrate the My Boards featured/Recently Created/Archive, destination-story galleries, Continue, Draft selection, creator preview, saved/owned lists, profile collections and Discover result presenters. Batch 5 completes the final usage audit and targeted QA; see [the final QA report](../docs/V4_QA_REPORT.md) and the backend handoff for verification limits. Summary adapters omit unavailable metadata. Saved membership supplies initial bookmarks; own-list context supplies ownership and existing visibility. Public-profile membership remains unknown and disabled. Discover samples retain tag links without invented Board navigation or saving. Gallery `selection`
+uses a native V4 card button that also toggles metadata when selected; navigation remains a separate gallery action. Inactive cards leave
+the tab order, save controls keep their own keyboard interaction, and pan selection returns focus to the gallery region. Linked V4 cards preview metadata on the first touch and navigate on the next; mouse and keyboard retain normal link activation. There is no visible Details/Close button.
+See [V4 backend handoff](../docs/V4_BACKEND_HANDOFF.md) for cumulative gaps.
 
 ### RoamFlow discovery preview
 
@@ -507,6 +533,20 @@ If staffing makes separation impossible, record that limitation in the handoff a
 
 Before finishing, review the diff for unrelated changes and generated files. Explain what changed and what was checked in short, plain language a student can follow. State any remaining limitations.
 
+`/dev/board-selection` is a development-only visual review of the production Continue/Draft presenters. Its labelled fixtures support loading, missing-cover and denied-access compositions; fixture editor links are intercepted, and no Board data is requested or persisted. It is unavailable in production. Real requests, restoration, permissions, pagination and retry remain covered by the page/store/API-helper tests.
+
+`/dev/creator-preview` is a development-only visual review of the production creator preview, with labelled empty,
+draft, published, long-title, failed-image and read-only fixtures. It uses existing reference images;
+editor links are intercepted and no Board data is requested or persisted. Use the actual creator for source-control
+focus/navigation and persistence checks. The fixture route is unavailable in production.
+
+`/dev/board-collections` is a development-only visual review of production saved, owned, profile and Discover card
+presenters. Fixtures use existing reference photos; account mutations and fixture Board links are intercepted. The
+fixture removal button only demonstrates exit/layout transitions. `saved-boards-store` is page-local and uses the
+existing credentialed saved-list service; confirmed unsaves refresh page one to avoid offset-pagination skips. Exiting saved rows become inert; a focused bookmark moves to another card or the saved list before its row is removed.
+Independent tests cover real helper calls with controlled responses, failures, duplicate guards, permissions and
+pagination. The harness is not evidence of persisted-account save behavior.
+
 ### Creator photo editing and destination suggestions
 
 02 and 03 now use the same single-title numbered intro as the later chapters. The cover Smart Create tooltip,
@@ -536,7 +576,7 @@ no browser was connected. Automated API, SQL, bounds and signed-delivery checks 
 
 The cover icon opens BoardCoverDialog to select any Board upload, including activity photos, and crop/resize it
 through the existing persisted photo editor. BoardPhotoStrip supplies arrow navigation in cover and activity dialogs.
-Thumbnail lists lazy-load with asynchronous decoding; creator collages use thumbnail delivery, activity cards avoid
+Thumbnail lists lazy-load with asynchronous decoding. Creator photo reviews use thumbnail delivery; the two V4 covers use display delivery. Activity cards avoid
 Motion layout measurements, the sticky chapter bar has an opaque background, and Smart Create uses one combined
 SVG circuit mask instead of 78 masks. Browser performance measurements remain pending.
 Decorative published Board spaces use a shared destination/country Unsplash search pool of up to 20 photos, selecting

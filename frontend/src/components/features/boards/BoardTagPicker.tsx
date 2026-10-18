@@ -55,7 +55,11 @@ export default function BoardTagPicker({
         if (!loading && !error) requestAnimationFrame(() => inputRef.current?.focus());
     }
     return (
-        <div className="max-w-3xl min-w-0">
+        <div
+            id="board-tags"
+            tabIndex={-1}
+            className="max-w-3xl min-w-0 scroll-mt-36 focus-visible:outline-1 focus-visible:outline-offset-4"
+        >
             <div className="flex flex-wrap items-center gap-3">
                 <h3 className="text-foreground/80 text-20 font-bold">Tags</h3>
                 <span className="text-muted-foreground inline-flex items-center gap-2 text-[11px]">

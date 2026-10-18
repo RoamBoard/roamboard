@@ -268,7 +268,7 @@ test("the controlled preview retains all days, more than five activities, descri
     assert.doesNotMatch(markup, /_next\/image\?url=https%3A%2F%2Fapi\.example\.test/);
 });
 
-test("saved crop revisions refresh collage, itinerary and photo-review URLs without changing Board data", () => {
+test("saved crop revisions refresh both V4 covers, itinerary and photo-review URLs without changing Board data", () => {
     const edited = image(901, 0, { pinId: "museum" });
     const untouched = image(902, 1);
     const external = image(903, 2, {
@@ -296,8 +296,11 @@ test("saved crop revisions refresh collage, itinerary and photo-review URLs with
         const sources = [...markup.matchAll(/<img\b[^>]*\bsrc="([^"]+)"/g)].map((match) =>
             match[1].replaceAll("&amp;", "&")
         );
-        const refreshed = `${edited.thumbnailUrl}&v=${revision}`;
-        assert.ok(sources.filter((url) => url === refreshed).length >= 3);
+        const refreshedThumbnail = `${edited.thumbnailUrl}&v=${revision}`;
+        const refreshedDisplay = `${edited.url}&v=${revision}`;
+        assert.equal(sources.filter((url) => url === refreshedDisplay).length, 2);
+        assert.equal(sources.filter((url) => url === refreshedThumbnail).length, 2);
+        assert.ok(!sources.includes(edited.url));
         assert.ok(!sources.includes(edited.thumbnailUrl));
         assert.ok(sources.includes(untouched.thumbnailUrl));
         assert.ok(sources.includes(external.thumbnailUrl));
@@ -310,7 +313,9 @@ test("an empty preview stays usable without sample photos or unsupported metadat
         createElement(BoardCreationPreview, { board: board({ title: "", description: "", tags: [] }) })
     );
     assert.match(markup, /Untitled Board/);
-    assert.match(markup, /Dates open/);
+    assert.match(markup, /COVER VIEW/);
+    assert.match(markup, /DETAILS VIEW/);
+    assert.doesNotMatch(markup, />(?:Dates|Dates &amp; duration)</);
     assert.doesNotMatch(markup.replace(/<[^>]*>/g, ""), /Highlights:|Saved by|by Roamboard|Tokyo|Japan/i);
     assert.doesNotMatch(markup, /<img[^>]*src="(?:\/images\/|https:\/\/images\.unsplash\.com)/);
 });

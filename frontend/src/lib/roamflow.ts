@@ -1,7 +1,7 @@
-import type { PhotoBoardCardData } from "@/types/board-card";
+import type { BoardCardImage, PhotoBoardCardData } from "@/types/board-card";
 
 // Presentation and loader types only. These do not define the public Boards API contract.
-export type RoamFlowBoard = PhotoBoardCardData & { href?: string };
+export type RoamFlowBoard = PhotoBoardCardData & { image: BoardCardImage; href?: string };
 export type RoamFlowPage = { boards: readonly RoamFlowBoard[]; nextCursor: string | null };
 export type RoamFlowSource = (cursor: string, signal: AbortSignal) => Promise<RoamFlowPage>;
 export const roamFlowPageSize = 7;

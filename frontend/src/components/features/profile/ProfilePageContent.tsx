@@ -1,56 +1,44 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Image from "next/image";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import UnderlineTabs from "@/components/ui/UnderlineTabs";
 import {
-    apiOrigin,
     loadMapDestinations,
     loadProfile,
     loadProfileStats,
     loadPublishedBoards,
-    loadSavedBoards,
     ProfileApiError,
     type MapDestination,
     type ProfileStats,
     type PublishedBoardSummary,
-    type SavedBoardSummary,
     type UserProfile
 } from "@/lib/profile";
 import ProfileHero from "./ProfileHero";
 import TravelMapSection from "./TravelMapSection";
 import VisitedWorldMap from "./VisitedWorldMap";
 
-type BoardCard = { boardId: number; title: string; coverImageUrl: string | null; author?: string };
+import AccountPhotoBoardCard from "@/components/features/boards/cards/AccountPhotoBoardCard";
+import SavedBoardGrid from "@/components/features/boards/SavedBoardGrid";
+import { createSavedBoardsStore } from "@/lib/saved-boards-store";
+import { toProfilePhotoBoardCard } from "@/lib/photo-board-card";
+import type { PhotoBoardCardProps } from "@/types/board-card";
 
-export function LiveBoardCard({ board }: { board: BoardCard }) {
+export function LiveBoardCard({
+    board,
+    ownership = "unknown",
+    publicView = false
+}: {
+    board: PublishedBoardSummary & { author?: string };
+    ownership?: PhotoBoardCardProps["ownership"];
+    publicView?: boolean;
+}) {
     return (
-        <Link
+        <AccountPhotoBoardCard
+            board={toProfilePhotoBoardCard(board, board.author ?? "", publicView)}
+            ownership={ownership}
             href={`/boards/${board.boardId}`}
-            className="border-line bg-background hover:border-foreground group block overflow-hidden rounded-[2px] border transition-colors"
-        >
-            <div className="bg-faint relative aspect-[4/3]">
-                {board.coverImageUrl ? (
-                    <Image
-                        src={new URL(board.coverImageUrl, apiOrigin).toString()}
-                        alt=""
-                        fill
-                        unoptimized
-                        sizes="(max-width: 1024px) 100vw, 33vw"
-                        className="object-cover"
-                    />
-                ) : (
-                    <div className="text-muted-foreground flex h-full items-center justify-center text-xs">
-                        No cover photo
-                    </div>
-                )}
-            </div>
-            <div className="p-4">
-                <h4 className="font-display text-foreground text-lg font-bold">{board.title}</h4>
-                {board.author && <p className="text-muted-foreground mt-1 text-xs">by {board.author}</p>}
-            </div>
-        </Link>
+        />
     );
 }
 
@@ -59,7 +47,8 @@ export default function ProfilePageContent() {
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [stats, setStats] = useState<ProfileStats | null>(null);
     const [published, setPublished] = useState<PublishedBoardSummary[]>([]);
-    const [saved, setSaved] = useState<SavedBoardSummary[]>([]);
+    const [savedStore] = useState(() => createSavedBoardsStore(3));
+    const saved = useSyncExternalStore(savedStore.subscribe, savedStore.getSnapshot, savedStore.getSnapshot);
     const [destinations, setDestinations] = useState<MapDestination[]>([]);
     const [error, setError] = useState("");
     const [sectionErrors, setSectionErrors] = useState<string[]>([]);
@@ -75,7 +64,7 @@ export default function ProfilePageContent() {
                 const results = await Promise.allSettled([
                     loadProfileStats(),
                     loadPublishedBoards(),
-                    loadSavedBoards(1, 3),
+                    savedStore.loadFirst(),
                     loadMapDestinations()
                 ]);
                 if (!request.active) return;
@@ -84,8 +73,6 @@ export default function ProfilePageContent() {
                 else failures.push("Statistics could not be loaded.");
                 if (results[1].status === "fulfilled") setPublished(results[1].value);
                 else failures.push("My boards could not be loaded.");
-                if (results[2].status === "fulfilled") setSaved(results[2].value);
-                else failures.push("Saved boards could not be loaded.");
                 if (results[3].status === "fulfilled") setDestinations(results[3].value);
                 else failures.push("The visited map could not be loaded.");
                 setSectionErrors(failures);
@@ -106,7 +93,7 @@ export default function ProfilePageContent() {
         return () => {
             request.active = false;
         };
-    }, [retry]);
+    }, [retry, savedStore]);
 
     function reload() {
         setLoading(true);
@@ -175,15 +162,43 @@ export default function ProfilePageContent() {
                                 view all →
                             </Link>
                         </div>
-                        <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-3">
-                            {saved.map((board) => (
-                                <LiveBoardCard
-                                    key={board.boardId}
-                                    board={{ ...board, author: board.owner.displayName }}
-                                />
-                            ))}
-                        </div>
-                        {saved.length === 0 && !sectionErrors.some((message) => message.startsWith("Saved")) && (
+                        {saved.error && (
+                            <p role="alert" className="mt-6 text-sm">
+                                {saved.error}{" "}
+                                {saved.signInRequired ? (
+                                    <Link href="/login" className="underline">
+                                        Sign in
+                                    </Link>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            void savedStore.retry();
+                                        }}
+                                        className="min-h-11 underline"
+                                    >
+                                        Retry saved Boards
+                                    </button>
+                                )}
+                            </p>
+                        )}
+                        {saved.loading && (
+                            <p role="status" className="mt-6 text-sm">
+                                Updating saved Boards…
+                            </p>
+                        )}
+                        <SavedBoardGrid
+                            boards={saved.items}
+                            onUnsave={(boardId) => {
+                                savedStore.removeConfirmed(boardId);
+                                setStats((current) =>
+                                    current
+                                        ? { ...current, boardsSaved: Math.max(0, current.boardsSaved - 1) }
+                                        : current
+                                );
+                            }}
+                        />
+                        {saved.loaded && !saved.loading && !saved.error && saved.items.length === 0 && (
                             <p className="text-muted-foreground mt-6 text-sm">No saved boards yet.</p>
                         )}
                     </section>
@@ -202,9 +217,13 @@ export default function ProfilePageContent() {
                                 view all →
                             </Link>
                         </div>
-                        <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-3">
+                        <div className="mt-8 grid grid-cols-1 items-start gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
                             {published.map((board) => (
-                                <LiveBoardCard key={board.boardId} board={board} />
+                                <LiveBoardCard
+                                    key={board.boardId}
+                                    board={{ ...board, author: profile.username }}
+                                    ownership="owner"
+                                />
                             ))}
                         </div>
                         {published.length === 0 && !sectionErrors.some((message) => message.startsWith("My")) && (

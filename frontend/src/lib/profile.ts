@@ -56,6 +56,8 @@ export type PublishedBoardSummary = {
     title: string;
     coverImageUrl: string | null;
     updatedAt: string;
+    // Present on the owned scope list; the public handle response omits it.
+    visibility?: "collaborators" | "friends" | "public";
 };
 
 export type SavedBoardSummary = {

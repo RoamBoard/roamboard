@@ -1,270 +1,340 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
-import { useId, type CSSProperties, type ReactNode } from "react";
-import CollageBoardCard from "./cards/CollageBoardCard";
+import { useEffect, useId, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import PhotoBoardCard from "./cards/PhotoBoardCard";
 import type { createBoardPreview } from "@/lib/board-creation-preview";
-import type { BoardCreatorPayload } from "@/types/board-creator";
 
-const assets = "/images/create/preview/";
-const visibilityLabels = { collaborators: "Collaborators", friends: "Friends", public: "Public" };
-const textClass = "text-muted-foreground mt-1 text-xs leading-[1.35] whitespace-pre-wrap [overflow-wrap:anywhere]";
-const editClass =
-    "hover:text-foreground focus-visible:outline-foreground inline-flex min-h-11 items-start gap-1.5 py-2 underline-offset-4 hover:underline focus-visible:outline-1 focus-visible:outline-offset-4 @min-[1100px]:min-h-0 @min-[1100px]:py-0";
+type Field = "title" | "cover" | "destination" | "tags" | "duration";
+type View = "cover" | "details";
+type Connector = { field: Field; path: string; x: number; y: number };
+type Preview = ReturnType<typeof createBoardPreview>;
+type EditSource = { href: string; section: string; control?: string; label: string };
 
-// Coordinates are relative to the 1536px-wide preview chapter in Figma 625:4006.
-// The destination elbow is shorter because this Board has no persisted Highlights field.
-// Text keeps a fixed readable size, so stems reserve pixel clearance before rejoining scaled endpoints.
-const connectors = [
-    { asset: "line45", x: 508, y: 101, length: 196, vertical: true, textClearance: 80 },
-    { asset: "line44", x: 508, y: 297, length: 80 },
-    { asset: "line60", x: 895, y: 136, length: 65, textClearance: 70 },
-    { asset: "line59", x: 960, y: 136, length: 113, vertical: true, textClearance: 70 },
-    { asset: "line49", x: 1078, y: 274, length: 86, vertical: true, textClearance: 60 },
-    { asset: "line44", x: 998, y: 360, length: 80 },
-    { asset: "line50", x: 998, y: 415, length: 220 },
-    { asset: "line51", x: 1218, y: 254, length: 161, vertical: true },
-    { asset: "line52", x: 1218, y: 254, length: 18 },
-    { asset: "line47", x: 401, y: 498, length: 25, vertical: true },
-    { asset: "line46", x: 401, y: 523, length: 187 },
-    { asset: "line53", x: 998, y: 479, length: 166 },
-    { asset: "line54", x: 1164, y: 479, length: 50, vertical: true },
-    { asset: "line55", x: 1164, y: 529, length: 190 },
-    { asset: "line56", x: 992, y: 602, length: 131 },
-    { asset: "line57", x: 1123, y: 602, length: 152, vertical: true },
-    { asset: "line58", x: 1123, y: 754, length: 106 }
-];
+const sources: Partial<Record<Field, EditSource>> = {
+    title: { href: "#board-title", section: "board-title", label: "Edit title" },
+    cover: {
+        href: "#board-images",
+        section: "board-images",
+        control:
+            'button[aria-label="Edit Board cover"]:not(:disabled), button[aria-label="Choose Board images"]:not(:disabled), button[data-board-cover-choice]:not(:disabled)',
+        label: "Manage photos"
+    },
+    tags: {
+        href: "#details-discovery",
+        section: "board-tags",
+        control: "input:not(:disabled), ul button:not(:disabled), button:not(:disabled)",
+        label: "Edit details"
+    },
+    destination: {
+        href: "#day-plan",
+        section: "day-plan",
+        label: "Edit places in the day plan",
+        control: 'button[aria-label^="Edit "]:not(:disabled), button[aria-label^="Add activity"]:not(:disabled)'
+    }
+};
+const mainDestinationSource: EditSource = {
+    href: "#board-destination",
+    section: "board-destination",
+    control: 'input[role="combobox"]:not(:disabled)',
+    label: "Edit main destination"
+};
 
-function Graphic({ asset, className, style }: { asset: string; className: string; style?: CSSProperties }) {
+function EditMark() {
     return (
         <span
             aria-hidden="true"
-            className={`pointer-events-none block ${className}`}
+            className="size-2.5 shrink-0 bg-current opacity-60"
             style={{
-                ...style,
-                maskImage: `url(${assets}${asset}.svg)`,
+                maskImage: "url(/images/create/preview/vector16.svg)",
                 maskRepeat: "no-repeat",
-                maskSize: "100% 100%"
+                maskSize: "contain"
             }}
         />
     );
 }
 
-function EditMark() {
-    return <Graphic asset="vector16" className="mt-0.5 h-[10px] w-[10px] shrink-0 bg-current opacity-70" />;
-}
-
 function Callout({
+    field,
     label,
-    href,
-    editLabel,
-    className,
+    editable,
     children,
-    note
+    className = "",
+    setActive,
+    elementRef,
+    sourceOverride
 }: {
+    field: Field;
     label: string;
-    href: string;
-    editLabel: string;
-    className: string;
+    editable: boolean;
     children: ReactNode;
-    note?: string;
+    className?: string;
+    setActive: (field: Field | null) => void;
+    elementRef: (element: HTMLDivElement | null) => void;
+    sourceOverride?: EditSource;
 }) {
     const reducedMotion = useReducedMotion();
     const valueId = useId();
+    const source = editable ? (sourceOverride ?? sources[field]) : undefined;
+    function navigate(event: MouseEvent<HTMLAnchorElement>) {
+        if (!source || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+        const section = document.getElementById(source.section);
+        if (!section) return;
+        event.preventDefault();
+        const target = (source.control ? section.querySelector<HTMLElement>(source.control) : section) ?? section;
+        target.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "center" });
+        target.focus({ preventScroll: true });
+    }
     return (
         <motion.div
-            initial={reducedMotion ? false : { opacity: 0, y: 4 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            ref={elementRef}
+            initial={reducedMotion ? false : { opacity: 0 }}
+            whileInView={{ opacity: 1 }}
             viewport={{ once: true, amount: 0.2 }}
-            transition={{ duration: reducedMotion ? 0 : 0.3 }}
-            className={`min-w-0 @min-[1100px]:absolute ${className}`}
+            transition={{ duration: reducedMotion ? 0 : 0.35 }}
+            onPointerEnter={() => setActive(field)}
+            onPointerLeave={() => setActive(null)}
+            onFocusCapture={() => setActive(field)}
+            onBlurCapture={() => setActive(null)}
+            className={`relative z-20 max-w-44 min-w-0 ${className}`}
         >
-            <dt className="text-foreground/80 text-sm leading-tight font-bold">{label}</dt>
-            <dd className={textClass}>
-                <a href={href} aria-label={editLabel} aria-describedby={valueId} className={editClass}>
-                    <span id={valueId} className="min-w-0">
-                        {children}
-                    </span>
-                    <EditMark />
-                </a>
+            <dt className="text-foreground/80 text-xs font-medium">
+                {source ? (
+                    <a
+                        href={source.href}
+                        onClick={navigate}
+                        aria-label={source.label}
+                        aria-describedby={valueId}
+                        className="hover:text-foreground focus-visible:outline-foreground inline-flex min-h-11 items-center gap-2 underline-offset-4 transition-colors hover:underline focus-visible:outline-1 focus-visible:outline-offset-4 motion-reduce:transition-none"
+                    >
+                        {label}
+                        <EditMark />
+                    </a>
+                ) : (
+                    <span className="flex min-h-11 items-center">{label}</span>
+                )}
+            </dt>
+            <dd id={valueId} className="text-muted-foreground text-xs leading-relaxed [overflow-wrap:anywhere]">
+                {children}
             </dd>
-            {note ? <dd className="text-muted-foreground mt-2 text-[10px] leading-snug">{note}</dd> : null}
         </motion.div>
     );
 }
 
-const photoSlots = [
-    { left: 0, top: 6.62, width: 48.98, height: 35.66 },
-    { left: 0, top: 43.38, width: 48.98, height: 26.47 },
-    { left: 0, top: 70.59, width: 48.98, height: 29.41 },
-    { left: 52.04, top: 0, width: 47.96, height: 22.43 },
-    { left: 52.04, top: 23.9, width: 47.96, height: 29.04 },
-    { left: 52.04, top: 54.04, width: 47.96, height: 26.47 }
-];
+function PreviewView({
+    view,
+    photo,
+    children,
+    elementRef
+}: {
+    view: View;
+    photo: Preview["photo"];
+    children: ReactNode;
+    elementRef: (element: HTMLElement | null) => void;
+}) {
+    const headingId = useId();
+    return (
+        <section aria-labelledby={headingId} className="grid min-w-0 content-start gap-5 @min-[1100px]:contents">
+            <figure
+                ref={elementRef}
+                aria-labelledby={headingId}
+                className={`mx-auto w-full max-w-[340px] @min-[1100px]:row-start-1 ${view === "cover" ? "@min-[1100px]:col-start-2" : "@min-[1100px]:col-start-3"}`}
+            >
+                <figcaption className="mb-5 flex items-center gap-4">
+                    <h3
+                        id={headingId}
+                        className="text-muted-foreground shrink-0 text-[10px] leading-normal font-medium tracking-[.18em]"
+                    >
+                        {view === "cover" ? "COVER VIEW" : "DETAILS VIEW"}
+                    </h3>
+                    <span aria-hidden="true" className="bg-line/65 h-px flex-1" />
+                </figcaption>
+                <PhotoBoardCard board={photo} presentation={view} imageSizes="(max-width: 480px) 80vw, 340px" />
+            </figure>
+            <dl
+                className={`grid grid-cols-2 items-start gap-x-6 gap-y-4 @min-[1100px]:row-start-1 @min-[1100px]:flex @min-[1100px]:h-full @min-[1100px]:flex-col ${view === "cover" ? "@min-[1100px]:col-start-1 @min-[1100px]:gap-20 @min-[1100px]:pt-16" : "@min-[1100px]:col-start-4 @min-[1100px]:gap-9 @min-[1100px]:pt-16 @min-[1100px]:pb-20"}`}
+            >
+                {children}
+            </dl>
+        </section>
+    );
+}
 
 export default function BoardPreviewDiagram({
-    board,
-    preview
+    preview,
+    editable = true,
+    mainDestination = false
 }: {
-    board: BoardCreatorPayload;
-    preview: ReturnType<typeof createBoardPreview>;
+    preview: Preview;
+    editable?: boolean;
+    mainDestination?: boolean;
 }) {
     const reducedMotion = useReducedMotion();
-    return (
-        <div className="relative grid min-w-0 grid-cols-2 items-start gap-x-6 gap-y-8 @min-[1100px]:block @min-[1100px]:h-[69.27cqw]">
-            <div aria-hidden="true" className="pointer-events-none absolute inset-0 hidden @min-[1100px]:block">
-                {connectors.map((line, index) => (
-                    <motion.div
-                        key={index}
-                        initial={reducedMotion ? false : { scaleX: 0, opacity: 0 }}
-                        whileInView={{ scaleX: 1, opacity: 1 }}
-                        viewport={{ once: true }}
-                        transition={{
-                            duration: reducedMotion ? 0 : 0.35,
-                            delay: reducedMotion ? 0 : Math.min(index * 0.012, 0.1)
-                        }}
-                        className="absolute h-[0.5px]"
-                        style={{
-                            left: `${(line.x / 1536) * 100}%`,
-                            top: `calc(${(line.y / 1536) * 100}cqw + ${line.textClearance ?? 0}px)`,
-                            width: `max(0px, calc(${(line.length / 1536) * 100}cqw - ${line.vertical ? (line.textClearance ?? 0) : 0}px))`,
-                            rotate: line.vertical ? 90 : 0,
-                            transformOrigin: "0 0"
-                        }}
-                    >
-                        <Graphic asset={line.asset} className="bg-foreground/30 h-full w-full" />
-                    </motion.div>
-                ))}
-            </div>
-            <motion.figure
-                layout={reducedMotion ? false : "position"}
-                initial={false}
-                className="relative order-2 col-span-2 mx-auto w-full max-w-[320px] @min-[1100px]:absolute @min-[1100px]:top-[16.536cqw] @min-[1100px]:left-[37.826%] @min-[1100px]:m-0 @min-[1100px]:w-[28.646%] @min-[1100px]:max-w-none"
+    const diagramRef = useRef<HTMLDivElement>(null);
+    const figures = useRef<Partial<Record<View, HTMLElement>>>({});
+    const callouts = useRef<Partial<Record<Field, HTMLDivElement>>>({});
+    const [connectors, setConnectors] = useState<Connector[]>([]);
+    const [active, setActive] = useState<Field | null>(null);
+    const photo = preview.photo;
+    const hasDestination = Boolean(photo.destination.trim());
+    const hasTags = Boolean(photo.tags?.some((tag) => tag.trim()));
+    const hasDuration = Number.isSafeInteger(photo.durationDays) && (photo.durationDays ?? 0) > 0;
+
+    useEffect(() => {
+        const diagram = diagramRef.current;
+        if (!diagram) return;
+        const cover = figures.current.cover?.querySelector<HTMLElement>("article");
+        const details = figures.current.details?.querySelector<HTMLElement>("article");
+        const targets: Partial<Record<Field, HTMLElement | null>> = {
+            title: cover?.querySelector("h3"),
+            cover,
+            destination: hasDestination ? details?.querySelector('[data-photo-board-field="destination"]') : null,
+            tags: hasTags ? details?.querySelector('[data-photo-board-field="tags"]') : null,
+            duration: hasDuration ? details?.querySelector('[data-photo-board-field="duration"]') : null
+        };
+        function measure() {
+            if (!diagram) return;
+            const bounds = diagram.getBoundingClientRect();
+            if (bounds.width < 1100) {
+                setConnectors([]);
+                return;
+            }
+            const next = (Object.keys(targets) as Field[]).flatMap((field) => {
+                const target = targets[field];
+                const callout = callouts.current[field];
+                if (!target || !callout) return [];
+                const content = target.getBoundingClientRect();
+                const label = callout.getBoundingClientRect();
+                const leftSide = field === "title" || field === "cover";
+                const x =
+                    (field === "cover" ? content.left + 12 : leftSide ? content.left - 8 : content.right + 8) -
+                    bounds.left;
+                const y =
+                    content.top -
+                    bounds.top +
+                    (field === "cover"
+                        ? content.height * 0.58
+                        : field === "title" || field === "destination"
+                          ? parseFloat(getComputedStyle(target).fontSize) * 0.6
+                          : content.height / 2);
+                const startX = (leftSide ? label.right + 12 : label.left - 12) - bounds.left;
+                const startY = label.top - bounds.top + 22;
+                const elbow = leftSide
+                    ? (cover?.getBoundingClientRect().left ?? content.left) - bounds.left - 20
+                    : (details?.getBoundingClientRect().right ?? content.right) - bounds.left + 20;
+                return [{ field, path: `M ${startX} ${startY} H ${elbow} V ${y} H ${x}`, x, y }];
+            });
+            setConnectors((current) => (JSON.stringify(current) === JSON.stringify(next) ? current : next));
+        }
+        const observer = new ResizeObserver(measure);
+        [
+            diagram,
+            ...Object.values(figures.current),
+            ...Object.values(callouts.current),
+            ...Object.values(targets)
+        ].forEach((element) => {
+            if (element) observer.observe(element);
+        });
+        measure();
+        return () => observer.disconnect();
+    }, [hasDestination, hasTags, hasDuration]);
+
+    function annotation(field: Field, label: string, children: ReactNode, className?: string) {
+        return (
+            <Callout
+                field={field}
+                label={label}
+                editable={editable}
+                sourceOverride={field === "destination" && mainDestination ? mainDestinationSource : undefined}
+                className={className}
+                setActive={setActive}
+                elementRef={(element) => {
+                    if (element) callouts.current[field] = element;
+                    else delete callouts.current[field];
+                }}
             >
-                <CollageBoardCard board={preview.card} preview annotatedPreview />
-                <Graphic
-                    asset="vector14"
-                    className="bg-foreground/65 absolute top-[2.159%] left-[84.09%] h-[19px] w-[19px]"
-                />
-                <figcaption className="sr-only">
-                    Live Board preview. {preview.card.images.length} photos shown in the collage; all photos remain
-                    available below.
-                </figcaption>
-            </motion.figure>
-            <dl className="contents">
-                <Callout
-                    label="Title"
-                    href="#board-title"
-                    editLabel="Edit title"
-                    className="order-1 col-span-2 @min-[1100px]:top-[6.576cqw] @min-[1100px]:left-[30.078%] @min-[1100px]:w-[16%]"
-                >
-                    <span className="block max-h-12 overflow-y-auto">{preview.card.title}</span>
-                </Callout>
-                <Callout
-                    label="Visibility"
-                    href="#details-discovery"
-                    editLabel="Edit visibility"
-                    className="order-3 @min-[1100px]:top-[8.854cqw] @min-[1100px]:left-[54.557%] @min-[1100px]:w-[16%]"
-                    note="Drafts are visible only to you."
-                >
-                    {visibilityLabels[board.visibility]} when published
-                </Callout>
-                <Callout
-                    label="Dates"
-                    href="#day-plan"
-                    editLabel="Review dates in the day plan"
-                    className="order-3 @min-[1100px]:top-[17.839cqw] @min-[1100px]:left-[68.49%] @min-[1100px]:w-[13%]"
-                >
-                    <span className="block max-h-16 overflow-y-auto">{preview.dateLabel}</span>
-                </Callout>
-                <div className="order-4 col-span-2 min-w-0 @min-[1100px]:absolute @min-[1100px]:top-[15.104cqw] @min-[1100px]:left-[21.615%] @min-[1100px]:w-[6.38%]">
-                    <dt className="text-foreground/80 text-sm leading-none font-bold @min-[1100px]:text-right">
-                        Board
-                        <br className="hidden @min-[1100px]:block" /> photos
-                    </dt>
-                    <dd className="mt-3 flex items-start gap-4 @min-[1100px]:mt-1 @min-[1100px]:block">
-                        <a
-                            href="#board-images"
-                            aria-label="Manage photos"
-                            className="group relative block aspect-[98/272] w-[98px] shrink-0 focus-visible:outline-1 focus-visible:outline-offset-4 @min-[1100px]:w-full"
-                        >
-                            {photoSlots.map((slot, index) => (
-                                <span
-                                    key={index}
-                                    className="absolute overflow-hidden"
-                                    style={{
-                                        left: `${slot.left}%`,
-                                        top: `${slot.top}%`,
-                                        width: `${slot.width}%`,
-                                        height: `${slot.height}%`
-                                    }}
-                                >
-                                    {preview.card.images[index] ? (
-                                        <img
-                                            src={preview.card.images[index].src}
-                                            alt=""
-                                            loading="lazy"
-                                            className="h-full w-full object-cover transition-opacity group-hover:opacity-80 motion-reduce:transition-none"
-                                        />
-                                    ) : (
-                                        <span
-                                            aria-hidden="true"
-                                            className="border-line/35 block h-full w-full border"
-                                        />
-                                    )}
-                                </span>
-                            ))}
-                            <Graphic
-                                asset="vector15"
-                                className={`absolute top-[22%] left-[19%] h-[11px] w-[11px] ${preview.card.images.length ? "bg-white drop-shadow-sm" : "bg-foreground/70 group-hover:bg-foreground"}`}
-                            />
-                        </a>
-                        <span className="text-muted-foreground mt-2 max-w-40 text-[10px] leading-snug @min-[1100px]:block">
-                            {preview.cover ? "Selected cover first" : "No Board cover selected"}
-                            <br />
-                            {preview.photos.length} {preview.photos.length === 1 ? "photo" : "photos"} available
-                        </span>
-                    </dd>
-                </div>
-                <Callout
-                    label="Description"
-                    href="#board-basics"
-                    editLabel="Edit description"
-                    className="order-5 col-span-2 @min-[1100px]:top-[13.542cqw] @min-[1100px]:left-[81.12%] @min-[1100px]:w-[11%]"
-                >
-                    <span className="block max-h-36 overflow-y-auto">
-                        {board.description.trim() || "No description yet."}
-                    </span>
-                </Callout>
-                <Callout
-                    label="Tags"
-                    href="#details-discovery"
-                    editLabel="Edit details"
-                    className="order-6 @min-[1100px]:top-[30.273cqw] @min-[1100px]:left-[88.802%] @min-[1100px]:w-[11.198%]"
-                >
-                    {board.tags.length ? (
-                        <span className="grid gap-2">
-                            {board.tags.map((tag) => (
-                                <span key={tag} className="border-line border-l pl-2">
-                                    {tag}
-                                </span>
-                            ))}
-                        </span>
-                    ) : (
-                        "None selected"
-                    )}
-                </Callout>
-                <Callout
-                    label="Destination"
-                    href="#day-plan"
-                    editLabel="Edit places in the day plan"
-                    className="order-7 @min-[1100px]:top-[47.526cqw] @min-[1100px]:left-[80.664%] @min-[1100px]:w-[16%]"
-                    note="From confirmed places in your day plan."
-                >
-                    <span className="block max-h-24 overflow-y-auto">{preview.destination}</span>
-                </Callout>
-            </dl>
+                {children}
+            </Callout>
+        );
+    }
+
+    return (
+        <div
+            ref={diagramRef}
+            className="relative grid min-w-0 gap-x-10 gap-y-16 @min-[760px]:grid-cols-2 @min-[1100px]:grid-cols-[minmax(0,1fr)_minmax(0,340px)_minmax(0,340px)_minmax(0,1fr)] @min-[1100px]:gap-x-12"
+        >
+            <svg
+                aria-hidden="true"
+                className="text-foreground pointer-events-none absolute inset-0 z-10 hidden size-full overflow-visible @min-[1100px]:block"
+                fill="none"
+            >
+                {connectors.map((line) => (
+                    <g key={line.field}>
+                        <motion.path
+                            d={line.path}
+                            stroke="currentColor"
+                            strokeWidth={0.6}
+                            initial={reducedMotion ? false : { pathLength: 0 }}
+                            whileInView={{ pathLength: 1 }}
+                            viewport={{ once: true }}
+                            animate={{ opacity: active === line.field ? 0.65 : 0.22 }}
+                            transition={{
+                                pathLength: { duration: reducedMotion ? 0 : 0.65 },
+                                opacity: { duration: reducedMotion ? 0 : 0.18 }
+                            }}
+                        />
+                        <circle
+                            cx={line.x}
+                            cy={line.y}
+                            r={1.5}
+                            fill="currentColor"
+                            opacity={active === line.field ? 0.65 : 0.25}
+                        />
+                    </g>
+                ))}
+            </svg>
+            <PreviewView
+                view="cover"
+                photo={photo}
+                elementRef={(element) => {
+                    if (element) figures.current.cover = element;
+                }}
+            >
+                {annotation("title", "Title", "Your Board’s title introduces the journey.")}
+                {annotation(
+                    "cover",
+                    "Cover image",
+                    preview.cover
+                        ? "The selected cover sets the scene."
+                        : photo.image
+                          ? "A photo from your Board sets the scene."
+                          : "No cover selected. A quiet placeholder holds its place.",
+                    "@min-[1100px]:ml-5"
+                )}
+            </PreviewView>
+            <PreviewView
+                view="details"
+                photo={photo}
+                elementRef={(element) => {
+                    if (element) figures.current.details = element;
+                }}
+            >
+                {hasDestination
+                    ? annotation(
+                          "destination",
+                          "Destination",
+                          mainDestination
+                              ? "The main destination selected for this Board."
+                              : "From the places in your day plan."
+                      )
+                    : null}
+                {hasTags
+                    ? annotation("tags", "Tags", "The themes you’ve chosen for this journey.", "@min-[1100px]:ml-5")
+                    : null}
+                {hasDuration
+                    ? annotation("duration", "Duration", "The number of days in your plan.", "@min-[1100px]:mt-auto")
+                    : null}
+            </PreviewView>
         </div>
     );
 }

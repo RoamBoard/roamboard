@@ -4,24 +4,49 @@ import { Children, createElement, isValidElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MyBoardsContent } from "../src/components/features/boards/MyBoardsExperience";
 import { createMyBoardsStore, type MyBoardsStore } from "../src/lib/my-boards-store";
+import type { BoardDocument } from "../src/lib/board-creator-api";
 
 function summary(boardId: number, title = `Journey ${boardId}`) {
     return { boardId, title, status: "published", visibility: "public", updatedAt: "2026-10-15", coverImageUrl: null };
 }
-function document(boardId: number) {
+function document(boardId: number): BoardDocument {
     return {
         ...summary(boardId),
+        status: "published",
+        visibility: "public",
+        author: { username: "real_owner", bio: "", photo: null },
+        revision: 1,
+        imageIds: [],
+        tagIds: [],
+        permissions: { canEditContent: true, canManageBoard: true },
+        createdAt: "2026-10-15",
         description: "A real API response",
         coverImageId: null,
         images: [],
         tags: [],
         days: [
             {
+                dayId: boardId,
                 dayNumber: 1,
+                date: null,
                 activities: [
                     {
+                        activityId: boardId * 10,
+                        position: 0,
                         title: "A walk",
+                        activityTime: null,
+                        category: "walk",
+                        note: null,
+                        source: "manual",
+                        locationConfirmed: true,
+                        uploadedImageIds: [],
+                        coverImageId: null,
                         location: {
+                            name: "A walk",
+                            latitude: boardId === 1 ? 35.01 : 59.91,
+                            longitude: boardId === 1 ? 135.76 : 10.75,
+                            address: null,
+                            externalPlaceId: null,
                             city: boardId === 1 ? "Kyoto" : "Oslo",
                             country: boardId === 1 ? "Japan" : "Norway"
                         },

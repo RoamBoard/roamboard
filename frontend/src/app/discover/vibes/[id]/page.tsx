@@ -47,7 +47,7 @@ export default async function VibePage({ params }: Props) {
                 {boards.length ? (
                     <section
                         aria-label={`${tag.name} Boards`}
-                        className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3"
+                        className="mt-12 grid max-w-[1440px] items-start gap-x-7 gap-y-12 md:grid-cols-2 xl:grid-cols-3"
                     >
                         {boards.map((board) => (
                             <DiscoverBoardCard key={board.id} board={board} activeTagId={tag.id} />

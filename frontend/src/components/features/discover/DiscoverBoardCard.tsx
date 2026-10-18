@@ -1,47 +1,57 @@
-import Image from "@/components/images/LibraryImage";
 import Link from "next/link";
+import PhotoBoardCard from "@/components/features/boards/cards/PhotoBoardCard";
 import TagIcon from "@/components/ui/TagIcon";
 import { getBoardTag, boardTagHref, type BoardTagId } from "@/data/board-tags";
 import type { DiscoverBoard } from "@/data/discover-boards";
+import { findCountry } from "@/lib/countries";
+import type { PhotoBoardCardData } from "@/types/board-card";
 
-// Board-detail navigation is not implemented yet. Preserve the existing tag links.
+export function toDiscoverPhotoBoardCard(board: DiscoverBoard): PhotoBoardCardData {
+    const countries = (board.destinations ?? []).map((place) => findCountry(place.countryCode || place.country));
+    return {
+        id: board.id,
+        title: board.title,
+        author: board.author,
+        description: board.description,
+        destination: [
+            ...new Set(
+                (board.destinations ?? []).flatMap((place) => [...(place.cities ?? []), place.country].filter(Boolean))
+            )
+        ].join(" · "),
+        destinationLabel:
+            countries.length && countries.every((country) => country && country.code === countries[0]?.code)
+                ? countries[0]!.code
+                : "",
+        tags: board.tags.flatMap((id) => {
+            const tag = getBoardTag(id);
+            return tag ? [tag.name] : [];
+        }),
+        image: board.image ? { src: board.image.url, alt: board.image.alt || `Cover of ${board.title}` } : undefined
+    };
+}
+
+// These sources currently have no persistent Board identity or detail URL. Tags remain real navigation.
 export default function DiscoverBoardCard({ board, activeTagId }: { board: DiscoverBoard; activeTagId?: BoardTagId }) {
     return (
-        <article className="border-line overflow-hidden border">
-            {board.image && (
-                <div className="bg-faint relative aspect-[4/3]">
-                    <Image
-                        src={board.image.url}
-                        alt={board.image.alt ?? ""}
-                        fill
-                        unoptimized
-                        sizes="(max-width: 767px) 80vw, 35vw"
-                        className="object-cover"
-                    />
-                </div>
-            )}
-            <div className="p-5">
-                <h2 className="font-display text-30 leading-tight font-bold">{board.title}</h2>
-                <p className="text-muted-foreground text-12 mt-2">by {board.author}</p>
-                <p className="text-14 mt-4 leading-relaxed">{board.description}</p>
-                <ul aria-label="Board tags" className="mt-5 flex flex-wrap gap-2">
-                    {board.tags.map((id) => {
-                        const tag = getBoardTag(id);
-                        return tag ? (
-                            <li key={id}>
-                                <Link
-                                    href={boardTagHref(id)}
-                                    aria-current={id === activeTagId ? "page" : undefined}
-                                    className="border-line aria-[current=page]:bg-faint text-12 inline-flex min-h-9 items-center gap-2 rounded-full border px-3 py-1 hover:underline focus-visible:outline-2"
-                                >
-                                    <TagIcon tag={tag} size={14} />
-                                    {tag.name}
-                                </Link>
-                            </li>
-                        ) : null;
-                    })}
-                </ul>
-            </div>
-        </article>
+        <div className="min-w-0">
+            <PhotoBoardCard board={toDiscoverPhotoBoardCard(board)} details />
+            <ul aria-label="Explore Board tags" className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
+                {board.tags.map((id) => {
+                    const tag = getBoardTag(id);
+                    return tag ? (
+                        <li key={id}>
+                            <Link
+                                href={boardTagHref(id)}
+                                aria-current={id === activeTagId ? "page" : undefined}
+                                className="text-muted-foreground hover:text-foreground aria-[current=page]:text-foreground inline-flex min-h-11 items-center gap-2 text-xs underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4"
+                            >
+                                <TagIcon tag={tag} size={14} />
+                                {tag.name}
+                            </Link>
+                        </li>
+                    ) : null;
+                })}
+            </ul>
+        </div>
     );
 }

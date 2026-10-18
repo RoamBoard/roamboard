@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { deleteBoard, listBoards, loadSavedBoard, type SavedBoardRecord, type SavedBoardSummary } from "@/lib/boards";
 import { loadProfile } from "@/lib/profile";
+import BoardDocumentPhotoCard from "./cards/BoardDocumentPhotoCard";
 
 function messageFrom(error: unknown): string {
     return error instanceof Error ? error.message : "The request could not be completed.";
@@ -96,6 +97,9 @@ function BoardRecord({
                 ) : null}
                 {record ? (
                     <div className="grid gap-6">
+                        <div className="w-full max-w-[400px]">
+                            <BoardDocumentPhotoCard document={record} />
+                        </div>
                         <dl className="text-12 grid gap-3 sm:grid-cols-2">
                             <div>
                                 <dt className="font-bold">Owner ID</dt>

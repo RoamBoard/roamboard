@@ -710,7 +710,7 @@ test("empty nearby sights and failed sight reads remain distinct without hiding 
     }
 });
 
-test("public Boards use linked photo cards with chosen covers and named placeholders when no photo is saved", () => {
+test("public Boards use spatial V4 cards with chosen covers and honest fallbacks when no photo is saved", () => {
     const destination = guide();
     destination.boards.push({ ...destination.boards[0], boardId: 722, title: "Tokyo morning platforms", images: [] });
     const markup = renderGuide(destination);
@@ -718,14 +718,14 @@ test("public Boards use linked photo cards with chosen covers and named placehol
     assert.ok(boards);
     assert.equal((boards.match(/aspect-ratio:400 \/ 500/g) ?? []).length, 2);
     assert.match(boards, /href="\/boards\/721"/);
-    assert.match(boards, /href="\/boards\/722"/);
+    assert.match(boards, /aria-label="Select Tokyo morning platforms"/);
     assert.ok(
         boards.includes(
             `src="${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/api/v1/images/80/content?variant=display"`
         )
     );
-    assert.doesNotMatch(boards, /src="https:\/\/images\.unsplash\.com\/activity\.jpg[?"]|\binert=|aria-label="Select /);
-    assert.match(boards, /role="img"[^>]*aria-label="[^"]*Tokyo morning platforms/);
+    assert.doesNotMatch(boards, /src="https:\/\/images\.unsplash\.com\/activity\.jpg[?"]/);
+    assert.match(boards, /No cover photo/);
     assert.match(boards, /real_traveller/);
 });
 
@@ -743,15 +743,23 @@ test("the fixed public Boards chapter keeps every loaded Board reachable in its 
     const gallery = chapter.match(/<(?:ol|div)\b[^>]*aria-label="Tokyo public Boards"[^>]*>/)?.[0];
     assert.ok(gallery);
     assert.match(gallery, /tabindex="0"/);
+    const selections = Array.from(chapter.matchAll(/<button\b[^>]*aria-label="Select Tokyo public trip (\d+)"[^>]*>/g));
+    assert.deepEqual(
+        selections.map(([, number]) => Number(number)),
+        boards.map((_, index) => index + 1)
+    );
+    for (const [index, [button]] of selections.entries()) {
+        assert.match(button, index === 0 ? /aria-pressed="true"/ : /aria-pressed="false"/);
+        assert.match(button, index === 0 ? /tabindex="0"/ : /tabindex="-1"/);
+    }
     const links = Array.from(chapter.matchAll(/<a\b[^>]*href="\/boards\/(\d+)"[^>]*>/g));
     assert.deepEqual(
         links.map(([, id]) => Number(id)),
-        boards.map((board) => board.boardId)
+        [900]
     );
-    for (const [link] of links) {
-        assert.match(link, /aria-label="Open Tokyo public trip \d+"/);
-        assert.doesNotMatch(link, /tabindex="-1"|aria-hidden="true"/);
-    }
+    assert.match(chapter, /Open Board/);
+    assert.match(chapter, /aria-label="Previous slide"/);
+    assert.match(chapter, /aria-label="Next slide"/);
     for (const board of boards) assert.ok(chapter.includes(board.username));
     assert.match(chapter, /<button\b[^>]*>Load more boards<\/button>/);
     assert.equal((markup.match(/\bdata-destination-chapter\b/g) ?? []).length, 4);
@@ -799,7 +807,8 @@ test("loaded public Boards remain visible beside pagination failures and loading
     const loaded = guide({ boards: [...guide().boards, ...next.boards], page: next.page, hasMore: next.hasMore });
     const markup = renderGuide(loaded);
     assert.match(markup, /href="\/boards\/721"/);
-    assert.match(markup, /href="\/boards\/722"/);
+    assert.match(markup, /aria-label="Select Tokyo morning platforms"/);
+    assert.match(markup, /aria-label="Next slide"/);
     const failed = renderGuide(guide({ hasMore: true }), {
         error: "Page two unavailable",
         onLoadMore() {},

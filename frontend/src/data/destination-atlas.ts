@@ -423,7 +423,7 @@ const editorialGuides: DestinationPageData[] = [
     }
 ];
 
-// Original sample compositions use the shared V1 presentation; they have no persisted IDs or detail links.
+// Editorial sample content is adapted to shared V4; it has no persisted IDs or detail links.
 export const destinationPages: DestinationPageData[] = editorialGuides.map((destination) => ({
     ...destination,
     relatedBoards: [

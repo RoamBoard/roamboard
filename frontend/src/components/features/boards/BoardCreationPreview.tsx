@@ -8,12 +8,14 @@ import { dayColors, type BoardCreatorPayload } from "@/types/board-creator";
 
 type Props = {
     board: BoardCreatorPayload;
+    author?: string;
+    editable?: boolean;
 };
 
 const editLink =
     "text-muted-foreground hover:text-foreground mt-2 inline-flex min-h-11 items-center text-[11px] underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4";
 
-export default function BoardCreationPreview({ board: sourceBoard }: Props) {
+export default function BoardCreationPreview({ board: sourceBoard, author, editable = true }: Props) {
     const photoUrl = usePhotoUrls();
     const board = {
         ...sourceBoard,
@@ -23,13 +25,13 @@ export default function BoardCreationPreview({ board: sourceBoard }: Props) {
             thumbnailUrl: photoUrl(image.thumbnailUrl)
         }))
     };
-    const preview = createBoardPreview(board);
+    const preview = createBoardPreview(board, author);
     const pins = board.days.flatMap((day) => day.pins);
     const uploadedCount = board.images.filter((image) => image.source === "upload").length;
     return (
         <article aria-label="Board preview" className="@container min-w-0">
-            <BoardPreviewDiagram board={board} preview={preview} />
-            <div className="text-muted-foreground mt-8 flex flex-wrap justify-between gap-x-6 gap-y-2 text-[11px] leading-relaxed @min-[1100px]:ml-[22%]">
+            <BoardPreviewDiagram preview={preview} editable={editable} mainDestination={Boolean(board.destination)} />
+            <div className="text-muted-foreground mt-12 flex flex-wrap justify-between gap-x-6 gap-y-2 text-[11px] leading-relaxed">
                 <p>Live preview · updates as you edit</p>
                 <p>
                     {board.days.length} {board.days.length === 1 ? "day" : "days"} · {pins.length}{" "}
@@ -37,7 +39,7 @@ export default function BoardCreationPreview({ board: sourceBoard }: Props) {
                     {uploadedCount === 1 ? "photo" : "photos"}
                 </p>
             </div>
-            <details className="border-line mt-12 border-t pt-3 @min-[1100px]:ml-[22%]">
+            <details className="border-line mt-12 border-t pt-3">
                 <summary className="text-foreground/80 cursor-pointer py-4 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-4">
                     Review full itinerary · {pins.length} {pins.length === 1 ? "activity" : "activities"}
                 </summary>
@@ -105,11 +107,13 @@ export default function BoardCreationPreview({ board: sourceBoard }: Props) {
                         <p className="text-muted-foreground text-xs">No days added yet.</p>
                     ) : null}
                 </div>
-                <a href="#day-plan" className={editLink}>
-                    Back to day plan
-                </a>
+                {editable ? (
+                    <a href="#day-plan" className={editLink}>
+                        Back to day plan
+                    </a>
+                ) : null}
             </details>
-            <details className="border-line mt-5 border-t pt-3 @min-[1100px]:ml-[22%]">
+            <details className="border-line mt-5 border-t pt-3">
                 <summary className="text-foreground/80 cursor-pointer py-4 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-4">
                     Review all photos · {board.images.length}
                 </summary>
@@ -164,9 +168,11 @@ export default function BoardCreationPreview({ board: sourceBoard }: Props) {
                 {board.images.length === 0 ? (
                     <p className="text-muted-foreground text-xs">No photos added yet.</p>
                 ) : null}
-                <a href="#board-images" className={editLink}>
-                    Back to Board photos
-                </a>
+                {editable ? (
+                    <a href="#board-images" className={editLink}>
+                        Back to Board photos
+                    </a>
+                ) : null}
             </details>
         </article>
     );

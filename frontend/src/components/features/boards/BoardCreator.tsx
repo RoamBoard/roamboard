@@ -79,6 +79,7 @@ export default function BoardCreator({
     const [destinationGeneration, setDestinationGeneration] = useState(0);
     const [destination, setDestination] = useState<BoardDestinationDraft | null>(null);
     const [description, setDescription] = useState("");
+    const [previewAuthor, setPreviewAuthor] = useState("");
     const [images, setImages] = useState<BoardImageDraft[]>([]);
     const [selectedCoverImageId, setSelectedCoverImageId] = useState<number | null>(null);
     const initialDayId = useId();
@@ -268,6 +269,7 @@ export default function BoardCreator({
         if (initialBoardId !== undefined) return;
         void loadProfile()
             .then((profile) => {
+                setPreviewAuthor(profile.username);
                 if (!visibilityTouched.current) {
                     setVisibility(profile.defaultBoardVisibility);
                     setInitialFingerprint(
@@ -642,19 +644,22 @@ export default function BoardCreator({
                                 description="Let’s start with the essentials to set the scene for everything you’re about to plan."
                             />
                             <div className="max-w-3xl min-w-0">
-                                <BoardDestinationSearch
-                                    key={`${savedBoard?.boardId ?? "new"}-${destinationGeneration}`}
-                                    value={destination}
-                                    suggested={destinationSuggested}
-                                    onChange={(place) => {
-                                        destinationTouched.current = true;
-                                        setDestinationSuggested(false);
-                                        setDestination(place);
-                                    }}
-                                />
+                                <div id="board-destination" tabIndex={-1} className="scroll-mt-36">
+                                    <BoardDestinationSearch
+                                        key={`${savedBoard?.boardId ?? "new"}-${destinationGeneration}`}
+                                        value={destination}
+                                        suggested={destinationSuggested}
+                                        onChange={(place) => {
+                                            destinationTouched.current = true;
+                                            setDestinationSuggested(false);
+                                            setDestination(place);
+                                        }}
+                                    />
+                                </div>
                                 <label className="text-foreground/80 text-20 sm:text-24 block max-w-3xl min-w-0 font-bold">
                                     Description
                                     <textarea
+                                        id="board-description"
                                         value={description}
                                         onChange={(event) => setDescription(event.target.value)}
                                         placeholder="type here..."
@@ -668,6 +673,7 @@ export default function BoardCreator({
 
                     <section
                         id="day-plan"
+                        tabIndex={-1}
                         className="mx-auto w-full max-w-[96rem] scroll-mt-36 px-5 pb-20 sm:px-8 lg:px-12 lg:pb-28"
                     >
                         <CreatorSectionIntro
@@ -760,7 +766,11 @@ export default function BoardCreator({
                     </section>
                 </fieldset>
 
-                <BoardPreviewSection board={payload} />
+                <BoardPreviewSection
+                    board={{ ...payload, status: savedBoard?.status ?? "draft" }}
+                    author={savedBoard?.author.username ?? previewAuthor}
+                    editable={!editorDisabled}
+                />
 
                 <section id="publish" className={`${fullChapterClasses} mb-20 sm:mb-32`}>
                     <CreatorSectionIntro

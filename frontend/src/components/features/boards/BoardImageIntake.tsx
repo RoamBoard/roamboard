@@ -240,9 +240,10 @@ export default function BoardImageIntake({
             ) : null}
             <section
                 id="board-images"
+                tabIndex={-1}
                 aria-label="Board setup and images"
                 aria-busy={busy || loading}
-                className="w-full min-w-0 scroll-mt-36"
+                className="w-full min-w-0 scroll-mt-36 focus-visible:outline-1 focus-visible:outline-offset-4"
             >
                 <input
                     ref={inputRef}
@@ -404,6 +405,7 @@ export default function BoardImageIntake({
                                         type="button"
                                         disabled={disabled || busy}
                                         onClick={() => onSelectCover(image.uploadedImageId!)}
+                                        data-board-cover-choice=""
                                         className="text-9 mt-1 block underline disabled:opacity-40"
                                     >
                                         Set as cover

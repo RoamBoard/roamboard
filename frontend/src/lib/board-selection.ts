@@ -1,17 +1,20 @@
 import type { BoardDocument, DraftSummary } from "./board-creator-api";
-import type { CollageBoardCardData, PhotoBoardCardData } from "../types/board-card";
+import type { CollageBoardCardData, PhotoBoardCardData, PhotoBoardCardProps } from "../types/board-card";
+import { toPhotoBoardCard, toSummaryPhotoBoardCard } from "./photo-board-card";
 import { boardTitleLines } from "./my-boards";
 import { findCountry } from "./countries";
 
 export type SelectionSummary = DraftSummary & {
     status: "draft" | "published";
     source: "owned" | "shared";
+    visibility?: BoardDocument["visibility"];
 };
 export type SelectionFilter = "all" | "draft" | "published";
 export type SelectionBoard = {
     summary: SelectionSummary;
     collage: CollageBoardCardData;
-    photo: PhotoBoardCardData | null;
+    photo: PhotoBoardCardData;
+    ownership: PhotoBoardCardProps["ownership"];
     document?: BoardDocument;
     destination: string;
 };
@@ -60,24 +63,9 @@ export function toSelectionBoard(summary: SelectionSummary, document?: BoardDocu
     const imageUrl = (url: string) =>
         new URL(url, process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001").toString();
     const activities = document?.days.flatMap((day) => day.activities) ?? [];
-    const locations = activities.flatMap((activity) =>
-        activity.locationConfirmed && activity.location ? [activity.location] : []
-    );
-    const destination = [
-        ...new Set(
-            locations.flatMap((location) =>
-                [
-                    location.city,
-                    location.country ? (findCountry(location.country)?.name ?? location.country) : null
-                ].filter(Boolean)
-            )
-        )
-    ].join(", ");
-    const countries = locations.map((location) => (location.country ? findCountry(location.country) : undefined));
-    const country =
-        countries.length && countries.every((country) => country?.code === countries[0]?.code)
-            ? countries[0]
-            : undefined;
+    const photo = document ? toPhotoBoardCard(document) : toSummaryPhotoBoardCard(summary);
+    const destination = photo.destination;
+    const country = findCountry(photo.destinationLabel);
     const uploaded = document
         ? [...document.images]
               .sort(
@@ -114,6 +102,12 @@ export function toSelectionBoard(summary: SelectionSummary, document?: BoardDocu
         document,
         collage,
         destination,
-        photo: cover ? { ...collage, titleLines: boardTitleLines(title, 16), image: cover } : null
+        photo,
+        ownership:
+            summary.source === "owned" || document?.permissions.canManageBoard
+                ? "owner"
+                : document
+                  ? "other"
+                  : "unknown"
     };
 }

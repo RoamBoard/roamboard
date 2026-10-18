@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import BoardCard, { type BoardCardProps } from "./BoardCard";
 import ThemeSelect from "@/components/ui/ThemeSelect";
+import PhotoBoardCardLab from "./PhotoBoardCardLab";
 import {
     collageBoardExamples,
     compactBoardExamples,
@@ -54,6 +55,7 @@ export default function BoardCardGallery() {
                     {feedback}
                 </p>
             </header>
+            <PhotoBoardCardLab />
             {groups.map((group) => (
                 <section key={group.variant} aria-label={group.name} className="mx-auto mt-12 max-w-[1480px]">
                     <h2 className="font-display text-24 border-line mb-8 border-b pb-4 font-bold">{group.name}</h2>

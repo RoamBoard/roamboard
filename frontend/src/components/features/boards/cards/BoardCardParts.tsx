@@ -1,9 +1,8 @@
 import Image from "next/image";
 import LibraryImage from "@/components/images/LibraryImage";
 import Link from "next/link";
-import type { CSSProperties, ReactNode } from "react";
+import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import type { BoardCardActions, BoardCardImage, BoardCardSummary } from "@/types/board-card";
-import BoardPhoto from "../BoardPhoto";
 
 export const cardAsset = (name: string) => `/images/board-cards/${name}`;
 
@@ -14,9 +13,10 @@ type FrameProps = {
     children: ReactNode;
     className?: string;
     href?: string;
+    linkProps?: Pick<ComponentProps<typeof Link>, "onClick" | "aria-describedby">;
 };
 
-export function BoardCardFrame({ board, width, height, children, className = "", href }: FrameProps) {
+export function BoardCardFrame({ board, width, height, children, className = "", href, linkProps }: FrameProps) {
     return (
         <article
             aria-label={`${board.title} — ${board.destination}`}
@@ -26,6 +26,7 @@ export function BoardCardFrame({ board, width, height, children, className = "",
             {children}
             {href ? (
                 <Link
+                    {...linkProps}
                     href={href}
                     aria-label={`Open ${board.title}`}
                     className="focus-visible:outline-foreground absolute inset-0 z-10 focus-visible:outline-2 focus-visible:outline-offset-4"
@@ -52,22 +53,15 @@ export function BoardCardTitle({ board, className }: { board: BoardCardSummary; 
 export function BoardCardPhoto({
     image,
     className = "",
-    sizes
+    sizes,
+    onError
 }: {
     image: BoardCardImage;
     className?: string;
     sizes: string;
+    onError?: () => void;
 }) {
-    // Live guide photos use the existing cookie-aware image and failure placeholder.
-    if (image.unoptimized)
-        return (
-            <BoardPhoto
-                image={{ id: image.src, url: image.src, alt: image.alt, source: "application" }}
-                placeholderLabel={image.alt}
-                className={className}
-                sizes={sizes}
-            />
-        );
+    // Direct delivery retains API cookies; keep V4's error callback and the shared crop/position wrapper.
     const Photo = image.src.startsWith("library:") ? LibraryImage : Image;
     return (
         <div className={`relative overflow-hidden ${className}`}>
@@ -85,6 +79,7 @@ export function BoardCardPhoto({
                 }
             >
                 <Photo
+                    onError={onError}
                     src={image.src}
                     alt={image.alt}
                     fill

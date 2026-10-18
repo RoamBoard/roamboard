@@ -70,7 +70,13 @@ export function Carousel({
                 aria-roledescription="carousel"
                 className={`relative ${className}`}
                 onKeyDownCapture={(event) => {
-                    if (event.target instanceof HTMLElement && event.target.matches("input, textarea, select")) return;
+                    if (
+                        event.target instanceof Element &&
+                        event.target.closest(
+                            "input, textarea, select, button[aria-expanded]:not([data-board-disclosure]), button[aria-pressed]"
+                        )
+                    )
+                        return;
                     if (event.key === "ArrowLeft") {
                         event.preventDefault();
                         scrollPrev();

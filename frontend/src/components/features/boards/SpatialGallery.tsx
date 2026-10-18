@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { animate, AnimatePresence, motion, useMotionValue, useReducedMotion } from "motion/react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import type { GalleryBoard } from "@/lib/my-boards";
+import { toEditorialPhotoBoardCard } from "@/lib/photo-board-card";
 import BoardCard from "./cards/BoardCard";
 
 export default function SpatialGallery({
@@ -23,6 +24,7 @@ export default function SpatialGallery({
     const reducedMotion = useReducedMotion();
     const panX = useMotionValue(0);
     const dragged = useRef(false);
+    const gallery = useRef<HTMLDivElement>(null);
 
     function select(index: number) {
         const wrapped = (index + boards.length) % boards.length;
@@ -31,6 +33,10 @@ export default function SpatialGallery({
     }
 
     if (!selected) return null;
+    const selectedPhoto = selected.photo ?? toEditorialPhotoBoardCard(selected.collage);
+    const caption = [selectedPhoto.durationDays ? `${selectedPhoto.durationDays} days` : "", selectedPhoto.destination]
+        .filter(Boolean)
+        .join(" · ");
 
     return (
         <section
@@ -59,6 +65,7 @@ export default function SpatialGallery({
                 <div className="min-w-0">
                     <div
                         role="region"
+                        ref={gallery}
                         aria-roledescription="carousel"
                         aria-label={
                             saved
@@ -67,7 +74,11 @@ export default function SpatialGallery({
                         }
                         tabIndex={0}
                         onKeyDown={(event) => {
-                            if (event.target !== event.currentTarget) return;
+                            if (
+                                event.target !== event.currentTarget &&
+                                !(event.target instanceof Element && event.target.closest("[data-board-selection]"))
+                            )
+                                return;
                             if (
                                 event.key === "ArrowLeft" ||
                                 event.key === "ArrowRight" ||
@@ -75,6 +86,7 @@ export default function SpatialGallery({
                                 event.key === "End"
                             ) {
                                 event.preventDefault();
+                                event.currentTarget.focus({ preventScroll: true });
                                 select(
                                     event.key === "Home"
                                         ? 0
@@ -96,15 +108,17 @@ export default function SpatialGallery({
                                 panX.set(Math.max(-120, Math.min(120, info.offset.x * 0.45)));
                             }}
                             onPanEnd={(_, info) => {
-                                if (Math.abs(info.offset.x) > 40 || Math.abs(info.velocity.x) > 350)
+                                if (Math.abs(info.offset.x) > 40 || Math.abs(info.velocity.x) > 350) {
+                                    gallery.current?.focus({ preventScroll: true });
                                     select(selectedIndex + (info.offset.x < 0 ? 1 : -1));
+                                }
                                 void animate(
                                     panX,
                                     0,
                                     reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 32 }
                                 );
                             }}
-                            className="relative h-[390px] cursor-grab select-none active:cursor-grabbing sm:h-[520px] lg:h-[590px]"
+                            className="relative h-[min(110cqw,430px)] min-h-[335px] cursor-grab select-none active:cursor-grabbing sm:h-[550px] lg:h-[630px]"
                         >
                             {boards.map((board, index) => {
                                 const half = Math.floor(boards.length / 2);
@@ -116,9 +130,9 @@ export default function SpatialGallery({
                                         key={board.collage.id}
                                         initial={false}
                                         animate={{
-                                            x: `${offset * 65}%`,
-                                            y: distance === 0 ? 0 : distance === 1 ? 55 : 110,
-                                            scale: distance === 0 ? 1 : distance === 1 ? 0.75 : 0.46,
+                                            x: `${offset * 78}%`,
+                                            y: distance === 0 ? 0 : distance === 1 ? 44 : 92,
+                                            scale: distance === 0 ? 1 : distance === 1 ? 0.78 : 0.54,
                                             opacity: distance === 0 ? 1 : distance === 1 ? 0.6 : visible ? 0.25 : 0
                                         }}
                                         transition={
@@ -131,17 +145,23 @@ export default function SpatialGallery({
                                             pointerEvents: visible ? "auto" : "none"
                                         }}
                                         aria-hidden={!visible}
-                                        className={`absolute top-0 left-1/2 ${saved ? "w-[clamp(244px,65cqw,440px)]" : "w-[clamp(244px,34cqw,440px)]"} origin-center -translate-x-1/2 ${distance ? "hidden sm:block" : ""}`}
+                                        inert={!visible}
+                                        className={`absolute top-0 left-1/2 ${saved ? "w-[min(400px,82cqw)]" : "w-[min(400px,82cqw)] sm:w-[min(400px,48cqw)]"} origin-center -translate-x-1/2 ${distance ? "hidden sm:block" : ""}`}
                                     >
-                                        <BoardCard variant="collage" board={board.collage} />
-                                        <button
-                                            type="button"
-                                            tabIndex={-1}
-                                            aria-label={`Select ${board.collage.title}`}
-                                            onClick={() => {
-                                                if (!dragged.current) select(index);
+                                        <BoardCard
+                                            variant="photo"
+                                            board={board.photo ?? toEditorialPhotoBoardCard(board.collage)}
+                                            ownership={board.ownership}
+                                            details={distance === 0}
+                                            imageSizes="(max-width: 640px) 75vw, 400px"
+                                            selection={{
+                                                selected: distance === 0,
+                                                tabIndex: distance === 0 ? 0 : -1,
+                                                onSelect: (event) => {
+                                                    if (!dragged.current || event.detail === 0) select(index);
+                                                    else event.preventDefault();
+                                                }
                                             }}
-                                            className="absolute inset-0 cursor-pointer"
                                         />
                                     </motion.div>
                                 );
@@ -182,7 +202,7 @@ export default function SpatialGallery({
                                 transition={{ duration: reducedMotion ? 0 : 0.12 }}
                                 className="text-12 text-muted-foreground"
                             >
-                                {selected.collage.durationDays} days · {selected.collage.destination}
+                                {caption}
                             </motion.p>
                         </AnimatePresence>
                         {selected.href && (
@@ -192,8 +212,8 @@ export default function SpatialGallery({
                         )}
                     </div>
                     <p className="sr-only" aria-live="polite" aria-atomic="true">
-                        {selected.collage.title}, by {selected.collage.author}. {selected.collage.durationDays} days in{" "}
-                        {selected.collage.destination}. Board {selectedIndex + 1} of {boards.length}.
+                        {selectedPhoto.title}, by {selectedPhoto.author}. {caption}. Board {selectedIndex + 1} of{" "}
+                        {boards.length}.
                     </p>
                 </div>
                 {saved && (
@@ -207,11 +227,9 @@ export default function SpatialGallery({
                                 transition={{ duration: reducedMotion ? 0 : 0.18 }}
                                 className="font-display text-foreground/65 text-24 md:text-30 space-y-10 text-center leading-tight lg:space-y-20"
                             >
-                                <p>by {selected.collage.author}</p>
-                                <p>
-                                    {selected.collage.durationDays} days | {selected.collage.destination}
-                                </p>
-                                <p>{selected.collage.themes.join(", ")}</p>
+                                <p>by {selectedPhoto.author}</p>
+                                {caption && <p>{caption}</p>}
+                                <p>{selectedPhoto.tags?.join(", ")}</p>
                             </motion.div>
                         </AnimatePresence>
                     </div>

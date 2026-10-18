@@ -5,7 +5,6 @@ import { useRef, type ReactNode } from "react";
 import { AnimatePresence, motion, useMotionValue, useReducedMotion, useSpring } from "motion/react";
 import { ArrowLeft, ArrowRight, ArrowUpRight } from "lucide-react";
 import { selectionEditorHref, type SelectionBoard } from "@/lib/board-selection";
-import CollageBoardCard from "./cards/CollageBoardCard";
 import PhotoBoardCard from "./cards/PhotoBoardCard";
 
 const spring = { type: "spring" as const, stiffness: 150, damping: 25, mass: 0.85 };
@@ -102,16 +101,21 @@ export function BoardSelectionGallery({
                 tabIndex={0}
                 className={`@container relative mt-8 ${focusClass}`}
                 onKeyDown={(event) => {
-                    if (event.target !== event.currentTarget) return;
+                    if (
+                        event.target !== event.currentTarget &&
+                        !(event.target instanceof Element && event.target.closest("[data-board-selection]"))
+                    )
+                        return;
                     if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
                         event.preventDefault();
+                        event.currentTarget.focus({ preventScroll: true });
                         if (event.key === "Home") onSelect(boards[0].summary.boardId);
                         else if (event.key === "End") onSelect(boards.at(-1)!.summary.boardId);
                         else selectOffset(event.key === "ArrowRight" ? 1 : -1);
                     }
                 }}
             >
-                <div className="relative h-[min(130cqw,35rem)] overflow-clip sm:h-[min(66cqw,37rem)] lg:h-[min(56cqw,37rem)]">
+                <div className="relative h-[min(calc(110cqw+4rem),36rem)] min-h-[320px] overflow-clip sm:h-[min(calc(60cqw+4rem),36rem)] lg:h-[min(calc(45cqw+4rem),36rem)]">
                     {boards.map((board) => {
                         const active = board.summary.boardId === selected.summary.boardId;
                         const position = positions.get(board.summary.boardId) ?? 0;
@@ -128,48 +132,40 @@ export function BoardSelectionGallery({
                                 }}
                                 transition={reduced ? { duration: 0 } : spring}
                                 style={{ zIndex: active ? 20 : 10 - position, transformOrigin: "top left" }}
-                                className={`absolute w-[100cqw] sm:w-[48cqw] lg:w-[38cqw] ${!active ? "hidden sm:block" : ""}`}
+                                className={`absolute ml-[6cqw] w-[min(400px,88cqw)] sm:ml-0 sm:w-[min(400px,48cqw)] lg:w-[min(400px,36cqw)] ${!active ? "hidden sm:block" : ""}`}
                             >
                                 <TactileBoard active={active}>
-                                    {board.document ? (
-                                        <CollageBoardCard
-                                            board={board.collage}
-                                            hideBookmark
-                                            preview={board.summary.source === "shared" || !board.document}
-                                            annotatedPreview={board.summary.source === "shared"}
-                                        />
-                                    ) : (
-                                        <div className="border-line relative aspect-[440/560] border-t pt-6 pl-5">
-                                            <h3 className="font-display text-24 max-w-[80%] leading-tight font-bold break-words">
-                                                {board.collage.title}
-                                            </h3>
-                                            <p className="text-muted-foreground mt-5 text-xs">
-                                                {active && error
-                                                    ? "Preview unavailable"
-                                                    : "Loading Board preview and edit access…"}
-                                            </p>
-                                            <span
-                                                aria-hidden="true"
-                                                className="bg-line/60 absolute top-0 bottom-16 left-3 w-px"
-                                            />
-                                        </div>
-                                    )}
-                                    <button
-                                        type="button"
-                                        aria-label={`Focus ${board.collage.title}`}
-                                        aria-pressed={active}
-                                        onClick={() => onSelect(board.summary.boardId)}
-                                        className={`absolute inset-0 cursor-pointer ${focusClass}`}
+                                    <PhotoBoardCard
+                                        board={board.photo}
+                                        ownership={board.ownership}
+                                        details={active && Boolean(board.document)}
+                                        imageSizes="(max-width: 640px) 80vw, 400px"
+                                        selection={{
+                                            selected: active,
+                                            label: `Focus ${board.photo.title}`,
+                                            tabIndex: active ? 0 : -1,
+                                            onSelect: () => onSelect(board.summary.boardId)
+                                        }}
                                     />
+                                    {!board.document && active && (
+                                        <p
+                                            role="status"
+                                            className="text-muted-foreground mt-3 max-w-full text-xs leading-relaxed"
+                                        >
+                                            {error
+                                                ? "Preview unavailable. Retry access below."
+                                                : "Loading Board preview and edit access…"}
+                                        </p>
+                                    )}
                                 </TactileBoard>
                             </motion.div>
                         );
                     })}
                     <span
                         aria-hidden="true"
-                        className="bg-line pointer-events-none absolute top-[calc(25%+5px)] left-[34.3%] hidden h-px w-[3%] lg:block"
+                        className="bg-line pointer-events-none absolute top-[calc(25%+5px)] left-[min(400px,36cqw)] hidden h-px w-[3cqw] lg:block"
                     />
-                    <div className="absolute top-[25%] left-[39%] z-30 hidden w-[24%] lg:block">
+                    <div className="absolute top-[25%] left-[calc(min(400px,36cqw)+3cqw)] z-30 hidden w-[22cqw] lg:block">
                         <SelectionAnnotations board={selected} />
                     </div>
                     <span
@@ -206,7 +202,7 @@ export function BoardSelectionGallery({
                     {mode === "continue" && href ? (
                         <Link
                             href={href}
-                            className={`group inline-flex min-h-11 items-center gap-4 py-3 text-xs tracking-[.08em] underline underline-offset-8 ${focusClass}`}
+                            className={`group ml-auto inline-flex min-h-11 items-center gap-4 py-3 text-xs tracking-[.08em] underline underline-offset-8 ${focusClass}`}
                         >
                             CONTINUE BOARD{" "}
                             <ArrowUpRight
@@ -219,7 +215,7 @@ export function BoardSelectionGallery({
                         <span className="text-muted-foreground text-xs">
                             {mode === "remix"
                                 ? "Remixing is coming later"
-                                : error
+                                : error || selected.document
                                   ? "Editing unavailable"
                                   : "Checking edit access…"}
                         </span>
@@ -229,7 +225,7 @@ export function BoardSelectionGallery({
                     <SelectionAnnotations board={selected} />
                 </div>
                 <p aria-live="polite" aria-atomic="true" className="sr-only">
-                    {selected.collage.title}. {selected.summary.status === "draft" ? "Draft" : "Published"}. Board{" "}
+                    {selected.photo.title}. {selected.photo.status === "draft" ? "Draft" : "Published"}. Board{" "}
                     {selectedIndex + 1} of {boards.length}.
                 </p>
                 {error && (
@@ -251,6 +247,7 @@ export function BoardSelectionGallery({
 
 function SelectionAnnotations({ board }: { board: SelectionBoard }) {
     const reduced = useReducedMotion();
+    const activities = board.document?.days.reduce((count, day) => count + day.activities.length, 0) ?? 0;
     return (
         <AnimatePresence mode="wait" initial={false}>
             <motion.dl
@@ -263,12 +260,12 @@ function SelectionAnnotations({ board }: { board: SelectionBoard }) {
             >
                 <div>
                     <dt className="text-foreground text-[10px] tracking-[.1em] uppercase">
-                        {board.summary.source === "owned" ? "Your Board" : "Shared with you"}
+                        {board.ownership === "owner" ? "Your Board" : "Shared with you"}
                     </dt>
                     <dd className="mt-1">
                         {board.summary.status === "draft"
                             ? "Unpublished draft"
-                            : board.summary.source === "owned"
+                            : board.ownership === "owner"
                               ? "Published · still yours to shape"
                               : "Published · editing access"}
                     </dd>
@@ -288,7 +285,7 @@ function SelectionAnnotations({ board }: { board: SelectionBoard }) {
                         <dt className="text-foreground text-[10px] tracking-[.1em] uppercase">In this Board</dt>
                         <dd className="mt-1">
                             {board.document.days.length} {board.document.days.length === 1 ? "day" : "days"} ·{" "}
-                            {board.document.days.reduce((count, day) => count + day.activities.length, 0)} activities
+                            {activities} {activities === 1 ? "activity" : "activities"}
                         </dd>
                     </div>
                 )}
@@ -331,7 +328,7 @@ export function BoardSelectionCollection({
             </div>
             <motion.ul
                 layout={!reduced}
-                className="mt-10 grid grid-cols-1 gap-y-3 min-[460px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4"
+                className="mt-10 grid grid-cols-1 gap-y-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
             >
                 {boards.map((board, index) => (
                     <motion.li
@@ -341,29 +338,21 @@ export function BoardSelectionCollection({
                         className={`border-line relative border-r border-b px-5 py-8 sm:px-7 sm:py-10 ${index % 2 ? "lg:pt-20" : ""}`}
                     >
                         <TactileBoard>
-                            <div className="relative mx-auto max-w-56 transition-transform duration-300 focus-within:-translate-y-2 hover:-translate-y-2 motion-reduce:transform-none motion-reduce:transition-none">
-                                {board.photo ? (
-                                    <PhotoBoardCard board={board.photo} />
-                                ) : (
-                                    <div className="border-line flex aspect-[4/5] flex-col justify-between border p-5">
-                                        <span className="text-muted-foreground text-[10px] tracking-[.12em] uppercase">
-                                            Room for memories
-                                        </span>
-                                        <h3 className="font-display text-24 leading-tight font-bold break-words">
-                                            {board.collage.title}
-                                        </h3>
-                                        <span className="text-muted-foreground text-[11px]">No cover added</span>
-                                    </div>
-                                )}
-                                <button
-                                    type="button"
-                                    aria-label={`Focus ${board.collage.title} from collection`}
-                                    onClick={() => onSelect(board.summary.boardId)}
-                                    className={`absolute inset-0 cursor-pointer ${focusClass}`}
+                            <div className="relative mx-auto max-w-60 transition-transform duration-300 focus-within:-translate-y-2 hover:-translate-y-2 motion-reduce:transform-none motion-reduce:transition-none">
+                                <PhotoBoardCard
+                                    board={board.photo}
+                                    ownership={board.ownership}
+                                    details
+                                    imageSizes="(max-width: 640px) 75vw, 240px"
+                                    selection={{
+                                        selected: false,
+                                        label: `Focus ${board.photo.title} from collection`,
+                                        onSelect: () => onSelect(board.summary.boardId)
+                                    }}
                                 />
                             </div>
                         </TactileBoard>
-                        <div className="text-muted-foreground mx-auto mt-4 flex max-w-56 flex-wrap justify-between gap-2 text-[10px]">
+                        <div className="text-muted-foreground mx-auto mt-4 flex max-w-60 flex-wrap justify-between gap-2 text-[10px]">
                             <span>{board.summary.status === "draft" ? "Draft" : "Published"}</span>
                             <time dateTime={board.summary.updatedAt}>
                                 {formatSelectionDate(board.summary.updatedAt)}

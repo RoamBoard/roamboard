@@ -3,7 +3,7 @@ import type {
     CollageBoardCardData,
     CompactBoardCardData,
     LandscapeBoardCardData,
-    PhotoBoardCardData
+    PhotoBoardCardProps
 } from "@/types/board-card";
 import CollageBoardCard from "./CollageBoardCard";
 import CompactBoardCard from "./CompactBoardCard";
@@ -15,7 +15,7 @@ export type BoardCardProps = BoardCardActions &
         | { variant: "collage"; board: CollageBoardCardData }
         | { variant: "compact"; board: CompactBoardCardData }
         | { variant: "landscape"; board: LandscapeBoardCardData }
-        | { variant: "photo"; board: PhotoBoardCardData }
+        | ({ variant: "photo" } & PhotoBoardCardProps)
     );
 
 export default function BoardCard(props: BoardCardProps) {
