@@ -1,5 +1,5 @@
 import type { BoardDocument, DraftSummary } from "./board-creator-api";
-import type { CollageBoardCardData, PhotoBoardCardData } from "../types/board-card";
+import type { BoardCardImage, CollageBoardCardData, PhotoBoardCardData } from "../types/board-card";
 import { boardTitleLines } from "./my-boards";
 import { findCountry } from "./countries";
 
@@ -11,7 +11,7 @@ export type SelectionFilter = "all" | "draft" | "published";
 export type SelectionBoard = {
     summary: SelectionSummary;
     collage: CollageBoardCardData;
-    photo: PhotoBoardCardData | null;
+    photo: (PhotoBoardCardData & { image: BoardCardImage }) | null;
     document?: BoardDocument;
     destination: string;
 };

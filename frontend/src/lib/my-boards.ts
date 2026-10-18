@@ -1,10 +1,18 @@
 import type { BoardDocument, PublishedSummary } from "./board-creator-api";
 import { findCountry } from "./countries";
-import type { CollageBoardCardData, CompactBoardCardData } from "../types/board-card";
+import { toPhotoBoardCard } from "./photo-board-card";
+import type {
+    CollageBoardCardData,
+    CompactBoardCardData,
+    PhotoBoardCardData,
+    PhotoBoardCardProps
+} from "../types/board-card";
 
 export type GalleryBoard = {
     collage: CollageBoardCardData;
     compact: CompactBoardCardData;
+    photo?: PhotoBoardCardData;
+    ownership?: PhotoBoardCardProps["ownership"];
     href?: string;
 };
 
@@ -15,9 +23,20 @@ export function filterGalleryBoards(boards: readonly GalleryBoard[], query: stri
             .replace(/[\u0300-\u036f]/g, "")
             .toLowerCase();
     const words = normalize(query).trim().split(/\s+/).filter(Boolean);
-    return boards.filter(({ collage: board }) => {
+    return boards.filter(({ collage: board, photo }) => {
         const text = normalize(
-            [board.title, board.destination, board.destinationLabel, board.author, ...board.themes].join(" ")
+            [
+                board.title,
+                board.destination,
+                board.destinationLabel,
+                board.author,
+                ...board.themes,
+                photo?.title,
+                photo?.destination,
+                photo?.destinationLabel,
+                photo?.author,
+                ...(photo?.tags ?? [])
+            ].join(" ")
         );
         return words.every((word) => text.includes(word));
     });
@@ -67,6 +86,9 @@ export function toGalleryBoard(summary: PublishedSummary, document: BoardDocumen
     };
     return {
         collage,
+        photo: toPhotoBoardCard(document),
+        // This adapter is used by the authenticated owner-published list, not public search or saved lists.
+        ownership: "owner",
         compact: {
             id: collage.id,
             title,

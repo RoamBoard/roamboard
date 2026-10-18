@@ -6,10 +6,12 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ArrowLeft, ArrowRight, ArrowUpRight } from "lucide-react";
 import type { DestinationPageData } from "@/data/destination-atlas";
 import BoardCard from "@/components/features/boards/cards/BoardCard";
+import { toEditorialPhotoBoardCard } from "@/lib/photo-board-card";
 
 export function DestinationStories({ destination }: { destination: DestinationPageData }) {
     const [selected, setSelected] = useState(0);
     const dragged = useRef(false);
+    const gallery = useRef<HTMLDivElement>(null);
     const reduced = useReducedMotion();
     const boards = destination.relatedBoards;
     const board = boards[selected];
@@ -43,10 +45,16 @@ export function DestinationStories({ destination }: { destination: DestinationPa
             </div>
             <div
                 role="region"
+                ref={gallery}
                 aria-roledescription="carousel"
                 aria-label={`${destination.name} sample Boards`}
                 tabIndex={0}
                 onKeyDown={(event) => {
+                    if (
+                        event.target !== event.currentTarget &&
+                        !(event.target instanceof Element && event.target.closest("[data-board-selection]"))
+                    )
+                        return;
                     if (
                         event.key === "ArrowLeft" ||
                         event.key === "ArrowRight" ||
@@ -55,6 +63,7 @@ export function DestinationStories({ destination }: { destination: DestinationPa
                     ) {
                         event.preventDefault();
                         event.stopPropagation();
+                        event.currentTarget.focus({ preventScroll: true });
                         select(
                             event.key === "Home"
                                 ? 0
@@ -64,7 +73,7 @@ export function DestinationStories({ destination }: { destination: DestinationPa
                         );
                     }
                 }}
-                className="relative mt-5 flex min-h-[380px] min-w-0 flex-1 flex-col focus-visible:outline-2 focus-visible:outline-offset-2 md:mt-0"
+                className="relative mt-7 flex min-h-[440px] min-w-0 flex-1 flex-col focus-visible:outline-2 focus-visible:outline-offset-2 md:mt-0 md:min-h-[380px]"
             >
                 <motion.div
                     style={{ containerType: "size", touchAction: "pan-y" }}
@@ -75,8 +84,10 @@ export function DestinationStories({ destination }: { destination: DestinationPa
                         if (Math.abs(info.offset.x) > 8) dragged.current = true;
                     }}
                     onPanEnd={(_, info) => {
-                        if (Math.abs(info.offset.x) > 45 || Math.abs(info.velocity.x) > 350)
+                        if (Math.abs(info.offset.x) > 45 || Math.abs(info.velocity.x) > 350) {
+                            gallery.current?.focus({ preventScroll: true });
                             select(selected + (info.offset.x < 0 ? 1 : -1));
+                        }
                     }}
                     className="relative min-h-0 flex-1 cursor-grab overflow-hidden active:cursor-grabbing"
                 >
@@ -98,26 +109,29 @@ export function DestinationStories({ destination }: { destination: DestinationPa
                                 aria-label={`${index + 1} of ${boards.length}: ${item.title}`}
                                 initial={false}
                                 animate={{
-                                    x: `${offset * 66}%`,
-                                    y: focused ? 0 : 34,
-                                    scale: focused ? 1 : 0.72,
+                                    x: `${offset * 76}%`,
+                                    y: focused ? 0 : 28,
+                                    scale: focused ? 1 : 0.76,
                                     rotate: 0,
                                     opacity: focused ? 1 : 0.48
                                 }}
                                 transition={reduced ? { duration: 0 } : { type: "spring", stiffness: 145, damping: 25 }}
                                 style={{ zIndex: focused ? 10 : 1 }}
-                                className="absolute top-[3%] left-1/2 w-[min(440px,72cqh,80cqw)] origin-center -translate-x-1/2 select-none"
+                                className="absolute top-[3%] left-1/2 w-[min(420px,65cqh,82cqw)] origin-center -translate-x-1/2 select-none"
                             >
-                                <BoardCard variant="collage" board={item} />
-                                <button
-                                    type="button"
-                                    tabIndex={-1}
-                                    aria-label={`Select ${item.title}`}
-                                    aria-pressed={focused}
-                                    onClick={(event) => {
-                                        if (!dragged.current || event.detail === 0) select(index);
+                                <BoardCard
+                                    variant="photo"
+                                    board={toEditorialPhotoBoardCard(item)}
+                                    details={focused}
+                                    imageSizes="(max-width: 768px) 75vw, 420px"
+                                    selection={{
+                                        selected: focused,
+                                        tabIndex: focused ? 0 : -1,
+                                        onSelect: (event) => {
+                                            if (!dragged.current || event.detail === 0) select(index);
+                                            else event.preventDefault();
+                                        }
                                     }}
-                                    className="absolute inset-0 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-4"
                                 />
                             </motion.div>
                         );

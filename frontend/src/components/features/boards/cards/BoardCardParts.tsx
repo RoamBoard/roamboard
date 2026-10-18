@@ -1,7 +1,7 @@
 import Image from "next/image";
 import LibraryImage from "@/components/images/LibraryImage";
 import Link from "next/link";
-import type { CSSProperties, ReactNode } from "react";
+import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import type { BoardCardActions, BoardCardImage, BoardCardSummary } from "@/types/board-card";
 
 export const cardAsset = (name: string) => `/images/board-cards/${name}`;
@@ -13,9 +13,10 @@ type FrameProps = {
     children: ReactNode;
     className?: string;
     href?: string;
+    linkProps?: Pick<ComponentProps<typeof Link>, "onClick" | "aria-describedby">;
 };
 
-export function BoardCardFrame({ board, width, height, children, className = "", href }: FrameProps) {
+export function BoardCardFrame({ board, width, height, children, className = "", href, linkProps }: FrameProps) {
     return (
         <article
             aria-label={`${board.title} — ${board.destination}`}
@@ -25,6 +26,7 @@ export function BoardCardFrame({ board, width, height, children, className = "",
             {children}
             {href ? (
                 <Link
+                    {...linkProps}
                     href={href}
                     aria-label={`Open ${board.title}`}
                     className="focus-visible:outline-foreground absolute inset-0 z-10 focus-visible:outline-2 focus-visible:outline-offset-4"
@@ -51,11 +53,13 @@ export function BoardCardTitle({ board, className }: { board: BoardCardSummary; 
 export function BoardCardPhoto({
     image,
     className = "",
-    sizes
+    sizes,
+    onError
 }: {
     image: BoardCardImage;
     className?: string;
     sizes: string;
+    onError?: () => void;
 }) {
     const Photo = image.src.startsWith("library:") ? LibraryImage : Image;
 
@@ -75,6 +79,7 @@ export function BoardCardPhoto({
                 }
             >
                 <Photo
+                    onError={onError}
                     src={image.src}
                     alt={image.alt}
                     fill

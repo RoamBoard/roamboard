@@ -27,21 +27,60 @@ test("live gallery cards use persisted content, cover ordering and a real Board 
         coverImageUrl: null
     };
     // The chosen cover must win even when it is not first in the API's image array.
-    const document = {
+    const document: BoardDocument = {
+        boardId: summary.boardId,
+        title: summary.title,
+        status: "published",
+        visibility: "public",
+        revision: 1,
+        imageIds: [1, 2],
+        tagIds: [1],
+        permissions: { canEditContent: true, canManageBoard: true },
+        createdAt: "2026-10-01",
+        updatedAt: "2026-10-01",
         author: { username: "stockholm_traveller", bio: "", photo: null },
         coverImageId: 2,
         description: "An afternoon in the old town.",
         tags: [{ tagId: 1, name: "Architecture" }],
-        images: [1, 2].map((imageId) => ({ imageId, url: `https://example.com/${imageId}.jpg` })),
+        images: [1, 2].map((imageId) => ({
+            imageId,
+            url: `https://example.com/${imageId}.jpg`,
+            thumbnailUrl: `https://example.com/${imageId}-thumb.jpg`,
+            position: imageId - 1,
+            capturedAt: null
+        })),
         days: [
             {
+                dayId: 1,
                 dayNumber: 1,
+                date: null,
                 activities: [
-                    { title: "Gamla Stan", location: { city: "Stockholm", country: "Sweden" }, externalImage: null }
+                    {
+                        activityId: 1,
+                        position: 0,
+                        title: "Gamla Stan",
+                        activityTime: null,
+                        category: "walk",
+                        note: null,
+                        source: "manual",
+                        locationConfirmed: true,
+                        location: {
+                            name: "Gamla Stan",
+                            latitude: 59.325,
+                            longitude: 18.071,
+                            address: null,
+                            city: "Stockholm",
+                            country: "Sweden",
+                            externalPlaceId: null
+                        },
+                        uploadedImageIds: [],
+                        coverImageId: null,
+                        externalImage: null
+                    }
                 ]
             }
         ]
-    } as BoardDocument;
+    };
     const board = toGalleryBoard(summary, document);
     assert.equal(board.href, "/boards/18");
     assert.equal(board.collage.destinationLabel, "SWE");
@@ -50,6 +89,16 @@ test("live gallery cards use persisted content, cover ordering and a real Board 
     assert.equal(board.collage.savedCount, undefined);
     assert.deepEqual(board.collage.highlights, ["Gamla Stan"]);
     assert.equal(filterGalleryBoards([board], "stockholm").length, 1);
+    assert.equal(board.ownership, "owner");
+    assert.equal(board.photo?.title, document.title);
+    assert.equal(board.photo?.author, "stockholm_traveller");
+    assert.equal(board.photo?.image?.src, "https://example.com/2.jpg");
+    assert.equal(board.photo?.destination, "Stockholm, Sweden");
+    assert.equal(board.photo?.durationDays, 1);
+    assert.deepEqual(board.photo?.tags, ["Architecture"]);
+    assert.equal(board.photo?.status, "published");
+    assert.equal(board.photo?.visibility, "public");
+    assert.equal(board.photo?.savedCount, undefined);
 });
 
 test("collection samples keep archived Boards separate, normalize country codes and support independent search", () => {

@@ -1,6 +1,7 @@
 import { editorialImage } from "../lib/image-library";
 import type {
     CollageBoardCardData,
+    BoardCardImage,
     CompactBoardCardData,
     LandscapeBoardCardData,
     PhotoBoardCardData
@@ -164,7 +165,7 @@ export const landscapeBoardExamples: readonly LandscapeBoardCardData[] = [
     }
 ];
 
-export const photoBoardExamples: readonly PhotoBoardCardData[] = [
+export const photoBoardExamples: readonly (PhotoBoardCardData & { image: BoardCardImage })[] = [
     {
         id: "v4-porto",
         title: "Postcards from Porto",

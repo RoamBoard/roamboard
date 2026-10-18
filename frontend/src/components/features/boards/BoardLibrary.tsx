@@ -14,7 +14,7 @@ import type { GalleryBoard } from "@/lib/my-boards";
 import BoardCard from "./cards/BoardCard";
 
 type Props = {
-    boards: readonly Pick<GalleryBoard, "compact" | "href">[];
+    boards: readonly Pick<GalleryBoard, "compact" | "photo" | "ownership" | "href">[];
     id?: string;
     title?: string;
     description?: string;
@@ -130,10 +130,26 @@ export default function BoardLibrary({
                                 <CarouselItem
                                     key={board.compact.id}
                                     aria-label={`${index + 1} of ${boards.length}: ${board.compact.title}`}
-                                    className="border-line/60 relative flex basis-[220px] justify-center border-r px-5 py-12 last:border-r sm:basis-[320px] sm:px-[70px]"
+                                    className="border-line/60 relative flex basis-[90%] justify-center border-r px-3 py-5 last:border-r sm:basis-[340px] sm:px-6 sm:py-8"
                                 >
-                                    <div className="w-[180px] shrink-0 transition-transform duration-200 motion-safe:hover:-translate-y-1 motion-reduce:transition-none">
-                                        <BoardCard variant="compact" board={board.compact} href={board.href} />
+                                    <div className="w-full max-w-[292px] shrink-0 transition-transform duration-200 motion-safe:hover:-translate-y-1 motion-reduce:transition-none">
+                                        <BoardCard
+                                            variant="photo"
+                                            board={
+                                                board.photo ?? {
+                                                    id: board.compact.id,
+                                                    title: board.compact.title,
+                                                    author: board.compact.author,
+                                                    destination: board.compact.destination,
+                                                    destinationLabel: board.compact.destinationLabel,
+                                                    image: board.compact.image
+                                                }
+                                            }
+                                            href={board.href}
+                                            ownership={board.ownership}
+                                            details
+                                            imageSizes="(max-width: 640px) 75vw, 292px"
+                                        />
                                         {archived && (
                                             <p className="text-10 text-foreground/65 mt-4 text-center tracking-[.12em] uppercase">
                                                 Archived
