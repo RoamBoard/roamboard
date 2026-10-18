@@ -75,7 +75,10 @@ export type BoardImageDraft = {
     sourceUrl: string | null;
 };
 
+export type BoardDestinationDraft = PinLocation & { kind: "city" | "region" | "country" };
+
 export type BoardCreatorPayload = {
+    destination?: BoardDestinationDraft | null;
     title: string;
     description: string;
     status: BoardStatus;

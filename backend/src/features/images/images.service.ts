@@ -20,6 +20,24 @@ export function createImagesService(
     boards: BoardRepository
 ): ImagesService {
     return {
+        async readPresentation(userId, imageId) {
+            const image = await repository.findImage(imageId);
+            if (!image || image.uploaderUserId !== userId) throw new AppError(404, "Image not found", "NOT_FOUND");
+            return { edit: image.presentationEdit ?? null, revision: image.presentationRevision ?? 0 };
+        },
+        async savePresentation(userId, imageId, revision, edit) {
+            const image = await repository.findImage(imageId);
+            if (!image || image.uploaderUserId !== userId) throw new AppError(404, "Image not found", "NOT_FOUND");
+            if (!repository.savePresentation)
+                throw new AppError(503, "Photo editing is unavailable", "PROVIDER_UNAVAILABLE");
+            if (!(await repository.savePresentation(imageId, userId, revision, edit)))
+                throw new AppError(
+                    409,
+                    "This photo was edited elsewhere. Reopen it before saving.",
+                    "STALE_IMAGE_REVISION"
+                );
+            return { edit, revision: revision + 1 };
+        },
         async createIntent(userId, input: UploadIntentWrite) {
             if (input.sizeBytes > MAX_IMAGE_BYTES) {
                 throw new AppError(413, "Image exceeds 10 MB", "IMAGE_TOO_LARGE");
@@ -83,6 +101,8 @@ export function createImagesService(
         async openImage(imageId, variant, userId, boardId, profileHandle) {
             const image = await repository.findImage(imageId);
             if (!image) throw new AppError(404, "Image not found", "NOT_FOUND");
+            if (variant === "original" && image.uploaderUserId !== userId)
+                throw new AppError(404, "Image not found", "NOT_FOUND");
             if (profileHandle !== undefined) {
                 if (!image.profileOwnerUserId || image.profileOwnerUsername !== profileHandle)
                     throw new AppError(404, "Image not found", "NOT_FOUND");
@@ -102,7 +122,11 @@ export function createImagesService(
                     throw new AppError(404, "Image not found", "NOT_FOUND");
                 }
             }
-            return provider.openVariant(image.storageKey, variant);
+            return provider.openVariant(
+                image.storageKey,
+                variant,
+                variant === "original" ? null : image.presentationEdit
+            );
         },
         async cleanupUnused() {
             const before = new Date(Date.now() - 24 * 60 * 60 * 1000);

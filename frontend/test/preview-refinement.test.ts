@@ -21,7 +21,7 @@ function board(): BoardCreatorPayload {
 }
 
 test("all preview source-edit links resolve to real targets in the production creator", () => {
-    const editor = renderToStaticMarkup(createElement(BoardCreator, { initialMode: "scratch" }));
+    const editor = renderToStaticMarkup(createElement(BoardCreator));
     for (const source of [board(), { ...board(), title: "", description: "", tags: [], days: [] }]) {
         const markup = renderToStaticMarkup(createElement(BoardCreationPreview, { board: source }));
         const targets = [...markup.matchAll(/href="#([^"#]+)"/g)].map((match) => match[1]);

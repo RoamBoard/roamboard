@@ -40,7 +40,10 @@ test(
                 "003_board_creator.sql",
                 "004_api_features.sql",
                 "006_profile.sql",
-                "007_profile_tag_catalog.sql"
+                "007_profile_tag_catalog.sql",
+                "008_board_destination.sql",
+                "009_image_presentation.sql",
+                "010_guest_accounts.sql"
             ]) {
                 await pool.query(await readFile(new URL(`../db/migrations/${name}`, import.meta.url), "utf8"));
             }
@@ -57,6 +60,16 @@ test(
             const boards = createBoardsRepository();
             const service = createBoardsService(boards);
             const input: BoardWrite = {
+                destination: {
+                    name: "Tokyo",
+                    kind: "city",
+                    latitude: 35.68,
+                    longitude: 139.76,
+                    address: "Tokyo, Japan",
+                    city: "Tokyo",
+                    country: "JPN",
+                    externalPlaceId: "geoapify:tokyo"
+                },
                 status: "published",
                 title: "Tokyo",
                 description: null,

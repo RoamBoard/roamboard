@@ -11,10 +11,13 @@ export type MapPoint = {
     latitude: number;
     longitude: number;
     color?: string;
+    sequence?: number;
 };
 
 type Props = {
     token?: string;
+    cooperativeGestures?: boolean;
+    className?: string;
     points: MapPoint[];
     routeGeometry: Array<[number, number]>;
     onMapClick?: (latitude: number, longitude: number) => void;
@@ -23,7 +26,15 @@ type Props = {
 
 const routeSource = "roamboard-provider-route";
 
-export default function InteractiveMap({ token, points, routeGeometry, onMapClick, onPointClick }: Props) {
+export default function InteractiveMap({
+    token,
+    points,
+    routeGeometry,
+    onMapClick,
+    onPointClick,
+    cooperativeGestures = false,
+    className
+}: Props) {
     const containerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<MapboxMap | null>(null);
     const markersRef = useRef<Marker[]>([]);
@@ -50,7 +61,8 @@ export default function InteractiveMap({ token, points, routeGeometry, onMapClic
                 container: containerRef.current,
                 style: "mapbox://styles/mapbox/streets-v12",
                 center: [18.0686, 59.3293],
-                zoom: 11
+                zoom: 11,
+                cooperativeGestures
             });
             map.addControl(new mapboxgl.NavigationControl(), "top-right");
             map.on("load", () => {
@@ -87,7 +99,7 @@ export default function InteractiveMap({ token, points, routeGeometry, onMapClic
             mapRef.current?.remove();
             mapRef.current = null;
         };
-    }, [token]);
+    }, [token, cooperativeGestures]);
 
     useEffect(() => {
         markersRef.current.forEach((marker) => marker.remove());
@@ -98,7 +110,7 @@ export default function InteractiveMap({ token, points, routeGeometry, onMapClic
             element.className = "provider-map-pin";
             if (point.color) element.style.backgroundColor = point.color;
             const label = document.createElement("span");
-            label.textContent = String(index + 1);
+            label.textContent = String(point.sequence ?? index + 1);
             element.append(label);
             element.title = point.label;
             if (onPointClickRef.current) {
@@ -161,7 +173,11 @@ export default function InteractiveMap({ token, points, routeGeometry, onMapClic
         );
     return (
         <div className="relative">
-            <div ref={containerRef} className="h-96 w-full sm:h-120" aria-label="Interactive Mapbox map" />
+            <div
+                ref={containerRef}
+                className={className ?? "h-96 w-full sm:h-120"}
+                aria-label="Interactive activity map"
+            />
             {mapError ? (
                 <p className="text-12 text-foreground absolute right-3 bottom-3 left-3 bg-white/95 p-3" role="alert">
                     {mapError}

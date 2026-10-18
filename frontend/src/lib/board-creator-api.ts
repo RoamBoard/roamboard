@@ -1,4 +1,10 @@
-import type { BoardCreatorPayload, BoardDayDraft, BoardImageDraft, BoardPinDraft } from "@/types/board-creator";
+import type {
+    BoardCreatorPayload,
+    BoardDayDraft,
+    BoardImageDraft,
+    BoardPinDraft,
+    BoardDestinationDraft
+} from "@/types/board-creator";
 import { findCountry } from "@/lib/countries";
 
 const apiOrigin = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001").replace(/\/+$/, "");
@@ -54,6 +60,16 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 
 export type BoardWriteRequest = {
+    destination?: {
+        name: string;
+        address: string | null;
+        city: string | null;
+        country: string;
+        externalPlaceId: string;
+        latitude: number;
+        longitude: number;
+        kind: "city" | "region" | "country";
+    } | null;
     isCompleted?: boolean;
     status: "draft" | "published";
     title: string;
@@ -178,8 +194,7 @@ export function saveBoardDocument(input: BoardWriteRequest, board?: BoardDocumen
 
 export function toBoardWrite(
     draft: BoardCreatorPayload,
-    tags: Array<{ tagId: number; name: string }>,
-    confirmedPhotoPins: Set<string>
+    tags: Array<{ tagId: number; name: string }>
 ): BoardWriteRequest {
     const tagIds = draft.tags.map((name) => tags.find((tag) => tag.name === name)?.tagId);
     if (tagIds.some((id) => id === undefined)) throw new Error("Select tags from the allowed list.");
@@ -188,6 +203,18 @@ export function toBoardWrite(
         throw new Error("An image has not finished uploading. Try again.");
     }
     return {
+        destination: draft.destination
+            ? {
+                  name: draft.destination.name,
+                  address: draft.destination.address || null,
+                  city: draft.destination.city,
+                  country: draft.destination.countryCode!,
+                  externalPlaceId: draft.destination.mapboxId!,
+                  latitude: draft.destination.latitude,
+                  longitude: draft.destination.longitude,
+                  kind: draft.destination.kind
+              }
+            : null,
         status: draft.status,
         title: draft.title,
         description: draft.description.trim() || null,
@@ -225,7 +252,7 @@ export function toBoardWrite(
                               externalPlaceId: pin.location.mapboxId
                           }
                         : null,
-                    locationConfirmed: pin.source === "photo" ? confirmedPhotoPins.has(pin.id) : pin.location !== null,
+                    locationConfirmed: pin.location !== null,
                     uploadedImageIds: pinImages.map((image) => image.uploadedImageId!),
                     coverImageId:
                         pin.coverImageId === undefined
@@ -251,12 +278,11 @@ export function toBoardWrite(
 }
 
 export function fromBoardDocument(board: BoardDocument): {
+    destination: BoardDestinationDraft | null;
     days: BoardDayDraft[];
     images: BoardImageDraft[];
-    confirmedPhotoPins: Set<string>;
 } {
     const pinIds = new Map<number, string>();
-    const confirmedPhotoPins = new Set<string>();
     const days: BoardDayDraft[] = board.days.map((day) => ({
         id: crypto.randomUUID(),
         serverDayId: day.dayId,
@@ -265,7 +291,6 @@ export function fromBoardDocument(board: BoardDocument): {
         pins: day.activities.map((activity) => {
             const id = crypto.randomUUID();
             pinIds.set(activity.activityId, id);
-            if (activity.source === "photo" && activity.locationConfirmed) confirmedPhotoPins.add(id);
             return {
                 id,
                 serverActivityId: activity.activityId,
@@ -341,7 +366,20 @@ export function fromBoardDocument(board: BoardDocument): {
                 sourceUrl: activity.externalImage.sourceUrl
             });
         }
-    return { days, images, confirmedPhotoPins };
+    const destination: BoardDestinationDraft | null = board.destination
+        ? {
+              name: board.destination.name,
+              address: board.destination.address ?? "",
+              latitude: board.destination.latitude,
+              longitude: board.destination.longitude,
+              city: board.destination.city,
+              country: findCountry(board.destination.country)?.name ?? null,
+              countryCode: board.destination.country,
+              mapboxId: board.destination.externalPlaceId,
+              kind: board.destination.kind
+          }
+        : null;
+    return { destination, days, images };
 }
 
 function contentType(file: File): string {
@@ -455,4 +493,58 @@ export function mergeServerImages(currentImages: BoardImageDraft[], savedBoard: 
         }
         return img;
     });
+}
+
+export type SmartPhotoSuggestion = {
+    imageId: number;
+    location: {
+        id: string;
+        label: string;
+        detail: string;
+        address: string;
+        type: string;
+        latitude: number;
+        longitude: number;
+        country: string | null;
+        countryCode: string | null;
+        city: string | null;
+    } | null;
+    category: BoardPinDraft["category"];
+    warning: string | null;
+};
+export async function suggestBoardPhotos(imageIds: number[]): Promise<SmartPhotoSuggestion[]> {
+    const result = await request<{ photos: SmartPhotoSuggestion[] }>("/api/v1/images/smart-create", {
+        method: "POST",
+        body: JSON.stringify({ imageIds })
+    });
+    return result.photos;
+}
+
+export function refreshBoardPhotoLocation(
+    imageId: number
+): Promise<SmartPhotoSuggestion & { capturedAt: string | null; latitude: number | null; longitude: number | null }> {
+    return request("/api/v1/images/" + imageId + "/refresh-location", { method: "POST" });
+}
+
+export async function suggestMainDestination(
+    points: Array<{ latitude: number; longitude: number; city?: string | null; country?: string | null }>,
+    signal?: AbortSignal
+): Promise<BoardDestinationDraft | null> {
+    const place = await request<import("./destinations").Destination | null>(
+        "/api/v1/providers/locations/suggest-area",
+        { method: "POST", body: JSON.stringify({ points }), signal }
+    );
+    return place?.countryCode
+        ? {
+              name: place.name,
+              address: place.address,
+              latitude: place.latitude,
+              longitude: place.longitude,
+              country: place.country,
+              countryCode: place.countryCode,
+              city: place.city,
+              mapboxId: place.id,
+              kind: ["state", "county", "region"].includes(place.placeType) ? "region" : "city"
+          }
+        : null;
 }

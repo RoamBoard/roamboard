@@ -1,3 +1,4 @@
+import { isCountryCode } from "../../shared/countries.js";
 import { z } from "zod";
 
 const id = z.number().int().positive();
@@ -62,22 +63,31 @@ const dateSchema = z
 const daySchema = z
     .object({
         dayId: id.optional(),
-        dayNumber: z.number().int().positive(),
+        dayNumber: z.number().int().positive().max(31),
         date: dateSchema.nullable(),
         activities: z.array(activitySchema)
     })
     .strict();
 
+const destinationSchema = locationSchema
+    .extend({
+        kind: z.enum(["city", "region", "country"]),
+        country: z.string().refine(isCountryCode, "Choose a destination with a valid country"),
+        externalPlaceId: z.string().startsWith("geoapify:").max(500)
+    })
+    .strict();
+
 const boardFields = {
+    destination: destinationSchema.nullable().optional(),
     status: z.enum(["draft", "published"]),
     isCompleted: z.boolean().optional(),
     title: z.string().max(500),
     description: optionalText,
     visibility: z.enum(["collaborators", "friends", "public"]),
     tagIds: z.array(id).max(3),
-    imageIds: z.array(id).max(10),
+    imageIds: z.array(id),
     coverImageId: id.nullable().optional(),
-    days: z.array(daySchema)
+    days: z.array(daySchema).max(31)
 };
 
 export const createBoardSchema = z
@@ -119,7 +129,8 @@ export const boardListQuerySchema = z
 
 export const imageVariantQuerySchema = z
     .object({
-        variant: z.enum(["display", "thumbnail"]).default("display"),
+        v: z.coerce.number().int().nonnegative().optional(),
+        variant: z.enum(["display", "thumbnail", "original"]).default("display"),
         // Author photos carry Board context so the image service can enforce the same read permissions.
         boardId: z.coerce.number().int().positive().optional(),
         profileHandle: z

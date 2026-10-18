@@ -41,6 +41,10 @@ try {
     await getPool().query("SELECT asset_key, revision, asset, aliases, usages FROM editorial_image LIMIT 0");
     await getPool().query("SELECT asset_key, revision, asset FROM editorial_image_revision LIMIT 0");
     report(true, "Image library migration 005 exists.");
+    await getPool().query("SELECT primary_location_id, primary_location_kind FROM board LIMIT 0");
+    report(true, "Board destination migration 008 exists.");
+    await getPool().query("SELECT presentation_edit,presentation_revision FROM uploaded_image LIMIT 0");
+    report(true, "Photo presentation migration 009 exists.");
     const quotaKey = await getPool().query<{ compact: boolean }>(
         `SELECT EXISTS (
             SELECT 1 FROM pg_constraint

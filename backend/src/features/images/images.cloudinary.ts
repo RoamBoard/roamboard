@@ -3,6 +3,7 @@ import { Readable } from "node:stream";
 import { v2 as cloudinary } from "cloudinary";
 import { observeCloudinary } from "../quotas/quota.feedback.js";
 
+import { cloudinaryPhotoMetadata } from "./photo-metadata.js";
 import { AppError } from "../../shared/app-error.js";
 import type { ImageProvider, ProviderAsset } from "./images.types.js";
 import type { QuotaService } from "../quotas/quota.service.js";
@@ -37,26 +38,6 @@ function metadataDate(value: unknown): Date | null {
     return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function gpsPart(value: unknown, ref: unknown): number | null {
-    let result: number | null = null;
-    if (typeof value === "number") result = value;
-    else if (Array.isArray(value) && value.length >= 3) {
-        const parts = value.map((part) => {
-            if (typeof part === "number") return part;
-            if (typeof part !== "string") return NaN;
-            const fraction = /^(\d+)\/(\d+)$/.exec(part);
-            return fraction ? Number(fraction[1]) / Number(fraction[2]) : Number(part);
-        });
-        if (parts.every(Number.isFinite)) result = parts[0]! + parts[1]! / 60 + parts[2]! / 3600;
-    } else if (typeof value === "string") {
-        const numeric = Number(value);
-        if (Number.isFinite(numeric)) result = numeric;
-    }
-    if (result === null || !Number.isFinite(result)) return null;
-    if (ref === "S" || ref === "W") result = -Math.abs(result);
-    return result;
-}
-
 function parseAsset(raw: Record<string, unknown>): ProviderAsset | null {
     if (
         typeof raw.public_id !== "string" ||
@@ -68,10 +49,7 @@ function parseAsset(raw: Record<string, unknown>): ProviderAsset | null {
         return null;
     const createdAt = metadataDate(raw.created_at);
     if (!createdAt) return null;
-    const meta = (raw.media_metadata ?? raw.image_metadata ?? raw.exif ?? {}) as Record<string, unknown>;
-    const capturedAt = metadataDate(raw.taken_at ?? meta.DateTimeOriginal ?? meta.DateTimeDigitized ?? meta.DateTime);
-    const latitude = gpsPart(meta.GPSLatitude, meta.GPSLatitudeRef);
-    const longitude = gpsPart(meta.GPSLongitude, meta.GPSLongitudeRef);
+    const { capturedAt, latitude, longitude } = cloudinaryPhotoMetadata(raw);
     return {
         storageKey: raw.public_id,
         originalFilename: typeof raw.original_filename === "string" ? raw.original_filename : undefined,
@@ -115,7 +93,7 @@ export function createCloudinaryProvider(quota?: QuotaService): ImageProvider {
                     cloudinary.api.resource(storageKey, {
                         resource_type: "image",
                         type: "authenticated",
-                        image_metadata: true
+                        media_metadata: true
                     });
                 const raw = (await (quota
                     ? quota.run("cloudinary.admin", (observe) => observeCloudinary(inspect, observe))
@@ -130,14 +108,30 @@ export function createCloudinaryProvider(quota?: QuotaService): ImageProvider {
                 throw error;
             }
         },
-        async openVariant(storageKey, variant) {
+        async openVariant(storageKey, variant, edit) {
             config();
             const url = cloudinary.url(storageKey, {
                 secure: true,
                 sign_url: true,
                 type: "authenticated",
                 resource_type: "image",
-                transformation: variants[variant],
+                transformation: [
+                    ...(variant !== "original" && edit
+                        ? [
+                              {
+                                  crop: "crop",
+                                  x: edit.x.toFixed(6),
+                                  y: edit.y.toFixed(6),
+                                  width: edit.width.toFixed(6),
+                                  height: edit.height.toFixed(6)
+                              },
+                              { crop: "limit", width: edit.outputWidth, height: edit.outputHeight }
+                          ]
+                        : []),
+                    variant === "original"
+                        ? { width: 4096, height: 4096, crop: "limit", quality: "auto", fetch_format: "jpg" }
+                        : variants[variant]
+                ],
                 format: "jpg"
             });
             const response = await fetch(url, { redirect: "error", signal: AbortSignal.timeout(15000) });

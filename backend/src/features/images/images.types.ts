@@ -1,3 +1,4 @@
+import type { ImagePresentationEdit } from "./images.schemas.js";
 import type { Readable } from "node:stream";
 
 import type { UploadIntentWrite } from "../boards/boards.schemas.js";
@@ -16,6 +17,8 @@ export interface UploadIntent {
 
 export interface UploadedImage {
     imageId: number;
+    presentationEdit?: ImagePresentationEdit | null;
+    presentationRevision?: number;
     storageKey: string;
     uploaderUserId: string;
     boardId: number | null;
@@ -48,7 +51,8 @@ export interface ImageProvider {
     inspect(storageKey: string): Promise<ProviderAsset | null>;
     openVariant(
         storageKey: string,
-        variant: "display" | "thumbnail"
+        variant: "display" | "thumbnail" | "original",
+        edit?: ImagePresentationEdit | null
     ): Promise<{ stream: Readable; contentType: string }>;
     destroy(storageKey: string): Promise<void>;
 }
@@ -58,6 +62,17 @@ export interface ImagesRepository {
     findIntent(uploadId: string): Promise<UploadIntent | null>;
     completeIntent(intent: UploadIntent, asset: ProviderAsset): Promise<number>;
     findImage(imageId: number): Promise<UploadedImage | null>;
+    findImages?(imageIds: number[]): Promise<UploadedImage[]>;
+    updateMetadata?(
+        imageId: number,
+        asset: Pick<ProviderAsset, "capturedAt" | "latitude" | "longitude">
+    ): Promise<void>;
+    savePresentation?(
+        imageId: number,
+        userId: string,
+        revision: number,
+        edit: ImagePresentationEdit | null
+    ): Promise<boolean>;
     listCleanupCandidates(
         before: Date,
         limit: number
@@ -67,6 +82,16 @@ export interface ImagesRepository {
 }
 
 export interface ImagesService {
+    readPresentation(
+        userId: string,
+        imageId: number
+    ): Promise<{ edit: ImagePresentationEdit | null; revision: number }>;
+    savePresentation(
+        userId: string,
+        imageId: number,
+        revision: number,
+        edit: ImagePresentationEdit | null
+    ): Promise<{ edit: ImagePresentationEdit | null; revision: number }>;
     createIntent(
         userId: string,
         input: UploadIntentWrite
@@ -91,7 +116,7 @@ export interface ImagesService {
     }>;
     openImage(
         imageId: number,
-        variant: "display" | "thumbnail",
+        variant: "display" | "thumbnail" | "original",
         userId: string | null,
         boardId?: number,
         profileHandle?: string

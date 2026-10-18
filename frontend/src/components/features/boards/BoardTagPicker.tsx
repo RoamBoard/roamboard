@@ -5,7 +5,7 @@ import { X } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandItem } from "@/components/ui/command";
 import TagIcon from "@/components/ui/TagIcon";
-import { boardTags } from "@/data/board-tags";
+import { boardTags, getAvailableBoardTags } from "@/data/board-tags";
 import CreatorDetailIcon from "@/components/features/boards/CreatorDetailIcon";
 
 type Props = {
@@ -34,9 +34,10 @@ export default function BoardTagPicker({
     const reducedMotion = useReducedMotion();
     const atLimit = values.length >= 3;
     const unavailable = disabled || loading || Boolean(error) || atLimit;
-    const choices = [...new Set(suggestions)].filter(
-        (name) => !values.some((value) => value.toLowerCase() === name.toLowerCase())
-    );
+    const availableTags = getAvailableBoardTags(suggestions);
+    const choices = availableTags
+        .map((tag) => tag.name)
+        .filter((name) => !values.some((value) => value.toLowerCase() === name.toLowerCase()));
     function select(name: string) {
         if (!open || unavailable || !choices.includes(name)) return;
         onChange([...values, name]);
@@ -173,10 +174,12 @@ export default function BoardTagPicker({
                     </div>
                 ) : atLimit ? (
                     <p role="status">Three tags selected. Remove one to choose another.</p>
-                ) : suggestions.length === 0 ? (
+                ) : availableTags.length === 0 ? (
                     <p>No tags are available right now.</p>
                 ) : (
-                    <p>Choose from the Board tag catalog. Typing searches; it never creates a new tag.</p>
+                    <p>
+                        Choose from the same travel tags as your profile. Typing searches; it never creates a new tag.
+                    </p>
                 )}
             </div>
         </div>

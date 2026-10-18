@@ -11,13 +11,21 @@ export type DestinationSearchState = {
 };
 
 // Shared by the production page and its presenter/API interaction tests, like My Boards.
-export function createDestinationSearchStore() {
+export function createDestinationSearchStore(searcher = searchDestinations, initialQuery = "") {
     const state: {
         snapshot: DestinationSearchState;
         timer?: ReturnType<typeof setTimeout>;
         controller?: AbortController;
     } = {
-        snapshot: { query: "", results: [], active: -1, open: false, loading: false, searched: false, error: "" }
+        snapshot: {
+            query: initialQuery,
+            results: [],
+            active: -1,
+            open: false,
+            loading: false,
+            searched: false,
+            error: ""
+        }
     };
     const listeners = new Set<() => void>();
 
@@ -39,7 +47,7 @@ export function createDestinationSearchStore() {
         state.controller = controller;
         update({ loading: true, searched: false, error: "" });
         state.timer = setTimeout(() => {
-            void searchDestinations(query, controller.signal)
+            void searcher(query, controller.signal)
                 .then((places) => {
                     if (controller.signal.aborted) return;
                     const results = places.slice(0, 3);
@@ -64,6 +72,18 @@ export function createDestinationSearchStore() {
             return () => {
                 listeners.delete(listener);
             };
+        },
+        select(destination: Destination) {
+            cancel();
+            update({
+                query: destination.name,
+                results: [],
+                active: -1,
+                open: false,
+                loading: false,
+                searched: false,
+                error: ""
+            });
         },
         setQuery(query: string) {
             cancel();

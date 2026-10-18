@@ -38,7 +38,10 @@ test(
                 "003_board_creator.sql",
                 "004_api_features.sql",
                 "006_profile.sql",
-                "007_profile_tag_catalog.sql"
+                "007_profile_tag_catalog.sql",
+                "008_board_destination.sql",
+                "009_image_presentation.sql",
+                "010_guest_accounts.sql"
             ]) {
                 await pool.query(await readFile(new URL(`../db/migrations/${name}`, import.meta.url), "utf8"));
             }
@@ -79,6 +82,16 @@ test(
             const app = createApp({ imageProvider: provider });
             const boards = createBoardsService(createBoardsRepository());
             const input: BoardWrite = {
+                destination: {
+                    name: "Stockholm",
+                    kind: "city",
+                    latitude: 59.33,
+                    longitude: 18.058,
+                    address: "Stockholm, Sweden",
+                    city: "Stockholm",
+                    country: "SWE",
+                    externalPlaceId: "geoapify:stockholm"
+                },
                 status: "published",
                 title: "A persisted Board",
                 description: "An existing database Board",

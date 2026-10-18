@@ -66,7 +66,7 @@ export default function BoardPublishPanel({
             <p className="text-muted-foreground mx-auto mt-10 max-w-md text-[11px] leading-relaxed">
                 {publishedEdit
                     ? "Changes use the visibility selected above. Only the Board owner can change visibility."
-                    : "Drafts can stay incomplete and remain visible only to you. Publishing needs a title, at least one confirmed location, and confirmation of every photo suggestion."}
+                    : "Drafts can stay incomplete and remain visible only to you. Publishing needs a title, a main destination, and at least one activity location."}
             </p>
             <p className="text-muted-foreground mx-auto mt-3 max-w-md text-[11px] leading-relaxed">
                 Save before using your browser’s Back or Forward controls. This page does not save automatically.

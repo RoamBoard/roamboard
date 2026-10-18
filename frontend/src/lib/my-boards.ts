@@ -34,13 +34,15 @@ export function boardTitleLines(title: string, width: number) {
 
 export function toGalleryBoard(summary: PublishedSummary, document: BoardDocument): GalleryBoard {
     const activities = document.days.flatMap((day) => day.activities);
-    const locations = activities.flatMap((activity) => (activity.location ? [activity.location] : []));
+    const locations = document.destination
+        ? [document.destination]
+        : activities.flatMap((activity) => (activity.location ? [activity.location] : []));
     const country = locations
         .map((location) => (location.country ? findCountry(location.country) : undefined))
         .find(Boolean);
-    const destination = [
-        ...new Set(locations.flatMap((location) => [location.city, location.country].filter(Boolean)))
-    ].join(", ");
+    const destination = document.destination
+        ? [document.destination.name, findCountry(document.destination.country)?.name].filter(Boolean).join(", ")
+        : [...new Set(locations.flatMap((location) => [location.city, location.country].filter(Boolean)))].join(", ");
     const imageUrl = (url: string) =>
         new URL(url, process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001").toString();
     const images = [

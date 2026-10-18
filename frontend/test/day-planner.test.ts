@@ -90,7 +90,7 @@ test("keyboard ordering is preserved as canonical API positions even when activi
         days: moved,
         images: [image(501, "A")]
     };
-    const write = toBoardWrite(draft, [], new Set(["A"]));
+    const write = toBoardWrite(draft, []);
     assert.deepEqual(
         write.days[0].activities.map((activity) => [activity.activityId, activity.position, activity.activityTime]),
         [
@@ -201,7 +201,6 @@ function plannerMarkup(overrides: Partial<ComponentProps<typeof DayPlanner>> = {
         createElement(DayPlanner, {
             days: days(),
             images: [],
-            confirmedPhotoPins: new Set<string>(),
             onAddDay: () => {},
             onRemoveDay: () => {},
             onAddPin: () => {},
@@ -213,7 +212,6 @@ function plannerMarkup(overrides: Partial<ComponentProps<typeof DayPlanner>> = {
             onAssignActivityImage: () => {},
             onSetActivityCover: () => {},
             onReorderActivityImage: () => {},
-            onConfirmPhotoPin: () => {},
             ...overrides
         })
     );
@@ -226,10 +224,10 @@ test("planner presents every activity and empty day without limiting long itiner
     ];
     const markup = plannerMarkup({ days: itinerary });
     for (const item of itinerary[0].pins) assert.ok(markup.includes(item.title), `${item.title} must be available`);
-    assert.match(markup, /DAY 3/);
-    assert.match(markup, /Add activity/i);
+    assert.match(markup, /Day 03/);
+    assert.match(markup, /Add an activity to day 3/i);
     assert.match(markup, /add day/i);
-    assert.match(markup, /Add your first activity/i);
+    assert.match(markup, /Click anywhere in this day to add an activity/i);
 });
 
 test("the selected uploaded activity cover is used instead of the first attached photo", () => {
@@ -245,17 +243,16 @@ test("an explicitly external activity cover retains its Unsplash thumbnail", () 
     assert.doesNotMatch(markup, /src="https:\/\/images\.example\.test\/500\/thumb"/);
 });
 
-test("photo-location confirmation is shown only for unconfirmed photo activities", () => {
+test("activity cards stay editable without review links or overflow menus", () => {
     const itinerary = [
         {
             ...days()[0],
             pins: [pin("A", "09:00", 0), pin("B", "10:00", 1), { ...pin("C", "11:00", 2), source: "manual" as const }]
         }
     ];
-    const markup = plannerMarkup({ days: itinerary, confirmedPhotoPins: new Set(["B"]) });
-    assert.equal((markup.match(/>confirm photo location<\/button>/gi) ?? []).length, 1);
-    const confirmed = plannerMarkup({ days: itinerary, confirmedPhotoPins: new Set(["A", "B"]) });
-    assert.doesNotMatch(confirmed, />confirm photo location<\/button>/i);
+    const markup = plannerMarkup({ days: itinerary });
+    assert.doesNotMatch(markup, /Review activity|aria-label="Move /i);
+    assert.match(markup, /aria-label="Edit Visit A"/);
 });
 
 test("disabled planners lock editing controls and cannot expose draggable activity handles", () => {
