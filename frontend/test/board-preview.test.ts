@@ -88,5 +88,8 @@ test("preview shows the same Board cover in both card states and retains the pho
     assert.match(markup, /aria-label="Images for Museum"/);
     assert.match(markup, /src="\/thumb\/1"/);
     assert.match(markup, /src="\/thumb\/2"/);
+    const activityImages = markup.match(/aria-label="Images for Museum"[\s\S]*?<\/div>/)?.[0];
+    assert.ok(activityImages);
+    assert.ok(activityImages.indexOf('src="/thumb/2"') < activityImages.indexOf('src="/thumb/1"'));
     assert.doesNotMatch(markup, /Cover images/);
 });

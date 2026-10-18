@@ -26,7 +26,7 @@ frontend types from `frontend/src/lib/providers.ts`.
 | Method   | Path                            | Input and behavior                                                                                                             |
 | -------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | GET      | `/config`                       | Configuration booleans, Google billing notice and optional public cloud name; no keys or Mapbox token                          |
-| GET      | `/locations/search`             | `q`, optional `limit`; Geoapify results suitable for saved locations                                                           |
+| GET      | `/locations/search`             | `q`, optional `limit`, paired `latitude`/`longitude`; Geoapify saved-place results with soft proximity bias                    |
 | GET      | `/locations/destinations`       | ISO `country`, `city`, optional `limit`; matching Geoapify cities                                                              |
 | GET      | `/locations/reverse`            | `latitude`, `longitude`; Geoapify area/city and identified POI details for user-confirmed photo suggestions                    |
 | POST     | `/mapbox/map-session`           | Reserve a map load and return `{ publicToken }`; only a `pk.` token                                                            |
@@ -141,7 +141,7 @@ protected images; the full API record stays unmodified.
 `page` (default 1), `limit` (default 10, maximum 50), within the first 1,000 results.
 It returns `{ hits: [{ document, score }], total, page, limit }`.
 `GET /api/v1/search/suggestions?q=...&limit=6` returns distinct current Board
-titles. Queries have 2?100 characters. Search reads PostgreSQL records on each
+titles. Queries have 2 to 100 characters. Search reads PostgreSQL records on each
 request. The API ranks matching words with title, city and country weighting and
 bounded edit distance for typos; suggestions match title word prefixes. Country
 and category filters and pagination retain the response shape above. Ranking is
@@ -245,3 +245,51 @@ frontend tests verify URLs, cookies, payloads and errors. `npm run test:db` appl
 all migrations in temporary schemas and checks persistence, permissions and
 concurrent quota rollback without changing shared application tables. Live
 provider accounts, browser flows and deployment migrations need environment checks.
+
+### Contextual saved-location search
+
+GET /api/v1/locations/search accepts both context coordinates or neither; partial or out-of-range pairs return 400.
+Coordinates are a soft preference, never a hard restriction. Exact generic terms such as cafe or restaurant with
+context use Geoapify Places discovery; named queries use text geocoding with the same bias. Provider relevance
+order is preserved without category boosts. Results suggest the existing activity category. The frontend uses
+current-day area, then Board area, and labels this Search location. Mapbox remains the map renderer.
+See [Geoapify geocoding bias](https://apidocs.geoapify.com/docs/geocoding/) and
+[Places proximity bias](https://apidocs.geoapify.com/docs/places/).
+
+### Main destinations and activity photos
+
+GET /api/v1/providers/locations/areas takes q and optional limit, using Geoapify type=locality through the shared
+geocoding budget for persistent cities, regions and states. Temporary Mapbox Home search data is not stored.
+
+GET /api/v1/providers/unsplash/activity-photo takes name, latitude, longitude and optional city/country, returning
+a canonical photo or null. POST with the same JSON requires session and exact Origin and records a selection.
+Invalid/missing GPS returns 400. A single specific search inspects at most three photo-detail records, without
+broadening to the city/country. GPS within 100m or exact place-name plus city/country metadata supports a match;
+GPS over 3km away rejects it. Coordinates are never inferred from search rank. Missing confident evidence returns
+null. Each upstream search, detail and download-equivalent selection consumes the existing Unsplash budget; no
+automatic retries or increased quotas. Hotlinks and photographer/Unsplash referral credits are retained.
+See [Unsplash photo details and selection](https://unsplash.com/documentation#get-a-photo) and
+[Geoapify locality search](https://apidocs.geoapify.com/docs/geocoding/forward-geocoding/).
+
+### Uploaded photo presentation
+
+GET /api/v1/images/:imageId/presentation returns {edit,revision} for the uploader. PUT accepts the same JSON, with
+exact frontend Origin, and saves only for the uploader at that expected revision. edit is null (reset), or normalized
+x/y/width/height crop bounds inside the original and integer outputWidth/outputHeight limits from 32 to 4096.
+Invalid bounds return 400, missing sessions 401, inaccessible IDs 404 and stale edits 409. Originals, capture
+metadata, image IDs and Board links stay unchanged. Edits affect every use of the upload, independently of Board
+field saves. Content variant=original is uploader-only and bypasses edits, providing a bounded 4096px source for the
+editor. Display/thumbnail delivery applies edits before existing size limits; optional v is a cache-busting revision.
+No raw Cloudinary URL or arbitrary transformation input is accepted.
+
+POST /api/v1/providers/locations/suggest-area requires session/Origin and {points:[{latitude,longitude,city?,country?}]}
+with 3 to 100 points. At least three points and 60% of the batch must share a country-compatible cluster within 120km.
+The medoid supplies one Geoapify reverse lookup: state for multiple cities or spread over 25km, otherwise city.
+Ambiguous input returns null without upstream calls. Responses do not persist a Board destination. Quota limits and
+feedback remain unchanged. See [Cloudinary crop coordinates](https://cloudinary.com/documentation/transformation_reference#c_crop).
+
+### Destination illustration pools
+
+GET /api/v1/providers/unsplash/search accepts limit 1 to 20 (default 5). Other provider search limits remain unchanged.
+Board decorative spaces share destination/country results rather than making exact hotel/POI requests. Shared
+Unsplash request quotas are unchanged; rendering illustrations does not persist them as activity images.

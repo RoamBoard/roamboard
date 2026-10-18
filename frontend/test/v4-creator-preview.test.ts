@@ -77,7 +77,7 @@ function pairedCards(markup: string) {
 test("the creator's V4 adapter preserves real author and metadata, selected cover delivery and immutable editor state", () => {
     const source = board();
     const original = structuredClone(source);
-    const preview = createBoardPreview(source, new Set(), "the_complete_author_handle");
+    const preview = createBoardPreview(source, "the_complete_author_handle");
     assert.equal(preview.photo.title, source.title);
     assert.equal(preview.photo.author, "the_complete_author_handle");
     assert.equal(preview.photo.destination, "Oslo · Norway");
@@ -121,18 +121,21 @@ test("an unselected cover falls back to an existing photo in editor order while 
     assert.doesNotMatch(annotations.replace(/<[^>]*>/g, " "), /selected photograph|selected cover/i);
 });
 
-test("V4 creator destinations use only confirmed places and never infer a destination from the title", () => {
+test("V4 creator destinations include generated photo places immediately and never infer a destination from the title", () => {
     const candidate = activity("photo-location", { source: "photo" });
     const source = board({
         title: "Postcards from Imaginary City",
         days: [{ id: "day", dayNumber: 1, date: null, pins: [candidate] }]
     });
-    const unconfirmed = createBoardPreview(source);
-    assert.equal(unconfirmed.photo.destination, "");
-    assert.equal(unconfirmed.photo.destinationLabel, "");
-    const confirmed = createBoardPreview(source, new Set([candidate.id]));
-    assert.equal(confirmed.photo.destination, "Oslo · Norway");
-    assert.equal(confirmed.photo.destinationLabel, "NOR");
+    const generated = createBoardPreview(source);
+    assert.equal(generated.photo.destination, "Oslo · Norway");
+    assert.equal(generated.photo.destinationLabel, "NOR");
+    const unlocated = createBoardPreview({
+        ...source,
+        days: [{ id: "day", dayNumber: 1, date: null, pins: [{ ...candidate, location: null }] }]
+    });
+    assert.equal(unlocated.photo.destination, "");
+    assert.equal(unlocated.photo.destinationLabel, "");
     const otherCountry = activity("other-country", {
         location: { ...candidate.location!, city: "Paris", country: "France", countryCode: "FRA" }
     });

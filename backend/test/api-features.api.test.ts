@@ -171,9 +171,11 @@ test("location and photo search map real provider payloads to the frontend contr
     assert.equal(locations.body.data[0].city, "Tokyo");
     assert.equal(locations.body.data[0].countryCode, "JPN");
     assert.equal(locations.body.data[0].placeType, "place");
-    const photos = await request(app).get("/api/v1/providers/unsplash/search?q=Tokyo");
+    const photos = await request(app).get("/api/v1/providers/unsplash/search?q=Tokyo&limit=20");
     assert.equal(photos.status, 200);
     assert.equal(photos.body.data[0].photographer, "Photographer");
+    assert.deepEqual(policies, ["geoapify.geocoding", "unsplash.requests"]);
+    assert.equal((await request(app).get("/api/v1/providers/unsplash/search?q=Tokyo&limit=21")).status, 400);
     assert.deepEqual(policies, ["geoapify.geocoding", "unsplash.requests"]);
 });
 

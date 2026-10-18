@@ -25,7 +25,6 @@ function descriptionExcerpt(value: string): string {
 
 export function createBoardPreview(
     board: BoardCreatorPayload,
-    confirmedPhotoPins: ReadonlySet<string> = new Set(),
     author = ""
 ): {
     cover: BoardImageDraft | undefined;
@@ -45,24 +44,27 @@ export function createBoardPreview(
     const collagePhotos = photos.filter(
         (image, index, all) => all.findIndex((other) => other.url === image.url) === index
     );
-    const locations = board.days
-        .flatMap((day) => day.pins)
-        .filter((pin) => pin.source !== "photo" || confirmedPhotoPins.has(pin.id))
-        .flatMap((pin) => (pin.location ? [pin.location] : []));
-    const countries = locations.map((location) => findCountry(location.countryCode || location.country || ""));
+    const locations = board.days.flatMap((day) => day.pins).flatMap((pin) => (pin.location ? [pin.location] : []));
+    const countries = (board.destination ? [board.destination] : locations).map((location) =>
+        findCountry(location.countryCode || location.country || "")
+    );
     const countryLabel =
         countries.length > 0 && countries.every((country) => country && country.code === countries[0]?.code)
             ? countries[0]!.code
             : "";
-    const destination = [
-        ...new Set(
-            locations.flatMap((location, index) =>
-                [location.city?.trim(), countries[index]?.name || location.country?.trim()].filter(
-                    (value): value is string => Boolean(value)
-                )
-            )
-        )
-    ].join(" · ");
+    const destination = board.destination
+        ? [board.destination.name, findCountry(board.destination.countryCode ?? "")?.name]
+              .filter((value, index, all) => value && all.indexOf(value) === index)
+              .join(", ")
+        : [
+              ...new Set(
+                  locations.flatMap((location, index) =>
+                      [location.city?.trim(), countries[index]?.name || location.country?.trim()].filter(
+                          (value): value is string => Boolean(value)
+                      )
+                  )
+              )
+          ].join(" · ");
     const dates = board.days.flatMap((day) => formattedDate(day.date) ?? []);
     const photo = cover ?? photos[0];
     const undated = board.days.length - dates.length;
@@ -111,7 +113,7 @@ export function createBoardPreview(
             themes: board.tags,
             highlights: [],
             images: collagePhotos.slice(0, 6).map((image) => ({
-                src: image.url,
+                src: image.thumbnailUrl,
                 alt: image === cover ? `Cover of ${title}` : `${title} trip photo`
             }))
         }

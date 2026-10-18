@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import BoardCreationPreview from "../src/components/features/boards/BoardCreationPreview";
 import CollageBoardCard from "../src/components/features/boards/cards/CollageBoardCard";
 import { createBoardPreview } from "../src/lib/board-creation-preview";
+import { photoWasEdited } from "../src/lib/use-photo-urls";
 import type { BoardCreatorPayload, BoardImageDraft, BoardPinDraft } from "../src/types/board-creator";
 
 function image(id: number, order: number, overrides: Partial<BoardImageDraft> = {}): BoardImageDraft {
@@ -77,16 +78,16 @@ function freeze<T>(value: T): T {
     return value;
 }
 
-test("preview mapping is immutable and puts the selected uploaded cover first using its original protected URL", () => {
+test("preview mapping is immutable and puts the selected uploaded cover first using its protected thumbnail", () => {
     const source = freeze(board({ coverImageId: 3, images: [image(1, 2), image(2, 0), image(3, 1)] }));
     const before = structuredClone(source);
     const result = createBoardPreview(source);
     assert.equal(result.cover?.uploadedImageId, 3);
     assert.deepEqual(
         result.card.images.map((photo) => photo.src),
-        [source.images[2].url, source.images[1].url, source.images[0].url]
+        [source.images[2].thumbnailUrl, source.images[1].thumbnailUrl, source.images[0].thumbnailUrl]
     );
-    assert.equal(result.card.images[0].src, "https://api.example.test/api/v1/images/3/content?variant=display");
+    assert.equal(result.card.images[0].src, "https://api.example.test/api/v1/images/3/content?variant=thumbnail");
     assert.deepEqual(source, before);
 });
 
@@ -102,7 +103,7 @@ test("collage selection removes duplicate URLs while retaining external photogra
     const result = createBoardPreview(source);
     assert.deepEqual(
         result.card.images.map((photo) => photo.src),
-        [source.images[2].url, source.images[3].url, external.url]
+        [source.images[2].thumbnailUrl, source.images[3].thumbnailUrl, external.thumbnailUrl]
     );
     assert.equal(new Set(result.card.images.map((photo) => photo.src)).size, result.card.images.length);
     assert.equal(result.photos.length, source.images.length);
@@ -120,7 +121,7 @@ test("only six photos enter the V1 collage, while all ten uploads remain availab
     assert.equal(result.card.images.length, 6);
     assert.deepEqual(
         result.card.images.map((photo) => photo.src),
-        [images[9].url, ...images.slice(0, 5).map((photo) => photo.url)]
+        [images[9].thumbnailUrl, ...images.slice(0, 5).map((photo) => photo.thumbnailUrl)]
     );
     assert.equal(result.photos.length, 10);
 });
@@ -139,18 +140,15 @@ test("an empty Board has no invented author, highlights, save counts, destinatio
     assert.doesNotMatch(JSON.stringify(result), /Tokyo|Japan|traveler|Default cover/i);
 });
 
-test("photo locations do not supply a destination or country until explicitly confirmed", () => {
+test("generated photo locations appear in the preview without individual confirmation", () => {
     const photo = pin("photo", { source: "photo" });
     const source = board({ days: [{ id: "day-1", dayNumber: 1, date: null, pins: [photo] }] });
-    const unconfirmed = createBoardPreview(source);
-    assert.equal(unconfirmed.countryLabel, "");
-    assert.doesNotMatch(unconfirmed.destination, /Stockholm|Sweden/);
-    const confirmed = createBoardPreview(source, new Set(["photo"]));
-    assert.equal(confirmed.countryLabel, "SWE");
-    assert.match(confirmed.destination, /Stockholm/);
+    const preview = createBoardPreview(source);
+    assert.equal(preview.countryLabel, "SWE");
+    assert.match(preview.destination, /Stockholm/);
 });
 
-test("the country watermark requires agreement across every confirmed location", () => {
+test("the country watermark requires agreement across every activity location", () => {
     const swedish = pin("one");
     const sameCountry = pin("two", {
         source: "geoapify",
@@ -268,6 +266,46 @@ test("the controlled preview retains all days, more than five activities, descri
     for (const photo of images)
         assert.ok(markup.includes(photo.thumbnailUrl.replaceAll("&", "&amp;")), `${photo.id} must remain accessible`);
     assert.doesNotMatch(markup, /_next\/image\?url=https%3A%2F%2Fapi\.example\.test/);
+});
+
+test("saved crop revisions refresh both V4 covers, itinerary and photo-review URLs without changing Board data", () => {
+    const edited = image(901, 0, { pinId: "museum" });
+    const untouched = image(902, 1);
+    const external = image(903, 2, {
+        source: "unsplash",
+        uploadedImageId: undefined,
+        url: "https://images.unsplash.com/external",
+        thumbnailUrl: "https://images.unsplash.com/external?w=400"
+    });
+    const source = freeze(
+        board({
+            coverImageId: 901,
+            images: [
+                edited,
+                untouched,
+                ...Array.from({ length: 4 }, (_, index) => image(904 + index, 2 + index)),
+                { ...external, order: 6 }
+            ],
+            days: [{ id: "day-1", dayNumber: 1, date: null, pins: [pin("museum")] }]
+        })
+    );
+    const before = structuredClone(source);
+    for (const revision of [2, 3]) {
+        photoWasEdited(901, revision);
+        const markup = renderToStaticMarkup(createElement(BoardCreationPreview, { board: source }));
+        const sources = [...markup.matchAll(/<img\b[^>]*\bsrc="([^"]+)"/g)].map((match) =>
+            match[1].replaceAll("&amp;", "&")
+        );
+        const refreshedThumbnail = `${edited.thumbnailUrl}&v=${revision}`;
+        const refreshedDisplay = `${edited.url}&v=${revision}`;
+        assert.equal(sources.filter((url) => url === refreshedDisplay).length, 2);
+        assert.equal(sources.filter((url) => url === refreshedThumbnail).length, 2);
+        assert.ok(!sources.includes(edited.url));
+        assert.ok(!sources.includes(edited.thumbnailUrl));
+        assert.ok(sources.includes(untouched.thumbnailUrl));
+        assert.ok(sources.includes(external.thumbnailUrl));
+        assert.deepEqual(source, before);
+    }
 });
 
 test("an empty preview stays usable without sample photos or unsupported metadata", () => {

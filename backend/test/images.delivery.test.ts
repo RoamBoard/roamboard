@@ -43,3 +43,46 @@ test("deleted Cloudinary files report a missing asset, while saved IDs and permi
         }
     }
 });
+
+test("saved crops use authenticated fractional bounding boxes and the editor source omits edits", async () => {
+    const previousFetch = globalThis.fetch;
+    const keys = ["CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET"] as const;
+    const previous = keys.map((key) => process.env[key]);
+    process.env.CLOUDINARY_CLOUD_NAME = "test-cloud";
+    process.env.CLOUDINARY_API_KEY = "test-key";
+    process.env.CLOUDINARY_API_SECRET = "test-secret";
+    const urls: string[] = [];
+    globalThis.fetch = async (input) => {
+        urls.push(String(input));
+        return new Response("jpeg", { headers: { "content-type": "image/jpeg" } });
+    };
+    try {
+        const provider = createCloudinaryProvider();
+        await provider.openVariant("roamboard/original", "display", {
+            x: 0.25,
+            y: 0.1,
+            width: 0.5,
+            height: 1,
+            outputWidth: 800,
+            outputHeight: 600
+        });
+        assert.match(urls[0]!, /\/image\/authenticated\/s--/);
+        assert.match(urls[0]!, /c_crop,h_1\.000000,w_0\.500000,x_0\.250000,y_0\.100000/);
+        assert.match(urls[0]!, /c_limit,h_600,w_800/);
+        await provider.openVariant("roamboard/original", "original", {
+            x: 0.25,
+            y: 0.1,
+            width: 0.5,
+            height: 1,
+            outputWidth: 800,
+            outputHeight: 600
+        });
+        assert.doesNotMatch(urls[1]!, /c_crop/);
+    } finally {
+        globalThis.fetch = previousFetch;
+        keys.forEach((key, index) => {
+            if (previous[index] === undefined) delete process.env[key];
+            else process.env[key] = previous[index];
+        });
+    }
+});

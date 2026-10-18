@@ -43,7 +43,10 @@ test(
                     "003_board_creator.sql",
                     "004_api_features.sql",
                     "006_profile.sql",
-                    "007_profile_tag_catalog.sql"
+                    "007_profile_tag_catalog.sql",
+                    "008_board_destination.sql",
+                    "009_image_presentation.sql",
+                    "010_guest_accounts.sql"
                 ]) {
                     const sql = await readFile(new URL(`../db/migrations/${name}`, import.meta.url), "utf8");
                     await migrationClient.query(sql);
@@ -186,6 +189,24 @@ test(
             const completed = await imageService.complete("owner-sub", upload.uploadId);
             assert.equal(completed.imageId > 0, true);
             assert.equal(completed.latitude, 35.68);
+            const crop = { x: 0.1, y: 0.2, width: 0.7, height: 0.6, outputWidth: 800, outputHeight: 600 };
+            assert.deepEqual(await imageService.readPresentation("owner-sub", completed.imageId), {
+                edit: null,
+                revision: 0
+            });
+            assert.deepEqual(await imageService.savePresentation("owner-sub", completed.imageId, 0, crop), {
+                edit: crop,
+                revision: 1
+            });
+            assert.deepEqual(await imageService.readPresentation("owner-sub", completed.imageId), {
+                edit: crop,
+                revision: 1
+            });
+            assert.equal((await createImagesRepository().findImage(completed.imageId))?.latitude, 35.68);
+            await assert.rejects(imageService.savePresentation("owner-sub", completed.imageId, 0, null), {
+                code: "STALE_IMAGE_REVISION"
+            });
+            await imageService.savePresentation("owner-sub", completed.imageId, 1, null);
             assert.equal((await imageService.complete("owner-sub", upload.uploadId)).imageId, completed.imageId);
             await assert.rejects(imageService.openImage(completed.imageId, "thumbnail", null), { code: "NOT_FOUND" });
             assert.equal(
@@ -202,6 +223,53 @@ test(
                 imageIds: [],
                 days: []
             };
+            const destination: NonNullable<BoardWrite["destination"]> = {
+                name: "Bali",
+                kind: "region",
+                latitude: -8.409518,
+                longitude: 115.188919,
+                address: "Bali, Indonesia",
+                city: null,
+                country: "IDN",
+                externalPlaceId: "geoapify:bali"
+            };
+            const destinationBoard = await service.create("owner-sub", { ...empty, destination });
+            assert.deepEqual((await service.read(destinationBoard.boardId, "owner-sub")).destination, destination);
+            const legacyWrite = await service.replace("owner-sub", destinationBoard.boardId, 1, empty);
+            assert.deepEqual(legacyWrite.destination, destination, "Older clients omitting destination preserve it");
+            const cityDestination = {
+                ...destination,
+                name: "Stockholm",
+                kind: "city" as const,
+                latitude: 59.3293,
+                longitude: 18.0686,
+                address: "Stockholm, Sweden",
+                city: "Stockholm",
+                country: "SWE",
+                externalPlaceId: "geoapify:stockholm"
+            };
+            const halfPrecisionDestination = {
+                ...cityDestination,
+                longitude: 18.0710935,
+                externalPlaceId: "geoapify:stockholm-half"
+            };
+            const halfPrecisionBoard = await service.create("owner-sub", {
+                ...empty,
+                destination: halfPrecisionDestination
+            });
+            assert.equal(halfPrecisionBoard.destination?.longitude, 18.071093);
+            await service.delete(halfPrecisionBoard.boardId, "owner-sub");
+            const changedDestination = await service.replace("owner-sub", destinationBoard.boardId, 2, {
+                ...empty,
+                destination: cityDestination
+            });
+            assert.deepEqual(changedDestination.destination, cityDestination);
+            const clearedDestination = await service.replace("owner-sub", destinationBoard.boardId, 3, {
+                ...empty,
+                destination: null
+            });
+            assert.equal(clearedDestination.destination, null);
+            await service.delete(destinationBoard.boardId, "owner-sub");
             const created = await service.create("owner-sub", empty);
             assert.equal(created.revision, 1);
             assert.equal(created.title, "");
@@ -280,6 +348,16 @@ test(
             assert.equal((await service.read(created.boardId, "owner-sub")).revision, 2);
 
             const publish: BoardWrite = {
+                destination: {
+                    name: "Tokyo",
+                    kind: "city" as const,
+                    latitude: 35.68,
+                    longitude: 139.76,
+                    address: "Tokyo, Japan",
+                    city: "Tokyo",
+                    country: "JPN",
+                    externalPlaceId: "geoapify:tokyo"
+                },
                 ...draft,
                 status: "published",
                 days: draft.days.map((day, index) => ({

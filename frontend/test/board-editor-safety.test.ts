@@ -109,7 +109,7 @@ function freeze<T>(value: T): T {
     return value;
 }
 
-test("fingerprints ignore remapped local/server identifiers while retaining photo assignments and confirmations", () => {
+test("fingerprints ignore remapped local/server identifiers while retaining photo assignments", () => {
     const source = freeze(board());
     const before = structuredClone(source);
     const reloaded = structuredClone(source);
@@ -128,10 +128,7 @@ test("fingerprints ignore remapped local/server identifiers while retaining phot
                 });
         });
     });
-    assert.equal(
-        boardEditorFingerprint(source, new Set(["photo-pin"])),
-        boardEditorFingerprint(reloaded, new Set(["new-pin-0-0"]))
-    );
+    assert.equal(boardEditorFingerprint(source), boardEditorFingerprint(reloaded));
     assert.deepEqual(source, before);
 });
 
@@ -151,24 +148,21 @@ test("upload URL refreshes and derived metadata do not invent unsaved edits", ()
             photo.longitude = null;
         });
     refreshed.days[0].pins[0].location!.countryCode = null;
-    assert.equal(boardEditorFingerprint(source, new Set()), boardEditorFingerprint(refreshed, new Set()));
+    assert.equal(boardEditorFingerprint(source), boardEditorFingerprint(refreshed));
 });
 
-test("equivalent tag membership, trimmed notes and manual confirmation bookkeeping stay clean", () => {
+test("equivalent tag membership and trimmed notes stay clean", () => {
     const source = board();
     const equivalent = structuredClone(source);
     equivalent.tags.reverse();
     equivalent.description = `  ${source.description}  `;
     equivalent.days[0].pins[0].description = `  ${source.days[0].pins[0].description}  `;
-    assert.equal(
-        boardEditorFingerprint(source, new Set(["photo-pin"])),
-        boardEditorFingerprint(equivalent, new Set(["manual-pin", "photo-pin", "missing-local-pin"]))
-    );
+    assert.equal(boardEditorFingerprint(source), boardEditorFingerprint(equivalent));
 });
 
 test("every meaningful content, cover, assignment and ordering edit changes the persisted fingerprint", () => {
     const source = board();
-    const baseline = boardEditorFingerprint(source, new Set(["photo-pin"]));
+    const baseline = boardEditorFingerprint(source);
     const changes: Array<[string, (value: BoardCreatorPayload) => void]> = [
         [
             "Board title",
@@ -314,27 +308,23 @@ test("every meaningful content, cover, assignment and ordering edit changes the 
     for (const [label, change] of changes) {
         const edited = structuredClone(source);
         change(edited);
-        assert.notEqual(
-            boardEditorFingerprint(edited, new Set(["photo-pin"])),
-            baseline,
-            `${label} must be protected as unsaved content`
-        );
+        assert.notEqual(boardEditorFingerprint(edited), baseline, `${label} must be protected as unsaved content`);
     }
 });
 
-test("confirming a photo location changes dirty meaning and confirmation-set order does not", () => {
+test("photo activities with saved locations serialize without separate review state", () => {
     const source = board();
-    assert.notEqual(boardEditorFingerprint(source, new Set()), boardEditorFingerprint(source, new Set(["photo-pin"])));
-    assert.equal(
-        boardEditorFingerprint(source, new Set(["manual-pin", "photo-pin"])),
-        boardEditorFingerprint(source, new Set(["photo-pin", "manual-pin"]))
-    );
+    const tags = source.tags.map((name, index) => ({ name, tagId: index + 1 }));
+    const write = toBoardWrite(source, tags);
+    const photo = write.days.flatMap((day) => day.activities).find((activity) => activity.source === "photo");
+    assert.ok(photo?.location);
+    assert.equal(photo.locationConfirmed, true);
 });
 
 test("canonical save-and-reopen mapping preserves the content fingerprint despite fresh local IDs and URLs", () => {
     const source = board();
     const tags = source.tags.map((name, index) => ({ name, tagId: index + 1 }));
-    const write = toBoardWrite(source, tags, new Set(["photo-pin"]));
+    const write = toBoardWrite(source, tags);
     const saved: BoardDocument = {
         ...write,
         boardId: 40,
@@ -371,10 +361,7 @@ test("canonical save-and-reopen mapping preserves the content fingerprint despit
         coverImageId: saved.coverImageId,
         ...restored
     };
-    assert.equal(
-        boardEditorFingerprint(source, new Set(["photo-pin"])),
-        boardEditorFingerprint(reopened, restored.confirmedPhotoPins)
-    );
+    assert.equal(boardEditorFingerprint(source), boardEditorFingerprint(reopened));
 });
 
 const currentURL = "https://roamboard.example.test/boards/new?mode=scratch#board-title";

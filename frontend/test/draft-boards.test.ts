@@ -489,8 +489,7 @@ test("reopening and updating a selected draft preserves its revision and child I
             tags: selected.tags.map((tag) => tag.name),
             ...restored
         },
-        selected.tags,
-        restored.confirmedPhotoPins
+        selected.tags
     );
     await saveBoardDocument(write, selected);
     assert.deepEqual(

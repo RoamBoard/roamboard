@@ -3,11 +3,11 @@
 
 import BoardPreviewDiagram from "./BoardPreviewDiagram";
 import { createBoardPreview } from "@/lib/board-creation-preview";
+import { usePhotoUrls } from "@/lib/use-photo-urls";
 import { dayColors, type BoardCreatorPayload } from "@/types/board-creator";
 
 type Props = {
     board: BoardCreatorPayload;
-    confirmedPhotoPins?: ReadonlySet<string>;
     author?: string;
     editable?: boolean;
 };
@@ -15,13 +15,22 @@ type Props = {
 const editLink =
     "text-muted-foreground hover:text-foreground mt-2 inline-flex min-h-11 items-center text-[11px] underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4";
 
-export default function BoardCreationPreview({ board, confirmedPhotoPins, author, editable = true }: Props) {
-    const preview = createBoardPreview(board, confirmedPhotoPins, author);
+export default function BoardCreationPreview({ board: sourceBoard, author, editable = true }: Props) {
+    const photoUrl = usePhotoUrls();
+    const board = {
+        ...sourceBoard,
+        images: sourceBoard.images.map((image) => ({
+            ...image,
+            url: photoUrl(image.url),
+            thumbnailUrl: photoUrl(image.thumbnailUrl)
+        }))
+    };
+    const preview = createBoardPreview(board, author);
     const pins = board.days.flatMap((day) => day.pins);
     const uploadedCount = board.images.filter((image) => image.source === "upload").length;
     return (
         <article aria-label="Board preview" className="@container min-w-0">
-            <BoardPreviewDiagram preview={preview} editable={editable} />
+            <BoardPreviewDiagram preview={preview} editable={editable} mainDestination={Boolean(board.destination)} />
             <div className="text-muted-foreground mt-12 flex flex-wrap justify-between gap-x-6 gap-y-2 text-[11px] leading-relaxed">
                 <p>Live preview · updates as you edit</p>
                 <p>
@@ -65,9 +74,6 @@ export default function BoardCreationPreview({ board, confirmedPhotoPins, author
                                                 {pin.location.name}
                                                 {pin.location.address ? ` · ${pin.location.address}` : ""}
                                             </p>
-                                        ) : null}
-                                        {pin.source === "photo" && !confirmedPhotoPins?.has(pin.id) ? (
-                                            <p className="mt-2">Photo location needs confirmation.</p>
                                         ) : null}
                                         <div
                                             className="mt-3 flex flex-wrap gap-2"

@@ -99,18 +99,22 @@ export function toPhotoBoardCard(document: BoardDocument): PhotoBoardCardData {
     const locations = activities.flatMap((activity) =>
         activity.locationConfirmed && activity.location ? [activity.location] : []
     );
-    const countries = locations.map((location) => (location.country ? findCountry(location.country) : undefined));
+    const countries = (document.destination ? [document.destination] : locations).map((location) =>
+        location.country ? findCountry(location.country) : undefined
+    );
     const singleCountry =
         countries.length > 0 && countries.every((country) => country && country.code === countries[0]?.code)
             ? countries[0]
             : undefined;
-    const destination = [
-        ...new Set(
-            locations.flatMap((location, index) =>
-                [location.city?.trim(), countries[index]?.name ?? location.country?.trim()].filter(Boolean)
-            )
-        )
-    ].join(", ");
+    const destination = document.destination
+        ? [...new Set([document.destination.name, singleCountry?.name].filter(Boolean))].join(", ")
+        : [
+              ...new Set(
+                  locations.flatMap((location, index) =>
+                      [location.city?.trim(), countries[index]?.name ?? location.country?.trim()].filter(Boolean)
+                  )
+              )
+          ].join(", ");
     const cover = document.images.find((image) => image.imageId === document.coverImageId) ?? document.images[0];
     const external = activities.find((activity) => activity.externalImage)?.externalImage;
     const src = cover

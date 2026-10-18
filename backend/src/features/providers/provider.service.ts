@@ -1,9 +1,13 @@
+import { suggestActivityArea } from "./provider.area-suggestion.js";
+import type { AreaSuggestionRequest } from "./provider.schemas.js";
+import { findActivityPhoto, requestActivityPhoto } from "./provider.activity-photo.js";
+import type { ActivityPhotoRequest } from "./provider.schemas.js";
 const env = process.env;
 import { AppError } from "../../shared/app-error.js";
 import { searchMapboxPlaces } from "../destinations/destination.providers.js";
 import type { DestinationResult } from "../destinations/destination.types.js";
 import type { QuotaService } from "../quotas/quota.service.js";
-import { searchGeoapify, reverseGeoapify } from "./provider.geoapify.js";
+import { searchGeoapify, reverseGeoapify, reverseGeoapifyArea } from "./provider.geoapify.js";
 import { loadCloudinaryAssets, loadCloudinaryMetadata, uploadCloudinaryImage } from "./provider.cloudinary.js";
 import {
     fetchGooglePlaceDetails,
@@ -29,14 +33,21 @@ import type {
 } from "./provider.types.js";
 
 export interface ProviderService {
+    suggestBoardArea(input: AreaSuggestionRequest): Promise<DestinationResult | null>;
     config(): ProviderConfig;
     mapboxMapSession(): Promise<MapboxMapSession>;
     mapboxSearch(query: string, limit: number): Promise<DestinationResult[]>;
-    mapboxBoardSearch(query: string, limit: number): Promise<DestinationResult[]>;
+    boardAreaSearch(query: string, limit: number): Promise<DestinationResult[]>;
+    mapboxBoardSearch(
+        query: string,
+        limit: number,
+        proximity?: { latitude: number; longitude: number }
+    ): Promise<DestinationResult[]>;
     mapboxDestinationSearch(country: string, city: string, limit: number): Promise<DestinationResult[]>;
     mapboxReverse(latitude: number, longitude: number): Promise<MapboxLocation>;
     mapboxBoardReverse(latitude: number, longitude: number): Promise<MapboxLocation>;
     mapboxRoute(points: RoutePoint[], profile: RouteProfile): Promise<ProviderRoute>;
+    unsplashActivityPhoto(input: ActivityPhotoRequest, select?: boolean): Promise<ProviderPhoto | null>;
     unsplashSearch(query: string, limit: number): Promise<ProviderPhoto[]>;
     googlePlacesSearch(query: string, limit: number): Promise<ProviderPlace[]>;
     googlePlaceDetails(placeId: string): Promise<GooglePlaceDetails>;
@@ -105,10 +116,30 @@ export function createProviderService(
                 quota.run("mapbox.search_box", (observe) => searchMapboxPlaces(query, limit, token, observe))
             );
         },
-        mapboxBoardSearch: async (query, limit) => {
+        suggestBoardArea: async (input) => {
+            const key = required(env.GEOAPIFY_API_KEY, "Geoapify destinations");
+            return callProvider("Geoapify", () =>
+                suggestActivityArea(input, (point, type) =>
+                    quota.run("geoapify.geocoding", (observe) =>
+                        reverseGeoapifyArea(point.latitude, point.longitude, type, key, observe)
+                    )
+                )
+            );
+        },
+        boardAreaSearch: async (query, limit) => {
+            const key = required(env.GEOAPIFY_API_KEY, "Geoapify destinations");
+            return callProvider("Geoapify", () =>
+                quota.run("geoapify.geocoding", (observe) =>
+                    searchGeoapify(query, limit, key, undefined, observe, undefined, true)
+                )
+            );
+        },
+        mapboxBoardSearch: async (query, limit, proximity) => {
             const key = required(env.GEOAPIFY_API_KEY, "Geoapify saved-location search");
             return callProvider("Geoapify", () =>
-                quota.run("geoapify.geocoding", (observe) => searchGeoapify(query, limit, key, undefined, observe))
+                quota.run("geoapify.geocoding", (observe) =>
+                    searchGeoapify(query, limit, key, undefined, observe, proximity)
+                )
             );
         },
         mapboxDestinationSearch: async (country, city, limit) => {
@@ -133,6 +164,19 @@ export function createProviderService(
             const token = required(env.MAPBOX_ACCESS_TOKEN, "Mapbox");
             return callProvider("Mapbox", () =>
                 quota.run("mapbox.directions", (observe) => routeMapbox(points, profile, token, observe))
+            );
+        },
+        unsplashActivityPhoto: async (input, select = false) => {
+            const key = required(env.UNSPLASH_ACCESS_KEY, "Unsplash");
+            return callProvider("Unsplash", () =>
+                findActivityPhoto(
+                    input,
+                    (path) =>
+                        quota.run("unsplash.requests", async (observe) => {
+                            return requestActivityPhoto(path, key, observe);
+                        }),
+                    select
+                )
             );
         },
         unsplashSearch: async (query, limit) => {

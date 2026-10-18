@@ -1,3 +1,5 @@
+import { createSmartCreateModule } from "./features/smart-create/smart-create.module.js";
+import type { SmartCreateResolver } from "./features/smart-create/smart-create.service.js";
 import express, { type Express } from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -23,6 +25,7 @@ import { createLibraryModule } from "./features/image-library/image-library.modu
 import type { LibraryProvider, LibraryRepository } from "./features/image-library/image-library.types.js";
 
 export interface AppOptions extends AuthModuleOptions {
+    smartCreateResolver?: SmartCreateResolver;
     libraryRepository?: LibraryRepository;
     libraryProvider?: LibraryProvider;
     boardRepository?: BoardRepository;
@@ -88,6 +91,11 @@ export function createApp(options: AppOptions = {}): Express {
     app.use("/api/v1/search", search.router);
     app.use("/api/v1", boards.router);
     app.use("/api/v1", images.router);
+    app.use(
+        "/api/v1",
+        createSmartCreateModule(attachUser, images.repository, quota, options.smartCreateResolver, images.provider)
+            .router
+    );
     app.use((_request, response) => {
         response.status(404).json({ error: { code: "NOT_FOUND", message: "Not found" } });
     });

@@ -9,14 +9,15 @@ type Field = "title" | "cover" | "destination" | "tags" | "duration";
 type View = "cover" | "details";
 type Connector = { field: Field; path: string; x: number; y: number };
 type Preview = ReturnType<typeof createBoardPreview>;
+type EditSource = { href: string; section: string; control?: string; label: string };
 
-const sources: Partial<Record<Field, { href: string; section: string; control?: string; label: string }>> = {
+const sources: Partial<Record<Field, EditSource>> = {
     title: { href: "#board-title", section: "board-title", label: "Edit title" },
     cover: {
         href: "#board-images",
         section: "board-images",
         control:
-            'button[aria-label="Choose Board images"]:not(:disabled), button[data-board-cover-choice]:not(:disabled)',
+            'button[aria-label="Edit Board cover"]:not(:disabled), button[aria-label="Choose Board images"]:not(:disabled), button[data-board-cover-choice]:not(:disabled)',
         label: "Manage photos"
     },
     tags: {
@@ -31,6 +32,12 @@ const sources: Partial<Record<Field, { href: string; section: string; control?: 
         label: "Edit places in the day plan",
         control: 'button[aria-label^="Edit "]:not(:disabled), button[aria-label^="Add activity"]:not(:disabled)'
     }
+};
+const mainDestinationSource: EditSource = {
+    href: "#board-destination",
+    section: "board-destination",
+    control: 'input[role="combobox"]:not(:disabled)',
+    label: "Edit main destination"
 };
 
 function EditMark() {
@@ -54,7 +61,8 @@ function Callout({
     children,
     className = "",
     setActive,
-    elementRef
+    elementRef,
+    sourceOverride
 }: {
     field: Field;
     label: string;
@@ -63,10 +71,11 @@ function Callout({
     className?: string;
     setActive: (field: Field | null) => void;
     elementRef: (element: HTMLDivElement | null) => void;
+    sourceOverride?: EditSource;
 }) {
     const reducedMotion = useReducedMotion();
     const valueId = useId();
-    const source = editable ? sources[field] : undefined;
+    const source = editable ? (sourceOverride ?? sources[field]) : undefined;
     function navigate(event: MouseEvent<HTMLAnchorElement>) {
         if (!source || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
         const section = document.getElementById(source.section);
@@ -151,7 +160,15 @@ function PreviewView({
     );
 }
 
-export default function BoardPreviewDiagram({ preview, editable = true }: { preview: Preview; editable?: boolean }) {
+export default function BoardPreviewDiagram({
+    preview,
+    editable = true,
+    mainDestination = false
+}: {
+    preview: Preview;
+    editable?: boolean;
+    mainDestination?: boolean;
+}) {
     const reducedMotion = useReducedMotion();
     const diagramRef = useRef<HTMLDivElement>(null);
     const figures = useRef<Partial<Record<View, HTMLElement>>>({});
@@ -228,6 +245,7 @@ export default function BoardPreviewDiagram({ preview, editable = true }: { prev
                 field={field}
                 label={label}
                 editable={editable}
+                sourceOverride={field === "destination" && mainDestination ? mainDestinationSource : undefined}
                 className={className}
                 setActive={setActive}
                 elementRef={(element) => {
@@ -302,7 +320,13 @@ export default function BoardPreviewDiagram({ preview, editable = true }: { prev
                 }}
             >
                 {hasDestination
-                    ? annotation("destination", "Destination", "From the confirmed places in your day plan.")
+                    ? annotation(
+                          "destination",
+                          "Destination",
+                          mainDestination
+                              ? "The main destination selected for this Board."
+                              : "From the places in your day plan."
+                      )
                     : null}
                 {hasTags
                     ? annotation("tags", "Tags", "The themes you’ve chosen for this journey.", "@min-[1100px]:ml-5")

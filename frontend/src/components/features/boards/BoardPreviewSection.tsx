@@ -4,12 +4,10 @@ import type { BoardCreatorPayload } from "@/types/board-creator";
 
 export default function BoardPreviewSection({
     board,
-    confirmedPhotoPins,
     author,
     editable
 }: {
     board: BoardCreatorPayload;
-    confirmedPhotoPins?: ReadonlySet<string>;
     author?: string;
     editable?: boolean;
 }) {
@@ -21,17 +19,12 @@ export default function BoardPreviewSection({
             <div className="@container relative min-w-0">
                 <div className="mb-10 max-w-xl [&>header]:pb-4 [&>header>p]:max-w-md">
                     <CreatorSectionIntro
-                        number="04"
+                        number="05"
                         title="BOARD PREVIEW"
                         description="The cover and the details behind your journey. Two views of the same Board."
                     />
                 </div>
-                <BoardCreationPreview
-                    board={board}
-                    confirmedPhotoPins={confirmedPhotoPins}
-                    author={author}
-                    editable={editable}
-                />
+                <BoardCreationPreview board={board} author={author} editable={editable} />
             </div>
         </section>
     );

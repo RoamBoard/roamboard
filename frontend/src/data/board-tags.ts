@@ -7,6 +7,13 @@ export type BoardTagId = BoardTag["id"];
 export const boardTags: readonly BoardTag[] = catalog.tags;
 export const boardTagCatalogVersion = catalog.catalogVersion;
 
+// Offer the shared profile catalog, restricted to names the API can persist.
+// Legacy database names remain valid for existing selections, not new choices.
+export function getAvailableBoardTags(allowedNames: readonly string[]): readonly BoardTag[] {
+    const allowed = new Set(allowedNames);
+    return boardTags.filter((tag) => allowed.has(tag.name));
+}
+
 const tagsById = new Map(boardTags.map((tag) => [tag.id, tag]));
 
 if (tagsById.size !== boardTags.length) {

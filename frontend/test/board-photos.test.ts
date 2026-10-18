@@ -6,11 +6,14 @@ import PublishedBoardDay from "../src/components/features/boards/PublishedBoardD
 import {
     createBoardPhotoSource,
     getBoardPhotoSlots,
-    resolveBoardPhotos,
+    resolveBoardPhotos as resolvePhotos,
     type PhotoSlot
 } from "../src/lib/board-photos";
 import type { ProviderPhoto } from "../src/lib/providers";
 import type { Board, BoardActivity, BoardImage } from "../src/types/board";
+
+const resolveBoardPhotos: typeof resolvePhotos = (board, slots, search, random = () => 0) =>
+    resolvePhotos(board, slots, search, random);
 
 // Photo fixtures let selection and cache tests run without spending Unsplash requests.
 function photo(id: string, changes: Partial<ProviderPhoto> = {}): ProviderPhoto {
@@ -132,7 +135,7 @@ test("photo slots use real city and country while retaining decorative slots alo
     }
     assert.ok(slots.every((entry) => entry.dayNumber !== 5));
     const secondDay = slots.find((entry) => entry.id === "day-2-first");
-    assert.match(secondDay?.query ?? "", /Kyoto/i);
+    assert.match(secondDay?.query ?? "", /Tokyo/i);
     assert.match(secondDay?.query ?? "", /Japan/i);
 });
 
@@ -216,19 +219,28 @@ test("only unresolved slots request their broader location and tag backup", asyn
     assert.equal(images.third?.url, "https://images.unsplash.com/photo-another?w=1600");
 });
 
-test("location without a city searches its saved place and country, with a broader location/tag backup", () => {
+test("decorative slots share the board destination pool instead of requesting hotel photographs", async () => {
     const source = board();
-    const entry = activity("shrine");
-    assert.ok(entry.location);
-    delete entry.location.city;
-    entry.location.name = "Fushimi Inari";
-    source.items = [entry];
-    const slots = getBoardPhotoSlots(source, ["Architecture"]);
-    const day = slots.find((entry) => entry.id === "day-1-first");
-    assert.match(day?.query ?? "", /Fushimi Inari/i);
-    assert.match(day?.query ?? "", /Japan/i);
-    assert.match(day?.backupQuery ?? "", /Japan/i);
-    assert.match(day?.backupQuery ?? "", /Architecture/i);
+    const entry = source.items[0];
+    assert.ok(entry?.type === "activity" && entry.location);
+    entry.location.name = "Tiny obscure hotel";
+    const slots = getBoardPhotoSlots(source);
+    assert.ok(slots.every((slot) => !slot.query?.includes("Tiny obscure hotel")));
+    const queries: string[] = [];
+    const result = await resolveBoardPhotos(
+        source,
+        slots,
+        async (query) => {
+            queries.push(query);
+            return Array.from({ length: 20 }, (_, index) => photo(String(index)));
+        },
+        () => 0.99
+    );
+    assert.deepEqual(queries, ["Tokyo Japan"]);
+    assert.equal(Object.keys(result).length, slots.length);
+    assert.equal(result.cover?.id, "unsplash-19");
+    assert.equal(new Set(Object.values(result).map((image) => image.id)).size, slots.length);
+    assert.ok(Object.values(result).every((image) => image.photographer && image.sourceUrl));
 });
 
 test("individual provider failures and unusable results leave slots empty while other locations resolve", async () => {
@@ -373,6 +385,6 @@ test("the default source requests the credentialed backend with enough distinct 
     assert.equal(calls[0]?.url.origin, new URL(process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001").origin);
     assert.equal(calls[0]?.url.pathname, "/api/v1/providers/unsplash/search");
     assert.match(calls[0]?.url.searchParams.get("q") ?? "", /Tokyo Japan/i);
-    assert.equal(calls[0]?.url.searchParams.get("limit"), "10");
+    assert.equal(calls[0]?.url.searchParams.get("limit"), "20");
     assert.equal(calls[0]?.init?.credentials, "include");
 });

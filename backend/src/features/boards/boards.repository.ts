@@ -22,6 +22,8 @@ interface BoardRow {
     revision: number;
     is_completed: boolean;
     cover_image_id: number | null;
+    primary_location_id: number | null;
+    primary_location_kind: "city" | "region" | "country" | null;
     created_at: Date;
     updated_at: Date;
 }
@@ -71,6 +73,7 @@ async function resolveLocations(client: PoolClient, input: BoardWrite): Promise<
         for (const activity of day.activities) {
             if (activity.location) unique.set(keyForLocation(activity.location), activity.location);
         }
+    if (input.destination) unique.set(keyForLocation(input.destination), input.destination);
     const resolved = new Map<string, number>();
     if (!unique.size) return resolved;
 
@@ -95,8 +98,8 @@ async function resolveLocations(client: PoolClient, input: BoardWrite): Promise<
     const placeholders = missing.map(([, location], index) => {
         values.push(
             location.name,
-            location.latitude,
-            location.longitude,
+            Number(location.latitude.toFixed(6)),
+            Number(location.longitude.toFixed(6)),
             location.address,
             location.city,
             location.country,
@@ -164,6 +167,12 @@ async function writeChildren(client: PoolClient, boardId: number, userId: string
     await verifyChildIds(client, boardId, input);
     await verifyImageOwnership(client, input.imageIds, userId, boardId);
     const locations = await resolveLocations(client, input);
+    if (input.destination !== undefined)
+        await client.query("UPDATE board SET primary_location_id=$1,primary_location_kind=$2 WHERE board_id=$3", [
+            input.destination ? locations.get(keyForLocation(input.destination)) : null,
+            input.destination?.kind ?? null,
+            boardId
+        ]);
 
     await client.query("DELETE FROM board_tag WHERE board_id = $1", [boardId]);
     if (input.tagIds.length) {
@@ -350,6 +359,22 @@ async function readBoardDocument(
         };
     }
 
+    const primaryLocation = board.primary_location_id
+        ? await client.query<LocationRow>(
+              "SELECT location_id,name,latitude,longitude,address,city,country,external_place_id FROM location WHERE location_id=$1",
+              [board.primary_location_id]
+          )
+        : null;
+    const destinationRow = primaryLocation?.rows[0];
+    const destination =
+        destinationRow && board.primary_location_kind
+            ? {
+                  ...locationFromRow(destinationRow),
+                  kind: board.primary_location_kind,
+                  country: destinationRow.country!,
+                  externalPlaceId: destinationRow.external_place_id!
+              }
+            : null;
     const tagResult = await client.query<{ tag_id: number; tag_name: string }>(
         `SELECT t.tag_id, t.tag_name FROM board_tag bt JOIN tag t ON t.tag_id = bt.tag_id
          WHERE bt.board_id = $1 ORDER BY t.tag_name`,
@@ -467,6 +492,7 @@ async function readBoardDocument(
                       }
         },
         boardId: board.board_id,
+        destination,
         savedByMe: savedResult?.rows[0]?.saved ?? false,
         revision: board.revision,
         status: board.status,

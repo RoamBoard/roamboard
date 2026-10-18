@@ -305,6 +305,16 @@ test("Board HTTP creator flow: draft, validation, revision, publish and read acc
     );
 
     const publish = {
+        destination: {
+            name: "Tokyo",
+            kind: "city" as const,
+            latitude: 35.68,
+            longitude: 139.76,
+            address: "Tokyo, Japan",
+            city: "Tokyo",
+            country: "JPN",
+            externalPlaceId: "geoapify:tokyo"
+        },
         ...draft,
         revision: 2,
         status: "published",
@@ -314,21 +324,17 @@ test("Board HTTP creator flow: draft, validation, revision, publish and read acc
         .put("/api/v1/boards/1")
         .set("Cookie", ownerCookie)
         .set("Origin", origin)
-        .send(publish);
+        .send({ ...publish, destination: null });
     assert.equal(blocked.status, 422);
     assert.equal(blocked.body.error.code, "PUBLISH_REQUIREMENTS_NOT_MET");
     const published = await request(app)
         .put("/api/v1/boards/1")
         .set("Cookie", ownerCookie)
         .set("Origin", origin)
-        .send({
-            ...publish,
-            days: [
-                { ...publish.days[0], activities: [{ ...publish.days[0]!.activities[0]!, locationConfirmed: true }] }
-            ]
-        });
+        .send(publish);
     assert.equal(published.status, 200);
     assert.equal(published.body.data.status, "published");
+    assert.equal(published.body.data.days[0].activities[0].locationConfirmed, true);
     assert.equal(published.body.data.days[0].activities[0].activityId, 100);
     assert.equal((await request(app).get("/api/v1/boards?scope=published")).status, 401);
     const mine = await request(app).get("/api/v1/boards?scope=published").set("Cookie", ownerCookie);
@@ -445,6 +451,16 @@ test("rejects duplicate tags, images, positions and unconfirmed manual locations
 test("a Board viewer cannot edit published content", async () => {
     const app = createApp({ ...fakeAuth(), boardRepository: fakeBoards("viewer") });
     const publishedBoard: BoardWrite = {
+        destination: {
+            name: "Tokyo",
+            kind: "city" as const,
+            latitude: 35.68,
+            longitude: 139.76,
+            address: "Tokyo, Japan",
+            city: "Tokyo",
+            country: "JPN",
+            externalPlaceId: "geoapify:tokyo"
+        },
         ...emptyDraft,
         status: "published",
         title: "Tokyo",
@@ -491,4 +507,78 @@ test("Board visibility permits only the intended audience", () => {
     assert.equal(canReadBoard({ ...published, visibility: "collaborators", isFriend: false }, "other"), true);
     assert.equal(canReadBoard({ ...published, visibility: "collaborators" }, null), false);
     assert.equal(canReadBoard({ ...published, visibility: "collaborators", memberRole: null }, "other"), false);
+});
+
+test("Board HTTP validates and returns an explicit primary destination independently of activities", async () => {
+    const app = createApp({ ...fakeAuth(), boardRepository: fakeBoards() });
+    const destination = {
+        name: "California",
+        kind: "region",
+        latitude: 36.7783,
+        longitude: -119.4179,
+        address: "California, United States",
+        city: null,
+        country: "USA",
+        externalPlaceId: "geoapify:california"
+    };
+    const response = await request(app)
+        .post("/api/v1/boards")
+        .set("Cookie", ownerCookie)
+        .set("Origin", origin)
+        .send({ ...emptyDraft, destination });
+    assert.equal(response.status, 201);
+    assert.deepEqual(response.body.data.destination, destination);
+    for (const invalid of [
+        { ...destination, country: "United States" },
+        { ...destination, externalPlaceId: "mapbox:temporary" },
+        { ...destination, kind: "restaurant" },
+        { ...destination, latitude: 95 }
+    ]) {
+        const rejected = await request(app)
+            .post("/api/v1/boards")
+            .set("Cookie", ownerCookie)
+            .set("Origin", origin)
+            .send({ ...emptyDraft, destination: invalid });
+        assert.equal(rejected.status, 400);
+    }
+});
+
+test("publishing requires an explicit main destination but incomplete drafts remain saveable", async () => {
+    const app = createApp({ ...fakeAuth(), boardRepository: fakeBoards() });
+    assert.equal(
+        (await request(app).post("/api/v1/boards").set("Cookie", ownerCookie).set("Origin", origin).send(emptyDraft))
+            .status,
+        201
+    );
+    const complete = {
+        ...emptyDraft,
+        title: "Tokyo",
+        status: "published",
+        destination: null,
+        days: [{ dayNumber: 1, date: null, activities: [locatedActivity(true)] }]
+    };
+    const missing = await request(app)
+        .post("/api/v1/boards")
+        .set("Cookie", ownerCookie)
+        .set("Origin", origin)
+        .send(complete);
+    assert.equal(missing.status, 422);
+    const valid = await request(app)
+        .post("/api/v1/boards")
+        .set("Cookie", ownerCookie)
+        .set("Origin", origin)
+        .send({
+            ...complete,
+            destination: {
+                name: "Tokyo",
+                kind: "city",
+                latitude: 35.68,
+                longitude: 139.76,
+                address: "Tokyo, Japan",
+                city: "Tokyo",
+                country: "JPN",
+                externalPlaceId: "geoapify:tokyo"
+            }
+        });
+    assert.equal(valid.status, 201);
 });

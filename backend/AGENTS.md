@@ -9,10 +9,30 @@ These instructions apply to `backend/`. Use `../layered-backend-demo1/` as the r
 - Board documents include a safe current-author summary for the published viewer: username, biography and optional profile photo. Author-photo image URLs carry the Board ID; each request checks Board read access and the owner's current photo linkage. See `BOARD_API_CONTRACT.md`.
 - Public handle profiles use `GET /api/v1/users/by-handle/:handle`. The users repository filters public published Boards and completed travel data in SQL. Public profile photo URLs carry `profileHandle`; the image service checks the current photo association. `/me` remains owner-only.
 - PostgreSQL schema lives in ordered files under `db/migrations/`: 001 is the baseline, 002 adds sessions, 003 adds canonical Board content/uploads, 004 adds compact shared provider counters with previous-bucket fields for conservative rolling guards, caller-owned place references and profile timestamps, 005 adds the editorial image library, 006 adds profile revision, default visibility, and saved Board ordering, and 007 adds the remaining names from the shared editorial tag catalog without deleting legacy tags. Migration 004 was consolidated with user approval on 2026-10-15. The shared Azure database has 005 and was reconciled with the profile changes now numbered 006 on 2026-10-17; its preexisting default-visibility column has a wider type than the migration specifies. Migration 007 has since been applied; do not rerun 004 through 007 on that database. See `db/MIGRATION_LOG.md` for verification. Treat migrations as the database source of truth. Do not treat the demo's in-memory Todo model or the frontend's mock data as persistent Roamboard behavior.
-- Migration 008 adds persistent guest accounts linked to `app_user`. It is pending on the shared database. Development-only `/api/v1/auth/guests` routes list, create, and sign into these accounts without credentials; created sessions use the existing cookie. Any development user can access each guest account, so guest data is shared.
+- Migration 010 adds persistent guest accounts linked to `app_user`. It is pending on the shared database. Development-only `/api/v1/auth/guests` routes list, create, and sign into these accounts without credentials; created sessions use the existing cookie. Any development user can access each guest account, so guest data is shared.
 - Check the relevant schema, `../frontend/REQUIREMENTS.md`, and `../frontend/src/types/` before defining a feature's contract. Preserve the product decisions already represented in the schema; ask about genuinely unresolved behavior instead of silently substituting the demo's choices.
 - Keep `backend/.env` and credentials out of Git. Document new variables in `.env.example` and `README.md` without real secrets.
 - Team development uses a shared PostgreSQL container on Azure through SSH tunnels; the backend still runs locally. See `README.md` for onboarding and `deploy/README.md` for maintenance. Do not recreate the shared database or rerun applied migrations when onboarding. `npm run check:setup` checks auth configuration and database access without changing data. Backend `GOOGLE_CLIENT_ID` must match frontend `NEXT_PUBLIC_GOOGLE_CLIENT_ID`.
+
+## Smart Create
+
+The `smart-create` feature resolves up to 30 caller-owned completed image IDs per request through
+`POST /api/v1/images/smart-create`, requiring a session and exact frontend Origin. Cloudinary Admin inspection
+uses `media_metadata`; `images/photo-metadata.ts` normalizes EXIF GPS and preserves camera wall-clock time.
+Smart Create uses nearby Geoapify POIs (75m radius) then reverse addresses; every upstream request uses the
+existing shared `geoapify.geocoding` budget, with paced calls and no automatic provider retries or raised quotas.
+The endpoint does not persist activities. The creator proposes grouping and numbered days, and existing Board
+save endpoints persist the confirmed document. Board writes allow repeated photo batches and at most 31 days.
+Explicit `POST /api/v1/images/:imageId/refresh-location` checks uploader ownership before inspecting the saved
+original, updates normalized image metadata, and returns a suggestion without changing Board activities. Full
+North/South/East/West EXIF references are supported. Saved-location search accepts paired optional GPS context as
+a soft Geoapify bias; exact generic category queries use Places discovery without a hard area filter.
+Smart Create itself needs no migration. Explicit Board destinations use migration 008, linking a primary location
+and city/region/country kind on Board; activity locations stay independent. Shared database 008 was applied after
+a verified custom-format backup on 2026-10-18; 007 was subsequently applied after a verified backup; see the migration log.
+Saved destination lookup uses
+Geoapify type=locality, reusing the Home search interaction without persisting temporary Mapbox discovery data.
+See [the Smart Create contract](../contracts/smart-create.md).
 
 ## Editorial website image library
 
@@ -125,3 +145,26 @@ country filters to alpha-2. Include the shared JSON when deploying backend build
 - Before handoff, run the relevant test and the same backend CI checks locally (`npm run check` runs those checks in sequence). Documentation-only changes need a content/diff review, not an application test run. Report any check that could not run.
 - Add meaningful service and HTTP tests for new behavior, especially validation, permissions, errors, and state changes. Follow the demo's pattern of importing `createApp()` and using Supertest without starting a listener. Inject fakes for deterministic tests; mark tests requiring a real PostgreSQL instance as integration tests and document how to run them. Do not make the normal CI suite depend on an unconfigured local database or live external provider.
 - Review the diff before committing. Keep changes focused, do not commit `.env`, build output, dependencies, or generated files, and do not include unrelated work. The frontend has its own `frontend/AGENTS.md` and CI workflow; follow those instructions when changing frontend files.
+
+## Activity photo matching
+
+The provider adapter searches Unsplash by exact place plus city/country, checks at most three canonical photo
+details, and rejects generic matches and contradictory GPS. Accept within 100m, or an exact normalized place name
+plus city/country evidence with no GPS more than 3km away. This is conservative metadata evidence, not visual
+verification. GET /providers/unsplash/activity-photo only discovers; authenticated exact-Origin POST selects and
+records the download-equivalent event. Every search/detail/selection call uses the unchanged shared Unsplash budget.
+No match returns null, and failures preserve user uploads and allow saving without an automatic photo.
+
+## Protected upload presentation
+
+Migration 009 stores nullable crop/resize JSON and an integer presentation revision on uploaded_image. It was applied
+to shared development on 2026-10-18 after a verified backup; no originals or EXIF fields were rewritten. GET and PUT
+/images/:imageId/presentation require uploader ownership; PUT also requires exact Origin and an expected revision.
+Normalized crop bounds and 32 to 4096px resize limits are validated; stale saves return 409. Signed authenticated
+Cloudinary delivery chains crop, resize and existing display/thumbnail limits. The owner-only original variant
+omits presentation edits and limits the editor source to 4096px. Existing read permissions protect other variants.
+
+Publishing now requires an explicit destination, while drafts may omit it. Published replacements that omit the
+property validate against the stored destination. POST /providers/locations/suggest-area requires session/Origin and
+3 to 100 activity points, finds a clear majority area and makes at most one quota-managed Geoapify reverse city/state
+lookup. It does not mutate Boards or overwrite chosen destinations.
