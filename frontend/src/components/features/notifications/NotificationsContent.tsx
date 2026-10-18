@@ -13,18 +13,26 @@ import {
     type FriendRequest
 } from "@/lib/profile";
 
-export default function NotificationsContent({ initialRequests }: { initialRequests?: FriendRequest[] }) {
+export default function NotificationsContent({
+    initialRequests,
+    initialError = null
+}: {
+    initialRequests?: FriendRequest[];
+    initialError?: string | null;
+}) {
     const [requests, setRequests] = useState<FriendRequest[]>(initialRequests ?? []);
     const [loading, setLoading] = useState(false);
-    const [loadError, setLoadError] = useState<string | null>(null);
+    const [loadError, setLoadError] = useState<string | null>(initialError);
     const [sessionUser, setSessionUser] = useState<AuthUser | null>(
-        initialRequests ? ({ userId: "initial-session", username: "", displayName: "" } as AuthUser) : null
+        initialRequests || initialError
+            ? ({ userId: "initial-session", username: "", displayName: "" } as AuthUser)
+            : null
     );
     const [actionInProgress, setActionInProgress] = useState<Record<number, "accepting" | "rejecting">>({});
     const [actionError, setActionError] = useState<string | null>(null);
     const [failedAvatars, setFailedAvatars] = useState<Record<number, boolean>>({});
 
-    const activeUserIdRef = useRef<string | null>(initialRequests ? "initial-session" : null);
+    const activeUserIdRef = useRef<string | null>(initialRequests || initialError ? "initial-session" : null);
     const requestVersionRef = useRef(0);
 
     const apiOrigin = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";

@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createElement, type ReactNode } from "react";
+import { Children, createElement, isValidElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import ProfileControl from "../src/components/ui/ProfileControl";
 import NotificationControl from "../src/components/ui/NotificationControl";
 import Sidebar from "../src/components/layout/Sidebar";
 import { getMockAuthState, getMockAuthStateServerSnapshot, setMockAuthState } from "../src/data/mock-social";
+import { subscribeToFriendRequestUpdates } from "../src/lib/profile";
 
 const mockRouter = {
     back: () => {},
@@ -23,6 +24,33 @@ function RouterWrapper({ children }: { children: ReactNode }) {
         { value: mockRouter as unknown as Parameters<typeof AppRouterContext.Provider>[0]["value"] },
         children
     );
+}
+
+type ElementProps = {
+    children?: ReactNode;
+    onClick?: () => void | Promise<void>;
+    disabled?: boolean;
+    role?: string;
+    [key: string]: unknown;
+};
+
+function elements(node: ReactNode): Array<{ type: unknown; props: ElementProps }> {
+    if (!isValidElement<ElementProps>(node)) return [];
+    return [{ type: node.type, props: node.props }, ...Children.toArray(node.props.children).flatMap(elements)];
+}
+
+function capture(render: () => ReactNode) {
+    const holder: { tree: ReactNode; nodes: Array<{ type: unknown; props: ElementProps }> } = {
+        tree: null,
+        nodes: []
+    };
+    function Probe() {
+        holder.tree = render();
+        holder.nodes = elements(holder.tree);
+        return holder.tree;
+    }
+    const markup = renderToStaticMarkup(createElement(RouterWrapper, null, createElement(Probe)));
+    return { markup, nodes: holder.nodes, tree: holder.tree };
 }
 
 test("mock auth defaults to signed out and updates via setMockAuthState", () => {
@@ -155,6 +183,171 @@ test("NotificationControl renders bell trigger, badge counter, and request items
     assert.ok(openHtml.includes("@alice"));
     assert.ok(openHtml.includes("accept"));
     assert.ok(openHtml.includes("reject"));
+});
+
+test("NotificationControl renders error alert and retry button when read fails, clicking retry calls API", async (context) => {
+    const calls: Array<{ url: string; method?: string }> = [];
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {
+        calls.push({ url: String(input), method: init?.method });
+        return Response.json({ data: [] }, { headers: { "content-type": "application/json" } });
+    });
+
+    const { nodes, markup } = capture(() =>
+        NotificationControl({
+            sidebar: true,
+            iconOnly: false,
+            open: true,
+            initialRequests: [],
+            initialError: "Failed to load notifications. Please try again."
+        })
+    );
+
+    assert.ok(markup.includes("Failed to load notifications. Please try again."));
+    assert.ok(markup.includes("Retry"));
+    assert.ok(!markup.includes("No pending notifications"));
+
+    const retryBtn = nodes.find((n) => n.type === "button" && n.props.children === "Retry");
+    assert.ok(retryBtn, "Expected retry button");
+
+    await retryBtn.props.onClick?.();
+
+    assert.equal(calls.length, 1);
+    assert.ok(calls[0].url.endsWith("/api/v1/users/me/friend-requests"));
+});
+
+test("NotificationControl accepting a friend request calls PUT /api/v1/users/me/friend-requests/:id/accept and broadcasts update", async (context) => {
+    const events: Array<{ type: string; requestId: number }> = [];
+    const unsubscribe = subscribeToFriendRequestUpdates((e) => {
+        events.push(e);
+    });
+    context.after(unsubscribe);
+
+    const calls: Array<{ url: string; method?: string }> = [];
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {
+        calls.push({ url: String(input), method: init?.method });
+        return Response.json(
+            { data: { requestId: 42, status: "accepted" } },
+            { headers: { "content-type": "application/json" } }
+        );
+    });
+
+    const requests = [
+        {
+            requestId: 42,
+            requester: {
+                userId: "user-1",
+                username: "alice",
+                displayName: "Alice Wonderland",
+                profilePictureUrl: null
+            }
+        }
+    ];
+
+    const { nodes } = capture(() =>
+        NotificationControl({
+            sidebar: true,
+            iconOnly: false,
+            open: true,
+            initialRequests: requests
+        })
+    );
+
+    const acceptBtn = nodes.find((n) => n.type === "button" && n.props.children === "accept");
+    assert.ok(acceptBtn, "Expected accept button to exist");
+
+    await acceptBtn.props.onClick?.();
+
+    assert.equal(calls.length, 1);
+    assert.ok(calls[0].url.endsWith("/api/v1/users/me/friend-requests/42/accept"));
+    assert.equal(calls[0].method, "PUT");
+    assert.deepEqual(events, [{ type: "accept", requestId: 42 }]);
+});
+
+test("NotificationControl rejecting a friend request calls DELETE /api/v1/users/me/friend-requests/:id and broadcasts update", async (context) => {
+    const events: Array<{ type: string; requestId: number }> = [];
+    const unsubscribe = subscribeToFriendRequestUpdates((e) => {
+        events.push(e);
+    });
+    context.after(unsubscribe);
+
+    const calls: Array<{ url: string; method?: string }> = [];
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {
+        calls.push({ url: String(input), method: init?.method });
+        return new Response(null, { status: 204 });
+    });
+
+    const requests = [
+        {
+            requestId: 42,
+            requester: {
+                userId: "user-1",
+                username: "alice",
+                displayName: "Alice Wonderland",
+                profilePictureUrl: null
+            }
+        }
+    ];
+
+    const { nodes } = capture(() =>
+        NotificationControl({
+            sidebar: true,
+            iconOnly: false,
+            open: true,
+            initialRequests: requests
+        })
+    );
+
+    const rejectBtn = nodes.find((n) => n.type === "button" && n.props.children === "reject");
+    assert.ok(rejectBtn, "Expected reject button to exist");
+
+    await rejectBtn.props.onClick?.();
+
+    assert.equal(calls.length, 1);
+    assert.ok(calls[0].url.endsWith("/api/v1/users/me/friend-requests/42"));
+    assert.equal(calls[0].method, "DELETE");
+    assert.deepEqual(events, [{ type: "reject", requestId: 42 }]);
+});
+
+test("NotificationControl accept failure does not broadcast update", async (context) => {
+    const events: Array<{ type: string; requestId: number }> = [];
+    const unsubscribe = subscribeToFriendRequestUpdates((e) => {
+        events.push(e);
+    });
+    context.after(unsubscribe);
+
+    context.mock.method(globalThis, "fetch", async () => {
+        return Response.json(
+            { error: { code: "NOT_FOUND", message: "Request not found" } },
+            { status: 404, headers: { "content-type": "application/json" } }
+        );
+    });
+
+    const requests = [
+        {
+            requestId: 42,
+            requester: {
+                userId: "user-1",
+                username: "alice",
+                displayName: "Alice Wonderland",
+                profilePictureUrl: null
+            }
+        }
+    ];
+
+    const { nodes } = capture(() =>
+        NotificationControl({
+            sidebar: true,
+            iconOnly: false,
+            open: true,
+            initialRequests: requests
+        })
+    );
+
+    const acceptBtn = nodes.find((n) => n.type === "button" && n.props.children === "accept");
+    assert.ok(acceptBtn);
+
+    await acceptBtn.props.onClick?.();
+    assert.equal(events.length, 0);
 });
 
 test("Sidebar renders navigation links including labs, and notification menu above profile control", () => {

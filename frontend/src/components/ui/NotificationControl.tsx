@@ -20,6 +20,7 @@ export type NotificationControlProps = {
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
     initialRequests?: FriendRequest[];
+    initialError?: string | null;
 };
 
 export default function NotificationControl({
@@ -27,7 +28,8 @@ export default function NotificationControl({
     iconOnly = false,
     open,
     onOpenChange,
-    initialRequests
+    initialRequests,
+    initialError = null
 }: NotificationControlProps) {
     const [internalOpen, setInternalOpen] = useState(false);
     const isOpen = open ?? internalOpen;
@@ -37,10 +39,15 @@ export default function NotificationControl({
 
     const [requests, setRequests] = useState<FriendRequest[]>(initialRequests ?? []);
     const [loading, setLoading] = useState(false);
+    const [loadError, setLoadError] = useState<string | null>(initialError);
     const [actionInProgress, setActionInProgress] = useState<Record<number, "accepting" | "rejecting">>({});
     const [actionError, setActionError] = useState<string | null>(null);
     const [failedAvatars, setFailedAvatars] = useState<Record<number, boolean>>({});
-    const [sessionUser, setSessionUser] = useState<AuthUser | null>(null);
+    const [sessionUser, setSessionUser] = useState<AuthUser | null>(
+        initialRequests || initialError
+            ? ({ userId: "initial-session", username: "", displayName: "" } as AuthUser)
+            : null
+    );
 
     const apiOrigin = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
     const resolveAvatarUrl = (url: string | null) => {
@@ -69,29 +76,23 @@ export default function NotificationControl({
         });
     }, []);
 
-    useEffect(() => {
-        return observeCurrentUser((user) => {
-            setSessionUser(user);
-            if (!user && !initialRequests) {
-                setRequests([]);
-            } else if (user) {
-                setLoading(true);
-            }
-        });
-    }, [initialRequests]);
-
-    useEffect(() => {
-        if (!sessionUser) return;
+    const fetchRequests = useCallback(() => {
+        if (!sessionUser) return () => {};
         const request = { active: true };
         const version = requestVersionRef.current;
+        setLoading(true);
+        setLoadError(null);
         void loadFriendRequests()
             .then((data) => {
                 if (request.active && version === requestVersionRef.current) {
                     setRequests(data);
+                    setLoadError(null);
                 }
             })
             .catch(() => {
-                // Ignore background load error
+                if (request.active && version === requestVersionRef.current) {
+                    setLoadError("Failed to load notifications. Please try again.");
+                }
             })
             .finally(() => {
                 if (request.active) {
@@ -104,21 +105,25 @@ export default function NotificationControl({
     }, [sessionUser]);
 
     useEffect(() => {
+        return observeCurrentUser((user) => {
+            setSessionUser(user);
+            if (!user && !initialRequests) {
+                setRequests([]);
+                setLoadError(null);
+            }
+        });
+    }, [initialRequests]);
+
+    useEffect(() => {
+        if (!sessionUser || initialRequests) return;
+        return fetchRequests();
+    }, [sessionUser, initialRequests, fetchRequests]);
+
+    useEffect(() => {
         if (isOpen && sessionUser) {
-            const request = { active: true };
-            const version = requestVersionRef.current;
-            void loadFriendRequests()
-                .then((data) => {
-                    if (request.active && version === requestVersionRef.current) setRequests(data);
-                })
-                .catch(() => {
-                    // Ignore background refresh errors
-                });
-            return () => {
-                request.active = false;
-            };
+            return fetchRequests();
         }
-    }, [isOpen, sessionUser]);
+    }, [isOpen, sessionUser, fetchRequests]);
 
     const handleAccept = async (requestId: number) => {
         requestVersionRef.current += 1;
@@ -242,10 +247,36 @@ export default function NotificationControl({
                                     {actionError}
                                 </p>
                             )}
+                            {loadError && requests.length > 0 && (
+                                <div
+                                    role="alert"
+                                    className="border-line text-10 flex items-center justify-between border-b px-4 py-2 text-red-500"
+                                >
+                                    <span>{loadError}</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => void fetchRequests()}
+                                        className="cursor-pointer underline underline-offset-2 hover:opacity-80"
+                                    >
+                                        Retry
+                                    </button>
+                                </div>
+                            )}
                             {loading && requests.length === 0 ? (
                                 <p className="text-12 text-muted-foreground font-body px-4 py-6 text-center">
                                     Loading notifications…
                                 </p>
+                            ) : loadError && requests.length === 0 ? (
+                                <div role="alert" className="px-4 py-6 text-center">
+                                    <p className="text-12 font-body mb-2 text-red-500">{loadError}</p>
+                                    <button
+                                        type="button"
+                                        onClick={() => void fetchRequests()}
+                                        className="text-12 text-foreground cursor-pointer font-medium underline underline-offset-4 hover:opacity-80"
+                                    >
+                                        Retry
+                                    </button>
+                                </div>
                             ) : requests.length === 0 ? (
                                 <p className="text-12 text-muted-foreground font-body px-4 py-6 text-center">
                                     No pending notifications
@@ -295,7 +326,7 @@ export default function NotificationControl({
                                             <div className="flex items-center gap-2 pt-1">
                                                 <button
                                                     type="button"
-                                                    onClick={() => void handleAccept(req.requestId)}
+                                                    onClick={() => handleAccept(req.requestId)}
                                                     disabled={Boolean(actionInProgress[req.requestId])}
                                                     aria-label={`Accept friend request from ${req.requester.displayName}`}
                                                     className="bg-foreground text-background font-body text-10 cursor-pointer rounded-[2px] px-3 py-1.5 font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
@@ -306,7 +337,7 @@ export default function NotificationControl({
                                                 </button>
                                                 <button
                                                     type="button"
-                                                    onClick={() => void handleReject(req.requestId)}
+                                                    onClick={() => handleReject(req.requestId)}
                                                     disabled={Boolean(actionInProgress[req.requestId])}
                                                     aria-label={`Reject friend request from ${req.requester.displayName}`}
                                                     className="border-line text-muted-foreground hover:text-foreground hover:border-foreground font-body text-10 cursor-pointer rounded-[2px] border px-3 py-1.5 font-medium transition-colors disabled:opacity-50"

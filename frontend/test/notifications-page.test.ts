@@ -189,3 +189,30 @@ test("NotificationsContent hides friend requests list when signed out", () => {
     assert.ok(!html.includes("Friend Requests"));
     assert.ok(html.includes("Sign in to see notifications"));
 });
+
+test("NotificationsContent renders load error and clicking retry triggers fetch", async (context) => {
+    const calls: Array<{ url: string; method?: string }> = [];
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {
+        calls.push({ url: String(input), method: init?.method });
+        return Response.json({ data: [] }, { headers: { "content-type": "application/json" } });
+    });
+
+    const { nodes, markup } = capture(() =>
+        NotificationsContent({
+            initialRequests: [],
+            initialError: "Failed to load friend requests. Please check your connection."
+        })
+    );
+
+    assert.ok(markup.includes("Failed to load friend requests. Please check your connection."));
+    assert.ok(markup.includes("Retry"));
+    assert.ok(!markup.includes("All caught up!"));
+
+    const retryBtn = nodes.find((n) => n.type === "button" && n.props.children === "Retry");
+    assert.ok(retryBtn, "Expected retry button");
+
+    await retryBtn.props.onClick?.();
+
+    assert.equal(calls.length, 1);
+    assert.ok(calls[0].url.endsWith("/api/v1/users/me/friend-requests"));
+});

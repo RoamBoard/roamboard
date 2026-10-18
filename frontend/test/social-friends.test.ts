@@ -176,6 +176,9 @@ test("FindFriendsDialog captures search input and updates query", () => {
     assert.ok(input, "Expected search input inside open dialog");
     assert.equal(input.props.value, "");
     assert.equal(typeof input.props.onChange, "function");
+    assert.doesNotThrow(() => {
+        (input.props.onChange as (e: unknown) => void)({ target: { value: "alice" } });
+    });
 });
 
 test("FindFriendsDialog sends friend request and updates row to request sent", async (context) => {
