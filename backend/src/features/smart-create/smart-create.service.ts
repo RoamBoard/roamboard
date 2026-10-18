@@ -1,5 +1,5 @@
 import { AppError } from "../../shared/app-error.js";
-import type { ImagesRepository, UploadedImage } from "../images/images.types.js";
+import type { ImagesRepository, UploadedImage, ImageProvider } from "../images/images.types.js";
 import type { MapboxLocation } from "../providers/provider.types.js";
 
 export type SmartCreateResolver = (latitude: number, longitude: number) => Promise<MapboxLocation | null>;
@@ -43,8 +43,42 @@ function category(type: string | undefined): string {
     ];
     return type && allowed.includes(type) ? type : "other";
 }
-export function createSmartCreateService(repository: ImagesRepository, resolve: SmartCreateResolver) {
+export function createSmartCreateService(
+    repository: ImagesRepository,
+    resolve: SmartCreateResolver,
+    provider?: ImageProvider
+) {
     return {
+        async refresh(userId: string, imageId: number) {
+            const image = await repository.findImage(imageId);
+            if (!image || image.uploaderUserId !== userId) throw new AppError(404, "Image not found", "NOT_FOUND");
+            if (!provider || !repository.updateMetadata)
+                throw new AppError(503, "Photo metadata refresh is unavailable", "PROVIDER_UNAVAILABLE");
+            const asset = await provider.inspect(image.storageKey);
+            if (!asset || asset.storageKey !== image.storageKey)
+                throw new AppError(404, "The original photo could not be read", "IMAGE_ASSET_MISSING");
+            await repository.updateMetadata(imageId, asset);
+            let location: MapboxLocation | null = null;
+            let warning: string | null = null;
+            if (asset.latitude !== null && asset.longitude !== null) {
+                try {
+                    location = await resolve(asset.latitude, asset.longitude);
+                } catch {
+                    warning =
+                        "The photo was re-read, but place lookup is unavailable. Search for its location instead.";
+                }
+                if (!location && !warning) warning = "No nearby place was found. Search for the location instead.";
+            } else warning = "No GPS was found in the original photo. Search for the location instead.";
+            return {
+                imageId,
+                capturedAt: asset.capturedAt?.toISOString() ?? null,
+                latitude: asset.latitude,
+                longitude: asset.longitude,
+                location,
+                category: category(location?.type),
+                warning
+            };
+        },
         async suggest(userId: string, imageIds: number[]): Promise<{ photos: PhotoSuggestion[] }> {
             // Authorize the entire request before sending any coordinates to a provider.
             const found = repository.findImages

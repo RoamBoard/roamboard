@@ -78,9 +78,26 @@ Cancelling or pressing Escape keeps the previous days and all uploaded photos. E
 the proposal is pending, and unsaved-navigation protection remains active.
 
 Suggestions are local edits until the existing revision-checked Board save succeeds. Existing ownership,
-photo-location confirmation, publication and protected-image delivery rules remain in force. Repeated batches do
+publication and protected-image delivery rules remain in force. Photo-generated activities with locations can be published together without opening and saving each activity. The server normalizes their locationConfirmed flag when saving. Repeated batches do
 not require a new table or migration; source metadata remains on uploaded image rows, while days, activities,
 locations and explicit cover/order links use their existing canonical tables.
+
+## Location editing and metadata repair
+
+Activity markers retain the first uploaded group photo's exact GPS; nearby POIs suggest names without replacing
+coordinates. Deliberately selecting another search result replaces the location. The shared editor exposes location,
+category, time and notes without manual coordinate inputs.
+
+Explicit `POST /api/v1/images/:imageId/refresh-location` requires session, exact frontend Origin and uploader
+ownership before Cloudinary inspection. It updates the saved image metadata and returns
+`{data: {imageId, capturedAt, latitude, longitude, location, category, warning}}`. Invalid IDs return 400,
+missing sessions 401, invalid origins 403 and missing/unowned images 404. Missing originals return 404
+`IMAGE_ASSET_MISSING`. There is no arbitrary URL parameter; provider errors use existing safe handling.
+
+Full EXIF references such as South and West are normalized alongside S/W. The frontend stages the suggested place
+at the corrected original GPS. If lookup fails but GPS exists, it stages Photo location at those coordinates,
+clearing stale place names and provider IDs. Missing GPS produces a warning. Activity changes require Save activity
+and the normal Board save; metadata refresh never silently rewrites existing Board locations.
 
 ## Verification and limits
 

@@ -7,6 +7,19 @@ export const providerSearchSchema = z
         limit: z.coerce.number().int().min(1).max(10).default(5)
     })
     .strict();
+export const unsplashSearchSchema = providerSearchSchema.extend({
+    limit: z.coerce.number().int().min(1).max(20).default(5)
+});
+export const boardLocationSearchSchema = providerSearchSchema
+    .extend({
+        latitude: z.coerce.number().finite().min(-90).max(90).optional(),
+        longitude: z.coerce.number().finite().min(-180).max(180).optional()
+    })
+    .refine(
+        (query) => (query.latitude === undefined) === (query.longitude === undefined),
+        "Supply both location coordinates"
+    );
+export type BoardLocationSearchRequest = z.infer<typeof boardLocationSearchSchema>;
 export const boardDestinationSearchSchema = z
     .object({
         country: z.string().trim().toUpperCase().refine(isCountryCode, "Choose an existing country"),
@@ -59,3 +72,34 @@ export type CloudinaryMetadataRequest = z.infer<typeof cloudinaryMetadataSchema>
 export type GooglePlaceDetailsRequest = z.infer<typeof googlePlaceDetailsSchema>;
 export type SaveGooglePlaceRequest = z.infer<typeof saveGooglePlaceSchema>;
 export type DeleteGooglePlaceRequest = z.infer<typeof deleteGooglePlaceSchema>;
+
+const photoCoordinate = z.union([z.number(), z.string().trim().min(1).pipe(z.coerce.number())]);
+export const activityPhotoSchema = z
+    .object({
+        name: z.string().trim().min(2).max(160),
+        city: z.string().trim().max(160).nullable().optional(),
+        country: z.string().trim().max(100).nullable().optional(),
+        latitude: photoCoordinate.pipe(z.number().finite().min(-90).max(90)),
+        longitude: photoCoordinate.pipe(z.number().finite().min(-180).max(180))
+    })
+    .strict();
+export type ActivityPhotoRequest = z.infer<typeof activityPhotoSchema>;
+
+export const areaSuggestionSchema = z
+    .object({
+        points: z
+            .array(
+                z
+                    .object({
+                        latitude: z.number().finite().min(-90).max(90),
+                        longitude: z.number().finite().min(-180).max(180),
+                        city: z.string().max(500).nullable().optional(),
+                        country: z.string().max(100).nullable().optional()
+                    })
+                    .strict()
+            )
+            .min(3)
+            .max(100)
+    })
+    .strict();
+export type AreaSuggestionRequest = z.infer<typeof areaSuggestionSchema>;

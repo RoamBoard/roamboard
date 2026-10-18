@@ -93,7 +93,8 @@ export function createApp(options: AppOptions = {}): Express {
     app.use("/api/v1", images.router);
     app.use(
         "/api/v1",
-        createSmartCreateModule(attachUser, images.repository, quota, options.smartCreateResolver).router
+        createSmartCreateModule(attachUser, images.repository, quota, options.smartCreateResolver, images.provider)
+            .router
     );
     app.use((_request, response) => {
         response.status(404).json({ error: { code: "NOT_FOUND", message: "Not found" } });

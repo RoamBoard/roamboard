@@ -23,7 +23,7 @@ function sharedEditorControls(markup: string) {
     assert.match(markup, /<input[^>]*id="board-title"/);
     assert.match(markup, /Description\s*<textarea/);
     assert.match(markup, /aria-label="Upload Board images"/);
-    assert.match(markup, /aria-label="Choose Board images"/);
+    assert.match(markup, /aria-label="Edit Board cover"/);
     for (const section of ["board-basics", "day-plan", "details-discovery", "board-preview"]) {
         assert.ok(markup.includes(`id="${section}"`), `The ${section} chapter must remain available`);
     }
@@ -44,10 +44,10 @@ test("new Boards place Smart Create after Board Basics and before the day planne
     assert.match(markup, /Choose photos/);
     assert.doesNotMatch(markup, /Switch to|Intelligence Engine/);
     assert.match(markup, /Up to 30 photos per batch/);
-    assert.match(markup, /Add activity photos in Smart Create below/);
+    assert.doesNotMatch(markup, /Add activity photos in Smart Create below/);
     assert.match(markup, /Already back from your trip/);
     const sections = [
-        'aria-label="Choose Board images"',
+        'aria-label="Edit Board cover"',
         'id="board-title"',
         'id="board-basics"',
         'id="image-intake-heading"',
@@ -79,7 +79,7 @@ test("reopening drafts and published Boards starts locked without creation-mode 
         assert.match(fieldset, /id="board-title"/);
         assert.match(fieldset, /<textarea/);
         assert.match(controlTag(markup, 'aria-label="Upload Board images"'), /disabled=""/);
-        assert.match(controlTag(markup, 'aria-label="Choose Board images"'), /disabled=""/);
+        assert.match(controlTag(markup, 'aria-label="Edit Board cover"'), /disabled=""/);
         const saveButtons = [
             ...markup.matchAll(/<button([^>]*)>(Save as draft|Publish Board|Save changes)<\/button>/g)
         ];
@@ -147,7 +147,7 @@ test("existing uploads do not prevent another thirty-photo batch", () => {
     for (const showDropZone of [true, false]) {
         const markup = intakeMarkup(images, 1, showDropZone);
         assert.doesNotMatch(controlTag(markup, 'aria-label="Upload Board images"'), /disabled=""/);
-        assert.doesNotMatch(controlTag(markup, 'aria-label="Choose Board images"'), /disabled=""/);
+        assert.doesNotMatch(controlTag(markup, 'aria-label="Edit Board cover"'), /disabled=""/);
         assert.doesNotMatch(controlTag(markup, 'aria-label="Remove image 10"'), / disabled=""/);
         assert.match(markup, /Set as cover/);
     }
@@ -180,6 +180,6 @@ test("cover hero uses a credited default only when there is no uploaded cover an
     for (const coverUrl of [undefined, protectedUrl]) {
         const loading = renderToStaticMarkup(createElement(BoardCoverHero, { ...props, coverUrl, loading: true }));
         assert.doesNotMatch(loading, /<img|Default image|bamboo/);
-        assert.match(controlTag(loading, 'aria-label="Choose Board images"'), /disabled=""/);
+        assert.match(controlTag(loading, 'aria-label="Edit Board cover"'), /disabled=""/);
     }
 });

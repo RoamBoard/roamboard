@@ -104,16 +104,25 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const loadProviderConfig = () => request<ProviderConfig>("/api/v1/providers/config");
 
-export const loadMapboxMapSession = () =>
+export const loadMapboxMapSession = (signal?: AbortSignal) =>
     request<{ publicToken: string }>("/api/v1/providers/mapbox/map-session", {
+        signal,
         method: "POST"
     });
 
 export const searchMapboxProvider = (query: string) =>
     request<MapboxSearchResult[]>(`/api/v1/providers/mapbox/search?q=${encodeURIComponent(query)}`);
 
-export const searchBoardLocationProvider = (query: string) =>
-    request<MapboxSearchResult[]>(`/api/v1/providers/locations/search?q=${encodeURIComponent(query)}`);
+export const searchBoardLocationProvider = (
+    query: string,
+    signal?: AbortSignal,
+    proximity?: { latitude: number; longitude: number }
+) => {
+    const bias = proximity ? `&latitude=${proximity.latitude}&longitude=${proximity.longitude}` : "";
+    return request<MapboxSearchResult[]>(`/api/v1/providers/locations/search?q=${encodeURIComponent(query)}${bias}`, {
+        signal
+    });
+};
 export const searchBoardMapboxProvider = searchBoardLocationProvider;
 
 export const searchBoardDestinations = (countryCode: string, city: string) => {
@@ -214,3 +223,54 @@ export const loadCloudinaryProviderMetadata = (publicId: string) =>
     request<{ publicId: string; metadata: PhotoMetadata }>(
         `/api/v1/providers/cloudinary/metadata?publicId=${encodeURIComponent(publicId)}`
     );
+
+export type ActivityPhotoLocation = {
+    name: string;
+    city?: string | null;
+    country?: string | null;
+    latitude: number;
+    longitude: number;
+};
+export function findActivityPhoto(
+    location: ActivityPhotoLocation,
+    signal?: AbortSignal,
+    select = false
+): Promise<ProviderPhoto | null> {
+    const body = {
+        name: location.name,
+        city: location.city ?? null,
+        country: location.country ?? null,
+        latitude: location.latitude,
+        longitude: location.longitude
+    };
+    const params = new URLSearchParams(
+        Object.entries(body)
+            .filter(([, value]) => value !== null)
+            .map(([key, value]) => [key, String(value)])
+    );
+    return request(
+        "/api/v1/providers/unsplash/activity-photo" + (select ? "" : "?" + params),
+        select
+            ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal }
+            : { signal }
+    );
+}
+
+export async function searchBoardAreas(
+    query: string,
+    signal?: AbortSignal
+): Promise<import("./destinations").Destination[]> {
+    const places = await request<import("./destinations").Destination[]>(
+        "/api/v1/providers/locations/areas?" + new URLSearchParams({ q: query, limit: "10" }),
+        { signal }
+    );
+    return places
+        .filter(
+            (place) =>
+                place.countryCode &&
+                ["place", "city", "town", "village", "state", "region", "county", "country", "district"].includes(
+                    place.placeType
+                )
+        )
+        .slice(0, 5);
+}

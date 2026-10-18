@@ -1,3 +1,4 @@
+import { saveImageEditSchema } from "./images.schemas.js";
 import { Router, type RequestHandler } from "express";
 
 import { requireFrontendOrigin } from "../../middleware/require-origin.js";
@@ -13,6 +14,22 @@ import type { ImagesController } from "./images.controller.js";
 
 export function createImagesRouter(controller: ImagesController, attachUser: RequestHandler): Router {
     const router = Router();
+    router.get(
+        "/images/:imageId/presentation",
+        attachUser,
+        requireSessionUser,
+        validateParams(imageIdParamsSchema),
+        controller.readPresentation
+    );
+    router.put(
+        "/images/:imageId/presentation",
+        attachUser,
+        requireSessionUser,
+        requireFrontendOrigin,
+        validateParams(imageIdParamsSchema),
+        validateBody(saveImageEditSchema),
+        controller.savePresentation
+    );
     router.post(
         "/images/upload-intents",
         attachUser,

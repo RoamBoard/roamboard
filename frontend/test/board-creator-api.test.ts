@@ -73,20 +73,20 @@ const draft: BoardCreatorPayload = {
     ]
 };
 
-test("creator mapping preserves IDs, links uploaded photos, and requires photo confirmation", () => {
+test("creator mapping preserves IDs and accepts generated photo locations without individual saves", () => {
     const tags = [{ tagId: 3, name: "Food" }];
-    const unconfirmed = toBoardWrite(draft, tags, new Set());
+    const unconfirmed = toBoardWrite(draft, tags);
     assert.deepEqual(unconfirmed.tagIds, [3]);
     assert.deepEqual(unconfirmed.imageIds, [12]);
     assert.equal(unconfirmed.days[0]?.dayId, 7);
     assert.equal(unconfirmed.days[0]?.activities[0]?.activityId, 25);
     assert.deepEqual(unconfirmed.days[0]?.activities[0]?.uploadedImageIds, [12]);
-    assert.equal(unconfirmed.days[0]?.activities[0]?.locationConfirmed, false);
-    const confirmed = toBoardWrite(draft, tags, new Set(["pin-local"]));
+    assert.equal(unconfirmed.days[0]?.activities[0]?.locationConfirmed, true);
+    const confirmed = toBoardWrite(draft, tags);
     assert.equal(confirmed.days[0]?.activities[0]?.locationConfirmed, true);
     assert.equal(confirmed.days[0]?.activities[0]?.coverImageId, 12);
     assert.equal(confirmed.days[0]?.activities[0]?.location?.latitude, 35.68);
-    assert.throws(() => toBoardWrite({ ...draft, tags: ["Unknown"] }, tags, new Set()), /allowed list/);
+    assert.throws(() => toBoardWrite({ ...draft, tags: ["Unknown"] }, tags), /allowed list/);
 });
 
 test("one Board cover is independent of multiple ordered images on an activity", () => {
@@ -109,7 +109,7 @@ test("one Board cover is independent of multiple ordered images on an activity",
             }
         ]
     };
-    const write = toBoardWrite(payload, [{ tagId: 3, name: "Food" }], new Set());
+    const write = toBoardWrite(payload, [{ tagId: 3, name: "Food" }]);
     assert.equal(write.coverImageId, 13);
     assert.deepEqual(write.imageIds, [12, 13]);
     assert.deepEqual(write.days[0]?.activities[0]?.uploadedImageIds, [13, 12]);
@@ -146,8 +146,7 @@ test("one Board cover is independent of multiple ordered images on an activity",
             days: restored.days,
             images: restored.images
         },
-        saved.tags,
-        restored.confirmedPhotoPins
+        saved.tags
     );
     assert.equal(roundTrip.coverImageId, 13);
     assert.deepEqual(roundTrip.days[0]?.activities[0]?.uploadedImageIds, [13, 12]);
@@ -185,7 +184,7 @@ test("explicit null coverImageId preserves null to keep external image as activi
             }
         ]
     };
-    const write = toBoardWrite(payload, [{ tagId: 3, name: "Food" }], new Set(["pin-local"]));
+    const write = toBoardWrite(payload, [{ tagId: 3, name: "Food" }]);
     assert.deepEqual(write.days[0]?.activities[0]?.uploadedImageIds, [12]);
     assert.equal(write.days[0]?.activities[0]?.coverImageId, null);
     assert.equal(write.days[0]?.activities[0]?.externalImage?.providerImageId, "unsplash-1");
@@ -225,8 +224,7 @@ test("explicit null coverImageId preserves null to keep external image as activi
             days: restored.days,
             images: restored.images
         },
-        saved.tags,
-        restored.confirmedPhotoPins
+        saved.tags
     );
     assert.equal(roundTrip.days[0]?.activities[0]?.coverImageId, null);
     assert.deepEqual(roundTrip.days[0]?.activities[0]?.uploadedImageIds, [12]);
@@ -246,7 +244,7 @@ test("explicit null coverImageId preserves null to keep external image as activi
             }
         ]
     };
-    const omittedWrite = toBoardWrite(omittedPayload, [{ tagId: 3, name: "Food" }], new Set(["pin-local"]));
+    const omittedWrite = toBoardWrite(omittedPayload, [{ tagId: 3, name: "Food" }]);
     assert.equal(omittedWrite.days[0]?.activities[0]?.coverImageId, 12);
 });
 
@@ -316,7 +314,7 @@ test("saving a reopened draft updates the same Board using its revision", async 
         return Response.json({ data: { boardId: 8, revision: 6 } });
     };
     try {
-        const write = toBoardWrite(draft, [{ tagId: 3, name: "Food" }], new Set());
+        const write = toBoardWrite(draft, [{ tagId: 3, name: "Food" }]);
         await saveBoardDocument(write, {
             boardId: 8,
             revision: 5
@@ -330,7 +328,7 @@ test("saving a reopened draft updates the same Board using its revision", async 
 });
 
 test("saved Board can be reopened with stable database IDs and image URLs", () => {
-    const write = toBoardWrite(draft, [{ tagId: 3, name: "Food" }], new Set(["pin-local"]));
+    const write = toBoardWrite(draft, [{ tagId: 3, name: "Food" }]);
     const board: BoardDocument = {
         ...write,
         boardId: 2,
@@ -363,7 +361,6 @@ test("saved Board can be reopened with stable database IDs and image URLs", () =
     assert.equal(restored.days[0]?.pins[0]?.serverActivityId, 25);
     assert.equal(restored.images[0]?.uploadedImageId, 12);
     assert.match(restored.images[0]?.url ?? "", /^http:\/\/localhost:3001\/api\/v1\/images\/12/);
-    assert.equal(restored.confirmedPhotoPins.has(restored.days[0]!.pins[0]!.id), true);
 });
 
 test("image upload uses authorization, direct transfer, then completion with cookies only on the API", async () => {

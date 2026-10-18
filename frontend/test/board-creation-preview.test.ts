@@ -77,16 +77,16 @@ function freeze<T>(value: T): T {
     return value;
 }
 
-test("preview mapping is immutable and puts the selected uploaded cover first using its original protected URL", () => {
+test("preview mapping is immutable and puts the selected uploaded cover first using its protected thumbnail", () => {
     const source = freeze(board({ coverImageId: 3, images: [image(1, 2), image(2, 0), image(3, 1)] }));
     const before = structuredClone(source);
     const result = createBoardPreview(source);
     assert.equal(result.cover?.uploadedImageId, 3);
     assert.deepEqual(
         result.card.images.map((photo) => photo.src),
-        [source.images[2].url, source.images[1].url, source.images[0].url]
+        [source.images[2].thumbnailUrl, source.images[1].thumbnailUrl, source.images[0].thumbnailUrl]
     );
-    assert.equal(result.card.images[0].src, "https://api.example.test/api/v1/images/3/content?variant=display");
+    assert.equal(result.card.images[0].src, "https://api.example.test/api/v1/images/3/content?variant=thumbnail");
     assert.deepEqual(source, before);
 });
 
@@ -102,7 +102,7 @@ test("collage selection removes duplicate URLs while retaining external photogra
     const result = createBoardPreview(source);
     assert.deepEqual(
         result.card.images.map((photo) => photo.src),
-        [source.images[2].url, source.images[3].url, external.url]
+        [source.images[2].thumbnailUrl, source.images[3].thumbnailUrl, external.thumbnailUrl]
     );
     assert.equal(new Set(result.card.images.map((photo) => photo.src)).size, result.card.images.length);
     assert.equal(result.photos.length, source.images.length);
@@ -120,7 +120,7 @@ test("only six photos enter the V1 collage, while all ten uploads remain availab
     assert.equal(result.card.images.length, 6);
     assert.deepEqual(
         result.card.images.map((photo) => photo.src),
-        [images[9].url, ...images.slice(0, 5).map((photo) => photo.url)]
+        [images[9].thumbnailUrl, ...images.slice(0, 5).map((photo) => photo.thumbnailUrl)]
     );
     assert.equal(result.photos.length, 10);
 });
@@ -139,18 +139,15 @@ test("an empty Board has no invented author, highlights, save counts, destinatio
     assert.doesNotMatch(JSON.stringify(result), /Tokyo|Japan|traveler|Default cover/i);
 });
 
-test("photo locations do not supply a destination or country until explicitly confirmed", () => {
+test("generated photo locations appear in the preview without individual confirmation", () => {
     const photo = pin("photo", { source: "photo" });
     const source = board({ days: [{ id: "day-1", dayNumber: 1, date: null, pins: [photo] }] });
-    const unconfirmed = createBoardPreview(source);
-    assert.equal(unconfirmed.countryLabel, "");
-    assert.doesNotMatch(unconfirmed.destination, /Stockholm|Sweden/);
-    const confirmed = createBoardPreview(source, new Set(["photo"]));
-    assert.equal(confirmed.countryLabel, "SWE");
-    assert.match(confirmed.destination, /Stockholm/);
+    const preview = createBoardPreview(source);
+    assert.equal(preview.countryLabel, "SWE");
+    assert.match(preview.destination, /Stockholm/);
 });
 
-test("the country watermark requires agreement across every confirmed location", () => {
+test("the country watermark requires agreement across every activity location", () => {
     const swedish = pin("one");
     const sameCountry = pin("two", {
         source: "geoapify",

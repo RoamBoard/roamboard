@@ -17,7 +17,12 @@ export default function BoardCoverHero({ coverUrl, disabled, loading = false, on
                     <div className="bg-faint absolute inset-0 animate-pulse motion-reduce:animate-none" />
                 ) : coverUrl ? (
                     // Protected Board images must keep their session cookies, without Next's image proxy.
-                    <img src={coverUrl} alt="Board cover" className="absolute inset-0 size-full object-cover" />
+                    <img
+                        src={coverUrl}
+                        alt="Board cover"
+                        decoding="async"
+                        className="absolute inset-0 size-full object-cover"
+                    />
                 ) : (
                     <Image
                         src="library:frontend.images.destinations.bamboo"
@@ -33,7 +38,7 @@ export default function BoardCoverHero({ coverUrl, disabled, loading = false, on
                     disabled={disabled || loading}
                     onClick={onChooseImages}
                     className="absolute top-[42%] left-1/2 grid size-11 -translate-x-1/2 -translate-y-1/2 cursor-pointer place-items-center rounded-full bg-black/35 text-white backdrop-blur-sm transition-colors hover:bg-black/60 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none sm:size-14"
-                    aria-label="Choose Board images"
+                    aria-label="Edit Board cover"
                 >
                     <ImagePlus aria-hidden="true" className="size-5 sm:size-6" strokeWidth={1.5} />
                 </button>

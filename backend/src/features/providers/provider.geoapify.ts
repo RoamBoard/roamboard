@@ -30,7 +30,11 @@ function poiType(category: string, raw: Record<string, unknown>): string {
     if (/hotel|hostel|guest_house|accommodation/.test(tags)) return "stay";
     if (/park|garden/.test(tags)) return "park";
     if (/beach/.test(tags)) return "beach";
-    if (/sights|attraction|monument|memorial|historic/.test(tags) || text(raw.historic)) return "landmark";
+    if (
+        /sights|attraction|monument|memorial|historic|religion|place_of_worship|temple|shrine/.test(tags) ||
+        text(raw.historic)
+    )
+        return "landmark";
     if (/transport|station|bus_stop/.test(tags)) return "transit";
     return "poi";
 }
@@ -72,10 +76,24 @@ async function request(url: URL, key: string, observe?: QuotaObserver): Promise<
         );
         const category = categories.join(".");
         const namedFeature = text(p.name) || text(raw.name);
+        const administrative = [
+            "city",
+            "town",
+            "village",
+            "state",
+            "region",
+            "country",
+            "county",
+            "district",
+            "locality",
+            "suburb",
+            "island"
+        ].includes(resultType);
         const isPoi =
-            resultType === "amenity" ||
-            categories.some((value) => !/^(building|administrative|address)(\.|$)/.test(value)) ||
-            Boolean(raw.amenity || raw.shop || raw.tourism || raw.historic || raw.leisure);
+            !administrative &&
+            (resultType === "amenity" ||
+                categories.some((value) => !/^(building|administrative|address)(\.|$)/.test(value)) ||
+                Boolean(raw.amenity || raw.shop || raw.tourism || raw.historic || raw.leisure));
         const poiName = isPoi ? namedFeature : "";
         const name = poiName || text(p.name) || text(p.address_line1) || city || "Pinned location";
         const placeType = isPoi
@@ -86,7 +104,9 @@ async function request(url: URL, key: string, observe?: QuotaObserver): Promise<
                 ? "neighborhood"
                 : resultType === "building"
                   ? "address"
-                  : resultType || "unknown";
+                  : resultType === "island"
+                    ? "region"
+                    : resultType || "unknown";
         const code = text(p.country_code).toUpperCase();
         return [
             {
@@ -107,15 +127,65 @@ async function request(url: URL, key: string, observe?: QuotaObserver): Promise<
     });
 }
 
+function categoryIntent(query: string): string | null {
+    const text = query
+        .trim()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+    const categories: Record<string, string> = {
+        cafe: "catering.cafe",
+        cafes: "catering.cafe",
+        coffee: "catering.cafe",
+        restaurant: "catering.restaurant",
+        restaurants: "catering.restaurant",
+        bar: "catering.bar",
+        bars: "catering.bar",
+        pub: "catering.pub",
+        pubs: "catering.pub",
+        shopping: "commercial",
+        shop: "commercial",
+        shops: "commercial",
+        mall: "commercial.shopping_mall",
+        malls: "commercial.shopping_mall",
+        "shopping mall": "commercial.shopping_mall",
+        "shopping malls": "commercial.shopping_mall",
+        hotel: "accommodation",
+        hotels: "accommodation",
+        museum: "entertainment.museum",
+        museums: "entertainment.museum",
+        beach: "beach",
+        beaches: "beach",
+        park: "leisure.park",
+        parks: "leisure.park",
+        attraction: "tourism",
+        attractions: "tourism",
+        landmark: "tourism.sights",
+        landmarks: "tourism.sights",
+        temple: "religion",
+        temples: "religion",
+        activity: "leisure,entertainment,sport,tourism",
+        activities: "leisure,entertainment,sport,tourism"
+    };
+    return categories[text] ?? null;
+}
+
 export async function searchGeoapify(
     query: string,
     limit: number,
     key: string,
     country?: string,
-    observe?: QuotaObserver
+    observe?: QuotaObserver,
+    proximity?: { latitude: number; longitude: number },
+    areasOnly = false
 ): Promise<DestinationResult[]> {
-    const url = new URL("https://api.geoapify.com/v1/geocode/search");
-    url.searchParams.set("text", query);
+    const intent = categoryIntent(query);
+    const url = new URL(
+        proximity && intent ? "https://api.geoapify.com/v2/places" : "https://api.geoapify.com/v1/geocode/search"
+    );
+    if (proximity && intent) url.searchParams.set("categories", intent);
+    else url.searchParams.set("text", query);
+    if (proximity) url.searchParams.set("bias", `proximity:${proximity.longitude},${proximity.latitude}`);
     url.searchParams.set("limit", String(limit));
     if (country) {
         const alpha2 = toAlpha2CountryCode(country);
@@ -123,6 +193,7 @@ export async function searchGeoapify(
         url.searchParams.set("type", "city");
         url.searchParams.set("filter", `countrycode:${alpha2.toLowerCase()}`);
     }
+    if (areasOnly) url.searchParams.set("type", "locality");
     const results = await request(url, key, observe);
     const selected = country
         ? results.filter(
@@ -187,7 +258,10 @@ export async function nearbyPhotoPlace(
     observe?: QuotaObserver
 ): Promise<MapboxLocation | null> {
     const url = new URL("https://api.geoapify.com/v2/places");
-    url.searchParams.set("categories", "tourism,catering,commercial,accommodation,leisure,entertainment");
+    url.searchParams.set(
+        "categories",
+        "tourism,catering,commercial,accommodation,leisure,entertainment,beach,religion,sport"
+    );
     url.searchParams.set("filter", `circle:${longitude},${latitude},75`);
     url.searchParams.set("bias", `proximity:${longitude},${latitude}`);
     url.searchParams.set("limit", "5");
@@ -206,5 +280,23 @@ export async function nearbyPhotoPlace(
               countryCode: place.countryCode,
               city: place.city
           }
+        : null;
+}
+
+export async function reverseGeoapifyArea(
+    latitude: number,
+    longitude: number,
+    type: "city" | "state",
+    key: string,
+    observe?: QuotaObserver
+): Promise<DestinationResult | null> {
+    const url = new URL("https://api.geoapify.com/v1/geocode/reverse");
+    url.searchParams.set("lat", String(latitude));
+    url.searchParams.set("lon", String(longitude));
+    url.searchParams.set("type", type);
+    url.searchParams.set("limit", "1");
+    const [place] = await request(url, key, observe);
+    return place?.countryCode && ["place", "city", "state", "county", "region"].includes(place.placeType)
+        ? place
         : null;
 }

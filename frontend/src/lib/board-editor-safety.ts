@@ -2,11 +2,10 @@ import { toBoardWrite } from "./board-creator-api";
 import type { BoardCreatorPayload } from "@/types/board-creator";
 
 // Compare persisted meaning, not transient editor IDs or refreshed protected-image URLs.
-export function boardEditorFingerprint(board: BoardCreatorPayload, confirmedPhotoPins: ReadonlySet<string>): string {
+export function boardEditorFingerprint(board: BoardCreatorPayload): string {
     const write = toBoardWrite(
         board,
-        board.tags.map((name, index) => ({ name, tagId: index })),
-        new Set(confirmedPhotoPins)
+        board.tags.map((name, index) => ({ name, tagId: index }))
     );
     return JSON.stringify({
         ...write,

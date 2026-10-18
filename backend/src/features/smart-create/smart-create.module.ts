@@ -1,5 +1,5 @@
 import type { RequestHandler } from "express";
-import type { ImagesRepository } from "../images/images.types.js";
+import type { ImagesRepository, ImageProvider } from "../images/images.types.js";
 import type { QuotaService } from "../quotas/quota.service.js";
 import { createSmartCreateController } from "./smart-create.controller.js";
 import { createSmartCreateRouter } from "./smart-create.routes.js";
@@ -9,8 +9,9 @@ export function createSmartCreateModule(
     attachUser: RequestHandler,
     repository: ImagesRepository,
     quota: QuotaService,
-    resolver?: SmartCreateResolver
+    resolver?: SmartCreateResolver,
+    provider?: ImageProvider
 ) {
-    const service = createSmartCreateService(repository, resolver ?? createSmartCreateResolver(quota));
+    const service = createSmartCreateService(repository, resolver ?? createSmartCreateResolver(quota), provider);
     return { service, router: createSmartCreateRouter(attachUser, createSmartCreateController(service)) };
 }

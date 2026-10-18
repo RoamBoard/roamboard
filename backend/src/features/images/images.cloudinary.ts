@@ -108,14 +108,30 @@ export function createCloudinaryProvider(quota?: QuotaService): ImageProvider {
                 throw error;
             }
         },
-        async openVariant(storageKey, variant) {
+        async openVariant(storageKey, variant, edit) {
             config();
             const url = cloudinary.url(storageKey, {
                 secure: true,
                 sign_url: true,
                 type: "authenticated",
                 resource_type: "image",
-                transformation: variants[variant],
+                transformation: [
+                    ...(variant !== "original" && edit
+                        ? [
+                              {
+                                  crop: "crop",
+                                  x: edit.x.toFixed(6),
+                                  y: edit.y.toFixed(6),
+                                  width: edit.width.toFixed(6),
+                                  height: edit.height.toFixed(6)
+                              },
+                              { crop: "limit", width: edit.outputWidth, height: edit.outputHeight }
+                          ]
+                        : []),
+                    variant === "original"
+                        ? { width: 4096, height: 4096, crop: "limit", quality: "auto", fetch_format: "jpg" }
+                        : variants[variant]
+                ],
                 format: "jpg"
             });
             const response = await fetch(url, { redirect: "error", signal: AbortSignal.timeout(15000) });

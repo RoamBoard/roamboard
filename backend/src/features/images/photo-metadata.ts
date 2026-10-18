@@ -21,9 +21,12 @@ function coordinate(value: unknown, reference: unknown, maximum: number): number
     }
     if (!parts.length || parts.length > 3 || parts.some((part) => !Number.isFinite(part))) return null;
     if ((parts[1] ?? 0) < 0 || (parts[1] ?? 0) >= 60 || (parts[2] ?? 0) < 0 || (parts[2] ?? 0) >= 60) return null;
-    const direction = String(reference ?? (typeof value === "string" ? value.match(/[NSEW]\s*$/i)?.[0] : "") ?? "")
+    const direction = String(
+        reference ?? (typeof value === "string" ? value.match(/\b(North|South|East|West|[NSEW])\s*$/i)?.[0] : "") ?? ""
+    )
         .trim()
-        .toUpperCase();
+        .toUpperCase()
+        .charAt(0);
     const absolute = Math.abs(parts[0]!) + (parts[1] ?? 0) / 60 + (parts[2] ?? 0) / 3600;
     if (absolute > maximum) return null;
     return direction === "S" || direction === "W" || parts[0]! < 0 ? -absolute : absolute;

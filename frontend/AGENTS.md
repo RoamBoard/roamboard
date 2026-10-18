@@ -101,7 +101,7 @@ This is a living project guide. Agents may and should update `AGENTS.md` when th
 
 The `/dev` index links to the implemented frontend routes and explains how to open `/boards/[boardId]` with a saved Board ID. The creation landing page is `/create`; `/boards` implements Boards Page 7.0: a featured Motion spatial gallery of up to five existing V1 collage cards and an independent shadcn/Embla V2 compact library with momentum dragging and snapping, keyboard/wheel navigation, a scroll indicator, and progressive loading near the end. It loads owner-published summaries and documents through the existing API, with paginated loading and local search over loaded Boards. A summary-list failure displays clearly labelled visual sample fixtures; samples have no detail links or persistence. The page request store (`src/lib/my-boards-store.ts`) keeps successful document reads when individual Boards are unavailable and retries only failed documents without discarding the current collection. Page/API regression tests render the production content and invoke its search, pagination, and retry handlers through the real request helpers. Recently Saved reuses the V1 gallery with an independent selection and side details. The grouped Archive / Saves area reuses V2 libraries. These saved/archive collections are explicitly labelled sample data until backend state APIs exist; they never persist fake changes. Search filters created, saved, and archived collections independently. The Board creator remains `/boards/new`. Creation and editing routes highlight Create; published Board viewing and `/boards/mine` highlight Boards.
 
-The Board creator now uses the versioned Board and image upload-intent endpoints with the session cookie. Existing drafts are listed at `/boards/drafts` and reopen at `/boards/drafts/[boardId]`; saving again sends the Board revision to the backend. `/create` contains the creation landing page and links to `/boards/mine`, which lists the signed-in owner's published Boards. Published Boards open for editing at `/boards/[boardId]/edit`; owners can edit content and visibility, while members with the editor role can edit content but not visibility. The creator has one selected Board cover and lets users attach several uploaded images to an activity, order them, and choose its activity cover. Unattached uploads can be assigned while editing an activity. The creator uses the backend's allowed tag list. Geoapify location search/reverse geocoding and Unsplash search are implemented in the current backend, with missing-key, quota and provider-failure states. Manual coordinates remain available. Vibe and Highlights controls are absent by agreement. The developer provider lab remains separate from persisted Board media.
+The Board creator now uses the versioned Board and image upload-intent endpoints with the session cookie. Existing drafts are listed at `/boards/drafts` and reopen at `/boards/drafts/[boardId]`; saving again sends the Board revision to the backend. `/create` contains the creation landing page and links to `/boards/mine`, which lists the signed-in owner's published Boards. Published Boards open for editing at `/boards/[boardId]/edit`; owners can edit content and visibility, while members with the editor role can edit content but not visibility. The creator has one selected Board cover and lets users attach several uploaded images to an activity, order them, and choose its activity cover. Unattached uploads can be assigned while editing an activity. The creator offers the same shared editorial tags as the profile, filtered to backend-persisted names. Retired database tags remain visible/removable on existing Boards but are not offered as new choices. Geoapify location search/reverse geocoding and Unsplash search are implemented in the current backend, with missing-key, quota and provider-failure states. Manual coordinates remain available. Vibe and Highlights controls are absent by agreement. The developer provider lab remains separate from persisted Board media.
 
 The `/home` route follows Figma 4.0–4.1.3: a small Satoshi destination prompt centered in the space beside
 our universal sidebar, with generous whitespace and no duplicate wordmark. The field has a restrained focus/hover
@@ -185,13 +185,16 @@ The developer Board browser (/dev/boards) lists paginated accessible Boards and 
 The provider lab (/dev/providers) uses current backend Mapbox, Geoapify, Unsplash, Google Places, Cloudinary routes, plus PostgreSQL-backed Board search. Cloudinary lab uploads are separate from Board media and restricted to the lab prefix/tag. Cloudinary/Google management tools and developer Board listing require a signed-in session with the backend in development mode. Provider credentials stay server-side; only an intentionally public Mapbox pk. token is returned after a map-load reservation. PostgreSQL persists shared provider budgets across restarts. Search reads only real public, published Boards from PostgreSQL and checks fresh database visibility before returning records or suggestions. Activities and locations are not standalone search results. The separate Mapbox search uses Search Box for POIs, restaurants and landmarks with its own quota; Home retains city geocoding, and persistent Board locations still use Geoapify. Backend setup, limitations and response shapes are documented in [API_FEATURES_CONTRACT.md](../backend/API_FEATURES_CONTRACT.md).
 
 The `/create` landing follows Figma 3.0–3.1 with a local, credited Unsplash photograph, a curved hero, and circular
-creation choices. `BoardCreationChoices` owns only the New Board expansion state; Motion respects reduced motion,
-and Escape collapses the choices and restores trigger focus. The left expanded circle opens Continue a Board;
-Start from Scratch opens `/boards/new`. Remix remains below the circles. All new Boards use the same curved-cover
-editor, including old `/boards/new?mode=scratch` links. The cover and title come first, followed by 01 Board Basics.
+creation choices. `BoardCreationChoices` shows separate New Board, Continue a Board and Remix circles vertically.
+New Board opens `/boards/new`; there is no expanding submenu. A normal click briefly expands and fades the selected
+circle before navigation. Modifier clicks and reduced-motion preferences retain native navigation; Escape cancels
+the pending transition. All new Boards use the same curved-cover
+editor, including old `/boards/new?mode=scratch` links. The cover and title come first, followed by 01 Board Basics. Main destination sits before the description, reusing
+Home's destination search store with permanent Geoapify locality results. Its saved city/region/country and country
+code round-trip through Board writes and provide the activity-search fallback area.
 Smart Create sits between 01 and 02, explaining editable metadata suggestions for photos from completed trips.
 Circuit traces rise from underneath its broad photo drop area, with hover guidance and a highlighted drag target.
-The top cover retains its image picker and points users to Smart Create below. Uploaded thumbnails can be dragged into this
+The top cover retains its image picker. Uploaded thumbnails can be dragged into this
 area to select the Board cover; the existing Set as cover buttons remain the keyboard/touch alternative.
 There is no creation mode switch. Reopened drafts and published edits retain plain cover uploads without the
 new-Board Smart Create introduction. Upload pickers accept 30 photos per batch, with repeat batches allowed.
@@ -203,13 +206,27 @@ new uploads unassigned. Existing field edits and manual photo order are retained
 See [the Smart Create contract](../contracts/smart-create.md) for missing metadata, provider failures, and overflow behavior.
 The shared editor uses spacious numbered chapters, Cabinet display titles, and Satoshi
 supporting text. Existing Boards lock editing while loading and remain locked after a failed load.
-The planner uses horizontally scrolling day columns with independent activity scrolling, compact photo cards,
-and circular category controls. Wheel scrolling over the day-column viewport stays within the planner, including
-empty columns and scroll boundaries. Vertical gestures scroll the hovered day's activities; horizontal gestures
-and Shift-wheel browse days. Ctrl-wheel keeps browser zoom. Touch scrolling retains native overscroll containment.
+The planner uses naturally sized day columns with photo cards and circular category controls. Normal vertical wheel
+input scrolls the webpage, including over days and the shared map; horizontal gestures, Shift-wheel and arrows browse
+days. Blank day space is a native keyboard-accessible add-activity target behind the content. AddActivityDialog and
+ActivityEditorDialog share Geoapify location search, category suggestions, time and notes. Adding or saving requires
+a selected location, without manual coordinate inputs; legacy unlocated activities can still load. Current day or
+Board coordinates softly bias search without restricting worldwide destinations or boosting arbitrary categories.
+Smart Create activities can publish without individual saves; their editable photo locations appear in previews immediately. Explicit Re-read photo location stages corrected original GPS/name, using
+an honest raw-GPS fallback on lookup failure. BoardPlanMap follows the days in its own chapter with all located
+activities, day colors and sequence numbers, filters and marker editing. Loading/error/retry and empty states are
+explicit. Mapbox cooperative gestures preserve page scrolling; an empty plan does not load a map. The map is chapter 03,
+with a 16:9 frame; Details, Preview and Publish are 04, 05 and 06. Map marker clicks open the shared editor.
+AddActivityDialog wraps ActivityEditorDialog with staged media assignments. Both have a collapsible photo area,
+file picker and drop target. First successful uploads fill missing location/time using exact GPS; entered fields
+are preserved and Use photo location explicitly replaces a chosen place. Completed create-dialog uploads remain
+available unassigned if discarded. New activity saves retain local photo order and first-upload cover.
+Automatic activity photos use strict location-matched Unsplash lookup and retain credits/hotlinked URLs. Broad
+country/city search rank alone is insufficient; no confident match leaves the activity without an automatic photo.
+Native select options use theme tokens, and creation circles have reduced-motion-aware springy hover growth.
 Category menus reuse the existing activity vocabulary and shadcn/Radix radio
 menus with typeahead; they do not use Board discovery tags or introduce new backend categories. Pointer drops
-retain 30-minute time placement. Activity move menus provide keyboard/touch reordering and cross-day moves
+retain 30-minute time placement. Activity editor day/order controls provide keyboard/touch reordering and cross-day moves
 without changing times, with focus restoration and live announcements. Explicit order is retained through edits,
 additions, and removals; new activities append to their day. `board-planner.ts` owns immutable move calculations,
 while `BoardCreator` remains the state/save owner.
@@ -227,7 +244,7 @@ and displays up to six photos without discarding other media records. The creato
 faint outlines. `BoardPreviewSection` and the stateless `BoardPreviewDiagram` place the compact V1 card and floating
 annotations on one proportional desktop canvas, with original Figma connector masks. Below a 1100px container,
 annotations follow a readable flow without connectors. Motion respects reduced-motion preferences.
-Only confirmed locations contribute to destination/country lettering, and multi-country or unresolved country
+All selected/generated activity locations contribute to destination/country lettering, and multi-country or unresolved country
 data produces no country watermark. Dates list actual recorded dates and identify undated days. Full title,
 description, tags, visibility, and source-edit links surround the collage; keyboard-accessible native disclosures
 retain every activity and photo, including source credits. This is a live local preview, not proof of persistence.
@@ -391,7 +408,7 @@ The user has chosen Google sign-in plus development guest accounts. Email/passwo
 
 `/login` and `/signup` use Google's rendered sign-in button. The browser sends the Google credential to `POST /api/v1/auth/google` with credentials; the backend verifies it and sets an HTTP-only session cookie. The frontend reads the current user through `GET /api/v1/auth/me` and signs out through `POST /api/v1/auth/logout`. `ProfileControl` shows the authenticated user's display name, handle, saved profile photo when available, and an active logout option. Confirmed profile saves, photo changes and removals notify mounted account controls immediately; stale initial session reads cannot overwrite those updates. Logout invalidates pending account notifications, and profile saves started before logout cannot repopulate signed-out controls or a later login. `/dev/account` still uses a fictional preview user and keeps its logout button disabled.
 
-In development, `/login` also lets a visitor create a persistent guest account or select one from a dropdown. The client calls `GET/POST /api/v1/auth/guests` and `POST /api/v1/auth/guests/sign-in`; the backend sets the same HTTP-only session cookie. The old visual-only Rowan demo shortcut was removed. Migration 008 must be applied to the development database before these controls work.
+In development, `/login` also lets a visitor create a persistent guest account or select one from a dropdown. The client calls `GET/POST /api/v1/auth/guests` and `POST /api/v1/auth/guests/sign-in`; the backend sets the same HTTP-only session cookie. The old visual-only Rowan demo shortcut was removed. Migration 010 must be applied to the development database before these controls work.
 
 Stable Roamboard user IDs and Google verification belong in the backend. The Google web client ID is shared through `NEXT_PUBLIC_GOOGLE_CLIENT_ID`; the Express API base URL is `NEXT_PUBLIC_API_URL`. Both are set in the ignored `frontend/.env.local` for local work. The client ID is public, while the Google client secret is not used by this flow.
 
@@ -457,9 +474,9 @@ lookup were removed after importing Tokyo into the user's account through the ca
 The retired sample slug has no database alias and shows the missing-Board state. The old `PublishedBoardView`
 inspector is no longer used by the page route. The profile page reads live account data through the profile API. `/profile` redirects signed-in users to `/profile/{handle}`. Handle pages are public: visitors see profile details, public Boards and public travel data, while the owner sees the existing account profile and saved Boards. Published Board author names link to handle pages.
 
-`useBoardPhotos` fills desktop grayscale photo spaces with distinct Unsplash photos from the saved location, with
-broader location/tag searches when a result pool is empty or runs out. A missing user-selected header uses another
-distinct automatic photo. Existing headers and activity photos are retained; IDs and image URLs already used in
+`useBoardPhotos` fills decorative desktop photo spaces from a shared destination/country Unsplash pool, with
+location/tag fallback when a successful search returns too few photos. These illustrations are independent of
+activity photo matching. A missing user-selected header uses another distinct automatic photo. Existing headers and activity photos are retained; IDs and image URLs already used in
 the Board are excluded from automatic selection. `src/lib/board-photos.ts` shares queries through a bounded
 browser-tab cache and calls the existing credentialed, quota-managed backend Unsplash endpoint. Failed provider
 requests do not trigger automatic backup requests. Photo lookup never delays Board rendering or writes to the
@@ -488,3 +505,39 @@ Tests are a first-class deliverable when a feature needs them, not self-validati
 If staffing makes separation impossible, record that limitation in the handoff and require a separate review of test intent and coverage before treating the feature as verified. Do not weaken tests to match an implementation; change the implementation or explicitly revise the agreed contract. Use the configured tests, lint, TypeScript, build, and manual/browser checks and report the remaining test gap honestly.
 
 Before finishing, review the diff for unrelated changes and generated files. Explain what changed and what was checked in short, plain language a student can follow. State any remaining limitations.
+
+### Creator photo editing and destination suggestions
+
+02 and 03 now use the same single-title numbered intro as the later chapters. The cover Smart Create tooltip,
+Review activity links and card overflow move menus are removed. Cards still open the editor; day/order controls
+there provide a keyboard alternative to dragging. The upload strip shows an unassigned count and per-photo
+assignment status, excluding stock photos.
+
+PhotoEditorDialog is shared by Board uploads, activity uploads and profile pictures. It offers draggable and
+keyboard-adjustable crop bounds, aspect presets and resize limits, without rotation or format conversion. It edits
+presentation settings through the protected image API, retaining the original and GPS/time. Reset restores original
+presentation. Saves apply to every use of that uploaded image and use an image revision to reject stale edits.
+The owner-only editor source is bounded to 4096px; ordinary delivery keeps its display/thumbnail bounds. Preview
+URLs update after saves. Modal focus, loading, failure, discard and leave-warning states are explicit.
+
+Publishing requires a main destination; incomplete drafts remain saveable. Three or more located activities can
+autofill an empty destination through a majority-area suggestion. Manual selections and explicit clearing stop
+autofill. Suggestions are labeled and editable; ambiguous or scattered locations leave the field empty.
+The suggestion uses at least three points and a 60% cluster within 120km of a representative; differing cities or
+spread over 25km requests a region, otherwise a city. These are initial heuristics, not proof of a trip boundary.
+
+Verification note: the photo-edit tests were authored alongside implementation. Independent
+review of their intent and coverage is still required before treating this UI as fully verified. Browser
+acceptance for crop dragging, focus, aspect selection and live destination autofill also remains pending because
+no browser was connected. Automated API, SQL, bounds and signed-delivery checks are separate evidence.
+
+## Board photo controls and destination illustrations
+
+The cover icon opens BoardCoverDialog to select any Board upload, including activity photos, and crop/resize it
+through the existing persisted photo editor. BoardPhotoStrip supplies arrow navigation in cover and activity dialogs.
+Thumbnail lists lazy-load with asynchronous decoding; creator collages use thumbnail delivery, activity cards avoid
+Motion layout measurements, the sticky chapter bar has an opaque background, and Smart Create uses one combined
+SVG circuit mask instead of 78 masks. Browser performance measurements remain pending.
+Decorative published Board spaces use a shared destination/country Unsplash search pool of up to 20 photos, selecting
+distinct candidates randomly per resolution. They show photographer/Unsplash credit, never attach themselves to
+activities, and leave placeholders on failure. Strict place matching still applies to actual activity photos.

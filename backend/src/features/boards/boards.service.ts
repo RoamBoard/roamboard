@@ -17,6 +17,7 @@ function normalize(input: BoardWrite): BoardWrite {
             ...day,
             activities: day.activities.map((activity) => ({
                 ...activity,
+                locationConfirmed: activity.source === "photo" && activity.location ? true : activity.locationConfirmed,
                 note: activity.note?.trim() || null
             }))
         }))
@@ -41,7 +42,7 @@ async function validateDocument(repository: BoardRepository, input: BoardWrite):
     const usedImages = new Set<number>();
     let hasConfirmedLocation = false;
 
-    input.days.forEach((day, dayIndex) => {
+    normalized.days.forEach((day, dayIndex) => {
         if (day.dayNumber !== dayIndex + 1) invalid();
         if (day.dayId !== undefined) {
             if (dayIds.has(day.dayId)) invalid();
@@ -71,13 +72,7 @@ async function validateDocument(repository: BoardRepository, input: BoardWrite):
     });
 
     if (input.status === "published") {
-        if (
-            !input.title.trim() ||
-            !hasConfirmedLocation ||
-            input.days.some((day) =>
-                day.activities.some((activity) => activity.source === "photo" && !activity.locationConfirmed)
-            )
-        ) {
+        if (!input.destination || !input.title.trim() || !hasConfirmedLocation) {
             throw new AppError(422, "Board is not ready to publish", "PUBLISH_REQUIREMENTS_NOT_MET");
         }
     }
@@ -112,7 +107,11 @@ export function createBoardsService(repository: BoardRepository): BoardsService 
             if (!owner && input.visibility !== access.visibility) {
                 throw new AppError(403, "Only the owner can change visibility", "FORBIDDEN");
             }
-            const validated = await validateDocument(repository, input);
+            const destination =
+                input.destination === undefined && input.status === "published"
+                    ? (await repository.getBoard(boardId, userId))?.destination
+                    : input.destination;
+            const validated = await validateDocument(repository, { ...input, destination });
             if (!owner && input.isCompleted !== undefined) {
                 const current = await repository.getBoard(boardId, userId);
                 if (current?.isCompleted !== input.isCompleted)

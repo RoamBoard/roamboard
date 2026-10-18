@@ -41,7 +41,7 @@ The backend takes the caller from the HTTP-only session cookie; the browser send
 - Each added activity needs a non-empty title and one allowed category. The current SQL calls the category `activity.type`; the API calls it `category`. An unfinished Add Pin form is local UI state and is not saved. Drafts may contain zero activities.
 - Activity `position` is zero-based and consecutive within its day. The backend returns activities in day/position order. Optional `activityTime` uses `HH:mm` and does not override a saved drag-and-drop order. Optional note is at most 500 characters.
 - An activity may have no location in a draft. A supplied location needs a name and latitude/longitude in the ranges already checked by the migration; address, city, country, and external place ID are optional. Editing one activity's location must not mutate another activity that shares a Location row.
-- A photo-suggested location has saved `locationConfirmed` state. A draft may retain `false`. Manually placed or searched locations count as confirmed when added. Publishing requires **at least one activity with a confirmed location** and rejects **every unconfirmed photo-suggested activity**. This flag records the user's confirmation in the normal app; it is not independent proof that a person inspected a map.
+- The saved `locationConfirmed` field is retained for compatibility. The backend sets it to `true` for photo-generated activities that have a location when saving the Board. Manually placed or searched locations count as confirmed when added. Publishing requires **at least one activity location** and a main destination. Individual photo-activity confirmation is no longer required; the flag is not proof that a person inspected a map.
 
 **Initial tag seed (40):**
 
@@ -123,7 +123,7 @@ Requires a session and the configured Origin. Send `{ "uploadId": "temporary-upl
 }
 ```
 
-Capture time and GPS may be `null`. The client may use available metadata to suggest a day or location; the user confirms photo-suggested locations before publication. Image paths are relative to the API origin, and each fetch applies the read rules below.
+Capture time and GPS may be `null`. The client may use available metadata to suggest a day or location; photo-generated locations remain editable and do not need individual confirmation before publication. Image paths are relative to the API origin, and each fetch applies the read rules below.
 
 ### `GET /api/v1/images/:imageId/content?variant=display|thumbnail`
 
@@ -297,3 +297,18 @@ All initial review items have been resolved and agreed:
 Backend-side decisions made in this interview: complete creator save/publish flow except Highlights and separate Vibes; owner-only drafts; publish title plus confirmed located activity; `private` maps to `collaborators`; unattached Board photos persist; empty days and dates persist; predefined tags shared with profiles, maximum three; Vibes use `board_tag`; seed a shared pool of 40 travel tags; photo-suggested location confirmation persists; Express-authorized direct uploads to Cloudinary supporting JPEG, PNG, WebP, HEIC, and HEIF with a 10 MB per-file limit; Express checks Board access and streams metadata-stripped display images; unlinked uploads are cleaned after 24 hours; first uploaded photo is default Board cover; draft then publish updates one Board; external activity image reference and credit persist; owner can resume drafts; empty draft title stays empty; unfinished pin forms do not persist; creator saves the full Board document in one transaction; retained day and activity IDs stay stable across saves; stale full-document saves are rejected using Board revision.
 
 Smart Create metadata suggestions and the updated batch/day rules are documented in [the Smart Create contract](../contracts/smart-create.md).
+
+## Explicit main destination
+
+Board create/replace accepts optional nullable destination containing name, address, city, ISO alpha-3 country,
+latitude, longitude, externalPlaceId (geoapify: reference) and kind (city, region or country). It is independent of
+activity locations and follows the same Board access and revision checks. Create without it leaves it null; replace
+without the property preserves the stored destination, while explicit null clears it. Responses include it.
+Migration 008 links board.primary_location_id to the existing location table and stores primary_location_kind.
+Both are updated in the existing Board transaction. Frontend selection is in 01 before description, reusing Home
+search interactions with Geoapify locality results. It seeds activity-search context and appears in previews/gallery
+and public Board destination data. Public Board search includes the explicit place even without located activities.
+
+Publishing additionally requires a non-null main destination. Draft saves can remain incomplete. Existing published
+replacements omitting destination validate the currently stored value; null cannot clear it while published.
+The creator may suggest an editable destination from at least three located activities; manual choices are preserved.

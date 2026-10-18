@@ -11,7 +11,16 @@ export function createProviderRouter(controller: ProviderController, attachUser:
     const router = Router();
     const dev = [developmentOnly, attachUser, requireSessionUser];
     router.get("/config", controller.config);
-    router.get("/locations/search", validateQuery(schemas.providerSearchSchema), controller.mapboxBoardSearch);
+    router.post(
+        "/locations/suggest-area",
+        attachUser,
+        requireSessionUser,
+        requireFrontendOrigin,
+        validateBody(schemas.areaSuggestionSchema),
+        controller.suggestBoardArea
+    );
+    router.get("/locations/areas", validateQuery(schemas.providerSearchSchema), controller.boardAreaSearch);
+    router.get("/locations/search", validateQuery(schemas.boardLocationSearchSchema), controller.mapboxBoardSearch);
     router.get(
         "/locations/destinations",
         validateQuery(schemas.boardDestinationSearchSchema),
@@ -27,7 +36,20 @@ export function createProviderRouter(controller: ProviderController, attachUser:
         validateBody(schemas.mapboxRouteSchema),
         controller.mapboxRoute
     );
-    router.get("/unsplash/search", validateQuery(schemas.providerSearchSchema), controller.unsplashSearch);
+    router.get(
+        "/unsplash/activity-photo",
+        validateQuery(schemas.activityPhotoSchema),
+        controller.unsplashActivityPhoto
+    );
+    router.post(
+        "/unsplash/activity-photo",
+        attachUser,
+        requireSessionUser,
+        requireFrontendOrigin,
+        validateBody(schemas.activityPhotoSchema),
+        controller.selectActivityPhoto
+    );
+    router.get("/unsplash/search", validateQuery(schemas.unsplashSearchSchema), controller.unsplashSearch);
     router.get(
         "/google-places/search",
         ...dev,

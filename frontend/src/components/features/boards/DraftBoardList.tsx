@@ -25,19 +25,16 @@ function savedDate(value: string) {
 
 function DraftCollage({ document }: { document: BoardDocument }) {
     const restored = fromBoardDocument(document);
-    const preview = createBoardPreview(
-        {
-            title: document.title,
-            description: document.description ?? "",
-            status: "draft",
-            visibility: document.visibility,
-            coverImageId: document.coverImageId,
-            tags: document.tags.map((tag) => tag.name),
-            days: restored.days,
-            images: restored.images
-        },
-        restored.confirmedPhotoPins
-    );
+    const preview = createBoardPreview({
+        title: document.title,
+        description: document.description ?? "",
+        status: "draft",
+        visibility: document.visibility,
+        coverImageId: document.coverImageId,
+        tags: document.tags.map((tag) => tag.name),
+        days: restored.days,
+        images: restored.images
+    });
     return (
         <CollageBoardCard
             board={{ ...preview.card, id: String(document.boardId) }}
