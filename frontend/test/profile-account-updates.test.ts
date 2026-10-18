@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
-import test from "node:test";
-import { observeCurrentUser, subscribeToAccountUpdates, publishAccountUpdate, type AuthUser } from "../src/lib/auth";
+import test, { beforeEach, mock } from "node:test";
+import {
+    observeCurrentUser,
+    subscribeToAccountUpdates,
+    publishAccountUpdate,
+    signInWithGoogle,
+    signOut,
+    type AuthUser
+} from "../src/lib/auth";
 import {
     apiOrigin,
     deleteProfilePicture,
@@ -59,8 +66,17 @@ function changes() {
     };
 }
 
+beforeEach(async () => {
+    // Each test starts with a fresh confirmed sign-in rather than resetting private auth state.
+    const fetched = mock.method(globalThis, "fetch", async () =>
+        Response.json({ data: { user: expectedAccount(profile(12)), isNew: false } })
+    );
+    await signInWithGoogle("verified-google-token");
+    fetched.mock.restore();
+});
+
 test("saved profile photo additions, replacements and removals immediately publish the confirmed account", async (context) => {
-    const received: AuthUser[] = [];
+    const received: Array<AuthUser | null> = [];
     const unsubscribe = subscribeToAccountUpdates((user) => received.push(user));
     context.after(unsubscribe);
     const savedProfiles = [profile(12), profile(25), profile(null)];
@@ -91,7 +107,7 @@ test("saved profile photo additions, replacements and removals immediately publi
 });
 
 test("profile edits publish the server's saved name and handle only after a successful response", async (context) => {
-    const received: AuthUser[] = [];
+    const received: Array<AuthUser | null> = [];
     const unsubscribe = subscribeToAccountUpdates((user) => received.push(user));
     context.after(unsubscribe);
     const responseState: { complete?: (response: Response) => void } = {};
@@ -113,7 +129,7 @@ test("profile edits publish the server's saved name and handle only after a succ
 });
 
 test("rejected profile saves and network failures do not publish account changes", async (context) => {
-    const received: AuthUser[] = [];
+    const received: Array<AuthUser | null> = [];
     const unsubscribe = subscribeToAccountUpdates((user) => received.push(user));
     context.after(unsubscribe);
     const operations = [() => setProfilePicture(12), () => deleteProfilePicture(), () => updateProfile(changes())];
@@ -131,7 +147,7 @@ test("rejected profile saves and network failures do not publish account changes
 });
 
 test("account subscriptions unsubscribe cleanly and do not replay stale account data", () => {
-    const received: AuthUser[] = [];
+    const received: Array<AuthUser | null> = [];
     const user = expectedAccount(profile(12));
     const unsubscribe = subscribeToAccountUpdates((update) => received.push(update));
     publishAccountUpdate(user);
@@ -140,7 +156,7 @@ test("account subscriptions unsubscribe cleanly and do not replay stale account 
     unsubscribe();
     publishAccountUpdate({ ...user, profilePictureUrl: null });
     assert.deepEqual(received, [user]);
-    const later: AuthUser[] = [];
+    const later: Array<AuthUser | null> = [];
     const unsubscribeLater = subscribeToAccountUpdates((update) => later.push(update));
     try {
         assert.deepEqual(later, [], "A remounted control must read its current session rather than replay an old save");
@@ -150,7 +166,7 @@ test("account subscriptions unsubscribe cleanly and do not replay stale account 
 });
 
 test("reading a profile does not announce an account mutation", async (context) => {
-    const received: AuthUser[] = [];
+    const received: Array<AuthUser | null> = [];
     const unsubscribe = subscribeToAccountUpdates((user) => received.push(user));
     context.after(unsubscribe);
     context.mock.method(globalThis, "fetch", async () => Response.json({ data: profile(12) }));
@@ -233,4 +249,168 @@ test("account observer loads the current session and handles signed-out and unav
             stop();
         }
     }
+});
+
+test("profile PATCH, photo PUT and photo DELETE completed after logout cannot restore account controls", async (context) => {
+    const received: Array<AuthUser | null> = [];
+    const unsubscribe = subscribeToAccountUpdates((user) => received.push(user));
+    context.after(unsubscribe);
+    const pending: Array<(response: Response) => void> = [];
+    const logoutState: { complete?: (response: Response) => void } = {};
+    context.mock.method(
+        globalThis,
+        "fetch",
+        (input: string | URL | Request) =>
+            new Promise<Response>((resolve) => {
+                if (String(input).endsWith("/auth/logout")) logoutState.complete = resolve;
+                else pending.push(resolve);
+            })
+    );
+    const saves = [updateProfile(changes()), setProfilePicture(25), deleteProfilePicture()];
+    const logout = signOut();
+    assert.deepEqual(received, [null], "Logout clears the account controls before its request finishes");
+    for (const complete of pending) complete(Response.json({ data: profile(25) }));
+    await Promise.all(saves);
+    assert.deepEqual(received, [null], "Earlier profile saves cannot resurrect a signed-out account");
+    assert.ok(logoutState.complete);
+    logoutState.complete(new Response(null, { status: 204 }));
+    await logout;
+});
+
+test("an old session response and a fresh login-page observer cannot resurrect an account after logout", async (context) => {
+    const sessionRequests: Array<(response: Response) => void> = [];
+    context.mock.method(globalThis, "fetch", (input: string | URL | Request) => {
+        if (String(input).endsWith("/auth/logout")) return Promise.resolve(new Response(null, { status: 204 }));
+        return new Promise<Response>((resolve) => sessionRequests.push(resolve));
+    });
+    const previous: Array<AuthUser | null> = [];
+    const stopPrevious = observeCurrentUser((user) => previous.push(user));
+    context.after(stopPrevious);
+    await signOut();
+    const remounted: Array<AuthUser | null> = [];
+    const stopRemounted = observeCurrentUser((user) => remounted.push(user));
+    context.after(stopRemounted);
+    sessionRequests[0]?.(Response.json({ data: expectedAccount(profile(12)) }));
+    sessionRequests[1]?.(new Response(null, { status: 401 }));
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.ok(previous.length > 0);
+    assert.ok(previous.every((user) => user === null));
+    assert.ok(remounted.every((user) => user === null));
+    const staleRemount: Array<AuthUser | null> = [];
+    const stopStaleRemount = observeCurrentUser((user) => staleRemount.push(user));
+    context.after(stopStaleRemount);
+    sessionRequests[2]?.(Response.json({ data: expectedAccount(profile(12)) }));
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.deepEqual(staleRemount, [null], "A new control cannot show a stale positive session after explicit logout");
+    publishAccountUpdate(expectedAccount(profile(25)));
+    assert.ok(previous.every((user) => user === null));
+    assert.ok(remounted.every((user) => user === null));
+});
+
+test("a new account sign-in cannot be overwritten by the previous account's unfinished profile save", async (context) => {
+    const received: Array<AuthUser | null> = [];
+    const unsubscribe = subscribeToAccountUpdates((user) => received.push(user));
+    context.after(unsubscribe);
+    const pending: { complete?: (response: Response) => void } = {};
+    const newUser = expectedAccount(
+        profile(44, { id: "new-google-owner", username: "grace_hopper", displayName: "Grace Hopper" })
+    );
+    context.mock.method(globalThis, "fetch", (input: string | URL | Request) => {
+        if (String(input).endsWith("/auth/logout")) return Promise.resolve(new Response(null, { status: 204 }));
+        if (String(input).endsWith("/auth/google"))
+            return Promise.resolve(Response.json({ data: { user: newUser, isNew: false } }));
+        return new Promise<Response>((resolve) => {
+            pending.complete = resolve;
+        });
+    });
+    const oldSave = setProfilePicture(25);
+    await signOut();
+    await signInWithGoogle("new-account-token");
+    assert.deepEqual(received, [null, newUser]);
+    assert.ok(pending.complete);
+    pending.complete(Response.json({ data: profile(25) }));
+    await oldSave;
+    assert.deepEqual(received, [null, newUser]);
+});
+
+test("a 401 session on a login-page remount invalidates unfinished profile saves", async (context) => {
+    const pending: { complete?: (response: Response) => void } = {};
+    context.mock.method(globalThis, "fetch", (input: string | URL | Request) => {
+        if (String(input).endsWith("/auth/me")) return Promise.resolve(new Response(null, { status: 401 }));
+        return new Promise<Response>((resolve) => {
+            pending.complete = resolve;
+        });
+    });
+    const save = setProfilePicture(25);
+    const received: Array<AuthUser | null> = [];
+    const stop = observeCurrentUser((user) => received.push(user));
+    context.after(stop);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.deepEqual(received, [null]);
+    assert.ok(pending.complete);
+    pending.complete(Response.json({ data: profile(25) }));
+    await save;
+    assert.deepEqual(received, [null]);
+});
+
+test("a Google sign-in request started before logout cannot revive signed-in account controls", async (context) => {
+    const pending: { complete?: (response: Response) => void } = {};
+    context.mock.method(globalThis, "fetch", (input: string | URL | Request) => {
+        if (String(input).endsWith("/auth/logout")) return Promise.resolve(new Response(null, { status: 204 }));
+        return new Promise<Response>((resolve) => {
+            pending.complete = resolve;
+        });
+    });
+    const received: Array<AuthUser | null> = [];
+    const unsubscribe = subscribeToAccountUpdates((user) => received.push(user));
+    context.after(unsubscribe);
+    const signIn = signInWithGoogle("earlier-google-token");
+    await signOut();
+    assert.ok(pending.complete);
+    pending.complete(Response.json({ data: { user: expectedAccount(profile(12)), isNew: false } }));
+    await signIn;
+    assert.deepEqual(received, [null]);
+});
+
+test("a confirmed Google sign-in survives a 401 from an earlier session lookup", async (context) => {
+    const pending: { complete?: (response: Response) => void } = {};
+    context.mock.method(globalThis, "fetch", (input: string | URL | Request) => {
+        if (String(input).endsWith("/auth/me")) return Promise.resolve(new Response(null, { status: 401 }));
+        return new Promise<Response>((resolve) => {
+            pending.complete = resolve;
+        });
+    });
+    const received: Array<AuthUser | null> = [];
+    const signIn = signInWithGoogle("valid-google-token");
+    const stop = observeCurrentUser((user) => received.push(user));
+    context.after(stop);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.deepEqual(received, [null]);
+    assert.ok(pending.complete);
+    const user = expectedAccount(profile(25));
+    pending.complete(Response.json({ data: { user, isNew: false } }));
+    await signIn;
+    assert.deepEqual(received, [null, user]);
+    publishAccountUpdate({ ...user, displayName: "Updated Ada" });
+    assert.deepEqual(received, [null, user, { ...user, displayName: "Updated Ada" }]);
+});
+
+test("a failed logout request still invalidates an earlier profile save", async (context) => {
+    const pending: { complete?: (response: Response) => void } = {};
+    context.mock.method(globalThis, "fetch", (input: string | URL | Request) => {
+        if (String(input).endsWith("/auth/logout")) return Promise.resolve(new Response(null, { status: 503 }));
+        return new Promise<Response>((resolve) => {
+            pending.complete = resolve;
+        });
+    });
+    const received: Array<AuthUser | null> = [];
+    const unsubscribe = subscribeToAccountUpdates((user) => received.push(user));
+    context.after(unsubscribe);
+    const save = deleteProfilePicture();
+    await assert.rejects(signOut(), /Could not sign out/);
+    assert.deepEqual(received, [null]);
+    assert.ok(pending.complete);
+    pending.complete(Response.json({ data: profile(null) }));
+    await save;
+    assert.deepEqual(received, [null]);
 });

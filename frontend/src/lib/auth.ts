@@ -11,9 +11,10 @@ type ApiError = {
     error?: { code?: string; message?: string };
 };
 
-const accountListeners = new Set<(user: AuthUser) => void>();
+const accountListeners = new Set<(user: AuthUser | null) => void>();
+const accountState = { generation: 0, logoutGeneration: 0, signedOut: false };
 
-export function subscribeToAccountUpdates(listener: (user: AuthUser) => void): () => void {
+export function subscribeToAccountUpdates(listener: (user: AuthUser | null) => void): () => void {
     accountListeners.add(listener);
     return () => {
         accountListeners.delete(listener);
@@ -21,7 +22,21 @@ export function subscribeToAccountUpdates(listener: (user: AuthUser) => void): (
 }
 
 export function publishAccountUpdate(user: AuthUser): void {
+    if (accountState.signedOut) return;
     accountListeners.forEach((listener) => listener(user));
+}
+
+export function captureAccountUpdate(): (user: AuthUser) => void {
+    const generation = accountState.generation;
+    return (user) => {
+        if (generation === accountState.generation) publishAccountUpdate(user);
+    };
+}
+
+function invalidateAccountUpdates(): void {
+    accountState.generation += 1;
+    accountState.signedOut = true;
+    accountListeners.forEach((listener) => listener(null));
 }
 
 export function observeCurrentUser(onChange: (user: AuthUser | null) => void): () => void {
@@ -32,7 +47,9 @@ export function observeCurrentUser(onChange: (user: AuthUser | null) => void): (
     });
     void getCurrentUser()
         .then((user) => {
-            if (state.active && !state.updated) onChange(user);
+            if (!state.active || state.updated) return;
+            if (user === null) invalidateAccountUpdates();
+            else onChange(accountState.signedOut ? null : user);
         })
         .catch(() => {
             if (state.active && !state.updated) onChange(null);
@@ -44,6 +61,8 @@ export function observeCurrentUser(onChange: (user: AuthUser | null) => void): (
 }
 
 export async function signInWithGoogle(credential: string): Promise<{ user: AuthUser; isNew: boolean }> {
+    // A pending sign-in may overlap an initial /me 401; only explicit logout cancels its account update.
+    const logoutGeneration = accountState.logoutGeneration;
     const response = await fetch(`${apiUrl}/api/v1/auth/google`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -59,6 +78,11 @@ export async function signInWithGoogle(credential: string): Promise<{ user: Auth
     const payload = (await response.json()) as {
         data: { user: AuthUser; isNew: boolean };
     };
+    if (logoutGeneration === accountState.logoutGeneration) {
+        accountState.generation += 1;
+        accountState.signedOut = false;
+        publishAccountUpdate(payload.data.user);
+    }
     return payload.data;
 }
 
@@ -75,6 +99,8 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 }
 
 export async function signOut(): Promise<void> {
+    accountState.logoutGeneration += 1;
+    invalidateAccountUpdates();
     const response = await fetch(`${apiUrl}/api/v1/auth/logout`, {
         method: "POST",
         credentials: "include"
