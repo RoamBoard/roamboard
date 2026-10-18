@@ -57,6 +57,15 @@ test("editorial catalog imports and replacements preserve public reads, developm
     };
     const app = createApp({
         repository: {
+            async listGuestAccounts() {
+                return [];
+            },
+            async createGuestAccount() {
+                return null;
+            },
+            async findGuestAccount() {
+                return null;
+            },
             async findUserById() {
                 return null;
             },

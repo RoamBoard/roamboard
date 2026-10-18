@@ -25,6 +25,9 @@ export interface GoogleVerifier {
 }
 
 export interface AuthRepository {
+    listGuestAccounts(): Promise<AppUser[]>;
+    createGuestAccount(userId: string, username: string): Promise<AppUser | null>;
+    findGuestAccount(userId: string): Promise<AppUser | null>;
     findUserById(userId: string): Promise<AppUser | null>;
     findGooglePhotoStorageKey(userId: string): Promise<string | null>;
     createUser(user: AppUser): Promise<AppUser | null>;
@@ -42,6 +45,17 @@ export interface AuthRepository {
 }
 
 export interface AuthService {
+    listGuestAccounts(): Promise<AppUser[]>;
+    createGuestAccount(username: string): Promise<{
+        user: AppUser;
+        isNew: true;
+        sessionToken: string;
+    }>;
+    signInAsGuest(userId: string): Promise<{
+        user: AppUser;
+        isNew: false;
+        sessionToken: string;
+    }>;
     signIn(idToken: string): Promise<{
         user: AppUser;
         isNew: boolean;

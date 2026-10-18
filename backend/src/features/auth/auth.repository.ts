@@ -34,6 +34,44 @@ async function availableUsername(client: PoolClient, base: string): Promise<stri
 
 export function createAuthRepository(): AuthRepository {
     return {
+        async listGuestAccounts() {
+            const result = await getPool().query<UserRow>(
+                `SELECT u.user_id, u.username, u.display_name, u.profile_picture_image_id
+                 FROM guest_account g JOIN app_user u ON u.user_id=g.user_id
+                 ORDER BY lower(u.username), u.user_id`
+            );
+            return result.rows.map(toUser);
+        },
+        async createGuestAccount(userId, username) {
+            const client = await getPool().connect();
+            try {
+                await client.query("BEGIN");
+                const result = await client.query<UserRow>(
+                    `INSERT INTO app_user (user_id, username, display_name)
+                     VALUES ($1, $2, $2)
+                     RETURNING user_id, username, display_name, profile_picture_image_id`,
+                    [userId, username]
+                );
+                await client.query("INSERT INTO guest_account (user_id) VALUES ($1)", [userId]);
+                await client.query("COMMIT");
+                if (!result.rows[0]) throw new Error("Guest account insert returned no user");
+                return toUser(result.rows[0]);
+            } catch (error) {
+                await client.query("ROLLBACK");
+                if ((error as { code?: string }).code === "23505") return null;
+                throw error;
+            } finally {
+                client.release();
+            }
+        },
+        async findGuestAccount(userId) {
+            const result = await getPool().query<UserRow>(
+                `SELECT u.user_id, u.username, u.display_name, u.profile_picture_image_id
+                 FROM guest_account g JOIN app_user u ON u.user_id=g.user_id WHERE g.user_id=$1`,
+                [userId]
+            );
+            return result.rows[0] ? toUser(result.rows[0]) : null;
+        },
         async findUserById(userId) {
             const result = await getPool().query<UserRow>(
                 "SELECT user_id, username, display_name, profile_picture_image_id FROM app_user WHERE user_id = $1",

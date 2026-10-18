@@ -1,5 +1,15 @@
 # Shared development database migration log
 
+## Pending guest account migration
+
+`008_guest_accounts.sql` adds the `guest_account` table. It has not been applied to the shared Azure database. Apply it after the team's backup and migration checks; do not rerun previously applied files.
+
+## Profile tag catalog — 2026-10-18
+
+The user reports applying `007_profile_tag_catalog.sql` to the shared Azure database. A read-only call to the live
+`GET /api/v1/tags` endpoint returned all 24 names from that migration (64 tags total). Do not rerun 007. The backup
+details for this application were not independently verified here.
+
 ## Editorial image library — 2026-10-17
 
 Applied additive migration `005_image_library.sql` through the guarded image importer after checking database access
