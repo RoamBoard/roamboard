@@ -61,9 +61,9 @@ export function createApp(options: AppOptions = {}): Express {
         }
     });
 
-    const auth = createAuthModule(options);
-    const attachUser = attachSessionUser(auth.service);
     const quota = options.quotaService ?? createQuotaService(createPostgresQuotaRepository(), createQuotaPolicies());
+    const auth = createAuthModule({ ...options, quotaService: quota });
+    const attachUser = attachSessionUser(auth.service);
     const providers = createProviderModule(quota, attachUser);
     const destinations = createDestinationModule(quota);
     const search = createSearchModule(options.searchRepository, options.searchProvider);

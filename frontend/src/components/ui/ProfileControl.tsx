@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -48,6 +49,7 @@ export default function ProfileControl({
     profileHref = "/profile",
     label = "my profile",
     userName,
+    avatarUrl,
     handle,
     compact = false,
     floating = false,
@@ -134,8 +136,32 @@ export default function ProfileControl({
     const isLoggedIn = Boolean(user || sessionUser || mockIsLoggedIn);
 
     const displayName = user?.name || sessionUser?.displayName || profile.name || userName || "Rowan";
-    const rawHandle = user?.handle || profile.handle || handle;
+    const rawHandle = user?.handle || sessionUser?.username || profile.handle || handle;
     const displayHandle = rawHandle ? (rawHandle.startsWith("@") ? rawHandle : `@${rawHandle}`) : null;
+    const photoUrl =
+        user?.avatarUrl ||
+        avatarUrl ||
+        (sessionUser?.profilePictureUrl
+            ? new URL(
+                  sessionUser.profilePictureUrl,
+                  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"
+              ).toString()
+            : null);
+    const [failedPhoto, setFailedPhoto] = useState<string | null>(null);
+    const accountIcon =
+        photoUrl && photoUrl !== failedPhoto ? (
+            <Image
+                src={photoUrl}
+                alt=""
+                width={24}
+                height={24}
+                unoptimized
+                className="h-6 w-6 shrink-0 rounded-full object-cover"
+                onError={() => setFailedPhoto(photoUrl)}
+            />
+        ) : (
+            <UserRound aria-hidden="true" size={20} strokeWidth={1.5} className="shrink-0" />
+        );
     const resolvedProfileHref = href ?? profileHref;
 
     const containerClasses = sidebar
@@ -223,7 +249,7 @@ export default function ProfileControl({
                     onClick={() => toggleSidebarAccount(!sidebarOpen)}
                     className="font-body text-12 text-muted-foreground hover:text-foreground flex min-h-11 w-full cursor-pointer items-center gap-3 px-3 font-medium focus-visible:outline-1 focus-visible:outline-offset-4"
                 >
-                    <UserRound aria-hidden="true" size={20} strokeWidth={1.5} className="shrink-0" />
+                    {accountIcon}
                     {!iconOnly && <span>account</span>}
                     {!iconOnly && (
                         <span aria-hidden="true" className="text-16 ml-auto">
@@ -249,7 +275,7 @@ export default function ProfileControl({
                         aria-label="Account menu"
                         className={`font-body text-12 text-muted-foreground hover:text-foreground flex min-h-11 cursor-pointer items-center font-medium focus-visible:outline-1 focus-visible:outline-offset-4 ${sidebar ? "w-full gap-3 px-3" : "bg-background/95 border-line gap-5 border px-4 py-2"}`}
                     >
-                        {sidebar && <UserRound aria-hidden="true" size={20} strokeWidth={1.5} className="shrink-0" />}
+                        {accountIcon}
                         {!iconOnly && <span>{isLoggedIn ? label : "account"}</span>}
                         {!iconOnly && (
                             <span aria-hidden="true" className="text-muted-foreground text-16 ml-auto">

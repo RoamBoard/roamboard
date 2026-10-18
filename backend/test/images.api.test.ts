@@ -35,6 +35,10 @@ function fakeAuth(): { repository: AuthRepository; googleVerifier: GoogleVerifie
             async createUser() {
                 return null;
             },
+            async findGooglePhotoStorageKey() {
+                return null;
+            },
+            async saveGoogleDefaults() {},
             async createSession() {
                 /* not used */
             },

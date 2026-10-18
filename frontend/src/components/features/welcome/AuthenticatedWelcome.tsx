@@ -27,7 +27,7 @@ export default function AuthenticatedWelcome() {
         };
     }, [router]);
 
-    if (user) return <WelcomeScreen username={user.username} />;
+    if (user) return <WelcomeScreen username={user.displayName} />;
 
     return (
         <main className="bg-background text-foreground grid h-dvh place-items-center px-6 text-center">

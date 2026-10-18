@@ -74,6 +74,7 @@ function parseAsset(raw: Record<string, unknown>): ProviderAsset | null {
     const longitude = gpsPart(meta.GPSLongitude, meta.GPSLongitudeRef);
     return {
         storageKey: raw.public_id,
+        originalFilename: typeof raw.original_filename === "string" ? raw.original_filename : undefined,
         format: raw.format.toLowerCase(),
         byteSize: raw.bytes,
         createdAt,

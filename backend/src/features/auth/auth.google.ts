@@ -26,7 +26,8 @@ export function createGoogleVerifier(): GoogleVerifier {
                 return {
                     sub: payload.sub,
                     givenName: payload.given_name ?? payload.name?.split(" ")[0] ?? "Traveler",
-                    familyName: payload.family_name ?? ""
+                    familyName: payload.family_name ?? "",
+                    picture: payload.picture
                 };
             } catch (error) {
                 if (error instanceof Error && error.message.includes("Failed to retrieve verification certificates")) {

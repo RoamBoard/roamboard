@@ -2,6 +2,7 @@ export type AuthUser = {
     userId: string;
     username: string;
     displayName: string;
+    profilePictureUrl?: string | null;
 };
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";

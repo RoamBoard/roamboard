@@ -53,7 +53,7 @@ export default function ProfileAvatarEditor({ profile, onChange, disabled, onBeg
                 Set your profile portrait displayed across your boards and traveler cards.
             </p>
             <div className="mt-5 flex flex-col gap-6 sm:flex-row sm:items-center">
-                <div className="bg-faint border-line relative aspect-[3/4] h-28 shrink-0 overflow-hidden rounded-[2px] border shadow-xs">
+                <div className="bg-faint border-line relative aspect-square h-28 shrink-0 overflow-hidden rounded-[2px] border shadow-xs">
                     {profile.profilePicture ? (
                         <Image
                             src={profile.profilePicture.url}

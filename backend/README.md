@@ -215,12 +215,29 @@ follow [the shared database deployment guide](deploy/README.md). The existing
 - `POST /api/v1/auth/google` accepts JSON `{ "credential": "<Google ID token>" }`
   from `CLIENT_ORIGIN`. It finds or creates the user and sets a seven-day,
   HTTP-only session cookie. It returns
-  `{ "data": { "user": { "userId": "...", "username": "...", "displayName": "..." }, "isNew": true } }`;
+  `{ "data": { "user": { "userId": "...", "username": "...", "displayName": "...", "profilePictureUrl": null }, "isNew": true } }`;
   `isNew` is false for a returning user. The frontend sends requests with
   credentials.
 - `GET /api/v1/auth/me` returns the current user from that cookie, or `401`.
 - `POST /api/v1/auth/logout` revokes the session and clears the cookie. It
   requires `CLIENT_ORIGIN`.
+
+New Google accounts receive normalized handles such as `ada_lovelace`, then `ada_lovelace_1`,
+`ada_lovelace_2`, using the lowest available suffix. Allocation uses a transaction lock and the existing
+username uniqueness constraint. On their next Google sign-in, existing handles matching the old normalized-name plus ten hex characters
+are replaced with an available clean handle. Their public profile URLs change; custom handles are preserved.
+Display names default to Google's given and family names together. On later sign-ins, the old first-name-only
+default is expanded to the full name; other edited display names are preserved.
+
+When no profile picture is saved, sign-in imports Google's verified photo claim into authenticated Cloudinary
+storage and links it through the existing uploaded-image tables. No schema migration is needed. Downloads accept
+only HTTPS `lh<number>.googleusercontent.com` URLs without redirects, supported raster types, and at most 10 MB.
+Google imports request a 1024-pixel source rather than the small sign-in thumbnail. Previously imported thumbnails
+are upgraded on a later sign-in only when provider metadata identifies the old Google import; uploaded photos are
+preserved, and concurrent photo edits take precedence. Refreshed imports use a dedicated storage prefix to avoid
+re-importing them on every login. A missing photo or failed import leaves sign-in working and retries on a
+later sign-in. Auth responses include a nullable `profilePictureUrl`; the frontend loads it directly with the
+session cookie. The welcome page displays `displayName`, while profile links continue using `username`.
 
 The cookie is `SameSite=Lax`, host-only, and `Secure` in production. The
 frontend Google button calls these endpoints. Google email is not stored. Expired session rows may
