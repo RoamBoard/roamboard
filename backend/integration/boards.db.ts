@@ -248,6 +248,17 @@ test(
                 country: "SWE",
                 externalPlaceId: "geoapify:stockholm"
             };
+            const halfPrecisionDestination = {
+                ...cityDestination,
+                longitude: 18.0710935,
+                externalPlaceId: "geoapify:stockholm-half"
+            };
+            const halfPrecisionBoard = await service.create("owner-sub", {
+                ...empty,
+                destination: halfPrecisionDestination
+            });
+            assert.equal(halfPrecisionBoard.destination?.longitude, 18.071093);
+            await service.delete(halfPrecisionBoard.boardId, "owner-sub");
             const changedDestination = await service.replace("owner-sub", destinationBoard.boardId, 2, {
                 ...empty,
                 destination: cityDestination

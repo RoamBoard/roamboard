@@ -98,8 +98,8 @@ async function resolveLocations(client: PoolClient, input: BoardWrite): Promise<
     const placeholders = missing.map(([, location], index) => {
         values.push(
             location.name,
-            location.latitude,
-            location.longitude,
+            Number(location.latitude.toFixed(6)),
+            Number(location.longitude.toFixed(6)),
             location.address,
             location.city,
             location.country,
