@@ -40,7 +40,7 @@ export default function ProfileHero({ profile, stats, isOwner = true }: Props) {
         <section aria-label="Profile overview" className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:gap-12">
             {/* Left column: Hero photo + Name */}
             <div className="flex flex-col lg:col-span-5">
-                <div className="bg-faint border-line relative aspect-[3/4] w-full overflow-hidden rounded-[2px] border">
+                <div className="bg-faint border-line relative aspect-square w-full overflow-hidden rounded-[2px] border">
                     {portraitUrl ? (
                         <Image
                             src={portraitUrl.toString()}

@@ -28,6 +28,7 @@ export interface UploadedImage {
 }
 
 export interface ProviderAsset {
+    originalFilename?: string;
     storageKey: string;
     format: string;
     byteSize: number;

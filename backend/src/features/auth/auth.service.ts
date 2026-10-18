@@ -1,7 +1,14 @@
 import { createHash, randomBytes } from "node:crypto";
 
 import { AppError } from "../../shared/app-error.js";
-import type { AppUser, AuthRepository, AuthService, GoogleIdentity, GoogleVerifier } from "./auth.types.js";
+import type {
+    AppUser,
+    AuthRepository,
+    AuthService,
+    GoogleIdentity,
+    GoogleVerifier,
+    GooglePhotoImporter
+} from "./auth.types.js";
 
 export const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -22,7 +29,9 @@ function usernameBase(identity: GoogleIdentity): string {
 }
 
 function displayName(identity: GoogleIdentity): string {
-    return identity.givenName.trim().slice(0, 500) || "Traveler";
+    return (
+        [identity.givenName.trim(), identity.familyName.trim()].filter(Boolean).join(" ").slice(0, 500) || "Traveler"
+    );
 }
 
 async function findOrCreateUser(
@@ -33,7 +42,7 @@ async function findOrCreateUser(
     if (existing) return { user: existing, isNew: false };
 
     for (let attempt = 0; attempt < 5; attempt += 1) {
-        const username = `${usernameBase(identity)}_${randomBytes(5).toString("hex")}`;
+        const username = usernameBase(identity);
         const created = await repository.createUser({
             userId: identity.sub,
             username,
@@ -48,11 +57,39 @@ async function findOrCreateUser(
     throw new Error("Could not generate a unique username");
 }
 
-export function createAuthService(repository: AuthRepository, verifier: GoogleVerifier): AuthService {
+export function createAuthService(
+    repository: AuthRepository,
+    verifier: GoogleVerifier,
+    importPhoto?: GooglePhotoImporter
+): AuthService {
     return {
         async signIn(idToken) {
             const identity = await verifier.verify(idToken);
-            const { user, isNew } = await findOrCreateUser(repository, identity);
+            const found = await findOrCreateUser(repository, identity);
+            let asset;
+            const previousPhotoStorageKey =
+                identity.picture && found.user.profilePictureUrl
+                    ? await repository.findGooglePhotoStorageKey(identity.sub)
+                    : null;
+            if (identity.picture && (!found.user.profilePictureUrl || previousPhotoStorageKey) && importPhoto) {
+                try {
+                    asset =
+                        (await importPhoto(identity.picture, previousPhotoStorageKey ?? undefined, identity.sub)) ??
+                        undefined;
+                } catch {
+                    // An optional default photo must not prevent Google sign-in. Retry on a later sign-in.
+                }
+            }
+            await repository.saveGoogleDefaults(
+                identity.sub,
+                identity.givenName.trim(),
+                displayName(identity),
+                asset,
+                usernameBase(identity),
+                previousPhotoStorageKey ?? undefined
+            );
+            const user = (await repository.findUserById(identity.sub)) ?? found.user;
+            const isNew = found.isNew;
             const sessionToken = randomBytes(32).toString("base64url");
             const expiresAt = new Date(Date.now() + SESSION_MAX_AGE_MS);
             await repository.createSession(hashToken(sessionToken), user.userId, expiresAt);

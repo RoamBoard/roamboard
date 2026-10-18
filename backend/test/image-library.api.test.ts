@@ -63,6 +63,10 @@ test("editorial catalog imports and replacements preserve public reads, developm
             async createUser() {
                 return null;
             },
+            async findGooglePhotoStorageKey() {
+                return null;
+            },
+            async saveGoogleDefaults() {},
             async createSession() {},
             async deleteSession() {},
             async findUserBySession() {

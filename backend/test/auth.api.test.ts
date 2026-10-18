@@ -6,6 +6,9 @@ import request from "supertest";
 import { createApp } from "../src/app.js";
 import type { AppUser, AuthRepository, GoogleVerifier } from "../src/features/auth/auth.types.js";
 import { AppError } from "../src/shared/app-error.js";
+import { createAuthService } from "../src/features/auth/auth.service.js";
+import type { GoogleIdentity } from "../src/features/auth/auth.types.js";
+import type { ProviderAsset } from "../src/features/images/images.types.js";
 
 const origin = "http://localhost:3000";
 
@@ -25,11 +28,14 @@ test("Google sign-in returns a configuration error when its backend client ID is
     }
 });
 
-function fakeDependencies(): {
+function fakeDependencies(
+    initialUsers: AppUser[] = [],
+    identity?: GoogleIdentity
+): {
     repository: AuthRepository;
     googleVerifier: GoogleVerifier;
 } {
-    const users = new Map<string, AppUser>();
+    const users = new Map<string, AppUser>(initialUsers.map((user) => [user.userId, user]));
     const sessions = new Map<string, { userId: string; expiresAt: Date }>();
 
     return {
@@ -42,6 +48,21 @@ function fakeDependencies(): {
                     return null;
                 users.set(user.userId, user);
                 return user;
+            },
+            async findGooglePhotoStorageKey() {
+                return null;
+            },
+            async saveGoogleDefaults(userId, previousDefaultName, fullName, asset, generatedUsernameBase) {
+                const user = users.get(userId);
+                if (!user) return;
+                users.set(userId, {
+                    ...user,
+                    ...(generatedUsernameBase && user.username === generatedUsernameBase + "_ab12345678"
+                        ? { username: generatedUsernameBase }
+                        : {}),
+                    displayName: user.displayName === previousDefaultName ? fullName : user.displayName,
+                    ...(asset && !user.profilePictureUrl ? { profilePictureUrl: "/api/v1/images/42" } : {})
+                });
             },
             async createSession(hash, userId, expiresAt) {
                 sessions.set(hash, { userId, expiresAt });
@@ -59,11 +80,13 @@ function fakeDependencies(): {
                 if (credential !== "valid-google-token") {
                     throw new AppError(401, "Invalid Google credential", "INVALID_GOOGLE_CREDENTIAL");
                 }
-                return {
-                    sub: "google-sub-123",
-                    givenName: "Ada",
-                    familyName: "Lovelace"
-                };
+                return (
+                    identity ?? {
+                        sub: "google-sub-123",
+                        givenName: "Ada",
+                        familyName: "Lovelace"
+                    }
+                );
             }
         }
     };
@@ -78,9 +101,9 @@ test("Google sign-in creates a user and a revocable HTTP-only session cookie", a
 
     assert.equal(signIn.status, 200);
     assert.equal(signIn.body.data.user.userId, "google-sub-123");
-    assert.equal(signIn.body.data.user.displayName, "Ada");
+    assert.equal(signIn.body.data.user.displayName, "Ada Lovelace");
     assert.equal(signIn.body.data.isNew, true);
-    assert.match(signIn.body.data.user.username, /^ada_lovelace_[a-f0-9]{10}$/);
+    assert.equal(signIn.body.data.user.username, "ada_lovelace");
     const cookie = signIn.headers["set-cookie"]?.[0] as string;
     assert.match(cookie, /^roamboard_session=/);
     assert.match(cookie, /HttpOnly/);
@@ -89,6 +112,7 @@ test("Google sign-in creates a user and a revocable HTTP-only session cookie", a
     const me = await request(app).get("/api/v1/auth/me").set("Cookie", cookie);
     assert.equal(me.status, 200);
     assert.equal(me.body.data.userId, "google-sub-123");
+    assert.equal(me.body.data.displayName, "Ada Lovelace");
 
     const secondSignIn = await request(app)
         .post("/api/v1/auth/google")
@@ -120,4 +144,115 @@ test("rejects invalid Google credentials, invalid bodies, and foreign origins", 
 
     const anonymous = await request(app).get("/api/v1/auth/me");
     assert.equal(anonymous.status, 401);
+});
+
+const googlePhoto: ProviderAsset = {
+    storageKey: "roamboard/uploads/google-photo",
+    format: "jpg",
+    byteSize: 512,
+    createdAt: new Date("2026-10-01T12:00:00Z"),
+    capturedAt: null,
+    latitude: null,
+    longitude: null
+};
+
+const googleIdentity: GoogleIdentity = {
+    sub: "google-sub-123",
+    givenName: "Ada",
+    familyName: "Lovelace",
+    picture: "https://lh3.googleusercontent.com/a/photo"
+};
+
+test("Google photo becomes a persisted default returned by sign-in and later sessions", async () => {
+    const { repository, googleVerifier } = fakeDependencies([], googleIdentity);
+    const imported: string[] = [];
+    const service = createAuthService(repository, googleVerifier, async (url) => {
+        imported.push(url);
+        return googlePhoto;
+    });
+    const first = await service.signIn("valid-google-token");
+    assert.equal(first.user.profilePictureUrl, "/api/v1/images/42");
+    assert.equal(first.user.displayName, "Ada Lovelace");
+    assert.deepEqual(await service.currentUser(first.sessionToken), first.user);
+    const second = await service.signIn("valid-google-token");
+    assert.equal(second.user.profilePictureUrl, first.user.profilePictureUrl);
+    assert.deepEqual(imported, [googleIdentity.picture]);
+});
+
+test("returning Google users get a full name, missing default photo and a readable replacement for their generated handle", async () => {
+    const existing = { userId: googleIdentity.sub, username: "ada_lovelace_ab12345678", displayName: "Ada" };
+    const { repository, googleVerifier } = fakeDependencies([existing], googleIdentity);
+    const service = createAuthService(repository, googleVerifier, async () => googlePhoto);
+    const signedIn = await service.signIn("valid-google-token");
+    assert.equal(signedIn.isNew, false);
+    assert.equal(signedIn.user.username, "ada_lovelace");
+    assert.equal(signedIn.user.displayName, "Ada Lovelace");
+    assert.equal(signedIn.user.profilePictureUrl, "/api/v1/images/42");
+});
+
+test("Google sign-in preserves a customized name and picture without importing another photo", async () => {
+    const existing = {
+        userId: googleIdentity.sub,
+        username: "countess_ada",
+        displayName: "Countess Ada",
+        profilePictureUrl: "/api/v1/images/7"
+    };
+    const { repository, googleVerifier } = fakeDependencies([existing], googleIdentity);
+    let imports = 0;
+    const service = createAuthService(repository, googleVerifier, async () => {
+        imports += 1;
+        return googlePhoto;
+    });
+    assert.deepEqual((await service.signIn("valid-google-token")).user, existing);
+    assert.equal(imports, 0);
+});
+
+test("a failed Google photo import does not block sign-in and is retried on the next login", async () => {
+    const { repository, googleVerifier } = fakeDependencies([], googleIdentity);
+    let attempts = 0;
+    const service = createAuthService(repository, googleVerifier, async () => {
+        attempts += 1;
+        if (attempts === 1) throw new Error("Photo provider unavailable");
+        return googlePhoto;
+    });
+    const first = await service.signIn("valid-google-token");
+    assert.equal(first.user.displayName, "Ada Lovelace");
+    assert.equal(first.user.profilePictureUrl, undefined);
+    assert.ok(await service.currentUser(first.sessionToken));
+    assert.equal((await service.signIn("valid-google-token")).user.profilePictureUrl, "/api/v1/images/42");
+    assert.equal(attempts, 2);
+});
+
+test("a Google account without a picture signs in without requesting a photo", async () => {
+    const { repository, googleVerifier } = fakeDependencies();
+    const service = createAuthService(repository, googleVerifier, async () => {
+        assert.fail("A missing Google picture must not trigger an import");
+    });
+    const result = await service.signIn("valid-google-token");
+    assert.equal(result.user.profilePictureUrl, undefined);
+    assert.equal(result.user.username, "ada_lovelace");
+});
+
+test("returning users repair an old imported Google photo on the next login", async () => {
+    const existing = {
+        userId: googleIdentity.sub,
+        username: "ada_lovelace",
+        displayName: "Ada Lovelace",
+        profilePictureUrl: "/api/v1/images/7"
+    };
+    const { repository, googleVerifier } = fakeDependencies([existing], googleIdentity);
+    repository.findGooglePhotoStorageKey = async () => "roamboard/old-google";
+    const saves: unknown[][] = [];
+    repository.saveGoogleDefaults = async (...args) => {
+        saves.push(args);
+    };
+    const imports: unknown[][] = [];
+    const service = createAuthService(repository, googleVerifier, async (...args) => {
+        imports.push(args);
+        return googlePhoto;
+    });
+    await service.signIn("valid-google-token");
+    assert.deepEqual(imports, [[googleIdentity.picture, "roamboard/old-google", googleIdentity.sub]]);
+    assert.equal(saves[0]?.[5], "roamboard/old-google");
+    assert.equal(saves[0]?.[3], googlePhoto);
 });

@@ -1,13 +1,23 @@
+import type { ProviderAsset } from "../images/images.types.js";
+
+export type GooglePhotoImporter = (
+    url: string,
+    previousStorageKey: string | undefined,
+    userId: string
+) => Promise<ProviderAsset | null>;
+
 export interface AppUser {
     userId: string;
     username: string;
     displayName: string;
+    profilePictureUrl?: string | null;
 }
 
 export interface GoogleIdentity {
     sub: string;
     givenName: string;
     familyName: string;
+    picture?: string;
 }
 
 export interface GoogleVerifier {
@@ -16,7 +26,16 @@ export interface GoogleVerifier {
 
 export interface AuthRepository {
     findUserById(userId: string): Promise<AppUser | null>;
+    findGooglePhotoStorageKey(userId: string): Promise<string | null>;
     createUser(user: AppUser): Promise<AppUser | null>;
+    saveGoogleDefaults(
+        userId: string,
+        previousDefaultName: string,
+        fullName: string,
+        asset?: ProviderAsset,
+        generatedUsernameBase?: string,
+        previousPhotoStorageKey?: string
+    ): Promise<void>;
     createSession(tokenHash: string, userId: string, expiresAt: Date): Promise<void>;
     findUserBySession(tokenHash: string): Promise<AppUser | null>;
     deleteSession(tokenHash: string): Promise<void>;

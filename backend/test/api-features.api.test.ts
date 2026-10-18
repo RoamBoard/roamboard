@@ -20,6 +20,10 @@ const repository: AuthRepository = {
     async createUser() {
         return user;
     },
+    async findGooglePhotoStorageKey() {
+        return null;
+    },
+    async saveGoogleDefaults() {},
     async createSession() {},
     async deleteSession() {},
     async findUserBySession(hash) {

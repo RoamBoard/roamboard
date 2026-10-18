@@ -1,4 +1,5 @@
 import { saveBoardDocument } from "@/lib/board-creator-api";
+import { captureAccountUpdate } from "@/lib/auth";
 
 export type UserProfile = {
     id: string;
@@ -148,6 +149,19 @@ export function loadPublicProfile(handle: string) {
     }));
 }
 
+function accountProfileSaved(): (profile: UserProfile) => UserProfile {
+    const publish = captureAccountUpdate();
+    return (profile) => {
+        publish({
+            userId: profile.id,
+            username: profile.username,
+            displayName: profile.displayName,
+            profilePictureUrl: profile.profilePicture?.url ?? null
+        });
+        return profile;
+    };
+}
+
 export function updateProfile(
     changes: Pick<
         UserProfile,
@@ -162,23 +176,32 @@ export function updateProfile(
         | "defaultBoardVisibility"
     >
 ) {
+    const profileSaved = accountProfileSaved();
     return apiRequest<UserProfile>("/api/v1/users/me", {
         method: "PATCH",
         body: JSON.stringify(changes)
-    }).then(resolveProfilePicture);
+    })
+        .then(resolveProfilePicture)
+        .then(profileSaved);
 }
 
 export function setProfilePicture(imageId: number) {
+    const profileSaved = accountProfileSaved();
     return apiRequest<UserProfile>("/api/v1/users/me/profile-picture", {
         method: "PUT",
         body: JSON.stringify({ imageId })
-    }).then(resolveProfilePicture);
+    })
+        .then(resolveProfilePicture)
+        .then(profileSaved);
 }
 
 export function deleteProfilePicture() {
+    const profileSaved = accountProfileSaved();
     return apiRequest<UserProfile>("/api/v1/users/me/profile-picture", {
         method: "DELETE"
-    }).then(resolveProfilePicture);
+    })
+        .then(resolveProfilePicture)
+        .then(profileSaved);
 }
 
 export function loadProfileStats() {

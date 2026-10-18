@@ -69,6 +69,25 @@ test("ProfileControl keeps the account menu closed when signed out", () => {
     assert.ok(!html.includes("Color theme"));
 });
 
+test("ProfileControl shows the supplied profile photo in regular and sidebar account controls", () => {
+    for (const sidebar of [false, true]) {
+        const html = renderToStaticMarkup(
+            createElement(
+                RouterWrapper,
+                null,
+                createElement(ProfileControl, {
+                    user: { name: "Ada Lovelace", handle: "@ada_lovelace", avatarUrl: "https://photos.test/ada.jpg" },
+                    sidebar
+                })
+            )
+        );
+        assert.ok(
+            html.includes('src="https://photos.test/ada.jpg"'),
+            `Profile photo should render with sidebar=${sidebar}`
+        );
+    }
+});
+
 test("Sidebar renders navigation links and does not render theme select", () => {
     const html = renderToStaticMarkup(
         createElement(RouterWrapper, null, createElement(Sidebar, { activeHref: "/home" }))
