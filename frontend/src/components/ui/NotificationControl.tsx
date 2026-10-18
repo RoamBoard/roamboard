@@ -69,10 +69,6 @@ export default function NotificationControl({
 
     const activeUserIdRef = useRef<string | null>(initialRequests || initialError ? "initial-session" : null);
     const readVersionRef = useRef(0);
-    const activeUserIdRef = useRef<string | null>(
-        initialRequests || initialError ? "initial-session" : null
-    );
-    const readVersionRef = useRef(0);
     const requestVersionRef = useRef(0);
 
     useEffect(() => {
