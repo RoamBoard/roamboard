@@ -23,6 +23,7 @@ type Props = {
     stats: ProfileStats | null;
     isOwner?: boolean;
     friendshipStatus?: FriendshipStatus;
+    initialConfirmUnfriendOpen?: boolean;
 };
 
 function getNameStyle(nameStr: string): string {
@@ -47,12 +48,18 @@ function useOptionalRouter() {
     }
 }
 
-export default function ProfileHero({ profile, stats, isOwner = true, friendshipStatus }: Props) {
+export default function ProfileHero({
+    profile,
+    stats,
+    isOwner = true,
+    friendshipStatus,
+    initialConfirmUnfriendOpen = false
+}: Props) {
     const router = useOptionalRouter();
     const [actionStatus, setActionStatus] = useState<FriendshipStatus | null>(null);
     const [actionError, setActionError] = useState<string | null>(null);
     const [pending, setPending] = useState(false);
-    const [confirmUnfriendOpen, setConfirmUnfriendOpen] = useState(false);
+    const [confirmUnfriendOpen, setConfirmUnfriendOpen] = useState(initialConfirmUnfriendOpen);
 
     const [portraitFailed, setPortraitFailed] = useState(false);
 

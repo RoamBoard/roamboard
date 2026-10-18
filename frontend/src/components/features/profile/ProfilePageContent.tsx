@@ -66,24 +66,43 @@ function FriendAvatar({ friend }: { friend: FriendUser }) {
     return <UserRound size={28} strokeWidth={1.5} className="text-muted-foreground" />;
 }
 
-export default function ProfilePageContent() {
-    const [profile, setProfile] = useState<UserProfile | null>(null);
-    const [stats, setStats] = useState<ProfileStats | null>(null);
-    const [published, setPublished] = useState<PublishedBoardSummary[]>([]);
+export type ProfilePageContentProps = {
+    initialProfile?: UserProfile | null;
+    initialStats?: ProfileStats | null;
+    initialPublished?: PublishedBoardSummary[];
+    initialFriends?: FriendUser[];
+    initialDestinations?: MapDestination[];
+    initialConfirmUnfriendTarget?: FriendUser | null;
+    initialSectionErrors?: string[];
+};
+
+export default function ProfilePageContent({
+    initialProfile = null,
+    initialStats = null,
+    initialPublished = [],
+    initialFriends = [],
+    initialDestinations = [],
+    initialConfirmUnfriendTarget = null,
+    initialSectionErrors = []
+}: ProfilePageContentProps = {}) {
+    const [profile, setProfile] = useState<UserProfile | null>(initialProfile);
+    const [stats, setStats] = useState<ProfileStats | null>(initialStats);
+    const [published, setPublished] = useState<PublishedBoardSummary[]>(initialPublished);
     const [savedStore] = useState(() => createSavedBoardsStore(3));
     const saved = useSyncExternalStore(savedStore.subscribe, savedStore.getSnapshot, savedStore.getSnapshot);
-    const [friends, setFriends] = useState<FriendUser[]>([]);
-    const [confirmUnfriendTarget, setConfirmUnfriendTarget] = useState<FriendUser | null>(null);
+    const [friends, setFriends] = useState<FriendUser[]>(initialFriends);
+    const [confirmUnfriendTarget, setConfirmUnfriendTarget] = useState<FriendUser | null>(initialConfirmUnfriendTarget);
     const [unfriendError, setUnfriendError] = useState<string | null>(null);
     const [unfriendLoading, setUnfriendLoading] = useState(false);
-    const [destinations, setDestinations] = useState<MapDestination[]>([]);
+    const [destinations, setDestinations] = useState<MapDestination[]>(initialDestinations);
     const [searchOpen, setSearchOpen] = useState(false);
     const [error, setError] = useState("");
-    const [sectionErrors, setSectionErrors] = useState<string[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [sectionErrors, setSectionErrors] = useState<string[]>(initialSectionErrors);
+    const [loading, setLoading] = useState(!initialProfile);
     const [retry, setRetry] = useState(0);
 
     useEffect(() => {
+        if (initialProfile && retry === 0) return;
         const request = { active: true };
         void loadProfile()
             .then(async (user) => {
@@ -105,6 +124,7 @@ export default function ProfilePageContent() {
                 if (results[3].status === "fulfilled") setDestinations(results[3].value);
                 else failures.push("The visited map could not be loaded.");
                 if (results[4].status === "fulfilled") setFriends(results[4].value);
+                else failures.push("Travel pals could not be loaded.");
                 setSectionErrors(failures);
             })
             .catch((caught: unknown) => {
@@ -123,7 +143,7 @@ export default function ProfilePageContent() {
         return () => {
             request.active = false;
         };
-    }, [retry, savedStore]);
+    }, [initialProfile, retry, savedStore]);
 
     function reload() {
         setLoading(true);
@@ -193,7 +213,21 @@ export default function ProfilePageContent() {
                             </div>
                         </div>
 
-                        {friends.length === 0 ? (
+                        {sectionErrors.some((message) => message.startsWith("Travel pals")) ? (
+                            <div
+                                role="alert"
+                                className="border-line bg-background text-12 text-muted-foreground rounded-[2px] border p-8 text-center font-medium"
+                            >
+                                <p className="mb-2 text-red-500">Travel pals could not be loaded.</p>
+                                <button
+                                    type="button"
+                                    onClick={reload}
+                                    className="text-foreground cursor-pointer font-medium underline underline-offset-4 hover:opacity-80"
+                                >
+                                    Retry
+                                </button>
+                            </div>
+                        ) : friends.length === 0 ? (
                             <div className="border-line bg-background rounded-[2px] border p-8 text-center sm:p-10">
                                 <div className="bg-muted text-muted-foreground mx-auto mb-3 flex size-12 items-center justify-center rounded-full">
                                     <UserRound size={22} strokeWidth={1.5} />
@@ -363,7 +397,15 @@ export default function ProfilePageContent() {
                 open={searchOpen}
                 onClose={() => setSearchOpen(false)}
                 onFriendAdded={() => {
-                    void loadFriends().then(setFriends);
+                    void loadFriends()
+                        .then(setFriends)
+                        .catch(() => {
+                            setSectionErrors((prev) =>
+                                prev.includes("Travel pals could not be loaded.")
+                                    ? prev
+                                    : [...prev, "Travel pals could not be loaded."]
+                            );
+                        });
                 }}
             />
             {confirmUnfriendTarget && (

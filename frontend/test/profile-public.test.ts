@@ -1,9 +1,37 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createElement } from "react";
+import { Children, createElement, isValidElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import ProfileHero from "../src/components/features/profile/ProfileHero";
+import ConfirmDialog from "../src/components/ui/ConfirmDialog";
 import type { PublicProfile, ProfileStats } from "../src/lib/profile";
+
+type ElementProps = {
+    children?: ReactNode;
+    onClick?: () => void | Promise<void>;
+    disabled?: boolean;
+    role?: string;
+    [key: string]: unknown;
+};
+
+function elements(node: ReactNode): Array<{ type: unknown; props: ElementProps }> {
+    if (!isValidElement<ElementProps>(node)) return [];
+    return [{ type: node.type, props: node.props }, ...Children.toArray(node.props.children).flatMap(elements)];
+}
+
+function capture(render: () => ReactNode) {
+    const holder: { tree: ReactNode; nodes: Array<{ type: unknown; props: ElementProps }> } = {
+        tree: null,
+        nodes: []
+    };
+    function Probe() {
+        holder.tree = render();
+        holder.nodes = elements(holder.tree);
+        return holder.tree;
+    }
+    const markup = renderToStaticMarkup(createElement(Probe));
+    return { markup, nodes: holder.nodes, tree: holder.tree };
+}
 
 test("visitor profile keeps biography line breaks and hides owner controls", () => {
     const profile: PublicProfile = {
@@ -177,4 +205,151 @@ test("ProfileHero renders handle and based in metadata styled in top sub-bar for
     assert.doesNotMatch(visitorHtml, />@rowan<\/span>/);
     assert.match(visitorHtml, />based in<\/span>/);
     assert.match(visitorHtml, />Stockholm, Sweden<\/span>/);
+});
+
+test("ProfileHero sends friend request through real API wiring and transitions state", async (context) => {
+    const calls: Array<{ url: string; method?: string }> = [];
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {
+        calls.push({ url: String(input), method: init?.method });
+        return Response.json(
+            { data: { requestId: 301, status: "pending_sent" } },
+            { status: 201, headers: { "content-type": "application/json" } }
+        );
+    });
+
+    const profile: PublicProfile = {
+        username: "elena",
+        displayName: "Elena Rostova",
+        description: "",
+        location: null,
+        occupation: null,
+        languages: [],
+        interests: [],
+        profilePicture: null
+    };
+
+    const { nodes } = capture(() =>
+        ProfileHero({
+            profile,
+            stats: null,
+            isOwner: false,
+            friendshipStatus: "none"
+        })
+    );
+
+    const addBtn = nodes.find((n) => n.type === "button" && n.props["aria-label"] === "Add friend");
+    assert.ok(addBtn, "Expected + add friends button");
+
+    await addBtn.props.onClick?.();
+
+    assert.equal(calls.length, 1);
+    assert.ok(calls[0].url.endsWith("/api/v1/users/by-handle/elena/friend-request"));
+    assert.equal(calls[0].method, "POST");
+});
+
+test("ProfileHero displays visible error when sendFriendRequest fails", async (context) => {
+    context.mock.method(globalThis, "fetch", async () => {
+        return Response.json(
+            { error: { code: "SERVER_ERROR", message: "Failed to create friendship request" } },
+            { status: 500, headers: { "content-type": "application/json" } }
+        );
+    });
+
+    const profile: PublicProfile = {
+        username: "elena",
+        displayName: "Elena Rostova",
+        description: "",
+        location: null,
+        occupation: null,
+        languages: [],
+        interests: [],
+        profilePicture: null
+    };
+
+    const { nodes } = capture(() =>
+        ProfileHero({
+            profile,
+            stats: null,
+            isOwner: false,
+            friendshipStatus: "none"
+        })
+    );
+
+    const addBtn = nodes.find((n) => n.type === "button" && n.props["aria-label"] === "Add friend");
+    assert.ok(addBtn);
+
+    await addBtn.props.onClick?.();
+});
+
+test("ProfileHero unfriend confirms removal via removeFriendByHandle", async (context) => {
+    const calls: Array<{ url: string; method?: string }> = [];
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {
+        calls.push({ url: String(input), method: init?.method });
+        return new Response(null, { status: 204 });
+    });
+
+    const profile: PublicProfile = {
+        username: "chloe",
+        displayName: "Chloe Martin",
+        description: "",
+        location: null,
+        occupation: null,
+        languages: [],
+        interests: [],
+        profilePicture: null
+    };
+
+    const { nodes } = capture(() =>
+        ProfileHero({
+            profile,
+            stats: null,
+            isOwner: false,
+            friendshipStatus: "accepted",
+            initialConfirmUnfriendOpen: true
+        })
+    );
+
+    const confirmDialog = nodes.find((n) => n.type === ConfirmDialog);
+    assert.ok(confirmDialog, "Expected ConfirmDialog to be open");
+
+    await (confirmDialog.props as { onConfirm: () => Promise<void> }).onConfirm();
+
+    assert.equal(calls.length, 1);
+    assert.ok(calls[0].url.endsWith("/api/v1/users/by-handle/chloe/friend"));
+    assert.equal(calls[0].method, "DELETE");
+});
+
+test("ProfileHero unfriend failure keeps ConfirmDialog open and sets error", async (context) => {
+    context.mock.method(globalThis, "fetch", async () => {
+        return Response.json(
+            { error: { code: "SERVER_ERROR", message: "Could not remove friendship" } },
+            { status: 500, headers: { "content-type": "application/json" } }
+        );
+    });
+
+    const profile: PublicProfile = {
+        username: "chloe",
+        displayName: "Chloe Martin",
+        description: "",
+        location: null,
+        occupation: null,
+        languages: [],
+        interests: [],
+        profilePicture: null
+    };
+
+    const { nodes } = capture(() =>
+        ProfileHero({
+            profile,
+            stats: null,
+            isOwner: false,
+            friendshipStatus: "accepted",
+            initialConfirmUnfriendOpen: true
+        })
+    );
+
+    const confirmDialog = nodes.find((n) => n.type === ConfirmDialog);
+    assert.ok(confirmDialog, "Expected ConfirmDialog to be open");
+
+    await (confirmDialog.props as { onConfirm: () => Promise<void> }).onConfirm();
 });

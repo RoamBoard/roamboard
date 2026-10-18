@@ -531,6 +531,53 @@ test("ConfirmDialog renders error alert and disables action buttons when loading
     assert.equal(disabledButtons.length, 2);
 });
 
+test("FindFriendsDialog separates search error from empty state and offers retry button", () => {
+    const { markup, nodes } = capture(() =>
+        FindFriendsDialog({
+            open: true,
+            onClose: () => {},
+            initialResults: [],
+            initialError: "Failed to search users. Please try again."
+        })
+    );
+
+    assert.ok(markup.includes("Failed to search users. Please try again."));
+    assert.ok(markup.includes("Retry search"));
+    assert.ok(!markup.includes("No other travelers found yet."));
+
+    const retryBtn = nodes.find(
+        (n) => n.type === "button" && n.props.children === "Retry search" && typeof n.props.onClick === "function"
+    );
+    assert.ok(retryBtn, "Expected retry search button");
+});
+
+test("SocialFriendsContent refreshData queries loadFriends, loadFriendsBoards, and loadFriendsActivity", async (context) => {
+    const calls: Array<{ url: string; method?: string }> = [];
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {
+        calls.push({ url: String(input), method: init?.method });
+        return Response.json({ data: [] }, { headers: { "content-type": "application/json" } });
+    });
+
+    const { nodes } = capture(() =>
+        SocialFriendsContent({
+            initialFriends: [],
+            initialBoards: [],
+            initialActivities: [],
+            initialFriendsError: "Failed to load your travel pals."
+        })
+    );
+
+    const retryAllBtn = nodes.find((n) => n.type === "button" && n.props.children === "Retry all");
+    assert.ok(retryAllBtn, "Expected Retry all button");
+
+    await retryAllBtn.props.onClick?.();
+
+    assert.equal(calls.length, 3);
+    assert.ok(calls.some((c) => c.url.endsWith("/api/v1/users/me/friends")));
+    assert.ok(calls.some((c) => c.url.endsWith("/api/v1/users/me/friends/boards?limit=12")));
+    assert.ok(calls.some((c) => c.url.endsWith("/api/v1/users/me/friends/activity?limit=10")));
+});
+
 test("searchUsers queries backend with query string and limit, stripping leading at-symbol", async (context) => {
     const calls: Array<{ url: string; init?: RequestInit }> = [];
     context.mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {

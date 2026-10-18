@@ -20,6 +20,7 @@ export type FindFriendsDialogProps = {
     onFriendAdded?: () => void;
     initialResults?: UserSearchResult[];
     initialConfirmUnfriendUser?: UserSearchResult | null;
+    initialError?: string | null;
 };
 
 export default function FindFriendsDialog({
@@ -27,17 +28,19 @@ export default function FindFriendsDialog({
     onClose,
     onFriendAdded,
     initialResults,
-    initialConfirmUnfriendUser = null
+    initialConfirmUnfriendUser = null,
+    initialError = null
 }: FindFriendsDialogProps) {
     const [query, setQuery] = useState("");
     const [results, setResults] = useState<UserSearchResult[]>(initialResults ?? []);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(initialError);
     const [actionState, setActionState] = useState<Record<string, "pending" | "done">>({});
     const [confirmUnfriendUser, setConfirmUnfriendUser] = useState<UserSearchResult | null>(initialConfirmUnfriendUser);
     const [unfriendError, setUnfriendError] = useState<string | null>(null);
     const [unfriendLoading, setUnfriendLoading] = useState(false);
     const [failedAvatars, setFailedAvatars] = useState<Record<string, boolean>>({});
+    const [searchRetry, setSearchRetry] = useState(0);
     const inputRef = useRef<HTMLInputElement>(null);
     const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -45,6 +48,7 @@ export default function FindFriendsDialog({
         setQuery("");
         setResults(initialResults ?? []);
         setError(null);
+        setSearchRetry(0);
         setUnfriendError(null);
         setUnfriendLoading(false);
         setActionState({});
@@ -61,7 +65,7 @@ export default function FindFriendsDialog({
 
     useEffect(() => {
         if (!open) return;
-        if (initialResults && !query.trim()) return;
+        if (initialResults && !query.trim() && searchRetry === 0) return;
         const trimmed = query.trim();
         const request = { active: true };
 
@@ -95,7 +99,7 @@ export default function FindFriendsDialog({
             request.active = false;
             clearTimeout(handle);
         };
-    }, [query, open, initialResults]);
+    }, [query, open, initialResults, searchRetry]);
 
     if (!open) return null;
 
@@ -207,6 +211,17 @@ export default function FindFriendsDialog({
                         <p className="text-12 text-muted-foreground font-body py-8 text-center">
                             {query.trim() ? "Searching travelers…" : "Loading travelers…"}
                         </p>
+                    ) : error && results.length === 0 ? (
+                        <div role="alert" className="py-8 text-center">
+                            <p className="text-12 font-body mb-2 text-red-500">{error}</p>
+                            <button
+                                type="button"
+                                onClick={() => setSearchRetry((v) => v + 1)}
+                                className="text-12 text-foreground cursor-pointer font-medium underline underline-offset-4 hover:opacity-80"
+                            >
+                                Retry search
+                            </button>
+                        </div>
                     ) : results.length === 0 ? (
                         <div className="py-8 text-center">
                             <p className="text-12 text-muted-foreground font-body">
