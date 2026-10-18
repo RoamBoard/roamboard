@@ -61,8 +61,8 @@ export function BoardCardPhoto({
     sizes: string;
     onError?: () => void;
 }) {
+    // Direct delivery retains API cookies; keep V4's error callback and the shared crop/position wrapper.
     const Photo = image.src.startsWith("library:") ? LibraryImage : Image;
-
     return (
         <div className={`relative overflow-hidden ${className}`}>
             <div
@@ -84,7 +84,7 @@ export function BoardCardPhoto({
                     alt={image.alt}
                     fill
                     sizes={sizes}
-                    unoptimized={!image.src.startsWith("https://images.unsplash.com/")}
+                    unoptimized={image.unoptimized ?? !image.src.startsWith("https://images.unsplash.com/")}
                     className="object-cover"
                     style={{ objectPosition: image.position ?? "center" }}
                 />

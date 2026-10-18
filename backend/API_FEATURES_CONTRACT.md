@@ -20,13 +20,99 @@ these tools. An unapproved mutation Origin returns `403 ORIGIN_NOT_ALLOWED`.
 
 ## Provider and Home routes
 
+### City tips and selected-place details
+
+The guide's optional Getting around tip keeps up to two source sentences and 40 words. It is read from the matched city's plain-text Wikivoyage transport section. Advice without fare amounts is preferred. Missing text is `cityTip: null`; failed reads also add `cityTip` to `unavailable`.
+
+`GET /api/v1/destinations/place-details` is public and read-only. It accepts the guide's city identity plus `placeId` (1-300 characters), with no `page` or `limit`. It verifies membership in the city's canonical sightseeing list before reading the source page. Success is `{ data: { placeId, description, sourceUrl, image, unavailable } }`. Descriptions keep at most two source sentences and 60 words. `image` is null or `{ url, alt, width, height, author, sourceUrl, licenseName, licenseUrl }`, from the listing's Commons image reference. Original raster images must have a long edge of at least 800 pixels; thumbnails request up to 1200 pixels without upscaling. Credit the author and link the source/license. Missing text or photos return null; upstream component failures also add `description` or `image` to `unavailable`, independently. Invalid queries return 400, foreign/missing listing IDs 404, unavailable canonical sight lists 429/502. No Board or image searches run on detail reads.
+
+TextExtracts returns the numbered plain-text listing lines, so no HTML parser dependency is needed. Full extracts require a single matched page ID. Plain pages and photo metadata use bounded one-hour caches and in-flight sharing; partial failures remain retryable. Descriptions and photos are display-only; Board links carry the original sight identity and coordinates. No database migration is required.
+
+### City destination guides
+
+`GET /api/v1/destinations/guide` is public and accepts `name` (trimmed, 1-100 characters), ISO alpha-3 `country`,
+finite `latitude` and `longitude`, optional `page` (default 1) and `limit` (default 6, maximum 20). Unknown fields,
+blank coordinates and invalid input return `400 INVALID_REQUEST`.
+
+The data envelope contains `destination: { name, country, countryCode, latitude, longitude }`,
+`article: null | { title, description, url }`, `cityTip: null | { title, text, url }`, up to two distinct landscape Unsplash `images` using the existing
+provider photo fields, `places`, `boards`, `page`, `hasMore` and `unavailable`. The latter contains failed components from
+`description`, `images`, `boards`, `places`, `cityTip`; independent failures still return 200 with the other content. An unmatched
+article or an empty successful search is not a failure. The Wikivoyage guide excerpt keeps at most three opening
+sentences and 80 words, preferring complete sentences. An oversized first sentence is cut with an ellipsis.
+The frontend links to the full article and displays text-license attribution. Home's separate context lead is unchanged.
+
+`places` contains up to ten Wikivoyage sightseeing listings with `id`, `name`, `address`, `latitude`, `longitude`
+and `provider: "wikivoyage"`. Read the matched city's `see` map group in guide order, keeping distinct named Point
+listings within 25 km. If the city page has no direct listings, read up to ten linked district pages in one batch
+and take turns between their listings. Names are plain text. Same-name cities are separated by title and location.
+These are travel-guide selections, not a measured popularity ranking. Empty results stay empty; failures return
+`places: []` with `places` in `unavailable`. The source ID is `wikivoyage:<pageId>:<normalized name>`; the frontend
+derives a source-page link and credits Wikivoyage contributors under CC BY-SA 4.0, when displaying a sight.
+
+`POST /api/v1/destinations/match-place` accepts `{ name, city, country, latitude, longitude }`, requires frontend
+Origin and allows anonymous use. Search Mapbox by name, city, country and proximity; keep only a same-name,
+same-country match within 500 m. Return `{ data: { latitude, longitude } }` or `{ data: null }` for no match or
+missing configuration. Provider failures return safe 502/429 responses. Only selecting a sight triggers a match.
+Its coordinates affect the temporary marker; Board links keep the original travel-guide data.
+Responses use `Cache-Control: no-store`, and Mapbox results are never saved in PostgreSQL.
+
+The destination page opens the Board creator with the selected travel-guide sight. It has no save-for-later action.
+The former `/destinations/resolve-place` endpoint was removed; Mapbox matching is display-only.
+
+Wikivoyage searches city and country and examines up to five candidates. A candidate must match the city name
+(ignoring accents and geographic qualifiers), have primary Earth coordinates within 50 km, contain opening text,
+and not be a disambiguation page. The nearest eligible candidate supplies the article. The adapter uses
+[coordinates](https://www.mediawiki.org/wiki/Extension:GeoData#prop=coordinates),
+[page properties](https://www.mediawiki.org/wiki/API:Pageprops) and
+[plain-text opening extracts](https://www.mediawiki.org/wiki/Extension:TextExtracts#API).
+
+Board summaries contain numeric `boardId`, actual author `username`, `title`, nullable `description`, `durationDays`,
+tag names, up to six ordered activity titles and up to six image summaries. Images have `url` and `alt`, with
+photographer/source fields for external photos. The chosen Board cover is first, followed by remaining saved
+images and external activity photos. Image URLs use the existing protected content route.
+
+Each request queries only published, public Boards with an activity location in the same country within 25 km
+of the selected centre. Country matching accepts stored ISO codes and the English country name. Each Board is
+returned once, ordered by updated time descending and then Board ID descending. Signed-in ownership or membership
+does not broaden discovery. Board results and visibility are never cached; HTTP responses use `Cache-Control: no-store`.
+
+Wikivoyage introductions, Unsplash photos and Wikivoyage sights use separate bounded memory caches of 64 city identities each for one hour, including empty
+successful results. Concurrent reads share pending provider requests. Failed requests are removed from the cache,
+and a page read does not retry upstream automatically. Provider operations retain PostgreSQL quota reservations
+and response-feedback observers. The cache clears on restart and does not replace shared quotas. Home's
+`/destinations/context` keeps its existing response and behavior. The request schemas and response types live in `src/features/destinations/`.
+
+Wikivoyage requests share the existing `wikipedia.action_api` budget. Each HTTP request, including the optional
+district batch, reserves quota and forwards response feedback. Selected-sight matching uses `mapbox.search_box`.
+Existing limits and counters are retained.
+
+The optional database regression is `npx tsx --test integration/destination-guide.db.ts` from `backend/`.
+It reads `TEST_DATABASE_URL` or `DATABASE_URL`, puts fixture inserts and repository reads on one transaction client,
+and rolls back afterward. Explicit identity values avoid advancing shared database sequences. It checks nearby
+public filtering, same-country matching, stable pagination, duplicate locations, image order and visibility changes.
+
+### Retained saved-place API (no frontend use)
+
+No current frontend page calls these routes. The destination guide supports browsing sights and starting a Board from a sight. Account saving is undecided; these backend routes and existing records are retained until the team decides whether to remove them.
+
+`GET /api/v1/saved-places` lists only the session owner's saved locations, newest first. `POST` accepts
+`{ id, name, address, latitude, longitude, city, country }` and upserts that owner's place identifier; a repeat save
+retains `savedAt`. Both return the normal data envelope; records include server-generated `savedAt`.
+`DELETE /api/v1/saved-places/:placeId` removes only the caller's record and returns 204 even if already absent.
+All require a session, writes require frontend Origin, and unknown body fields are rejected. Anonymous access
+returns 401, wrong Origin 403, invalid input 400. No client user ID is accepted. Migration 008 adds `saved_place`,
+separate from Google Place references and saved Board activities.
+
+### Existing provider and Home routes
+
 The paths below are relative to `/api/v1/providers` and return the existing
 frontend types from `frontend/src/lib/providers.ts`.
 
 | Method   | Path                            | Input and behavior                                                                                                             |
 | -------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | GET      | `/config`                       | Configuration booleans, Google billing notice and optional public cloud name; no keys or Mapbox token                          |
-| GET      | `/locations/search`             | `q`, optional `limit`, paired `latitude`/`longitude`; Geoapify saved-place results with soft proximity bias                    |
+| GET      | `/locations/search`             | `q`, optional `limit`; Geoapify results for confirmed Board activity locations                                                 |
 | GET      | `/locations/destinations`       | ISO `country`, `city`, optional `limit`; matching Geoapify cities                                                              |
 | GET      | `/locations/reverse`            | `latitude`, `longitude`; Geoapify area/city and identified POI details for user-confirmed photo suggestions                    |
 | POST     | `/mapbox/map-session`           | Reserve a map load and return `{ publicToken }`; only a `pk.` token                                                            |

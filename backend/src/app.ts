@@ -23,6 +23,8 @@ import { createSearchModule } from "./features/search/search.module.js";
 import type { SearchProvider, SearchRepository } from "./features/search/search.types.js";
 import { createLibraryModule } from "./features/image-library/image-library.module.js";
 import type { LibraryProvider, LibraryRepository } from "./features/image-library/image-library.types.js";
+import { createSavedPlacesModule } from "./features/saved-places/saved-places.module.js";
+import type { SavedPlacesRepository } from "./features/saved-places/saved-places.types.js";
 
 export interface AppOptions extends AuthModuleOptions {
     smartCreateResolver?: SmartCreateResolver;
@@ -35,6 +37,7 @@ export interface AppOptions extends AuthModuleOptions {
     usersRepository?: UsersRepository;
     searchRepository?: SearchRepository;
     searchProvider?: SearchProvider;
+    savedPlacesRepository?: SavedPlacesRepository;
 }
 
 export function createApp(options: AppOptions = {}): Express {
@@ -89,6 +92,7 @@ export function createApp(options: AppOptions = {}): Express {
     app.use("/api/v1/users", users.router);
     app.use("/api/v1", users.publicRouter);
     app.use("/api/v1/search", search.router);
+    app.use("/api/v1/saved-places", createSavedPlacesModule(attachUser, options.savedPlacesRepository).router);
     app.use("/api/v1", boards.router);
     app.use("/api/v1", images.router);
     app.use(

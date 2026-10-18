@@ -51,6 +51,8 @@ independent local database. The shared Azure database already has the consolidat
 schema, image-library 005, and reconciled profile changes in 006; do not rerun those
 files there. Migration 007 is applied; do not rerun it. Destination migration 008 and photo presentation migration 009 are also recorded as applied; do not rerun them. Guest migration 010 remains pending on Azure. See
 [the migration log](db/MIGRATION_LOG.md) for the remaining profile column-length difference.
+The shared database also has the saved-place table from the file originally named
+`005_saved_places.sql`, now `008_saved_places.sql`; do not rerun it there.
 Integration tests apply the files only inside temporary test schemas.
 
 `npm run dev` selects `NODE_ENV=development`. Cloudinary lab management, Google
@@ -179,8 +181,7 @@ follow [the shared database deployment guide](deploy/README.md). The existing
    punctuation, URL-encode it in `DATABASE_URL`.
 3. Apply unapplied migrations in order: `001_initial.sql`, `002_auth_session.sql`,
    `003_board_creator.sql`, `004_api_features.sql`, `005_image_library.sql`,
-   `006_profile.sql`, `007_profile_tag_catalog.sql`, `008_board_destination.sql`,
-   `009_image_presentation.sql`, and `010_guest_accounts.sql`. Apply only missing migrations.
+   `006_profile.sql`, `007_profile_tag_catalog.sql`, and `008_saved_places.sql`. Apply only missing migrations.
    The shared Azure database already has 004, 005, and the reconciled profile changes
    from 006; do not rerun them there. Migration 007 is also applied. Destination migration 008 and photo presentation migration 009 are also recorded as applied. Apply only guest migration 010 there after a fresh backup is confirmed.
    From `backend/`, for an independent database missing 006:

@@ -309,7 +309,10 @@ test("real keyboard handlers wrap selection, close suggestions, and form submiss
     const url = new URL(view.navigations[0], "http://localhost:3000");
     assert.equal(url.pathname, "/discover/destinations/paris");
     assert.deepEqual(Object.fromEntries(url.searchParams), {
-        country: "USA"
+        name: "Paris",
+        country: "USA",
+        latitude: "33.6609",
+        longitude: "-95.5555"
     });
 });
 
@@ -328,7 +331,14 @@ test("real option and suggested-link click handlers preserve the selected destin
     await respond(view.requests[0], { data: [destination("kyoto-choice", "Kyoto", "Japan", "JPN")] });
     control(view.tree(), (props) => props.id === "destination-option-0").onClick!(click());
     await settle();
-    assert.equal(view.navigations[0], "/discover/destinations/kyoto");
+    const selectedCity = new URL(view.navigations[0], "http://localhost:3000");
+    assert.equal(selectedCity.pathname, "/discover/destinations/kyoto");
+    assert.deepEqual(Object.fromEntries(selectedCity.searchParams), {
+        name: "Kyoto",
+        country: "JPN",
+        latitude: "35.0116",
+        longitude: "135.7681"
+    });
     view.type("");
     control(view.tree(), (props) => props.href === "/discover/destinations/copenhagen").onClick!(click(true));
     assert.equal(view.navigations.length, 1, "Modified link activation must retain native browser behavior");
@@ -337,74 +347,17 @@ test("real option and suggested-link click handlers preserve the selected destin
     assert.equal(view.navigations[1], "/discover/destinations/copenhagen");
 });
 
+// Cities now open from the selected search result, without a second primary-city lookup.
 for (const activation of ["submit", "option"] as const) {
-    test(`Stockholm ${activation} navigates once to a clean URL directly from production search controls`, async (context) => {
-        const view = fixture(context);
-        view.type("Stockholm");
-        view.startRequest();
-        await respond(view.requests[0], {
-            data: [
-                {
-                    ...destination("dXJuOm1ieHBsYzpTdG9ja2hvbG0", "Stockholm", "Sweden", "SWE"),
-                    latitude: 59.324337,
-                    longitude: 18.06902
-                }
-            ]
-        });
-        if (activation === "submit") view.submit();
-        else
-            control(view.tree(), (props) => props.id === "destination-option-0").onClick!({
-                button: 0,
-                metaKey: false,
-                ctrlKey: false,
-                shiftKey: false,
-                altKey: false,
-                preventDefault() {}
-            });
-        await settle();
-        assert.deepEqual(view.navigations, ["/discover/destinations/stockholm"]);
-        assert.equal(new URL(view.navigations[0], "http://localhost:3000").search, "");
-        assert.equal(view.requests.length, 1);
-        await assert.rejects(DestinationRoute({ params: Promise.resolve({ slug: "stockholm" }) }), /404/);
-    });
-}
-
-test("a stalled Stockholm primary lookup cannot leave production search navigation pending indefinitely", async (context) => {
-    const view = fixture(context);
-    const selected = {
-        ...destination("dXJuOm1ieHBsYzpTdG9ja2hvbG0", "Stockholm", "Sweden", "SWE"),
-        latitude: 59.324337,
-        longitude: 18.06902
-    };
-    view.type("Stockh");
-    view.startRequest();
-    await respond(view.requests[0], { data: [selected] });
-    view.submit();
-    assert.equal(view.requests.length, 2);
-    assert.equal(view.requests[1].url.searchParams.get("q"), "Stockholm");
-    context.mock.timers.tick(999);
-    await settle();
-    assert.deepEqual(view.navigations, []);
-    assert.equal(view.requests[1].init?.signal?.aborted, false);
-    context.mock.timers.tick(1);
-    await settle();
-    assert.equal(view.requests[1].init?.signal?.aborted, true);
-    assert.deepEqual(view.navigations, ["/discover/destinations/stockholm"]);
-    assert.equal(view.requests.length, 2);
-    await respond(view.requests[1], { data: [{ ...selected, id: "late-secondary", countryCode: "USA" }] });
-    assert.deepEqual(view.navigations, ["/discover/destinations/stockholm"]);
-});
-
-for (const activation of ["submit", "option"] as const) {
-    for (const outcome of ["primary", "nearby-provider-identity", "empty", "network"] as const) {
-        test(`Stockholm prefix ${activation} uses a single clean navigation after a ${outcome} primary lookup`, async (context) => {
+    for (const query of ["Stockholm", "Stockh"]) {
+        test(`city ${activation} opens the selected dynamic guide from "${query}"`, async (context) => {
             const view = fixture(context);
             const selected = {
                 ...destination("dXJuOm1ieHBsYzpTdG9ja2hvbG0", "Stockholm", "Sweden", "SWE"),
                 latitude: 59.324337,
                 longitude: 18.06902
             };
-            view.type("Stockh");
+            view.type(query);
             view.startRequest();
             await respond(view.requests[0], { data: [selected] });
             if (activation === "submit") view.submit();
@@ -417,22 +370,23 @@ for (const activation of ["submit", "option"] as const) {
                     altKey: false,
                     preventDefault() {}
                 });
-            assert.equal(view.navigations.length, 0, "Wait for primary lookup before navigating");
-            assert.equal(view.requests.length, 2);
-            assert.equal(view.requests[1].url.searchParams.get("q"), "Stockholm");
-            if (outcome === "network") {
-                view.requests[1].response.reject(new TypeError("Offline"));
-                await settle();
-            } else {
-                const primary =
-                    outcome === "nearby-provider-identity"
-                        ? { ...selected, id: "replacement-provider-id", latitude: 59.33, longitude: 18.07 }
-                        : selected;
-                await respond(view.requests[1], { data: outcome === "empty" ? [] : [primary] });
-            }
-            assert.deepEqual(view.navigations, ["/discover/destinations/stockholm"]);
-            assert.equal(new URL(view.navigations[0], "http://localhost:3000").search, "");
-            await assert.rejects(DestinationRoute({ params: Promise.resolve({ slug: "stockholm" }) }), /404/);
+            await settle();
+            assert.equal(view.requests.length, 1, "Selecting a city must not repeat the provider search");
+            assert.equal(view.navigations.length, 1);
+            const url = new URL(view.navigations[0], "http://localhost:3000");
+            assert.equal(url.pathname, "/discover/destinations/stockholm");
+            assert.deepEqual(Object.fromEntries(url.searchParams), {
+                name: "Stockholm",
+                country: "SWE",
+                latitude: "59.324337",
+                longitude: "18.06902"
+            });
+            assert.ok(
+                await DestinationRoute({
+                    params: Promise.resolve({ slug: "stockholm" }),
+                    searchParams: Promise.resolve(Object.fromEntries(url.searchParams))
+                })
+            );
         });
     }
 }

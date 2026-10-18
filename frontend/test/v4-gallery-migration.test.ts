@@ -5,10 +5,10 @@ import { renderToStaticMarkup } from "react-dom/server";
 import BoardLibrary from "../src/components/features/boards/BoardLibrary";
 import SpatialGallery from "../src/components/features/boards/SpatialGallery";
 import { DestinationStories } from "../src/components/features/destinations/DestinationStories";
-import { destinationPages } from "../src/data/destination-atlas";
 import { mockBoardCollections } from "../src/data/my-board-collections";
 import type { BoardDocument, PublishedSummary } from "../src/lib/board-creator-api";
 import { toGalleryBoard } from "../src/lib/my-boards";
+import type { DestinationBoardSummary } from "../src/lib/destination-guides";
 
 function ownedBoard(boardId: number, visibility: BoardDocument["visibility"] = "public") {
     const summary: PublishedSummary = {
@@ -133,69 +133,107 @@ test("sample fallback and archive libraries never acquire owner controls, persis
     }
 });
 
-test("each destination story gallery uses V4 with whole-card selection and disclosure while retaining truthful sample status", () => {
-    for (const destination of destinationPages) {
-        const markup = renderToStaticMarkup(createElement(DestinationStories, { destination }));
-        requireV4(markup, destination.relatedBoards.length);
-        assert.match(markup, /Sample Boards · Illustrative content/);
-        assert.match(markup, /aria-roledescription="carousel"/);
-        assert.match(markup, /aria-label="Previous slide"/);
-        assert.match(markup, /aria-label="Next slide"/);
-        const selects = selectionButtons(markup);
-        assert.equal(selects.length, destination.relatedBoards.length);
-        assert.match(selects[0], /aria-pressed="true"/);
-        assert.match(selects[0], /tabindex="0"/);
-        for (const inactive of selects.slice(1)) {
-            assert.match(inactive, /aria-pressed="false"/);
-            assert.match(inactive, /tabindex="-1"/);
-        }
-        assert.equal((markup.match(/aria-expanded=/g) ?? []).length, 1);
-        assert.doesNotMatch(markup, />(?:Details|Close)(?:<|$)/);
-        assert.doesNotMatch(markup, /href="\/boards\/|aria-label="(?:Save|Unsave|Public|Friends|Restricted access) /);
-        assert.doesNotMatch(markup, /[\d,]+ saves/);
-        assert.match(markup, /aria-live="polite"/);
-        destination.relatedBoards.forEach((sample, index) => {
-            const image = sample.images[0];
-            assert.ok(image.credit);
-            assert.ok(image.sourceUrl);
-            assert.ok(markup.includes(image.credit), "The source photographer stays credited after migration");
-            const source = [...markup.matchAll(/<a\b[^>]*>/g)]
-                .map((match) => match[0])
-                .find((link) => link.includes(`href="${image.sourceUrl!.replaceAll("&", "&amp;")}"`));
-            assert.ok(source, "The original image source link must survive the V4 adapter");
-            if (index > 0) assert.match(source, /tabindex="-1"/, "Inactive photo credits stay out of the tab order");
-        });
-    }
-});
+function publicBoard(boardId: number, changes: Partial<DestinationBoardSummary> = {}): DestinationBoardSummary {
+    return {
+        boardId,
+        username: `public_author_${boardId}`,
+        title: `Public journey ${boardId}`,
+        description: "A traveller's persisted trip notes.",
+        durationDays: 3,
+        tags: ["Architecture", "Food"],
+        activityTitles: ["Riverside walk"],
+        images: [{ url: `/api/v1/images/${boardId}/content?variant=display&revision=4`, alt: "Chosen Board cover" }],
+        ...changes
+    };
+}
 
-test("destination navigation preserves an explicitly supplied real Board route and absent photos remain honest", () => {
-    const destination = destinationPages[0];
-    const first = destination.relatedBoards[0];
-    const markup = renderToStaticMarkup(
-        createElement(DestinationStories, {
-            destination: {
-                ...destination,
-                relatedBoards: [{ ...first, href: "/boards/771", images: [] }]
-            }
-        })
+function renderPublicBoards(boards: DestinationBoardSummary[], extra = {}) {
+    return renderToStaticMarkup(
+        createElement(DestinationStories, { name: "Kyoto", countryCode: "JPN", boards, ...extra })
     );
-    const rendered = requireV4(markup, 1);
+}
+
+test("public destination Boards render V4 metadata with spatial selection and a separate real open action", () => {
+    const boards = [publicBoard(771), publicBoard(772)];
+    const markup = renderPublicBoards(boards);
+    const rendered = requireV4(markup, boards.length);
+    assert.match(markup, /Boards in and around Kyoto/);
+    assert.match(markup, /aria-roledescription="carousel"/);
+    assert.match(markup, /aria-label="Previous slide"/);
+    assert.match(markup, /aria-label="Next slide"/);
+    const selects = selectionButtons(markup);
+    assert.equal(selects.length, 2);
+    assert.match(selects[0], /aria-pressed="true"/);
+    assert.match(selects[0], /tabindex="0"/);
+    assert.match(selects[1], /aria-pressed="false"/);
+    assert.match(selects[1], /tabindex="-1"/);
+    assert.equal((markup.match(/aria-expanded=/g) ?? []).length, 1);
     assert.match(markup, /href="\/boards\/771"/);
     assert.match(markup, /Open Board/);
-    assert.match(rendered[0], /No cover photo/);
-    assert.doesNotMatch(rendered[0], /<img\b|globe\.svg|aria-label="(?:Save|Unsave) /);
+    assert.doesNotMatch(markup, /href="\/boards\/772"/);
+    assert.doesNotMatch(markup, /Sample Boards|Illustrative content|>(?:Details|Close)(?:<|$)/);
+    assert.doesNotMatch(markup, /aria-label="(?:Save |Unsave |Public —|Friends —|Restricted access —)|[\d,]+ saves/);
+    assert.match(markup, /aria-live="polite"/);
+    for (const [index, card] of rendered.entries()) {
+        assert.match(card, new RegExp(boards[index].username));
+    }
+    assert.match(rendered[0], /persisted trip notes/);
+    assert.match(rendered[0], /Architecture/);
+    assert.match(rendered[0], /Food/);
+    assert.match(rendered[0], /3 days/);
+    assert.match(rendered[0], /data-photo-board-field="destination"[^>]*>Kyoto</);
+});
+
+test("public destination cards keep the chosen protected cover URL and never substitute an activity photo", () => {
+    const board = publicBoard(781);
+    board.images.push({ url: "https://images.unsplash.com/unselected-activity.jpg", alt: "Unselected activity" });
+    const markup = renderPublicBoards([board]);
+    assert.ok(
+        markup.includes(
+            `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/api/v1/images/781/content?variant=display&amp;revision=4`
+        )
+    );
+    assert.doesNotMatch(markup, /unselected-activity|_next\/image/);
+});
+
+test("public destination cards preserve live provider attribution and omit absent metadata rather than inventing it", () => {
+    const markup = renderPublicBoards([
+        publicBoard(791, {
+            description: null,
+            tags: [],
+            durationDays: 0,
+            images: [
+                {
+                    url: "https://images.unsplash.com/real-cover.jpg?ixid=original-tracking&w=640",
+                    alt: "Author's chosen station",
+                    photographer: "Actual Photographer",
+                    photographerUrl: "https://unsplash.com/@actual-photographer",
+                    sourceUrl: "https://unsplash.com/photos/real-cover"
+                }
+            ]
+        })
+    ]);
+    requireV4(markup, 1);
+    assert.match(markup, /src="https:\/\/images\.unsplash\.com\/real-cover\.jpg\?ixid=original-tracking/);
+    assert.match(markup, /Actual Photographer/);
+    assert.match(markup, /href="https:\/\/unsplash\.com\/@actual-photographer(?:[?"])/);
+    assert.match(markup, /href="https:\/\/unsplash\.com\/photos\/real-cover(?:[?"])/);
+    assert.doesNotMatch(markup, /0 saves|data-photo-board-field="(?:tags|duration)"|persisted trip notes/);
+});
+
+test("public destination Boards without saved covers have an honest V4 fallback and a real navigation target", () => {
+    const markup = renderPublicBoards([publicBoard(801, { images: [] })]);
+    const [card] = requireV4(markup, 1);
+    assert.match(markup, /href="\/boards\/801"/);
+    assert.match(card, /No cover photo/);
+    assert.doesNotMatch(card, /<img\b|globe\.svg|aria-label="(?:Save|Unsave) /);
 });
 
 test("empty libraries and galleries preserve their empty presentation and progressive-loading announcements", () => {
     assert.equal(renderToStaticMarkup(createElement(SpatialGallery, { boards: [] })), "");
-    assert.equal(
-        renderToStaticMarkup(
-            createElement(DestinationStories, {
-                destination: { ...destinationPages[0], relatedBoards: [] }
-            })
-        ),
-        ""
-    );
+    const emptyPublic = renderPublicBoards([]);
+    assert.match(emptyPublic, /No public Boards in and around Kyoto yet/);
+    assert.equal(cards(emptyPublic).length, 0);
     const empty = renderToStaticMarkup(createElement(BoardLibrary, { boards: [], title: "RECENTLY CREATED" }));
     assert.match(empty, /No recently created Boards match your search/);
     assert.equal(cards(empty).length, 0);

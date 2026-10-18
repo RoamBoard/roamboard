@@ -78,3 +78,13 @@ These improve information density or consistency and are **not required for the 
   exists and requires no new backend work.
 - Reassess search indexing and very large gallery virtualization once a real, larger public collection is connected.
   Current RoamFlow reserves image geometry and lazy-loads, but is not a virtualized list.
+
+## Destination-story integration after PR #80 reconciliation
+
+City guides now supply live public Board summaries through the existing credentialed
+`GET /api/v1/destinations/guide` frontend helper. V4 uses the real ID, username, description, tags, duration and first
+(chosen-cover) image. The parent hook retains pagination, de-duplication and retry; gallery selection is keyed by
+Board ID. Protected image URLs load directly, and supplied external cover credits remain visible for the selected Board.
+These summaries do not expose viewer ownership, saved membership or save counts. Account controls and totals remain
+absent; no extra document fetches, inferred ownership, endpoint changes or collaboration UI are added. Country-page
+and Discover/RoamFlow data-source limitations documented above are unchanged.

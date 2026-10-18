@@ -37,8 +37,8 @@ function controlTag(markup: string, selector: string): string {
     return tag;
 }
 
-test("new Boards place Smart Create after Board Basics and before the day planner", () => {
-    const markup = editorMarkup(NewBoardPage());
+test("new Boards place Smart Create after Board Basics and before the day planner", async () => {
+    const markup = editorMarkup(await NewBoardPage({ searchParams: Promise.resolve({}) }));
     assert.match(markup, /SMART CREATE/);
     assert.match(markup, /You can edit every suggestion/);
     assert.match(markup, /Choose photos/);

@@ -150,17 +150,9 @@ controlled test delays are isolated there. The independent Node tests in `destin
 readiness gates, failure, timeout, retry, cancellation and stale completion. Existing search presenter/API tests remain.
 All API clients use NEXT_PUBLIC_API_URL and session cookies.
 
-`/discover/destinations/[slug]` renders the reusable Destination Atlas for Kyoto, Paris and Copenhagen from
-`src/data/destination-atlas.ts`. These are editorial mock guides with local, credited photography, destination-specific
-compositions, seasonal notes, category-filtered places and native modal place details with Motion photo transitions.
-The horizontal exhibition uses native trackpad/touch/Shift-wheel scrolling, chapter links, arrows and a single position slider; long information panels scroll vertically. Mouse-wheel input is not remapped. The bright introduction preserves the circular Figma hero, with an entrance rotation and compact typography in its wider reading panel.
-Kyoto's opening copy, pins and tags are transcribed from Figma frame `55:1060`; other cities retain existing mock copy.
-The compact Credits disclosure retains destination navigation and photography attribution without an extra full-height panel.
-Place details support map/visitor links and previous/next browsing. Existing country destination routes remain available.
-Destination descriptions and guide records are structured local editorial data. Country pages currently await
-`getDiscoverBoardsByDestination`, but its public-Boards source is an asynchronous unavailable placeholder, not a live
-backend request. The existing destination-context API helper is not consumed by these routes. Search and the image
-catalog are genuinely network-backed; general dynamic destination content remains future work.
+`/discover/destinations/[slug]` renders city guides through the destination API. Home and Discover searches carry city name, country and coordinates in the URL. The guide uses short attributed Wikivoyage text, large credited Unsplash photos and fresh public Board summaries. It is one viewport tall, with native horizontal touch/keyboard navigation and wheel scrolling; no inner vertical panels or extra footer. Four full-viewport chapters contain the city artwork/introduction, places/map, public Board cards and closing creator. Native snapping and wheel/keyboard steps settle on whole chapters. On desktop the list and map share the second chapter; smaller screens switch between Places and Map within it. Loaded Boards remain reachable in a focusable horizontal gallery inside the third chapter. The list shows five sights per page (fewer only on the final page). Large arrow buttons and a page counter change pages; shorter screens use compact rows. Wikivoyage supplies travel-guide sights, including district listings when needed. The map loads when the guide opens and starts at the city even without sights. Selecting a sight tries to match it in Mapbox for temporary map display. A gray row and marker indicate selection; focus keeps the list/map section in view without revealing the neighboring dark Boards panel. Original travel-guide names and coordinates remain in Board links, with Wikivoyage source attribution. The Places panel shows travel-guide sights without a Saved places tab. The destination page has no account-save action or saved-place requests. Selecting a place can prefill an editable Day 1 activity in `/boards/new`; no Board is automatically saved. The closing "Start a {city} board" action opens the empty creator. Failed provider requests retain the guide and show retry/error feedback. About includes a short Wikivoyage Getting around tip when available. Selecting a sight loads its own plain-text listing description and a credited, adequately sized listing-linked Commons photo through `/destinations/place-details`; missing photos use the sight name. Details are display-only and preserve canonical Board-prefill coordinates. The old Atlas fixtures remain inactive references.
+Country destination pages still use `getDiscoverBoardsByDestination`, whose public-Boards source remains an unavailable
+placeholder. City guides instead use the live destination-guide API; the old Atlas fixtures remain inactive.
 Primary destinations use clean `/discover/destinations/<slug>` URLs. Existing editorial guides own their slugs;
 otherwise the highest-ranked unqualified Mapbox result owns the clean URL. Home reuses an exact-name autocomplete
 response or makes one unqualified-name request when selection came from a prefix/qualified query. This extra lookup
@@ -176,9 +168,13 @@ Incomplete, repeated or mismatched selectors return 404. General destination pag
 resolve clean URLs by unqualified provider ranking, country selectors within that country, and full identities by provider ID.
 Other search results use a normalized destination slug under the same route. General city detail-page support is
 handled separately and is not implemented by Home. Discover search and its Kyoto feature link to guides.
-The destination story gallery uses shared V4 photographic cards in a height-aware Motion stack, with button, keyboard and drag selection, animated captions and selected-card metadata. Photo credits remain attached to the original editorial sources. Its mock stories have no account controls, fictional save totals, detail links or persistence; an optional real Board href is respected when supplied. Seasonal controls live in a separate white, ruled editorial interlude. The Trending destinations section uses a destination-specific asymmetric photo grid, a fixed near-black palette, animated filtering and shared-photo native-dialog details. The concluding Create panel returns to the page theme; Kyoto’s closing image rotation follows the Figma artwork. Create links open the existing
-blank `/boards/new` flow; destination prefill, activity saving and copying are future integrations. Editorial guide data
-does not create backend destination/location records. Photo sources and rights notes live in `public/images/destinations/README.md`.
+The destination story gallery adapts real public Board summaries into shared V4 photographic cards in a height-aware
+Motion stack. Stable Board-ID selection survives pagination; buttons, keyboard Home/End/arrows, drag selection,
+animated captions and selected-card metadata remain. The selected Board opens its real numeric route. First-image
+cover order, direct API image delivery and supplied photo credits are preserved. Missing covers use the shared fallback.
+The page hook owns loading, pagination, de-duplication and retries; loaded cards remain available on later failures.
+Public summaries do not supply ownership, saved membership or save counts, so the gallery shows no account controls
+or invented totals. No additional canonical Board requests or account mutations are introduced.
 
 The developer Board browser (/dev/boards) lists paginated accessible Boards and inspects canonical days, activities, tags and protected images; deletion remains owner-only. The profile lab (/dev/profile) reads and edits the signed-in account, accepts owned uploaded image IDs for pictures, creates test Boards through the canonical Board endpoint, and reads statistics, recent owned Boards and activity-derived map destinations. Its globe retains planned/visited styling and obtains a quota-reserved Mapbox session. There is no seeded-user fallback or prototype identity header.
 

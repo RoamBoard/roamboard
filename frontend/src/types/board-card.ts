@@ -1,6 +1,8 @@
 export type BoardCardImage = {
     src: string;
     alt: string;
+    // Provider photos can keep their returned URL instead of using Next's image proxy.
+    unoptimized?: boolean;
     position?: string;
     credit?: string;
     creditUrl?: string;

@@ -104,6 +104,27 @@ constraint for `collaborators`, `friends`, and `public` match the migration. Ali
 the column length separately if an exact schema match is required. Backup status
 was not independently verified during this read-only check.
 
+## Saved places on 2026-10-17
+
+Current status: the destination page's save-location action was removed on 2026-10-18.
+The backend API and table remain; this historical migration must not be undone or reapplied.
+
+The user requested account-owned saved destination places. Verified that
+`public.saved_place` was absent, then applied only `005_saved_places.sql` in one
+transaction and verified its nine columns before committing. This creates one
+new table; existing tables and data were unchanged. No new pre-migration backup
+was created for this additive change. The existing backup procedure remains in
+`deploy/README.md`.
+
+The repository and account-isolation tests also passed against an isolated
+PostgreSQL schema that was removed by transaction rollback. Do not reapply 005
+to the shared development database.
+
+The saved-places file was later renamed to `008_saved_places.sql` when the branches
+were combined, because 005 is used by the image library. This is the same SQL and
+does not need to run again on the shared database. Fresh databases use the current
+filename after 007.
+
 ## Explicit Board destination - 2026-10-18
 
 Applied only 008_board_destination.sql to the configured shared development database after verifying both columns
