@@ -46,3 +46,8 @@ export const savePhotoEdit = (id: number, revision: number, edit: PhotoEdit | nu
         body: JSON.stringify({ revision, edit })
     });
 export const originalPhotoUrl = (id: number) => `${api}/api/v1/images/${id}/content?variant=original`;
+export async function readOriginalPhoto(id: number, signal?: AbortSignal): Promise<Blob> {
+    const response = await fetch(originalPhotoUrl(id), { credentials: "include", signal });
+    if (!response.ok) throw new Error("The original photo could not load.");
+    return response.blob();
+}

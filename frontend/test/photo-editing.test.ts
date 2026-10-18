@@ -4,7 +4,38 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import BoardImageIntake from "../src/components/features/boards/BoardImageIntake";
 import type { BoardImageDraft } from "../src/types/board-creator";
-import { cropAspect, fullCrop, outputSize } from "../src/lib/photo-editing";
+import { cropAspect, fullCrop, outputSize, readOriginalPhoto } from "../src/lib/photo-editing";
+
+test("original photo reads request the protected original with cookies and a cancellation signal", async (context) => {
+    const controller = new AbortController();
+    const bytes = new Uint8Array([137, 80, 78, 71]);
+    context.mock.method(globalThis, "fetch", async (input: string, init?: RequestInit) => {
+        const url = new URL(input);
+        assert.equal(url.pathname, "/api/v1/images/42/content");
+        assert.equal(url.searchParams.get("variant"), "original");
+        assert.equal(init?.credentials, "include");
+        assert.equal(init?.signal, controller.signal);
+        return new Response(bytes, { headers: { "Content-Type": "image/png" } });
+    });
+    const blob = await readOriginalPhoto(42, controller.signal);
+    assert.equal(blob.type, "image/png");
+    assert.deepEqual(new Uint8Array(await blob.arrayBuffer()), bytes);
+});
+
+test("failed original photo reads report a safe error instead of returning an error body as an image", async (context) => {
+    context.mock.method(globalThis, "fetch", async () => new Response("Forbidden", { status: 403 }));
+    await assert.rejects(readOriginalPhoto(42), { message: "The original photo could not load." });
+});
+
+test("original photo reads preserve fetch cancellation", async (context) => {
+    const controller = new AbortController();
+    controller.abort();
+    context.mock.method(globalThis, "fetch", async (_input: string, init?: RequestInit) => {
+        init?.signal?.throwIfAborted();
+        throw new Error("Expected an aborted request");
+    });
+    await assert.rejects(readOriginalPhoto(42, controller.signal), { name: "AbortError" });
+});
 
 test("aspect-ratio crops stay inside original bounds for landscape and portrait photos", () => {
     for (const source of [4 / 3, 3 / 4, 16 / 9])

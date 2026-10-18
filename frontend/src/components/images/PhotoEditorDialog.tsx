@@ -5,8 +5,8 @@ import { useDialogFocus } from "@/lib/use-dialog-focus";
 import {
     cropAspect,
     fullCrop,
-    originalPhotoUrl,
     outputSize,
+    readOriginalPhoto,
     readPhotoEdit,
     savePhotoEdit,
     type PhotoEdit
@@ -39,15 +39,7 @@ export default function PhotoEditorDialog({ imageId, onClose }: { imageId: numbe
     useEffect(() => {
         const controller = new AbortController();
         const resource: { url?: string } = {};
-        void Promise.all([
-            readPhotoEdit(imageId, controller.signal),
-            fetch(originalPhotoUrl(imageId), { credentials: "include", signal: controller.signal }).then(
-                async (response) => {
-                    if (!response.ok) throw new Error("The original photo could not load.");
-                    return response.blob();
-                }
-            )
-        ])
+        void Promise.all([readPhotoEdit(imageId, controller.signal), readOriginalPhoto(imageId, controller.signal)])
             .then(async ([saved, blob]) => {
                 if (controller.signal.aborted) return;
                 resource.url = URL.createObjectURL(blob);
