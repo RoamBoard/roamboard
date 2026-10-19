@@ -26,6 +26,8 @@ export default function CommentNotificationList({
                     <Link
                         href={commentNotificationHref(notification)}
                         onClick={(event) => {
+                            if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+                                return;
                             event.preventDefault();
                             if (pendingId === null) void onOpen(notification);
                         }}

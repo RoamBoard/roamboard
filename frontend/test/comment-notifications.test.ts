@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createElement } from "react";
+import { createElement, type MouseEvent as ReactMouseEvent, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import CommentNotificationList from "@/components/features/notifications/CommentNotificationList";
@@ -76,4 +76,52 @@ test("comment notifications keep the Board anchor and plain-text excerpt", () =>
     assert.ok(html.includes("/boards/12#comment-32"));
     assert.ok(html.includes("Look &lt;here&gt; &amp; enjoy"));
     assert.ok(html.includes("Unread"));
+});
+
+test("notification links leave modified clicks to the browser", () => {
+    const notification: CommentNotification = {
+        notificationId: 7,
+        boardId: 12,
+        boardTitle: "Tokyo",
+        commentId: 32,
+        commenter: { displayName: "Avery", username: "avery", profilePictureUrl: null },
+        excerpt: "New comment",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        readAt: null
+    };
+    const state = { opened: 0 };
+    const list = CommentNotificationList({
+        items: [notification],
+        pendingId: null,
+        onOpen: async () => {
+            state.opened += 1;
+        }
+    });
+    const [row] = list.props.children as ReactElement<{ children: ReactElement[] }>[];
+    const link = row.props.children as unknown as ReactElement<{
+        onClick: (event: ReactMouseEvent<HTMLAnchorElement>) => void;
+    }>;
+    const click = (overrides: Partial<ReactMouseEvent<HTMLAnchorElement>>) => {
+        const result = { prevented: false };
+        link.props.onClick({
+            button: 0,
+            metaKey: false,
+            ctrlKey: false,
+            shiftKey: false,
+            altKey: false,
+            preventDefault: () => {
+                result.prevented = true;
+            },
+            ...overrides
+        } as ReactMouseEvent<HTMLAnchorElement>);
+        return result.prevented;
+    };
+
+    for (const modifier of ["metaKey", "ctrlKey", "shiftKey", "altKey"] as const) {
+        assert.equal(click({ [modifier]: true }), false);
+    }
+    assert.equal(click({ button: 1 }), false);
+    assert.equal(state.opened, 0);
+    assert.equal(click({}), true);
+    assert.equal(state.opened, 1);
 });

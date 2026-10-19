@@ -3,8 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Bell, Pencil, Trash2, UserRound } from "lucide-react";
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 import { observeCurrentUser, type AuthUser } from "@/lib/auth";
+import { subscribeBackNavigation } from "@/lib/back-navigation";
 import {
     getCommentSubscription,
     notifyCommentNotificationUpdate,
@@ -69,6 +70,18 @@ function CommentAvatar({ name, url }: { name: string; url?: string | null }) {
 function commentError(error: unknown): string {
     return error instanceof Error ? error.message : "The comment request failed. Please try again.";
 }
+
+export function subscribeCommentFragment(listener: () => void): () => void {
+    const unsubscribeNavigation = subscribeBackNavigation(listener);
+    window.addEventListener("hashchange", listener);
+    return () => {
+        unsubscribeNavigation();
+        window.removeEventListener("hashchange", listener);
+    };
+}
+
+export const getCommentFragment = () => window.location.hash;
+const getServerCommentFragment = () => "";
 
 export function BoardCommentRow({
     comment,
@@ -335,6 +348,7 @@ export function BoardCommentRow({
 }
 
 export default function BoardComments({ boardId }: { boardId: string }) {
+    const fragment = useSyncExternalStore(subscribeCommentFragment, getCommentFragment, getServerCommentFragment);
     const [viewer, setViewer] = useState<AuthUser | null | undefined>(undefined);
     const [accountEpoch, setAccountEpoch] = useState(0);
     const [comments, setComments] = useState<BoardComment[]>([]);
@@ -453,16 +467,19 @@ export default function BoardComments({ boardId }: { boardId: string }) {
 
     useEffect(() => {
         if (typeof window === "undefined" || loading || readError) return;
-        const match = /^#comment-(\d+)$/.exec(window.location.hash);
+        const match = /^#comment-(\d+)$/.exec(fragment);
         if (!match) return;
         const targetId = Number(match[1]);
         if (comments.some((comment) => comment.commentId === targetId)) {
-            window.requestAnimationFrame(() => document.getElementById(`comment-${targetId}`)?.scrollIntoView());
+            const frame = window.requestAnimationFrame(() =>
+                document.getElementById(`comment-${targetId}`)?.scrollIntoView()
+            );
+            return () => window.cancelAnimationFrame(frame);
         } else if (nextCursor && !olderBusy && !olderError) {
             const timer = window.setTimeout(() => void loadOlder(), 0);
             return () => window.clearTimeout(timer);
         }
-    }, [comments, loading, readError, nextCursor, olderBusy, olderError, loadOlder]);
+    }, [fragment, comments, loading, readError, nextCursor, olderBusy, olderError, loadOlder]);
 
     async function submitComment(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
