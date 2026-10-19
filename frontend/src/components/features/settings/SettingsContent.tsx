@@ -204,10 +204,7 @@ export default function SettingsContent() {
             <header className="mb-8">
                 <div className="flex flex-wrap items-end justify-between gap-4">
                     <div>
-                        <span className="text-10 tracking-label text-muted-foreground font-bold uppercase">
-                            ACCOUNT &amp; PROFILE
-                        </span>
-                        <h1 className="font-display text-48 sm:text-60 text-foreground mt-1 font-bold tracking-tight uppercase">
+                        <h1 className="font-display text-48 sm:text-60 text-foreground font-bold tracking-tight uppercase">
                             SETTINGS
                         </h1>
                     </div>

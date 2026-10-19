@@ -31,7 +31,6 @@ export default async function CollectionPage({ params }: Props) {
                 <BackLink fallbackHref={discoverHref} />
                 <header className="border-line mt-6 grid gap-6 border-b pb-8 md:grid-cols-2 md:items-center">
                     <div>
-                        <p className="text-muted-foreground text-12 mb-4">CURATED COLLECTION</p>
                         <h1 className="font-display text-[clamp(2rem,6vw,5rem)] leading-none font-bold tracking-tight">
                             {collection.title}
                         </h1>

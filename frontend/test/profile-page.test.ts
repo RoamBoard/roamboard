@@ -66,9 +66,9 @@ const mockProfile: UserProfile = {
     updatedAt: new Date().toISOString()
 };
 
-test("ProfilePageContent renders ACCOUNT and PROFILE header without audience tabs", () => {
+test("ProfilePageContent renders PROFILE header without audience tabs or ACCOUNT subheading", () => {
     const html = renderToStaticMarkup(createElement(RouterWrapper, null, createElement(ProfilePageContent)));
-    assert.ok(html.includes("ACCOUNT"));
+    assert.ok(!html.includes("ACCOUNT"));
     assert.ok(html.includes("PROFILE"));
     assert.ok(!html.includes("Audience filter"));
     assert.ok(!html.includes("EXPLORE"));

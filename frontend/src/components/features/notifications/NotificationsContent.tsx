@@ -226,10 +226,7 @@ export default function NotificationsContent({
                 <div className="px-4 pt-6 pb-20 sm:px-8 md:px-12 lg:px-16">
                     <div className="mx-auto w-full max-w-3xl pb-20">
                         <header className="mb-8">
-                            <span className="text-10 tracking-label text-muted-foreground font-bold uppercase">
-                                COMMUNITY
-                            </span>
-                            <div className="mt-1 flex items-baseline justify-between gap-4">
+                            <div className="flex items-baseline justify-between gap-4">
                                 <h1 className="font-display text-48 sm:text-60 text-foreground font-bold tracking-tight uppercase">
                                     NOTIFICATIONS
                                 </h1>

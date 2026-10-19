@@ -96,11 +96,6 @@ export function BoardSelectionContent({
                         </Link>
                     </nav>
                 )}
-                {remix && (
-                    <p className="text-muted-foreground mt-6 text-[10px] tracking-[.18em] uppercase">
-                        Their inspiration, your adventure
-                    </p>
-                )}
                 <h1 className="font-display mt-4 text-[clamp(2.5rem,6.3vw,6rem)] leading-[.96] font-bold tracking-[-.045em]">
                     {remix ? "YOUR SAVED BOARDS" : "YOUR BOARDS"}
                 </h1>
