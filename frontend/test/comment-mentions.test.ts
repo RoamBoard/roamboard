@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { activeCommentMention, commentMentionParts, insertCommentMention } from "../src/lib/comment-mentions";
+import {
+    activeCommentMention,
+    commentMentionCount,
+    commentMentionLimit,
+    commentMentionParts,
+    insertCommentMention
+} from "../src/lib/comment-mentions";
 
 test("mention suggestions use the handle at the cursor and replace only that token", () => {
     const body = "Thanks @ave for this route";
@@ -21,4 +27,10 @@ test("only resolved mentions become profile links, preserving plain text and old
         { text: "@unknown" },
         { text: "!" }
     ]);
+});
+
+test("the comment editor counts distinct handles, ignoring case and email addresses", () => {
+    const ten = Array.from({ length: commentMentionLimit }, (_, index) => `@person${index}`).join(" ");
+    assert.equal(commentMentionCount(`${ten} @PERSON0 mail@example.com`), commentMentionLimit);
+    assert.equal(commentMentionCount(`${ten} @person${commentMentionLimit}`), commentMentionLimit + 1);
 });

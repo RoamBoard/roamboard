@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type Fo
 import CommentMentionEditor from "./CommentMentionEditor";
 import { observeCurrentUser, type AuthUser } from "@/lib/auth";
 import { subscribeBackNavigation } from "@/lib/back-navigation";
-import { commentMentionParts } from "@/lib/comment-mentions";
+import { commentMentionCount, commentMentionLimit, commentMentionParts } from "@/lib/comment-mentions";
 import {
     getCommentSubscription,
     notifyCommentNotificationUpdate,
@@ -113,6 +113,7 @@ export function BoardCommentRow({
     const [canExpand, setCanExpand] = useState(() => comment.body.length > 280 || comment.body.split("\n").length > 4);
     const bodyRef = useRef<HTMLParagraphElement>(null);
     const busy = saving || deleting;
+    const tooManyEditMentions = commentMentionCount(editDraft) > commentMentionLimit;
 
     useEffect(() => {
         if (editing || !bodyRef.current) return;
@@ -139,7 +140,7 @@ export function BoardCommentRow({
 
     async function saveEdit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        if (busy || !editDraft.trim()) return;
+        if (busy || !editDraft.trim() || tooManyEditMentions) return;
         setSaving(true);
         setError("");
         setStale(false);
@@ -252,7 +253,7 @@ export function BoardCommentRow({
                             id={`edit-comment-${comment.commentId}`}
                             value={editDraft}
                             onChange={setEditDraft}
-                            describedBy={`edit-comment-count-${comment.commentId}`}
+                            describedBy={`edit-comment-count-${comment.commentId}${tooManyEditMentions ? ` edit-comment-mention-limit-${comment.commentId}` : ""}`}
                             className={textareaClass}
                             disabled={busy}
                             viewer={viewer}
@@ -275,13 +276,22 @@ export function BoardCommentRow({
                                 </button>
                                 <button
                                     type="submit"
-                                    disabled={busy || !editDraft.trim()}
+                                    disabled={busy || !editDraft.trim() || tooManyEditMentions}
                                     className={primaryButtonClass}
                                 >
                                     {saving ? "Saving…" : "Save"}
                                 </button>
                             </div>
                         </div>
+                        {tooManyEditMentions ? (
+                            <p
+                                id={`edit-comment-mention-limit-${comment.commentId}`}
+                                role="alert"
+                                className="text-12 mt-2"
+                            >
+                                Mention up to {commentMentionLimit} distinct @handles per comment.
+                            </p>
+                        ) : null}
                     </form>
                 ) : (
                     <>
@@ -388,6 +398,7 @@ export default function BoardComments({ boardId }: { boardId: string }) {
     const postingRef = useRef(false);
     const olderRef = useRef(false);
     const loginHref = `/login?returnTo=${encodeURIComponent(`/boards/${boardId}#comments`)}`;
+    const tooManyDraftMentions = commentMentionCount(draft) > commentMentionLimit;
 
     const refreshSubscription = useCallback(
         async (epoch: number) => {
@@ -504,7 +515,7 @@ export default function BoardComments({ boardId }: { boardId: string }) {
 
     async function submitComment(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        if (!viewer || loading || postingRef.current || !draft.trim()) return;
+        if (!viewer || loading || postingRef.current || !draft.trim() || tooManyDraftMentions) return;
         postingRef.current = true;
         const epoch = accountEpochRef.current;
         setPosting(true);
@@ -626,7 +637,7 @@ export default function BoardComments({ boardId }: { boardId: string }) {
                                     value={draft}
                                     onChange={setDraft}
                                     placeholder="Share a thought about this Board…"
-                                    describedBy="board-comment-count"
+                                    describedBy={`board-comment-count${tooManyDraftMentions ? " board-comment-mention-limit" : ""}`}
                                     className={textareaClass}
                                     disabled={posting}
                                     viewer={viewer}
@@ -637,12 +648,17 @@ export default function BoardComments({ boardId }: { boardId: string }) {
                                     </span>
                                     <button
                                         type="submit"
-                                        disabled={posting || loading || !draft.trim()}
+                                        disabled={posting || loading || !draft.trim() || tooManyDraftMentions}
                                         className={primaryButtonClass}
                                     >
                                         {posting ? "Posting…" : "Post comment"}
                                     </button>
                                 </div>
+                                {tooManyDraftMentions ? (
+                                    <p id="board-comment-mention-limit" role="alert" className="text-12 mt-2">
+                                        Mention up to {commentMentionLimit} distinct @handles per comment.
+                                    </p>
+                                ) : null}
                                 {postError ? (
                                     <p role="alert" className="text-13 mt-3">
                                         {postError}{" "}

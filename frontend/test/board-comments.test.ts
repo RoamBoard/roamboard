@@ -570,6 +570,59 @@ test("mounted BoardCommentRow edits with retained draft on conflict, reloads cur
     assert.deepEqual(deletedIds, [81]);
 });
 
+test("new and edited comments block submission above ten distinct mentions", async (t) => {
+    const ten = Array.from({ length: 10 }, (_, index) => `@person${index}`).join(" ");
+    const eleven = `${ten} @person10`;
+    replaceFetch(t, async (input) => {
+        const path = new URL(String(input)).pathname;
+        if (path === "/api/v1/auth/me")
+            return json({ data: { userId: "user-1", username: "avery", displayName: "Avery Lee" } });
+        if (path === "/api/v1/boards/42/comment-subscription") return json({ data: { enabled: true } });
+        if (path === "/api/v1/boards/42/comments")
+            return json({ data: [comment(81)], meta: { nextCursor: null, hasMore: false } });
+        throw new Error(`Unexpected request: ${path}`);
+    });
+
+    const section = mount(t, () => BoardComments({ boardId: "42" }));
+    await flush();
+    const draftInput = section.render().nodes.find((node) => node.props.id === "board-comment-draft");
+    assert.ok(draftInput);
+    draftInput.props.onChange?.(eleven);
+    const overLimit = section.render();
+    assert.match(overLimit.markup, /Mention up to 10 distinct @handles per comment/);
+    assert.equal(overLimit.nodes.find((node) => node.props.children === "Post comment")?.props.disabled, true);
+    await overLimit.nodes.find((node) => node.type === "form")?.props.onSubmit?.({ preventDefault: noop });
+    draftInput.props.onChange?.(ten);
+    const withinLimit = section.render();
+    assert.doesNotMatch(withinLimit.markup, /Mention up to 10 distinct @handles per comment/);
+    assert.equal(withinLimit.nodes.find((node) => node.props.children === "Post comment")?.props.disabled, false);
+
+    const row = mount(t, () =>
+        BoardCommentRow({
+            comment: comment(81),
+            boardId: "42",
+            epoch: 1,
+            loginHref: "/login",
+            onUpdated() {},
+            onDeleted() {}
+        })
+    );
+    row.render()
+        .nodes.find((node) => node.props["aria-label"] === "Edit comment")
+        ?.props.onClick?.();
+    const editInput = row.render().nodes.find((node) => node.props.id === "edit-comment-81");
+    assert.ok(editInput);
+    editInput.props.onChange?.(eleven);
+    const editOverLimit = row.render();
+    assert.match(editOverLimit.markup, /Mention up to 10 distinct @handles per comment/);
+    assert.equal(editOverLimit.nodes.find((node) => node.props.children === "Save")?.props.disabled, true);
+    await editOverLimit.nodes.find((node) => node.type === "form")?.props.onSubmit?.({ preventDefault: noop });
+    editInput.props.onChange?.(ten);
+    const editWithinLimit = row.render();
+    assert.doesNotMatch(editWithinLimit.markup, /Mention up to 10 distinct @handles per comment/);
+    assert.equal(editWithinLimit.nodes.find((node) => node.props.children === "Save")?.props.disabled, false);
+});
+
 test("toggling the notification bell while post refresh is in flight preserves the newer bell choice", async (t) => {
     const subscriptionReads: Array<(response: Response) => void> = [];
     replaceFetch(t, async (input, init) => {

@@ -1,6 +1,11 @@
 import type { BoardComment } from "./board-comments";
 
 const mentionPattern = /(^|[^A-Za-z0-9._])@([A-Za-z0-9](?:[A-Za-z0-9._]{0,62}[A-Za-z0-9])?)(?![A-Za-z0-9._])/g;
+export const commentMentionLimit = 10;
+
+export function commentMentionCount(body: string): number {
+    return new Set([...body.matchAll(mentionPattern)].map((match) => match[2]!.toLowerCase())).size;
+}
 
 export function activeCommentMention(body: string, cursor: number) {
     const before = body.slice(0, cursor);
