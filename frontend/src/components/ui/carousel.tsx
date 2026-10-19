@@ -2,7 +2,15 @@
 
 // Adapted from shadcn/ui's Carousel (MIT, SHADCN-LICENSE.txt).
 // Native buttons and Roamboard tokens replace the registry's Button dependency.
-import { createContext, useContext, useCallback, useEffect, useState, type ComponentProps } from "react";
+import {
+    createContext,
+    useContext,
+    useCallback,
+    useEffect,
+    useState,
+    type ComponentProps,
+    type HTMLAttributes
+} from "react";
 import useEmblaCarousel, { type UseEmblaCarouselType } from "embla-carousel-react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useReducedMotion } from "motion/react";
@@ -94,11 +102,15 @@ export function Carousel({
     );
 }
 
-export function CarouselContent({ className = "", ...props }: ComponentProps<"div">) {
+export function CarouselContent({
+    className = "",
+    as: Tag = "div",
+    ...props
+}: HTMLAttributes<HTMLElement> & { as?: "div" | "ul" }) {
     const { carouselRef } = useCarousel();
     return (
         <div ref={carouselRef} className="overflow-hidden">
-            <div className={`flex touch-pan-y ${className}`} {...props} />
+            <Tag className={`flex touch-pan-y ${className}`} {...props} />
         </div>
     );
 }

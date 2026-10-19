@@ -4,27 +4,52 @@ import { useRef } from "react";
 import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "motion/react";
 import { toSavedPhotoBoardCard } from "@/lib/photo-board-card";
 import type { SavedBoardSummary } from "@/lib/profile";
+import { BoardLibraryCarousel, boardLibrarySlideClass } from "./BoardLibrary";
 import AccountPhotoBoardCard from "./cards/AccountPhotoBoardCard";
 
 export default function SavedBoardGrid({
     boards,
-    onUnsave
+    onUnsave,
+    presentation = "grid"
 }: {
     boards: SavedBoardSummary[];
+    presentation?: "grid" | "library";
     onUnsave: (boardId: number) => void;
 }) {
     const reduced = useReducedMotion();
-    return (
+    const items = (
+        <AnimatePresence initial={false}>
+            {boards.map((board, index) => (
+                <SavedBoardItem
+                    key={board.boardId}
+                    board={board}
+                    reduced={Boolean(reduced)}
+                    onUnsave={onUnsave}
+                    library={presentation === "library"}
+                    index={index}
+                    count={boards.length}
+                />
+            ))}
+        </AnimatePresence>
+    );
+    return presentation === "library" ? (
+        <BoardLibraryCarousel
+            id="profile-saved-library"
+            title="Currently Inspired By"
+            count={boards.length}
+            variant="profile"
+            listLabel="Saved Boards"
+            emptyMessage=""
+        >
+            {items}
+        </BoardLibraryCarousel>
+    ) : (
         <ul
             tabIndex={-1}
             aria-label="Saved Boards"
             className="mt-8 grid items-start gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3"
         >
-            <AnimatePresence initial={false}>
-                {boards.map((board) => (
-                    <SavedBoardItem key={board.boardId} board={board} reduced={Boolean(reduced)} onUnsave={onUnsave} />
-                ))}
-            </AnimatePresence>
+            {items}
         </ul>
     );
 }
@@ -32,9 +57,15 @@ export default function SavedBoardGrid({
 function SavedBoardItem({
     board,
     reduced,
-    onUnsave
+    onUnsave,
+    library,
+    index,
+    count
 }: {
     board: SavedBoardSummary;
+    library: boolean;
+    index: number;
+    count: number;
     reduced: boolean;
     onUnsave: (boardId: number) => void;
 }) {
@@ -44,6 +75,9 @@ function SavedBoardItem({
     return (
         <motion.li
             ref={row}
+            className={library ? boardLibrarySlideClass("profile") : undefined}
+            aria-roledescription={library ? "slide" : undefined}
+            aria-label={library ? `${index + 1} of ${count}: ${board.title}` : undefined}
             onFocusCapture={() => {
                 hadFocus.current = true;
             }}

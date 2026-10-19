@@ -5,8 +5,9 @@
 `013_board_comments.sql` creates persisted Board comments. `014_board_comment_notifications.sql` adds comment bell preferences and in-app notifications. Neither migration was applied to the shared database in this implementation session. The requester applies migrations; check the actual schema and migration history first, particularly if the earlier `012_board_comments.sql` filename was already used. Apply 014 only after the comment table exists.
 
 ## Pending friendship acceptance timestamp migration
+## Friendship acceptance timestamp — 2026-10-19
 
-`012_friendship_accepted_at.sql` adds the `accepted_at` column to `friendship` and backfills it with `CURRENT_TIMESTAMP` for accepted friendships. It has not been applied to the shared Azure database. Apply 012 after 011.
+Applied migration `015_friendship_accepted_at.sql` in one transaction to the shared Azure database `roamboard_dev` through the SSH tunnel. It added the nullable `accepted_at TIMESTAMPTZ` column to the `friendship` table and backfilled existing accepted friendship rows with the current timestamp (11 rows updated out of 17 total friendships). Do not rerun 015. It was renumbered from 012 to avoid conflicts with migrations 012–014 reserved by other branches.
 
 ## Pending board publication timestamp migration
 

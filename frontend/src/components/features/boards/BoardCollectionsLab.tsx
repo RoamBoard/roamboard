@@ -4,8 +4,8 @@ import { useState } from "react";
 import type { SavedBoardSummary } from "@/lib/profile";
 import type { PublishedSummary } from "@/lib/board-creator-api";
 import { publicDiscoverPreviewBoards } from "@/data/discover-boards";
-import DiscoverBoardCard from "@/components/features/discover/DiscoverBoardCard";
-import { LiveBoardCard } from "@/components/features/profile/ProfilePageContent";
+import DiscoverBoardLibrary from "@/components/features/discover/DiscoverBoardLibrary";
+import { LiveBoardLibrary } from "@/components/features/profile/ProfilePageContent";
 import { OwnedBoardCard } from "./PublishedBoardList";
 import SavedBoardGrid from "./SavedBoardGrid";
 
@@ -100,33 +100,29 @@ export default function BoardCollectionsLab() {
             >
                 {context === "saved" ? (
                     <SavedBoardGrid
+                        presentation="library"
                         boards={items.filter((board) =>
                             `${board.title} ${board.owner.displayName}`.toLowerCase().includes(query.toLowerCase())
                         )}
                         onUnsave={() => {}}
                     />
                 ) : context === "discover" ? (
-                    <div className="grid items-start gap-7 sm:grid-cols-2 lg:grid-cols-3">
-                        {publicDiscoverPreviewBoards.slice(0, 3).map((board) => (
-                            <DiscoverBoardCard key={board.id} board={board} />
-                        ))}
-                    </div>
-                ) : (
+                    <DiscoverBoardLibrary boards={publicDiscoverPreviewBoards.slice(0, 3)} title="Discover samples" />
+                ) : context === "owned" ? (
                     <ul className="grid items-start gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
                         {ownedExamples.map((board) => (
                             <li key={board.boardId}>
-                                {context === "owned" ? (
-                                    <OwnedBoardCard board={board} />
-                                ) : (
-                                    <LiveBoardCard
-                                        board={{ ...board, author: "sample_profile_author" }}
-                                        ownership={context === "profile-owner" ? "owner" : "other"}
-                                        publicView={context === "profile-public"}
-                                    />
-                                )}
+                                <OwnedBoardCard board={board} />
                             </li>
                         ))}
                     </ul>
+                ) : (
+                    <LiveBoardLibrary
+                        boards={ownedExamples}
+                        author="sample_profile_author"
+                        ownership={context === "profile-owner" ? "owner" : "other"}
+                        publicView={context === "profile-public"}
+                    />
                 )}
             </div>
         </article>

@@ -149,9 +149,22 @@ export function BoardSelectionGallery({
                     </div>
                 </div>
                 <div
-                    className={`border-line relative z-30 flex flex-wrap items-center justify-between gap-3 py-3 ${boards.length > 1 ? "border-t" : ""}`}
+                    className={`border-line relative z-30 flex flex-col items-center gap-3 py-3 sm:flex-row ${boards.length > 1 ? "border-t" : ""}`}
                 >
-                    <div className="flex items-center justify-start gap-3">
+                    {!href && (
+                        <span className="text-muted-foreground text-xs">
+                            {mode === "remix"
+                                ? "Remixing is coming later"
+                                : error || selected.document
+                                  ? "Editing unavailable"
+                                  : "Checking edit access..."}
+                        </span>
+                    )}
+                    <div
+                        role="group"
+                        aria-label="Board selection controls"
+                        className="flex items-center justify-center gap-3 sm:ml-auto sm:w-[35%]"
+                    >
                         <button
                             type="button"
                             aria-label="Previous Board"
@@ -174,15 +187,6 @@ export function BoardSelectionGallery({
                             <ArrowRight size={24} strokeWidth={1.5} />
                         </button>
                     </div>
-                    {!href && (
-                        <span className="text-muted-foreground text-xs">
-                            {mode === "remix"
-                                ? "Remixing is coming later"
-                                : error || selected.document
-                                  ? "Editing unavailable"
-                                  : "Checking edit access..."}
-                        </span>
-                    )}
                 </div>
                 <div className="pt-4 lg:hidden">
                     <SelectionAnnotations board={selected} />

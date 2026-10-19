@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { loadProfile, loadPublicProfile, ProfileApiError, type PublicProfileView } from "@/lib/profile";
 import ProfileHero from "./ProfileHero";
-import ProfilePageContent, { LiveBoardCard } from "./ProfilePageContent";
+import ProfilePageContent, { LiveBoardLibrary } from "./ProfilePageContent";
 import TravelMapSection from "./TravelMapSection";
 import VisitedWorldMap from "./VisitedWorldMap";
 
@@ -152,16 +152,12 @@ export default function HandleProfileContent({
                     <p className="text-12 text-muted-foreground mt-0.5 font-medium">
                         boards shared by {view.profile.displayName}
                     </p>
-                    <div className="mt-8 grid grid-cols-1 items-start gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
-                        {view.boards.map((board) => (
-                            <LiveBoardCard
-                                key={board.boardId}
-                                board={{ ...board, author: view.profile.username }}
-                                ownership="other"
-                                publicView
-                            />
-                        ))}
-                    </div>
+                    <LiveBoardLibrary
+                        boards={view.boards}
+                        author={view.profile.username}
+                        ownership="other"
+                        publicView
+                    />
                     {view.boards.length === 0 && (
                         <p className="text-muted-foreground mt-6 text-sm">No public boards yet.</p>
                     )}

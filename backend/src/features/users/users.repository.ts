@@ -4,7 +4,12 @@ import { countryCodeForName } from "../../shared/countries.js";
 import { continentForCountry } from "../../shared/continents.js";
 import type { UsersRepository, UserProfile, ProfileBoard, MapDestination } from "./users.types.js";
 
-export function createUsersRepository(): UsersRepository {
+export type RepositoryQueryClient = {
+    query: <R = unknown>(sql: string, values?: readonly unknown[]) => Promise<{ rows: R[]; rowCount?: number | null }>;
+};
+
+export function createUsersRepository(pool?: RepositoryQueryClient): UsersRepository {
+    const getDb = (): RepositoryQueryClient => (pool ?? getPool()) as unknown as RepositoryQueryClient;
     return {
         async read(userId) {
             const result = await getPool().query<{
@@ -414,13 +419,26 @@ export function createUsersRepository(): UsersRepository {
             }));
         },
         async acceptFriendRequest(recipientId, requestId) {
-            const result = await getPool().query(
-                `UPDATE friendship
-                 SET status = 'accepted', accepted_at = CURRENT_TIMESTAMP
-                 WHERE friendship_id = $1 AND recipient_user_id = $2 AND status = 'pending'`,
-                [requestId, recipientId]
-            );
-            return (result.rowCount ?? 0) > 0;
+            try {
+                const result = await getDb().query(
+                    `UPDATE friendship
+                     SET status = 'accepted', accepted_at = CURRENT_TIMESTAMP
+                     WHERE friendship_id = $1 AND recipient_user_id = $2 AND status = 'pending'`,
+                    [requestId, recipientId]
+                );
+                return (result.rowCount ?? 0) > 0;
+            } catch (error: unknown) {
+                if (error && typeof error === "object" && "code" in error && error.code === "42703") {
+                    const result = await getDb().query(
+                        `UPDATE friendship
+                         SET status = 'accepted'
+                         WHERE friendship_id = $1 AND recipient_user_id = $2 AND status = 'pending'`,
+                        [requestId, recipientId]
+                    );
+                    return (result.rowCount ?? 0) > 0;
+                }
+                throw error;
+            }
         },
         async rejectFriendRequest(userId, requestId) {
             const result = await getPool().query(
@@ -431,23 +449,48 @@ export function createUsersRepository(): UsersRepository {
             return (result.rowCount ?? 0) > 0;
         },
         async listFriends(userId) {
-            const result = await getPool().query<{
-                friendship_id: number;
-                accepted_at: Date | null;
-                user_id: string;
-                username: string;
-                display_name: string;
-                profile_picture_image_id: number | null;
-                biography: string | null;
-                location: string | null;
-            }>(
-                `SELECT f.friendship_id, f.accepted_at, u.user_id, u.username, u.display_name, u.profile_picture_image_id, u.biography, u.location
-                 FROM friendship f
-                 JOIN app_user u ON u.user_id = (CASE WHEN f.requester_user_id = $1 THEN f.recipient_user_id ELSE f.requester_user_id END)
-                 WHERE (f.requester_user_id = $1 OR f.recipient_user_id = $1) AND f.status = 'accepted'
-                 ORDER BY u.display_name ASC`,
-                [userId]
-            );
+            let result;
+            try {
+                result = await getDb().query<{
+                    friendship_id: number;
+                    accepted_at: Date | null;
+                    user_id: string;
+                    username: string;
+                    display_name: string;
+                    profile_picture_image_id: number | null;
+                    biography: string | null;
+                    location: string | null;
+                }>(
+                    `SELECT f.friendship_id, f.accepted_at, u.user_id, u.username, u.display_name, u.profile_picture_image_id, u.biography, u.location
+                     FROM friendship f
+                     JOIN app_user u ON u.user_id = (CASE WHEN f.requester_user_id = $1 THEN f.recipient_user_id ELSE f.requester_user_id END)
+                     WHERE (f.requester_user_id = $1 OR f.recipient_user_id = $1) AND f.status = 'accepted'
+                     ORDER BY u.display_name ASC`,
+                    [userId]
+                );
+            } catch (error: unknown) {
+                if (error && typeof error === "object" && "code" in error && error.code === "42703") {
+                    result = await getDb().query<{
+                        friendship_id: number;
+                        accepted_at: Date | null;
+                        user_id: string;
+                        username: string;
+                        display_name: string;
+                        profile_picture_image_id: number | null;
+                        biography: string | null;
+                        location: string | null;
+                    }>(
+                        `SELECT f.friendship_id, NULL::timestamptz AS accepted_at, u.user_id, u.username, u.display_name, u.profile_picture_image_id, u.biography, u.location
+                         FROM friendship f
+                         JOIN app_user u ON u.user_id = (CASE WHEN f.requester_user_id = $1 THEN f.recipient_user_id ELSE f.requester_user_id END)
+                         WHERE (f.requester_user_id = $1 OR f.recipient_user_id = $1) AND f.status = 'accepted'
+                         ORDER BY u.display_name ASC`,
+                        [userId]
+                    );
+                } else {
+                    throw error;
+                }
+            }
             return result.rows.map((row) => ({
                 friendshipId: row.friendship_id,
                 acceptedAt: row.accepted_at ? row.accepted_at.toISOString() : null,
