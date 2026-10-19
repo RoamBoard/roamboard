@@ -88,6 +88,16 @@ test("globe enables both permitted collections by default and keeps map explorat
     const empty = renderToStaticMarkup(createElement(VisitedWorldMap, { destinations: [] }));
     assert.match(empty, /Interactive grayscale world globe/);
     assert.doesNotMatch(empty, /No board locations|Browse individual locations|Close previews/);
+    assert.doesNotMatch(empty, /<select|select country/);
+    for (const destinationWithoutCountry of [
+        { ...destination, countryCode: null },
+        { ...destination, collection: "saved" as const }
+    ]) {
+        const html = renderToStaticMarkup(
+            createElement(VisitedWorldMap, { destinations: [destinationWithoutCountry] })
+        );
+        assert.doesNotMatch(html, /<select|select country/);
+    }
 });
 
 test("destination selector lists published countries only and opens the production carousel", (context) => {
@@ -120,6 +130,7 @@ test("destination selector lists published countries only and opens the producti
         value?: string;
         onChange?: (event: { target: { value: string } }) => void;
         onClick?: () => void;
+        "aria-pressed"?: boolean;
         places?: typeof destinations;
     };
     function nodes(root: ReactNode): Array<{ type: unknown; props: Props }> {
@@ -172,10 +183,23 @@ test("destination selector lists published countries only and opens the producti
         hidden.filter((node) => node.type === "option").map((node) => node.props.value),
         ["", "country:VNM"]
     );
-    hidden
-        .find((node) => node.type === "button" && Children.toArray(node.props.children).includes("Published"))
-        ?.props.onClick?.();
-    assert.ok(render().some((node) => node.type === "option" && node.props.value === "country:VNM"));
+    assert.equal(
+        hidden.find((node) => node.type === "button" && Children.toArray(node.props.children).includes("Published"))
+            ?.props["aria-pressed"],
+        false
+    );
+    hidden.find((node) => node.type === "select")?.props.onChange?.({ target: { value: "country:VNM" } });
+    const restored = render();
+    assert.equal(
+        restored.find((node) => node.type === "button" && Children.toArray(node.props.children).includes("Published"))
+            ?.props["aria-pressed"],
+        true
+    );
+    assert.equal(restored.find((node) => node.type === "select")?.props.value, "country:VNM");
+    assert.deepEqual(
+        restored.find((node) => node.type === ProfileMapBoardLibrary)?.props.places?.map((place) => place.boardId),
+        [41, 52]
+    );
 });
 
 test("map API helper requests published by default and session-owned saved destinations explicitly", async (context) => {

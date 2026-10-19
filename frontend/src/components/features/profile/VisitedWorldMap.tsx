@@ -370,33 +370,34 @@ export default function VisitedWorldMap({
                         </button>
                     )}
                 </div>
-                <label className="text-foreground ml-auto flex flex-wrap items-center gap-2 text-sm">
-                    select country
-                    <select
-                        className="border-line bg-background max-w-full rounded border px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2"
-                        value={
-                            destinationOptions.find((option) =>
-                                selection ? option.value === `${selection.kind}:${selection.key}` : false
-                            )?.value ?? ""
-                        }
-                        onChange={(event) => {
-                            setHighlightedBoard(null);
-                            setSelection(
-                                destinationOptions.find((option) => option.value === event.target.value)?.selection ??
-                                    null
-                            );
-                        }}
-                    >
-                        <option value="">
-                            {destinationOptions.length ? "Choose a destination" : "No destinations"}
-                        </option>
-                        {destinationOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                                {option.label}
-                            </option>
-                        ))}
-                    </select>
-                </label>
+                {destinationOptions.length > 0 && (
+                    <label className="text-foreground ml-auto flex flex-wrap items-center gap-2 text-sm">
+                        select country
+                        <select
+                            className="border-line bg-background max-w-full rounded border px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2"
+                            value={
+                                destinationOptions.find((option) =>
+                                    selection ? option.value === `${selection.kind}:${selection.key}` : false
+                                )?.value ?? ""
+                            }
+                            onChange={(event) => {
+                                const nextSelection =
+                                    destinationOptions.find((option) => option.value === event.target.value)
+                                        ?.selection ?? null;
+                                if (nextSelection) setShowPublished(true);
+                                setHighlightedBoard(null);
+                                setSelection(nextSelection);
+                            }}
+                        >
+                            <option value="">Choose a destination</option>
+                            {destinationOptions.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                )}
             </div>
             {allowSaved && showSaved && !savedDestinations && !savedError && (
                 <p role="status" className="text-muted-foreground text-sm">
