@@ -1,3 +1,4 @@
+import { loadSavedBoardsPage, ProfileApiError } from "./profile";
 import { listBoardDrafts, listPublishedBoards, loadBoardDocument, type BoardDocument } from "./board-creator-api";
 import { parseSharedBoardId, type SelectionSummary } from "./board-selection";
 
@@ -16,6 +17,7 @@ export type BoardSelectionState = {
     sharedBoardId: number | null;
 };
 type Dependencies = {
+    listSaved?: typeof loadSavedBoardsPage;
     listDrafts: typeof listBoardDrafts;
     listPublished: typeof listPublishedBoards;
     loadDocument: typeof loadBoardDocument;
@@ -30,7 +32,8 @@ export function createBoardSelectionStore(
         listDrafts: listBoardDrafts,
         listPublished: listPublishedBoards,
         loadDocument: loadBoardDocument
-    }
+    },
+    mode: "continue" | "remix" = "continue"
 ) {
     const state: { snapshot: BoardSelectionState; version: number; sharedVersion: number } = {
         version: 0,
@@ -59,13 +62,29 @@ export function createBoardSelectionStore(
         );
     function validate(document: BoardDocument, id: number) {
         if (document.boardId !== id) throw new Error("This Board could not be verified. Try again.");
-        if (!document.permissions.canEditContent) throw new Error("You don’t have permission to edit this Board.");
+        if (mode === "continue" && !document.permissions.canEditContent)
+            throw new Error("You don’t have permission to edit this Board.");
+        if (mode === "remix" && (document.status !== "published" || !document.savedByMe))
+            throw new Error("This saved Board is no longer available.");
         return document;
+    }
+    async function readSavedPage(page: number) {
+        const result = await (deps.listSaved ?? loadSavedBoardsPage)(page, 20);
+        return {
+            items: result.data.map((board) => ({
+                boardId: board.boardId,
+                title: board.title,
+                coverImageUrl: board.coverImageUrl,
+                updatedAt: board.savedAt
+            })),
+            hasMore: result.meta?.hasMore ?? false
+        };
     }
     async function readPages(initial: boolean) {
         const version = initial ? ++state.version : state.version;
         const scopes = (["draft", "published"] as const).filter(
-            (scope) => initial || state.snapshot.scopes[scope].hasMore
+            (scope) =>
+                (mode === "continue" || scope === "published") && (initial || state.snapshot.scopes[scope].hasMore)
         );
         update(
             initial
@@ -87,9 +106,16 @@ export function createBoardSelectionStore(
             scopes.map(async (scope) => {
                 const page = initial ? 1 : state.snapshot.scopes[scope].page + 1;
                 try {
-                    const result = await (scope === "draft" ? deps.listDrafts(page) : deps.listPublished(page));
+                    const result =
+                        mode === "remix"
+                            ? await readSavedPage(page)
+                            : await (scope === "draft" ? deps.listDrafts(page) : deps.listPublished(page));
                     if (version !== state.version) return;
-                    const items = result.items.map((item) => ({ ...item, status: scope, source: "owned" as const }));
+                    const items = result.items.map((item) => ({
+                        ...item,
+                        status: scope,
+                        source: mode === "remix" ? ("saved" as const) : ("owned" as const)
+                    }));
                     const existing = initial
                         ? state.snapshot.items.filter((item) => item.source === "shared" || item.status !== scope)
                         : state.snapshot.items;
@@ -99,6 +125,8 @@ export function createBoardSelectionStore(
                     });
                 } catch (error) {
                     if (version !== state.version) return;
+                    if (mode === "remix" && error instanceof ProfileApiError && error.status === 401)
+                        update({ items: [], documents: {}, documentErrors: {} });
                     update({
                         scopes: {
                             ...state.snapshot.scopes,
@@ -128,7 +156,12 @@ export function createBoardSelectionStore(
                 items: merge(
                     state.snapshot.items.map((item) =>
                         item.boardId === id
-                            ? { ...item, status: document.status, title: document.title, updatedAt: document.updatedAt }
+                            ? {
+                                  ...item,
+                                  status: document.status,
+                                  title: document.title,
+                                  updatedAt: mode === "remix" ? item.updatedAt : document.updatedAt
+                              }
                             : item
                     )
                 )

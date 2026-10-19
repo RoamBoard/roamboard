@@ -7,11 +7,27 @@ import { cloudinaryPhotoMetadata } from "./photo-metadata.js";
 import { AppError } from "../../shared/app-error.js";
 import type { ImageProvider, ProviderAsset } from "./images.types.js";
 import type { QuotaService } from "../quotas/quota.service.js";
+import type { ImagePresentationEdit } from "./images.schemas.js";
 
 const variants = {
     display: { width: 1600, height: 1600, crop: "limit", quality: "auto", fetch_format: "jpg" },
     thumbnail: { width: 320, height: 320, crop: "limit", quality: "auto", fetch_format: "jpg" }
 } as const;
+
+function presentationSteps(edit?: ImagePresentationEdit | null) {
+    return edit
+        ? [
+              {
+                  crop: "crop",
+                  x: edit.x.toFixed(6),
+                  y: edit.y.toFixed(6),
+                  width: edit.width.toFixed(6),
+                  height: edit.height.toFixed(6)
+              },
+              { crop: "limit", width: edit.outputWidth, height: edit.outputHeight }
+          ]
+        : [];
+}
 
 interface CloudinaryConfig {
     cloudName: string;
@@ -64,6 +80,34 @@ function parseAsset(raw: Record<string, unknown>): ProviderAsset | null {
 
 export function createCloudinaryProvider(quota?: QuotaService): ImageProvider {
     return {
+        async copy(sourceKey, targetKey, edit) {
+            config();
+            // Copy only the displayed crop. A readable Board does not grant access to its uploader's original.
+            const source = cloudinary.url(sourceKey, {
+                secure: true,
+                sign_url: true,
+                type: "authenticated",
+                resource_type: "image",
+                transformation: [...presentationSteps(edit), variants.display],
+                format: "jpg"
+            });
+            const raw = await cloudinary.uploader
+                .upload(source, {
+                    public_id: targetKey,
+                    type: "authenticated",
+                    resource_type: "image",
+                    overwrite: false,
+                    transformation: [{ flags: "force_strip" }],
+                    allowed_formats: ["jpg", "jpeg", "png", "webp", "heic", "heif"],
+                    timeout: 120000
+                })
+                .catch(() => {
+                    throw new AppError(503, "Photo could not be copied. Try again.", "PROVIDER_UNAVAILABLE");
+                });
+            const asset = parseAsset(raw);
+            if (!asset) throw new AppError(503, "Photo could not be copied", "PROVIDER_UNAVAILABLE");
+            return asset;
+        },
         authorizeUpload(storageKey) {
             const { cloudName, apiKey, apiSecret } = config();
             const timestamp = Math.floor(Date.now() / 1000).toString();
@@ -116,18 +160,7 @@ export function createCloudinaryProvider(quota?: QuotaService): ImageProvider {
                 type: "authenticated",
                 resource_type: "image",
                 transformation: [
-                    ...(variant !== "original" && edit
-                        ? [
-                              {
-                                  crop: "crop",
-                                  x: edit.x.toFixed(6),
-                                  y: edit.y.toFixed(6),
-                                  width: edit.width.toFixed(6),
-                                  height: edit.height.toFixed(6)
-                              },
-                              { crop: "limit", width: edit.outputWidth, height: edit.outputHeight }
-                          ]
-                        : []),
+                    ...(variant !== "original" ? presentationSteps(edit) : []),
                     variant === "original"
                         ? { width: 4096, height: 4096, crop: "limit", quality: "auto", fetch_format: "jpg" }
                         : variants[variant]

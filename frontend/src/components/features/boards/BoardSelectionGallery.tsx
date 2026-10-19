@@ -62,7 +62,11 @@ export function BoardSelectionGallery({
     const selectedIndex = boards.findIndex((board) => board.summary.boardId === selected.summary.boardId);
     const rest = boards.filter((board) => board.summary.boardId !== selected.summary.boardId);
     const positions = new Map(rest.map((board, index) => [board.summary.boardId, index]));
-    const href = selected.document ? selectionEditorHref(selected.document) : null;
+    const href = selected.document
+        ? mode === "remix"
+            ? `/boards/${selected.summary.boardId}`
+            : selectionEditorHref(selected.document)
+        : null;
     const selectOffset = (offset: number) => {
         const next = boards[(selectedIndex + offset + boards.length) % boards.length];
         if (next) onSelect(next.summary.boardId);
@@ -122,7 +126,11 @@ export function BoardSelectionGallery({
                                         imageSizes="(max-width: 640px) 80vw, 400px"
                                         selection={{
                                             selected: active,
-                                            href: active && mode === "continue" ? (href ?? undefined) : undefined,
+                                            href: active ? (href ?? undefined) : undefined,
+                                            remixHref:
+                                                active && mode === "remix" && href
+                                                    ? `/boards/new?remix=${board.summary.boardId}`
+                                                    : undefined,
                                             label: `Focus ${board.photo.title}`,
                                             tabIndex: active ? 0 : -1,
                                             onSelect: () => onSelect(board.summary.boardId)
@@ -135,7 +143,9 @@ export function BoardSelectionGallery({
                                         >
                                             {error
                                                 ? "Preview unavailable. Retry access below."
-                                                : "Loading Board preview and edit access…"}
+                                                : mode === "remix"
+                                                  ? "Loading saved Board preview..."
+                                                  : "Loading Board preview and edit access…"}
                                         </p>
                                     )}
                                 </TactileBoard>
@@ -154,7 +164,9 @@ export function BoardSelectionGallery({
                     {!href && (
                         <span className="text-muted-foreground text-xs">
                             {mode === "remix"
-                                ? "Remixing is coming later"
+                                ? error
+                                    ? "Saved Board unavailable"
+                                    : "Checking saved Board access..."
                                 : error || selected.document
                                   ? "Editing unavailable"
                                   : "Checking edit access..."}
@@ -241,7 +253,11 @@ function SelectionAnnotations({ board }: { board: SelectionBoard }) {
             >
                 <div>
                     <dt className="text-foreground text-xs tracking-[.08em] uppercase">
-                        {board.ownership === "owner" ? "Your Board" : "Shared with you"}
+                        {board.summary.source === "saved"
+                            ? "Saved Board"
+                            : board.ownership === "owner"
+                              ? "Your Board"
+                              : "Shared with you"}
                     </dt>
                     <dd className="mt-1">
                         {status === "draft" ? "Unpublished draft" : "Published"}
@@ -249,7 +265,9 @@ function SelectionAnnotations({ board }: { board: SelectionBoard }) {
                     </dd>
                 </div>
                 <div>
-                    <dt className="text-foreground text-xs tracking-[.08em] uppercase">Last updated</dt>
+                    <dt className="text-foreground text-xs tracking-[.08em] uppercase">
+                        {board.summary.source === "saved" ? "Saved on" : "Last updated"}
+                    </dt>
                     <dd className="mt-1">{formatSelectionDate(board.summary.updatedAt)}</dd>
                 </div>
                 {board.destination && (
@@ -291,10 +309,12 @@ export function formatSelectionDate(value: string) {
 
 export function BoardSelectionCollection({
     boards,
-    onSelect
+    onSelect,
+    mode = "continue"
 }: {
     boards: SelectionBoard[];
     onSelect: (id: number) => void;
+    mode?: "continue" | "remix";
 }) {
     const reduced = useReducedMotion();
     if (!boards.length) return null;
@@ -323,12 +343,14 @@ export function BoardSelectionCollection({
                         transition={reduced ? { duration: 0 } : spring}
                         className={`border-line relative border-r border-b px-5 py-8 sm:px-7 sm:py-10 ${index % 2 ? "lg:pt-20" : ""}`}
                     >
-                        <TactileBoard>
-                            <div className="relative mx-auto max-w-60 transition-transform duration-300 focus-within:-translate-y-2 hover:-translate-y-2 motion-reduce:transform-none motion-reduce:transition-none">
+                        <TactileBoard active={mode !== "remix"}>
+                            <div
+                                className={`relative mx-auto max-w-60 ${mode === "remix" ? "" : "transition-transform duration-300 focus-within:-translate-y-2 hover:-translate-y-2 motion-reduce:transform-none motion-reduce:transition-none"}`}
+                            >
                                 <PhotoBoardCard
                                     board={board.photo}
                                     ownership={board.ownership}
-                                    details
+                                    details={mode !== "remix"}
                                     imageSizes="(max-width: 640px) 75vw, 240px"
                                     selection={{
                                         selected: false,

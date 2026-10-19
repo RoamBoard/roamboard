@@ -15,11 +15,15 @@ export default async function NewBoardPage({
     searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
     const params = await searchParams;
+    const remixId =
+        typeof params.remix === "string" && /^[1-9]\d*$/.test(params.remix) ? Number(params.remix) : undefined;
 
     return (
         <AppShell activeHref="/create">
             <BoardCreator
                 backHref="/create"
+                key={params.remix as string | undefined}
+                initialRemixBoardId={Number.isSafeInteger(remixId) ? remixId : undefined}
                 initialMode={params.mode === "scratch" ? "scratch" : "smart"}
                 initialPlace={getStartingPlace(params)}
             />

@@ -2,6 +2,7 @@ import type { ImagePresentationEdit } from "./images.schemas.js";
 import type { Readable } from "node:stream";
 
 import type { UploadIntentWrite } from "../boards/boards.schemas.js";
+import type { BoardDocument } from "../boards/boards.types.js";
 
 export interface UploadIntent {
     uploadId: string;
@@ -42,6 +43,7 @@ export interface ProviderAsset {
 }
 
 export interface ImageProvider {
+    copy?(sourceKey: string, targetKey: string, edit?: ImagePresentationEdit | null): Promise<ProviderAsset>;
     authorizeUpload(storageKey: string): {
         uploadUrl: string;
         method: "POST";
@@ -82,6 +84,7 @@ export interface ImagesRepository {
 }
 
 export interface ImagesService {
+    copyForBoard(userId: string, boardId: number, imageId: number, source?: BoardDocument): Promise<number>;
     readPresentation(
         userId: string,
         imageId: number

@@ -20,6 +20,53 @@ export function createImagesService(
     boards: BoardRepository
 ): ImagesService {
     return {
+        async copyForBoard(userId, boardId, imageId, authorizedSource) {
+            // Preparation supplies its authorized snapshot to avoid rereading the entire itinerary for each photo.
+            const [image, source] = await Promise.all([
+                repository.findImage(imageId),
+                authorizedSource ?? boards.getBoard(boardId, userId)
+            ]);
+            if (
+                !source ||
+                source.boardId !== boardId ||
+                source.status !== "published" ||
+                !source.savedByMe ||
+                !image ||
+                image.boardId !== boardId ||
+                !source.images.some((item) => item.imageId === imageId)
+            )
+                throw new AppError(404, "Saved Board photo not found", "NOT_FOUND");
+            if (!provider.copy) throw new AppError(503, "Photo copying is unavailable", "PROVIDER_UNAVAILABLE");
+            const uploadId = randomUUID();
+            const createdAt = new Date();
+            const intent = {
+                uploadId,
+                userId,
+                storageKey: `roamboard/${uploadId}`,
+                fileName: "saved-board-photo",
+                contentType: "image/jpeg",
+                sizeBytes: MAX_IMAGE_BYTES,
+                createdAt,
+                expiresAt: new Date(createdAt.getTime() + 60 * 60 * 1000),
+                imageId: null
+            };
+            // Track storage targets before copying so partial failures can be cleaned up.
+            await repository.createIntent(intent);
+            const asset = await provider.copy(image.storageKey, intent.storageKey, image.presentationEdit);
+            if (
+                asset.storageKey !== intent.storageKey ||
+                asset.byteSize > MAX_IMAGE_BYTES ||
+                !allowedFormats.has(asset.format)
+            )
+                throw new AppError(400, "Invalid copied image", "INVALID_REQUEST");
+            const copiedId = await repository.completeIntent(intent, {
+                ...asset,
+                capturedAt: null,
+                latitude: null,
+                longitude: null
+            });
+            return copiedId;
+        },
         async readPresentation(userId, imageId) {
             const image = await repository.findImage(imageId);
             if (!image || image.uploaderUserId !== userId) throw new AppError(404, "Image not found", "NOT_FOUND");

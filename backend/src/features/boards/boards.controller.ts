@@ -9,6 +9,7 @@ interface BoardController {
     listTags: RequestHandler;
     listCategories: RequestHandler;
     create: RequestHandler;
+    prepareRemix: RequestHandler;
     replace: RequestHandler;
     read: RequestHandler;
     listOwned: RequestHandler;
@@ -21,6 +22,11 @@ function userId(locals: Record<string, unknown>): string {
 
 export function createBoardsController(service: BoardsService): BoardController {
     return {
+        prepareRemix: async (_request, response) => {
+            response.json({
+                data: await service.prepareRemix(userId(response.locals), response.locals.params.boardId)
+            });
+        },
         listAccessible: async (_request, response) => {
             const { page, limit } = response.locals.query as { page: number; limit: number };
             const result = await service.listAccessible(userId(response.locals), page, limit);

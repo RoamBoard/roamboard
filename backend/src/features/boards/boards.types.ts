@@ -85,7 +85,19 @@ export interface BoardRepository {
     deleteBoard(boardId: number, userId: string): Promise<boolean>;
 }
 
+export type PreparedBoardCopy = Pick<
+    BoardDocument,
+    "title" | "description" | "destination" | "tags" | "days" | "images" | "coverImageId"
+>;
+export type CopyBoardImage = (
+    userId: string,
+    boardId: number,
+    imageId: number,
+    source?: BoardDocument
+) => Promise<number>;
+
 export interface BoardsService {
+    prepareRemix(userId: string, boardId: number): Promise<PreparedBoardCopy>;
     listAccessible(
         userId: string,
         page: number,
