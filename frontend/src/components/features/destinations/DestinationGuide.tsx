@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import BackLink from "@/components/ui/BackLink";
 import type { DestinationGuideInput } from "@/lib/destination-guides";
 import { DestinationPage } from "./DestinationPage";
 import useDestinationGuide from "./useDestinationGuide";
@@ -10,10 +10,8 @@ export default function DestinationGuide({ input }: { input: DestinationGuideInp
     const { data, error, loading, retry, loadMore } = useDestinationGuide(input);
     if (!data)
         return (
-            <section className="ml-16 min-h-[70dvh] px-6 py-20 md:ml-20 md:px-12">
-                <Link href="/discover" className="text-12 underline underline-offset-4">
-                    Back to Discover
-                </Link>
+            <section className="min-h-[70dvh] px-6 py-20 md:px-12">
+                <BackLink fallbackHref="/discover" />
                 <h1 className="font-display text-48 mt-8">{input.name}</h1>
                 {error ? (
                     <p role="alert" className="mt-5">

@@ -143,6 +143,7 @@ export function toPhotoBoardCard(document: BoardDocument): PhotoBoardCardData {
         tags: document.tags.map((tag) => tag.name),
         description: document.description?.trim() || undefined,
         durationDays: document.days.length,
+        activityCount: activities.length,
         visibility: document.visibility,
         status: document.status
     };

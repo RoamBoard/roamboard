@@ -17,6 +17,12 @@
     --muted-foreground: #818181; /* graphite */
     --line: #d2d2d2; /* slate */
     --faint: #e7e7e7; /* porcelain */
+    --feedback-error: #991b1b;
+    --feedback-error-surface: #fef2f2;
+    --feedback-error-border: #fca5a5;
+    --feedback-success: #166534;
+    --feedback-success-surface: #f0fdf4;
+    --feedback-success-border: #86efac;
     --decorative-line: #bdbdbd; /* stone */
     --board-highlight: #acffd1;
     --card-title: #363636;
@@ -41,6 +47,12 @@
     --muted-foreground: #a3a3a3;
     --line: #383838;
     --faint: #2a2a2a;
+    --feedback-error: #fecaca;
+    --feedback-error-surface: #391b1b;
+    --feedback-error-border: #b45353;
+    --feedback-success: #bbf7d0;
+    --feedback-success-surface: #163125;
+    --feedback-success-border: #397653;
     --decorative-line: #383838;
     --board-highlight: #264f39;
     --card-title: #e7e7e7;
@@ -67,6 +79,12 @@
     --color-muted-foreground: var(--muted-foreground);
     --color-line: var(--line);
     --color-faint: var(--faint);
+    --color-feedback-error: var(--feedback-error);
+    --color-feedback-error-surface: var(--feedback-error-surface);
+    --color-feedback-error-border: var(--feedback-error-border);
+    --color-feedback-success: var(--feedback-success);
+    --color-feedback-success-surface: var(--feedback-success-surface);
+    --color-feedback-success-border: var(--feedback-success-border);
     --color-decorative-line: var(--decorative-line);
     --color-board-highlight: var(--board-highlight);
     --color-card-title: var(--card-title);

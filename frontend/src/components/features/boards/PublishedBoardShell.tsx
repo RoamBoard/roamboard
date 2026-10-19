@@ -10,7 +10,7 @@ type Props = {
 // Keep the sidebar and account controls around the board content.
 export default function PublishedBoardShell({ children }: Props) {
     return (
-        <div className="bg-background text-foreground min-h-dvh">
+        <div className="bg-background text-foreground grid min-h-dvh grid-cols-[auto_minmax(0,1fr)]">
             {/* Keyboard users can skip the sidebar and go straight to the board. */}
             <a
                 href="#published-board-content"
@@ -19,11 +19,7 @@ export default function PublishedBoardShell({ children }: Props) {
                 Skip to board
             </a>
             <Sidebar activeHref="/boards" />
-            <main
-                id="published-board-content"
-                tabIndex={-1}
-                className="border-line ml-16 min-h-dvh min-w-0 outline-none md:ml-20"
-            >
+            <main id="published-board-content" tabIndex={-1} className="border-line min-h-dvh min-w-0 outline-none">
                 {children}
             </main>
         </div>

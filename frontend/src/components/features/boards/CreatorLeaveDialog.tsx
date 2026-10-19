@@ -2,8 +2,17 @@
 
 import { useRouter } from "next/navigation";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import type { BoardLeaveNavigation } from "@/lib/board-editor-safety";
 
-export default function CreatorLeaveDialog({ href, onClose }: { href: string; onClose: () => void }) {
+export default function CreatorLeaveDialog({
+    href,
+    navigation = "push",
+    onClose
+}: {
+    href: string;
+    navigation?: BoardLeaveNavigation;
+    onClose: () => void;
+}) {
     const router = useRouter();
     return (
         <ConfirmDialog
@@ -12,9 +21,15 @@ export default function CreatorLeaveDialog({ href, onClose }: { href: string; on
             confirmLabel="Leave without saving"
             onCancel={onClose}
             onConfirm={() => {
-                const destination = new URL(href);
                 onClose();
-                router.push(`${destination.pathname}${destination.search}${destination.hash}`);
+                if (navigation === "back") {
+                    router.back();
+                    return;
+                }
+                const destination = new URL(href);
+                const target = `${destination.pathname}${destination.search}${destination.hash}`;
+                if (navigation === "replace") router.replace(target);
+                else router.push(target);
             }}
         />
     );

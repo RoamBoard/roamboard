@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import BackLink from "@/components/ui/BackLink";
 import { motion, MotionConfig, useReducedMotion } from "motion/react";
 import { ArrowUpRight } from "lucide-react";
 import BoardPhoto from "@/components/features/boards/BoardPhoto";
@@ -40,12 +41,10 @@ export function DestinationPage({ destination: guide, onLoadMore, onRetry, loadi
                     className="relative grid h-full w-[var(--destination-width)] shrink-0 snap-start snap-always grid-rows-[38%_minmax(0,1fr)] overflow-hidden outline-none md:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] md:grid-rows-1"
                 >
                     <div className="border-line @container relative isolate h-full min-w-0 overflow-hidden border-r">
-                        <Link
-                            href="/discover"
-                            className="bg-background/90 absolute top-5 left-5 z-20 px-2 py-2 text-xs underline underline-offset-4 md:left-8"
-                        >
-                            Back to Discover
-                        </Link>
+                        <BackLink
+                            fallbackHref="/discover"
+                            className="bg-background/90 absolute top-5 left-5 z-20 px-2 md:left-8"
+                        />
                         <motion.div
                             initial={{ opacity: 0.35, rotate: -35 }}
                             animate={{ opacity: 1, rotate: 0 }}

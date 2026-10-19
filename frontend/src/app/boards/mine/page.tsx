@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function MyBoardsPage() {
     return (
-        <AppShell activeHref="/boards">
+        <AppShell activeHref="/boards" backHref="/create">
             <PublishedBoardList />
         </AppShell>
     );

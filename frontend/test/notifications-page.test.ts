@@ -1,10 +1,31 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import React, { Children, createElement, isValidElement, type ReactNode } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderToStaticMarkup as renderMarkup } from "react-dom/server";
+import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import NotificationsContent from "@/components/features/notifications/NotificationsContent";
 import { notifyFriendRequestAction, subscribeToFriendRequestUpdates, type FriendRequest } from "@/lib/profile";
 import { publishAccountUpdate, signInWithGoogle, type AuthUser } from "@/lib/auth";
+
+function renderToStaticMarkup(node: ReactNode) {
+    return renderMarkup(
+        createElement(
+            AppRouterContext.Provider,
+            {
+                value: {
+                    bfcacheId: "notifications-test",
+                    back() {},
+                    forward() {},
+                    refresh() {},
+                    push() {},
+                    replace() {},
+                    prefetch() {}
+                }
+            },
+            node
+        )
+    );
+}
 
 type ElementProps = {
     children?: ReactNode;

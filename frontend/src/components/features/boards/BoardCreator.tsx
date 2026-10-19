@@ -17,7 +17,8 @@ import CreatorNotifications, { creatorToastOptions } from "./CreatorNotification
 import CreatorProgress from "./CreatorProgress";
 import { toast } from "sonner";
 import CreatorLeaveDialog from "./CreatorLeaveDialog";
-import { boardEditorFingerprint } from "@/lib/board-editor-safety";
+import CreatorDeleteDialog from "./CreatorDeleteDialog";
+import { boardEditorFingerprint, type BoardLeaveNavigation } from "@/lib/board-editor-safety";
 import { useBoardLeaveWarning } from "@/lib/use-board-leave-warning";
 import {
     fromBoardDocument,
@@ -67,7 +68,10 @@ export default function BoardCreator({
 }) {
     const [smartStartDate, setSmartStartDate] = useState<string | null>(null);
     const [pendingPlan, setPendingPlan] = useState<SmartCreatePlan | null>(null);
-    const [leaveHref, setLeaveHref] = useState<string | null>(null);
+    const [leaveTarget, setLeaveTarget] = useState<{ href: string; navigation: BoardLeaveNavigation } | null>(null);
+    const requestLeave = useCallback((href: string, navigation: BoardLeaveNavigation) => {
+        setLeaveTarget({ href, navigation });
+    }, []);
     const saveToastId = useId();
     const saveInFlight = useRef(false);
     const [title, setTitle] = useState(
@@ -136,7 +140,11 @@ export default function BoardCreator({
     const [tagsError, setTagsError] = useState("");
     const [savedFingerprint, setSavedFingerprint] = useState<string | null>(null);
     const [savedBoard, setSavedBoard] = useState<BoardDocument | null>(null);
+    const [deleteOpen, setDeleteOpen] = useState(false);
+    const [deleting, setDeleting] = useState(false);
     const editorDisabled =
+        deleteOpen ||
+        deleting ||
         pendingPlan !== null ||
         saving !== null ||
         draftLoading ||
@@ -290,8 +298,9 @@ export default function BoardCreator({
     }, [initialBoardId]);
     const dirty = fingerprint !== (savedFingerprint ?? initialFingerprint);
     useBoardLeaveWarning(
-        ((!editorDisabled || pendingPlan !== null) && dirty) || saving !== null || uploading,
-        setLeaveHref
+        !deleting &&
+            (((!editorDisabled || pendingPlan !== null || deleteOpen) && dirty) || saving !== null || uploading),
+        requestLeave
     );
     useEffect(
         () => () => {
@@ -543,6 +552,13 @@ export default function BoardCreator({
     return (
         <article className="font-body bg-background text-foreground relative min-w-0 overflow-x-clip">
             <CreatorNotifications />
+            {deleteOpen && savedBoard?.permissions.canManageBoard ? (
+                <CreatorDeleteDialog
+                    boardId={savedBoard.boardId}
+                    onClose={() => setDeleteOpen(false)}
+                    onDeletingChange={setDeleting}
+                />
+            ) : null}
             {pendingPlan ? (
                 <SmartCreateReviewDialog
                     plan={pendingPlan}
@@ -555,7 +571,7 @@ export default function BoardCreator({
                     }}
                 />
             ) : null}
-            {leaveHref ? <CreatorLeaveDialog href={leaveHref} onClose={() => setLeaveHref(null)} /> : null}
+            {leaveTarget ? <CreatorLeaveDialog {...leaveTarget} onClose={() => setLeaveTarget(null)} /> : null}
             <CreatorProgress
                 dirty={dirty}
                 saved={savedBoard !== null}
@@ -778,7 +794,7 @@ export default function BoardCreator({
                         title="PUBLISH"
                         description="Save it for yourself, or share it if you feel like it."
                     />
-                    <div className="min-w-0 lg:-translate-x-[19.25%] lg:translate-y-16 lg:self-center">
+                    <div className="min-w-0 lg:-translate-x-[19.25%] lg:self-center">
                         <BoardPublishPanel
                             expectedStatus={expectedStatus}
                             savedBoard={savedBoard}
@@ -788,6 +804,7 @@ export default function BoardCreator({
                             message={saveMessage}
                             error={saveError}
                             onSave={(status) => void save(status)}
+                            onDelete={() => setDeleteOpen(true)}
                         />
                     </div>
                 </section>

@@ -1,6 +1,8 @@
 import { toBoardWrite } from "./board-creator-api";
 import type { BoardCreatorPayload } from "@/types/board-creator";
 
+export type BoardLeaveNavigation = "back" | "replace" | "push";
+
 // Compare persisted meaning, not transient editor IDs or refreshed protected-image URLs.
 export function boardEditorFingerprint(board: BoardCreatorPayload): string {
     const write = toBoardWrite(

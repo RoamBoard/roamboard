@@ -5,7 +5,7 @@ import BoardSelectionExperience from "@/components/features/boards/BoardSelectio
 export const metadata: Metadata = { title: "Continue a Board | Roamboard", robots: { index: false, follow: false } };
 export default function ContinueBoardPage() {
     return (
-        <AppShell activeHref="/create">
+        <AppShell activeHref="/create" backHref="/create">
             <BoardSelectionExperience mode="continue" />
         </AppShell>
     );

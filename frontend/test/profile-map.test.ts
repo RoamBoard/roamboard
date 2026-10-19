@@ -139,7 +139,7 @@ test("destination selector lists published countries only and opens the producti
     const initial = render();
     assert.ok(
         initial.some(
-            (node) => node.type === "label" && Children.toArray(node.props.children).includes("Explore destination")
+            (node) => node.type === "label" && Children.toArray(node.props.children).includes("select country")
         )
     );
     assert.equal(

@@ -123,12 +123,15 @@ export default function BoardLibrary({
                     <h2 id={`${id}-heading`} className="font-display text-foreground/60 text-24 md:text-36 font-medium">
                         {title}
                     </h2>
-                    <div className="flex gap-2">
+                    <div className="flex items-center justify-center gap-2">
                         <CarouselPrevious
                             aria-label={`Previous ${collectionName} Boards`}
-                            className="rounded-none border-0"
+                            className="rounded-none border-0 [&>svg]:size-6"
                         />
-                        <CarouselNext aria-label={`Next ${collectionName} Boards`} className="rounded-none border-0" />
+                        <CarouselNext
+                            aria-label={`Next ${collectionName} Boards`}
+                            className="rounded-none border-0 [&>svg]:size-6"
+                        />
                     </div>
                 </div>
                 {description && <p className="text-12 text-foreground/65 mx-5 mb-8 max-w-xl sm:mx-12">{description}</p>}

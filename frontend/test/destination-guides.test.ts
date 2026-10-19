@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test, { type TestContext } from "node:test";
 import { Children, createElement, isValidElement, type ComponentProps, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import DestinationRoute, { generateMetadata } from "../src/app/discover/destinations/[slug]/page";
 import NewBoardPage from "../src/app/boards/new/page";
 import BoardCreator from "../src/components/features/boards/BoardCreator";
@@ -108,7 +109,23 @@ function routeInput(node: ReactNode): unknown {
     return node.props.input ?? Children.toArray(node.props.children).map(routeInput).find(Boolean);
 }
 function renderGuide(destination = guide(), extra: Partial<Parameters<typeof DestinationPage>[0]> = {}) {
-    return renderToStaticMarkup(createElement(DestinationPage, { destination, ...extra }));
+    return renderToStaticMarkup(
+        createElement(
+            AppRouterContext.Provider,
+            {
+                value: {
+                    bfcacheId: "guide-test",
+                    back: () => {},
+                    forward: () => {},
+                    refresh: () => {},
+                    push: () => {},
+                    replace: () => {},
+                    prefetch: () => {}
+                }
+            },
+            createElement(DestinationPage, { destination, ...extra })
+        )
+    );
 }
 
 function startingEditor(node: ReactNode): ReactElement<ComponentProps<typeof BoardCreator>> | undefined {

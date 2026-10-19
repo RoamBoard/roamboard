@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import BackLink from "@/components/ui/BackLink";
 import { notFound } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import DiscoverPhoto from "@/components/features/discover/DiscoverPhoto";
@@ -59,14 +60,8 @@ export default async function DestinationPage(props: Props) {
     return (
         <AppShell activeHref="/discover" discover={{ collapsed: true }}>
             <DestinationReady href={href} />
-            <div className="min-h-dvh py-12 pr-5 pl-24 md:py-16 md:pr-12 md:pl-36">
-                <Link
-                    href="/discover#trending-title"
-                    scroll={false}
-                    className="text-14 inline-flex min-h-11 items-center gap-2 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4"
-                >
-                    <span aria-hidden="true">←</span> Back to Discover
-                </Link>
+            <div className="min-h-dvh py-12 pr-5 pl-8 md:py-16 md:pr-12 md:pl-16">
+                <BackLink fallbackHref="/discover#trending-title" />
                 <header className="border-line mt-6 grid gap-6 border-b pb-8 md:grid-cols-2 md:items-center">
                     <div>
                         <p className="text-muted-foreground text-12 mb-4">TRENDING DESTINATION</p>

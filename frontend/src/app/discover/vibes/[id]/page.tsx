@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import BackLink from "@/components/ui/BackLink";
 import { notFound } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import TagIcon from "@/components/ui/TagIcon";
@@ -24,13 +25,8 @@ export default async function VibePage({ params }: Props) {
 
     return (
         <AppShell activeHref="/discover" discover={{ collapsed: true }}>
-            <div className="min-h-dvh py-12 pr-5 pl-24 md:py-16 md:pr-12 md:pl-36">
-                <Link
-                    href="/discover#roam-by-vibe"
-                    className="text-14 inline-flex min-h-11 items-center gap-2 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4"
-                >
-                    <span aria-hidden="true">←</span> All vibes
-                </Link>
+            <div className="min-h-dvh py-12 pr-5 pl-8 md:py-16 md:pr-12 md:pl-16">
+                <BackLink fallbackHref="/discover#roam-by-vibe" />
                 <header className="border-line mt-6 border-b pb-8">
                     <div className="flex items-center gap-4">
                         <TagIcon tag={tag} size={40} className="shrink-0" />

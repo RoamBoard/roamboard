@@ -13,6 +13,7 @@ type Props = {
     message: string;
     error: string;
     onSave: (status: BoardStatus) => void;
+    onDelete?: () => void;
 };
 
 export default function BoardPublishPanel({
@@ -23,13 +24,14 @@ export default function BoardPublishPanel({
     uploading,
     message,
     error,
-    onSave
+    onSave,
+    onDelete
 }: Props) {
     const publishedEdit = expectedStatus === "published";
     const locked = disabled || saving !== null || uploading || (savedBoard?.status === "published" && !publishedEdit);
     return (
         <div className="[container-type:inline-size] min-w-0 text-center" aria-busy={saving !== null}>
-            <p className="text-muted-foreground mx-auto mb-10 max-w-md text-xs leading-relaxed sm:text-sm">
+            <p className="text-muted-foreground mx-auto mb-6 max-w-md text-xs leading-relaxed sm:text-sm">
                 {publishedEdit
                     ? "Keep the journey up to date. Save your changes when you’re ready."
                     : "A plan worth sharing. Publish when you’re ready, or keep it as a draft for later."}
@@ -63,7 +65,7 @@ export default function BoardPublishPanel({
                     {saving === "draft" ? "Saving draft..." : "Save as draft"}
                 </button>
             ) : null}
-            <p className="text-muted-foreground mx-auto mt-10 max-w-md text-[11px] leading-relaxed">
+            <p className="text-muted-foreground mx-auto mt-6 max-w-md text-[11px] leading-relaxed">
                 {publishedEdit
                     ? "Changes use the visibility selected above. Only the Board owner can change visibility."
                     : "Drafts can stay incomplete and remain visible only to you. Publishing needs a title, a main destination, and at least one activity location."}
@@ -121,6 +123,16 @@ export default function BoardPublishPanel({
                 >
                     View saved Board →
                 </Link>
+            ) : null}
+            {savedBoard?.permissions.canManageBoard && onDelete ? (
+                <button
+                    type="button"
+                    disabled={locked}
+                    onClick={onDelete}
+                    className="text-muted-foreground mx-auto mt-1 block min-h-11 cursor-pointer px-2 text-xs underline underline-offset-4 transition-colors hover:text-red-500 focus-visible:outline-2 focus-visible:outline-offset-4 disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                    Delete Board
+                </button>
             ) : null}
         </div>
     );

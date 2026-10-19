@@ -3,7 +3,7 @@ import AppShell from "@/components/layout/AppShell";
 
 export default function DraftsPage() {
     return (
-        <AppShell activeHref="/create">
+        <AppShell activeHref="/create" backHref="/create">
             <DraftBoardList />
         </AppShell>
     );
