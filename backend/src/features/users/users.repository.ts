@@ -1,10 +1,12 @@
+import type { Pool } from "pg";
 import { getPool } from "../../db.js";
 import { AppError } from "../../shared/app-error.js";
 import { countryCodeForName } from "../../shared/countries.js";
 import { continentForCountry } from "../../shared/continents.js";
 import type { UsersRepository, UserProfile, ProfileBoard, MapDestination } from "./users.types.js";
 
-export function createUsersRepository(): UsersRepository {
+export function createUsersRepository(pool?: Pick<Pool, "query">): UsersRepository {
+    const getDb = () => pool ?? getPool();
     return {
         async read(userId) {
             const result = await getPool().query<{
@@ -407,7 +409,7 @@ export function createUsersRepository(): UsersRepository {
         },
         async acceptFriendRequest(recipientId, requestId) {
             try {
-                const result = await getPool().query(
+                const result = await getDb().query(
                     `UPDATE friendship
                      SET status = 'accepted', accepted_at = CURRENT_TIMESTAMP
                      WHERE friendship_id = $1 AND recipient_user_id = $2 AND status = 'pending'`,
@@ -416,7 +418,7 @@ export function createUsersRepository(): UsersRepository {
                 return (result.rowCount ?? 0) > 0;
             } catch (error: unknown) {
                 if (error && typeof error === "object" && "code" in error && error.code === "42703") {
-                    const result = await getPool().query(
+                    const result = await getDb().query(
                         `UPDATE friendship
                          SET status = 'accepted'
                          WHERE friendship_id = $1 AND recipient_user_id = $2 AND status = 'pending'`,
@@ -438,7 +440,7 @@ export function createUsersRepository(): UsersRepository {
         async listFriends(userId) {
             let result;
             try {
-                result = await getPool().query<{
+                result = await getDb().query<{
                     friendship_id: number;
                     accepted_at: Date | null;
                     user_id: string;
@@ -457,7 +459,7 @@ export function createUsersRepository(): UsersRepository {
                 );
             } catch (error: unknown) {
                 if (error && typeof error === "object" && "code" in error && error.code === "42703") {
-                    result = await getPool().query<{
+                    result = await getDb().query<{
                         friendship_id: number;
                         accepted_at: Date | null;
                         user_id: string;
