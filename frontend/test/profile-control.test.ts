@@ -189,25 +189,33 @@ test("NotificationControl renders bell trigger, badge counter, and request items
     ];
 
     const closedHtml = renderToStaticMarkup(
-        createElement(NotificationControl, {
-            sidebar: true,
-            iconOnly: false,
-            open: false,
-            initialRequests: requests
-        })
+        createElement(
+            RouterWrapper,
+            null,
+            createElement(NotificationControl, {
+                sidebar: true,
+                iconOnly: false,
+                open: false,
+                initialRequests: requests
+            })
+        )
     );
     assert.ok(closedHtml.includes("Notifications"));
     assert.ok(closedHtml.includes("notifications"));
-    assert.ok(closedHtml.includes("1 pending requests"));
+    assert.ok(closedHtml.includes("1 pending notifications"));
     assert.ok(!closedHtml.includes("Alice Wonderland"));
 
     const openHtml = renderToStaticMarkup(
-        createElement(NotificationControl, {
-            sidebar: true,
-            iconOnly: false,
-            open: true,
-            initialRequests: requests
-        })
+        createElement(
+            RouterWrapper,
+            null,
+            createElement(NotificationControl, {
+                sidebar: true,
+                iconOnly: false,
+                open: true,
+                initialRequests: requests
+            })
+        )
     );
     assert.ok(openHtml.includes("notifications"));
     assert.ok(openHtml.includes("view all"));
@@ -450,11 +458,15 @@ test("NotificationControl reject failure does not broadcast update and displays 
 
 test("NotificationControl hides requests and counter when signed out", () => {
     const html = renderToStaticMarkup(
-        createElement(NotificationControl, {
-            sidebar: true,
-            iconOnly: false,
-            open: true
-        })
+        createElement(
+            RouterWrapper,
+            null,
+            createElement(NotificationControl, {
+                sidebar: true,
+                iconOnly: false,
+                open: true
+            })
+        )
     );
     assert.ok(html.includes("Sign in to see notifications"));
     assert.ok(html.includes("Sign in →"));

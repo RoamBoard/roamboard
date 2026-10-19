@@ -8,6 +8,10 @@ import { checkDatabase } from "./db.js";
 import { createAuthModule, type AuthModuleOptions } from "./features/auth/auth.module.js";
 import { createBoardsModule } from "./features/boards/boards.module.js";
 import { createBoardsRepository } from "./features/boards/boards.repository.js";
+import { createCommentsModule } from "./features/board-comments/board-comments.module.js";
+import type { CommentsRepository } from "./features/board-comments/board-comments.types.js";
+import { createNotificationsModule } from "./features/board-comment-notifications/notifications.module.js";
+import type { NotificationsRepository } from "./features/board-comment-notifications/notifications.types.js";
 import type { BoardRepository } from "./features/boards/boards.types.js";
 import { createImagesModule } from "./features/images/images.module.js";
 import type { ImageProvider, ImagesRepository } from "./features/images/images.types.js";
@@ -32,6 +36,8 @@ export interface AppOptions extends AuthModuleOptions {
     libraryRepository?: LibraryRepository;
     libraryProvider?: LibraryProvider;
     boardRepository?: BoardRepository;
+    commentsRepository?: CommentsRepository;
+    notificationsRepository?: NotificationsRepository;
     imagesRepository?: ImagesRepository;
     imageProvider?: ImageProvider;
     quotaService?: QuotaService;
@@ -96,6 +102,11 @@ export function createApp(options: AppOptions = {}): Express {
     app.use("/api/v1/search", search.router);
     app.use("/api/v1/saved-places", createSavedPlacesModule(attachUser, options.savedPlacesRepository).router);
     app.use("/api/v1", boards.router);
+    app.use("/api/v1", createCommentsModule(attachUser, boards.repository, options.commentsRepository).router);
+    app.use(
+        "/api/v1",
+        createNotificationsModule(attachUser, boards.repository, options.notificationsRepository).router
+    );
     app.use("/api/v1", images.router);
     app.use(
         "/api/v1",

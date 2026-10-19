@@ -20,8 +20,13 @@ export default function MyBoardsExperience() {
 }
 
 export function MyBoardsContent({ state, actions }: { state: MyBoardsState; actions: MyBoardsStore }) {
-    const { collection, query, loading, error, preview, hasMore, loadingMore, failed, retryingFailed } = state;
+    const { collection, query, loading, error, preview, hasMore, loadingMore, failed, retryingFailed, publicSearch } =
+        state;
     const matches = filterGalleryBoards(collection, query);
+    const publicBoards = publicSearch.boards.filter(
+        (board) => !collection.some((owned) => owned.collage.id === board.id)
+    );
+    const searchTerm = query.trim();
     return (
         <article className="font-body min-w-0 pb-24">
             <header className="px-5 pt-16 text-center md:pt-24">
@@ -40,14 +45,14 @@ export function MyBoardsContent({ state, actions }: { state: MyBoardsState; acti
                         className="text-muted-foreground ml-3 shrink-0"
                     />
                     <label htmlFor="board-search" className="sr-only">
-                        Search your Boards
+                        Search your Boards and public Boards
                     </label>
                     <input
                         id="board-search"
                         type="search"
                         value={query}
                         onChange={(event) => actions.setQuery(event.target.value)}
-                        placeholder="search for a board..."
+                        placeholder="search your Boards and public Boards..."
                         className="text-14 placeholder:text-muted-foreground md:text-20 w-full min-w-0 bg-transparent px-4 py-5 text-center outline-none [&::-webkit-search-cancel-button]:appearance-none"
                     />
                     <button
@@ -92,6 +97,94 @@ export function MyBoardsContent({ state, actions }: { state: MyBoardsState; acti
                     </details>
                 )}
             </div>
+            {searchTerm && (
+                <section aria-labelledby="public-boards-heading" className="mx-auto mt-24 max-w-[1320px] px-5">
+                    <h2
+                        id="public-boards-heading"
+                        className="font-display text-foreground/60 text-30 md:text-36 text-center font-medium"
+                    >
+                        PUBLIC BOARDS
+                    </h2>
+                    <p className="text-muted-foreground mx-auto mt-3 max-w-xl text-center text-sm">
+                        Published Boards from the community. Boards in your loaded collection below are omitted here.
+                    </p>
+                    {searchTerm.length < 2 ? (
+                        <p className="text-muted-foreground mt-8 text-center text-sm">
+                            Enter at least two characters to search public Boards.
+                        </p>
+                    ) : (
+                        <>
+                            {publicSearch.loading && (
+                                <p role="status" className="mt-8 text-center text-sm">
+                                    Searching public Boards…
+                                </p>
+                            )}
+                            {publicSearch.error && (
+                                <div role="alert" className="mt-8 text-center text-sm">
+                                    {publicSearch.error}{" "}
+                                    <button
+                                        type="button"
+                                        onClick={() => void actions.retryPublicSearch()}
+                                        className="underline"
+                                    >
+                                        Retry
+                                    </button>
+                                </div>
+                            )}
+                            {!publicSearch.loading && !publicSearch.error && publicSearch.boards.length === 0 && (
+                                <p role="status" className="mt-8 text-center text-sm">
+                                    No public Boards match your search.
+                                </p>
+                            )}
+                            {!publicSearch.loading &&
+                                !publicSearch.error &&
+                                publicSearch.boards.length > 0 &&
+                                publicBoards.length === 0 && (
+                                    <p role="status" className="mt-8 text-center text-sm">
+                                        Matching Boards from your collection are shown below.
+                                    </p>
+                                )}
+                            {publicBoards.length > 0 && (
+                                <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                    {publicBoards.map((board) => (
+                                        <Link
+                                            key={board.id}
+                                            href={`/boards/${board.id}`}
+                                            className="border-line hover:bg-faint focus-visible:outline-foreground block border p-5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-4"
+                                        >
+                                            <h3 className="font-display text-xl font-bold">{board.title}</h3>
+                                            {[board.city, board.country].filter(Boolean).length > 0 && (
+                                                <p className="text-muted-foreground mt-2 text-xs">
+                                                    {[board.city, board.country].filter(Boolean).join(" · ")}
+                                                </p>
+                                            )}
+                                            {board.description && (
+                                                <p className="text-muted-foreground mt-4 line-clamp-3 text-sm">
+                                                    {board.description}
+                                                </p>
+                                            )}
+                                            <span className="mt-5 inline-block text-xs underline underline-offset-4">
+                                                Open Board ↗
+                                            </span>
+                                        </Link>
+                                    ))}
+                                </div>
+                            )}
+                            {!publicSearch.loading &&
+                                !publicSearch.error &&
+                                publicSearch.page * 10 < publicSearch.total && (
+                                    <button
+                                        type="button"
+                                        onClick={() => void actions.loadMorePublic()}
+                                        className="border-line mx-auto mt-8 block min-h-11 cursor-pointer border px-5 py-2 text-sm"
+                                    >
+                                        Load more public Boards
+                                    </button>
+                                )}
+                        </>
+                    )}
+                </section>
+            )}
             {!loading && failed.length > 0 && (
                 <div role="status" className="text-12 text-foreground/65 mx-auto mt-6 max-w-xl px-5 text-center">
                     <p>
@@ -129,7 +222,7 @@ export function MyBoardsContent({ state, actions }: { state: MyBoardsState; acti
                 <section className="mx-auto max-w-lg px-5 py-28 text-center">
                     <h2 className="font-display text-30 font-medium">
                         {query.trim()
-                            ? "No created Boards found."
+                            ? "No matching Boards in your collection."
                             : failed.length
                               ? "Your Boards couldn’t be displayed."
                               : "Your next journey starts here."}

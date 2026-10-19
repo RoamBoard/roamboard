@@ -322,3 +322,13 @@ and public Board destination data. Public Board search includes the explicit pla
 Publishing additionally requires a non-null main destination. Draft saves can remain incomplete. Existing published
 replacements omitting destination validate the currently stored value; null cannot clear it while published.
 The creator may suggest an editable destination from at least three located activities; manual choices are preserved.
+
+## Published Board comments
+
+The approved [Board comments contract](../contracts/board-comments.md) defines the comment API and permissions.
+`GET /api/v1/boards/:boardId/comments` returns 20 newest comments and an opaque Board-scoped cursor; authorized
+anonymous viewers can read public Board comments. Session and exact frontend Origin are required for POST, PATCH,
+and DELETE. Authors edit their own text with a revision check and may delete it; Board owners may delete any comment.
+Drafts and inaccessible Boards return 404. Current author display names, handles, and profile photos are read from
+`app_user`. Migration `013_board_comments.sql` adds storage after the existing `012_friendship_accepted_at.sql`;
+applying it to the shared database remains a separate step.

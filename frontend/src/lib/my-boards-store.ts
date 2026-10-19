@@ -1,6 +1,17 @@
 import { mockBoardCollections } from "@/data/my-board-collections";
 import { listPublishedBoards, loadBoardDocument, type PublishedSummary } from "./board-creator-api";
 import { toGalleryBoard, type GalleryBoard } from "./my-boards";
+import { searchIndex, type SearchDocument } from "./search";
+
+type PublicSearchState = {
+    boards: SearchDocument[];
+    total: number;
+    page: number;
+    loading: boolean;
+    error: string;
+};
+
+const emptyPublicSearch = (): PublicSearchState => ({ boards: [], total: 0, page: 0, loading: false, error: "" });
 
 export type MyBoardsState = {
     collection: GalleryBoard[];
@@ -13,6 +24,7 @@ export type MyBoardsState = {
     loadingMore: boolean;
     failed: PublishedSummary[];
     retryingFailed: boolean;
+    publicSearch: PublicSearchState;
 };
 
 async function readDocuments(summaries: PublishedSummary[]) {
@@ -45,14 +57,61 @@ export function createMyBoardsStore() {
             hasMore: false,
             loadingMore: false,
             failed: [],
-            retryingFailed: false
+            retryingFailed: false,
+            publicSearch: emptyPublicSearch()
         },
         version: 0
     };
     const listeners = new Set<() => void>();
+    const publicRequest: {
+        timer?: ReturnType<typeof setTimeout>;
+        controller?: AbortController;
+        version: number;
+        pendingPage: number;
+    } = { version: 0, pendingPage: 1 };
     function update(patch: Partial<MyBoardsState>) {
         state.snapshot = { ...state.snapshot, ...patch };
         listeners.forEach((listener) => listener());
+    }
+    function cancelPublicSearch() {
+        publicRequest.version += 1;
+        if (publicRequest.timer) clearTimeout(publicRequest.timer);
+        publicRequest.timer = undefined;
+        publicRequest.controller?.abort();
+        publicRequest.controller = undefined;
+    }
+    async function runPublicSearch(query: string, page: number) {
+        cancelPublicSearch();
+        const version = publicRequest.version;
+        const controller = new AbortController();
+        publicRequest.controller = controller;
+        publicRequest.pendingPage = page;
+        update({ publicSearch: { ...state.snapshot.publicSearch, loading: true, error: "" } });
+        try {
+            const result = await searchIndex(query, { country: "", category: "" }, { page, signal: controller.signal });
+            if (version !== publicRequest.version) return;
+            const incoming = result.hits.map((hit) => hit.document);
+            const boards =
+                page === 1
+                    ? incoming
+                    : [
+                          ...state.snapshot.publicSearch.boards,
+                          ...incoming.filter(
+                              (board) =>
+                                  !state.snapshot.publicSearch.boards.some((existing) => existing.id === board.id)
+                          )
+                      ];
+            update({ publicSearch: { boards, total: result.total, page, loading: false, error: "" } });
+        } catch (caught) {
+            if (version !== publicRequest.version) return;
+            update({
+                publicSearch: {
+                    ...state.snapshot.publicSearch,
+                    loading: false,
+                    error: caught instanceof Error ? caught.message : "Public Boards could not be searched."
+                }
+            });
+        }
     }
     return {
         getSnapshot: () => state.snapshot,
@@ -64,9 +123,31 @@ export function createMyBoardsStore() {
         },
         cancel() {
             state.version += 1;
+            cancelPublicSearch();
         },
         setQuery(query: string) {
-            update({ query });
+            cancelPublicSearch();
+            const term = query.trim();
+            publicRequest.pendingPage = 1;
+            update({
+                query,
+                publicSearch: {
+                    ...emptyPublicSearch(),
+                    loading: term.length >= 2 && term.length <= 100,
+                    error: term.length > 100 ? "Use 100 characters or fewer to search public Boards." : ""
+                }
+            });
+            if (term.length >= 2 && term.length <= 100)
+                publicRequest.timer = setTimeout(() => void runPublicSearch(term, 1), 300);
+        },
+        async retryPublicSearch() {
+            const term = state.snapshot.query.trim();
+            if (term.length >= 2 && term.length <= 100) await runPublicSearch(term, publicRequest.pendingPage);
+        },
+        async loadMorePublic() {
+            const { publicSearch, query } = state.snapshot;
+            if (publicSearch.loading || publicSearch.error || publicSearch.page * 10 >= publicSearch.total) return;
+            await runPublicSearch(query.trim(), publicSearch.page + 1);
         },
         async load() {
             const version = ++state.version;

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import BackLink from "@/components/ui/BackLink";
+import CommentNotificationsSection from "./CommentNotificationsSection";
 import Image from "next/image";
 import { Bell, UserRound } from "lucide-react";
 import { observeCurrentUser, type AuthUser } from "@/lib/auth";
@@ -296,9 +297,11 @@ export default function NotificationsContent({
                                 <div className="bg-muted text-muted-foreground mx-auto mb-4 flex size-12 items-center justify-center rounded-full">
                                     <Bell size={24} strokeWidth={1.5} />
                                 </div>
-                                <h2 className="font-display text-24 text-foreground font-bold">All caught up!</h2>
+                                <h2 className="font-display text-24 text-foreground font-bold">
+                                    No pending friend requests
+                                </h2>
                                 <p className="text-14 text-muted-foreground mx-auto mt-2 max-w-sm font-medium">
-                                    You don&apos;t have any pending friend requests or new notifications right now.
+                                    New Board comments will appear below.
                                 </p>
                                 <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
                                     <Link
@@ -392,6 +395,9 @@ export default function NotificationsContent({
                                     ))}
                                 </ul>
                             </section>
+                        )}
+                        {sessionUser && (
+                            <CommentNotificationsSection key={sessionUser.userId} userId={sessionUser.userId} />
                         )}
                     </div>
                 </div>
