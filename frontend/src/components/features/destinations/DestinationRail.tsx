@@ -74,7 +74,7 @@ export function DestinationRail({ name, children }: { name: string; children: Re
 
     return (
         <div
-            className="font-body bg-background text-foreground ml-16 h-dvh min-w-0 overflow-hidden [--destination-width:calc(100vw-4rem)] md:ml-20 md:[--destination-width:calc(100vw-5rem)]"
+            className="font-body bg-background text-foreground @container h-dvh min-w-0 overflow-hidden [--destination-width:100cqw]"
             onClickCapture={(event) => {
                 const anchor =
                     event.target instanceof Element ? event.target.closest<HTMLAnchorElement>('a[href^="#"]') : null;

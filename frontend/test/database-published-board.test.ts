@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test, { type TestContext } from "node:test";
 import { Children, createElement, isValidElement, type ReactNode } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderToStaticMarkup as renderMarkup } from "react-dom/server";
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import ActivityDetailsDialog from "../src/components/features/boards/ActivityDetailsDialog";
 import { DatabasePublishedBoardContent } from "../src/components/features/boards/DatabasePublishedBoard";
@@ -12,6 +12,26 @@ import { loadPublishedBoard, toPublishedBoardData } from "../src/lib/published-b
 import type { PublishedBoardState } from "../src/types/published-board";
 
 const apiOrigin = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+
+function renderToStaticMarkup(node: ReactNode) {
+    return renderMarkup(
+        createElement(
+            AppRouterContext.Provider,
+            {
+                value: {
+                    bfcacheId: "board-test",
+                    back() {},
+                    forward() {},
+                    refresh() {},
+                    push() {},
+                    replace() {},
+                    prefetch() {}
+                }
+            },
+            node
+        )
+    );
+}
 
 function replaceFetch(t: TestContext, replacement: typeof fetch) {
     const original = globalThis.fetch;

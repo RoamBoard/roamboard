@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
-import { shouldConfirmBoardNavigation } from "./board-editor-safety";
+import { shouldConfirmBoardNavigation, type BoardLeaveNavigation } from "./board-editor-safety";
 
-export function useBoardLeaveWarning(active: boolean, onLeaveRequest?: (href: string) => void) {
+export function useBoardLeaveWarning(
+    active: boolean,
+    onLeaveRequest?: (href: string, navigation: BoardLeaveNavigation) => void
+) {
     useEffect(() => {
         if (!active) return;
         function beforeUnload(event: BeforeUnloadEvent) {
@@ -23,7 +26,8 @@ export function useBoardLeaveWarning(active: boolean, onLeaveRequest?: (href: st
                 return;
             event.preventDefault();
             event.stopImmediatePropagation();
-            onLeaveRequest(anchor.href);
+            const action = anchor.dataset.backNavigation;
+            onLeaveRequest(anchor.href, action === "back" || action === "replace" ? action : "push");
         }
         window.addEventListener("beforeunload", beforeUnload);
         if (onLeaveRequest) document.addEventListener("click", beforeLink, true);

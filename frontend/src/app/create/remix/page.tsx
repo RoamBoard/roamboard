@@ -5,7 +5,7 @@ import BoardSelectionExperience from "@/components/features/boards/BoardSelectio
 export const metadata: Metadata = { title: "Remix a saved Board | Roamboard", robots: { index: false, follow: false } };
 export default function RemixBoardPage() {
     return (
-        <AppShell activeHref="/create">
+        <AppShell activeHref="/create" backHref="/create">
             <BoardSelectionExperience mode="remix" />
         </AppShell>
     );

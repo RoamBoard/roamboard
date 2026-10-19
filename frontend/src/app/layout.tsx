@@ -5,6 +5,7 @@ import WelcomeTransitionProvider from "@/components/features/welcome/WelcomeTran
 import "./globals.css";
 import { ImageLibraryProvider } from "@/components/images/LibraryImage";
 import DestinationTransitionProvider from "@/components/features/destinations/DestinationTransitionProvider";
+import BackNavigationTracker from "@/components/layout/BackNavigationTracker";
 
 // Both typefaces are from Fontshare (fontshare.com). Download the variable
 // .woff2 files and place them in src/fonts/.
@@ -47,6 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 />
             </head>
             <body className={`${cabinet.variable} ${satoshi.variable} antialiased`}>
+                <BackNavigationTracker />
                 <ImageLibraryProvider>
                     <WelcomeTransitionProvider>
                         <DestinationTransitionProvider>{children}</DestinationTransitionProvider>

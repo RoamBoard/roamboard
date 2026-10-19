@@ -53,11 +53,11 @@ function activeDestination(pathname: string | null, fallback: string) {
 type NavigationProps = {
     activeHref: string;
     expanded: boolean;
-    compactTop?: boolean;
+    drawer?: boolean;
     onNavigate?: () => void;
 };
 
-function SidebarNavigation({ activeHref, expanded, compactTop = false, onNavigate }: NavigationProps) {
+function SidebarNavigation({ activeHref, expanded, drawer = false, onNavigate }: NavigationProps) {
     const reducedMotion = useReducedMotion();
     function renderLink({ href, label, icon: Icon }: (typeof navigation)[number]) {
         const active = activeHref === href;
@@ -68,13 +68,13 @@ function SidebarNavigation({ activeHref, expanded, compactTop = false, onNavigat
                     aria-label={label}
                     aria-current={active ? "page" : undefined}
                     onClick={onNavigate}
-                    className={`relative flex h-11 w-full items-center transition-colors duration-150 focus-visible:outline-1 focus-visible:outline-offset-4 motion-reduce:transition-none ${expanded ? "justify-start px-3" : "justify-center"} ${active ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                    className={`relative flex h-11 w-full items-center px-3 transition-colors duration-150 focus-visible:outline-1 focus-visible:outline-offset-4 motion-reduce:transition-none ${active ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
                 >
                     <Icon aria-hidden="true" className="size-5 shrink-0" strokeWidth={1.5} />
                     {!expanded && active && (
                         <span
                             aria-hidden="true"
-                            className="absolute bottom-1 left-1/2 h-px w-5 -translate-x-1/2 bg-current"
+                            className="absolute bottom-1 left-[22px] h-px w-5 -translate-x-1/2 bg-current"
                         />
                     )}
                     <motion.span
@@ -96,10 +96,10 @@ function SidebarNavigation({ activeHref, expanded, compactTop = false, onNavigat
     return (
         <nav
             aria-label="Main navigation"
-            className={`flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-contain transition-all duration-200 ${expanded ? "justify-start px-4" : "justify-center px-2.5 md:px-4"}`}
+            className={`flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-contain ${drawer ? "px-4" : "px-2.5 md:px-4"}`}
         >
             <ul
-                className={`flex w-full shrink-0 flex-col gap-2 transition-[margin,padding] duration-200 ${expanded ? "mt-0 pt-2" : compactTop ? "my-auto pt-1" : "my-auto py-4 [@media(max-height:650px)]:py-0"}`}
+                className={`flex w-full shrink-0 flex-col gap-2 ${drawer ? "mt-0 pt-2" : "my-auto py-4 [@media(max-height:650px)]:py-0"}`}
             >
                 {navigation.map(renderLink)}
             </ul>
@@ -183,7 +183,7 @@ function MobileSidebar({
                         <X aria-hidden="true" size={20} strokeWidth={1.5} />
                     </button>
                 </header>
-                <SidebarNavigation activeHref={activeHref} expanded onNavigate={requestClose} />
+                <SidebarNavigation activeHref={activeHref} expanded drawer onNavigate={requestClose} />
             </motion.div>
         </dialog>
     );
@@ -199,11 +199,34 @@ export default function Sidebar({ activeHref, profile = {} }: { activeHref: stri
     const [hovered, setHovered] = useState(false);
     const expanded = (desktop && (savedExpanded || hovered)) || accountOpen || notificationsOpen;
     const sidebarWidth = expanded ? "176px" : "80px";
-    const compactTop = accountOpen || notificationsOpen;
     const [mobileOpen, setMobileOpen] = useState(false);
     const triggerRef = useRef<HTMLButtonElement>(null);
+    const hoverTimers = useRef<{
+        open?: ReturnType<typeof setTimeout>;
+        close?: ReturnType<typeof setTimeout>;
+    }>({});
     const reducedMotion = useReducedMotion();
     const panelId = useId();
+
+    const clearHoverTimers = useCallback(() => {
+        clearTimeout(hoverTimers.current.open);
+        clearTimeout(hoverTimers.current.close);
+        hoverTimers.current.open = undefined;
+        hoverTimers.current.close = undefined;
+    }, []);
+
+    useEffect(() => {
+        const query = window.matchMedia("(min-width: 768px)");
+        const resetHover = () => {
+            clearHoverTimers();
+            setHovered(false);
+        };
+        query.addEventListener("change", resetHover);
+        return () => {
+            query.removeEventListener("change", resetHover);
+            clearHoverTimers();
+        };
+    }, [clearHoverTimers]);
 
     // The saved desktop preference never opens the mobile drawer automatically.
     const closeMobile = useCallback(() => {
@@ -220,12 +243,48 @@ export default function Sidebar({ activeHref, profile = {} }: { activeHref: stri
                 initial={false}
                 animate={{ "--sidebar-width": sidebarWidth }}
                 transition={{ duration: reducedMotion ? 0 : 0.24, ease: [0.22, 1, 0.36, 1] }}
-                onPointerEnter={(event) => {
-                    if (desktop && event.pointerType !== "touch") setHovered(true);
+                onPointerEnter={() => {
+                    clearTimeout(hoverTimers.current.close);
+                    hoverTimers.current.close = undefined;
                 }}
-                onPointerLeave={() => setHovered(false)}
+                onPointerOver={(event) => {
+                    if (!desktop || event.pointerType === "touch" || expanded) return;
+                    const target = event.target;
+                    if (!(target instanceof Element) || target.closest("header")) return;
+                    if (!target.closest("a, button") || hoverTimers.current.open !== undefined) return;
+                    hoverTimers.current.open = setTimeout(() => {
+                        hoverTimers.current.open = undefined;
+                        setHovered(true);
+                    }, 150); // hover delay
+                }}
+                onPointerOut={(event) => {
+                    const target = event.target;
+                    const control = target instanceof Element ? target.closest("a, button") : null;
+                    if (event.relatedTarget instanceof Element && control?.contains(event.relatedTarget)) return;
+                    clearTimeout(hoverTimers.current.open);
+                    hoverTimers.current.open = undefined;
+                }}
+                onPointerLeave={() => {
+                    clearHoverTimers();
+                    hoverTimers.current.close = setTimeout(() => {
+                        hoverTimers.current.close = undefined;
+                        setHovered(false);
+                    }, 100);
+                }}
+                onFocusCapture={(event) => {
+                    if (!desktop || event.target.closest("header")) return;
+                    clearHoverTimers();
+                    setHovered(true);
+                }}
+                onBlurCapture={(event) => {
+                    if (event.relatedTarget instanceof Element && event.currentTarget.contains(event.relatedTarget))
+                        return;
+                    clearHoverTimers();
+                    setHovered(false);
+                }}
                 onKeyDown={(event) => {
                     if (event.key === "Escape") {
+                        clearHoverTimers();
                         if (notificationsOpen) {
                             setNotificationsOpen(false);
                         }
@@ -238,32 +297,22 @@ export default function Sidebar({ activeHref, profile = {} }: { activeHref: stri
                         }
                     }
                 }}
-                className={`bg-background text-foreground border-line fixed inset-y-0 left-0 z-40 flex ${accountOpen ? "w-56" : "w-16"} flex-col border-r pt-[env(safe-area-inset-top)] pb-[max(1.5rem,env(safe-area-inset-bottom))] md:w-[var(--sidebar-width)] [@media(max-height:400px)]:pb-2 ${expanded ? "shadow-[16px_0_40px_-24px_rgb(0_0_0/0.25)]" : ""}`}
+                className={`bg-background text-foreground border-line sticky top-0 z-40 flex h-dvh ${accountOpen ? "w-56" : "w-16"} flex-col self-start border-r pt-[env(safe-area-inset-top)] pb-[max(1.5rem,env(safe-area-inset-bottom))] md:w-[var(--sidebar-width)] [@media(max-height:400px)]:pb-2`}
             >
-                <header
-                    className={`relative shrink-0 transition-[height] duration-200 ease-out ${expanded || compactTop ? "h-16 md:h-20" : "h-[clamp(11rem,25dvh,15rem)]"} [@media(max-height:400px)]:h-12 [@media(max-height:650px)]:h-20`}
-                >
+                <header className="relative h-[clamp(11rem,25dvh,15rem)] shrink-0 [@media(max-height:400px)]:h-12 [@media(max-height:650px)]:h-20">
                     <Link
                         href="/home"
                         aria-label="Roamboard home"
-                        className={`font-display absolute top-7 left-[20px] leading-none font-bold tracking-tight whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-4 md:left-[25px] [@media(max-height:400px)]:top-3 ${expanded ? "text-20" : "text-24 md:text-30"}`}
+                        className="font-display text-24 md:text-30 absolute top-7 left-[20px] leading-none font-bold tracking-tight whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-4 md:left-[25px] [@media(max-height:400px)]:top-3"
                     >
-                        {expanded ? (
-                            <span>Roamboard</span>
-                        ) : (
-                            <>
-                                <span className="[writing-mode:vertical-rl] [@media(max-height:650px)]:hidden">
-                                    ROAMBOARD
-                                </span>
-                                <span className="hidden [@media(max-height:650px)]:inline" aria-hidden="true">
-                                    R.
-                                </span>
-                            </>
-                        )}
+                        <span className="[writing-mode:vertical-rl] [@media(max-height:650px)]:hidden">ROAMBOARD</span>
+                        <span className="hidden [@media(max-height:650px)]:inline" aria-hidden="true">
+                            R.
+                        </span>
                     </Link>
                 </header>
                 <div id={panelId} className="flex min-h-0 min-w-0 flex-1 flex-col">
-                    <SidebarNavigation activeHref={selectedHref} expanded={expanded} compactTop={compactTop} />
+                    <SidebarNavigation activeHref={selectedHref} expanded={expanded} />
                 </div>
                 <div aria-hidden="true" className="border-line mx-2.5 mt-auto mb-2 border-t md:mx-4" />
                 <div className="mx-2.5 flex shrink-0 flex-col gap-1 md:mx-4">
@@ -304,6 +353,7 @@ export default function Sidebar({ activeHref, profile = {} }: { activeHref: stri
                     aria-haspopup={desktop ? undefined : "dialog"}
                     aria-controls={desktop ? panelId : `${panelId}-drawer`}
                     onClick={() => {
+                        clearHoverTimers();
                         if (desktop) {
                             setAccountOpen(false);
                             setNotificationsOpen(false);

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import BackLink from "@/components/ui/BackLink";
 import { useState } from "react";
 import ActivityDetailsDialog from "@/components/features/boards/ActivityDetailsDialog";
 import BoardCopyEditor from "@/components/features/boards/BoardCopyEditor";
@@ -109,12 +110,7 @@ export default function PublishedBoard({
         <>
             <article className="break-words">
                 <header className="relative pb-12 text-center sm:pb-20">
-                    <Link
-                        href="/boards"
-                        className="text-muted-foreground hover:text-foreground text-12 absolute top-6 left-4 z-10 inline-flex min-h-9 items-center gap-2 focus-visible:outline-2 focus-visible:outline-offset-4 sm:left-8"
-                    >
-                        <BoardIcon name="arrow" className="size-3" /> back
-                    </Link>
+                    <BackLink fallbackHref="/boards" className="absolute top-6 left-4 z-10 sm:left-8" />
                     <BoardPhoto
                         image={cover}
                         placeholderLabel={coverLabel}

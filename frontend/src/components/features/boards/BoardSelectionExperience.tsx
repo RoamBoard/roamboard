@@ -91,11 +91,8 @@ export function BoardSelectionContent({
             <header className="mx-auto max-w-[1400px] px-5 pt-8 text-center sm:px-10 sm:pt-12">
                 <nav
                     aria-label="Create paths"
-                    className="text-muted-foreground flex flex-wrap items-center justify-between gap-3 text-[10px] tracking-[.05em]"
+                    className="text-muted-foreground flex flex-wrap items-center justify-end gap-3 text-[10px] tracking-[.05em]"
                 >
-                    <Link href="/create#board-paths" className={actionClass}>
-                        ← CREATE
-                    </Link>
                     <Link
                         href={remix ? "/create/continue" : "/create/remix"}
                         className={`inline-flex items-center gap-2 ${actionClass}`}

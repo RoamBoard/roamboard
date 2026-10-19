@@ -120,10 +120,7 @@ export default function DiscoverExperience({ hero, journey, mobileJourney, child
             >
                 Skip to discovery
             </a>
-            <div
-                className="w-full min-w-0 pl-16 [--panel-width:calc(100vw-4rem)] md:pl-20 md:[--panel-width:calc(100vw-5rem)]"
-                onClickCapture={handleAnchor}
-            >
+            <div className="@container w-full min-w-0 [--panel-width:100cqw]" onClickCapture={handleAnchor}>
                 <div
                     ref={section}
                     style={desktop && dimensions.height ? { height: dimensions.height + dimensions.travel } : undefined}

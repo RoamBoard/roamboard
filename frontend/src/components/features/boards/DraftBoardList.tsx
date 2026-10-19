@@ -94,9 +94,6 @@ export function DraftBoardListContent({
     return (
         <article className="font-body text-foreground min-w-0 pb-28">
             <header className="px-5 pt-16 text-center sm:px-10 md:pt-24">
-                <Link href="/create" className={`text-muted-foreground text-12 ${actionClass}`}>
-                    Back to Create
-                </Link>
                 <h1 className="font-display mt-5 text-[clamp(44px,7vw,96px)] leading-[1.02] font-bold tracking-[-0.045em]">
                     MY DRAFTS
                 </h1>

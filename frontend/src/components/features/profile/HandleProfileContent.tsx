@@ -59,10 +59,17 @@ export function ProfileRedirect() {
     );
 }
 
-export default function HandleProfileContent({ handle }: { handle: string }) {
+export default function HandleProfileContent({
+    handle,
+    profileSaved = false
+}: {
+    handle: string;
+    profileSaved?: boolean;
+}) {
     const [view, setView] = useState<PublicProfileView | null>(null);
     const [error, setError] = useState("");
     const [retry, setRetry] = useState(0);
+    const [saveNoticeDismissed, setSaveNoticeDismissed] = useState(false);
 
     useEffect(() => {
         const request = { active: true };
@@ -102,7 +109,28 @@ export default function HandleProfileContent({ handle }: { handle: string }) {
             </p>
         );
     if (!view) return <p role="status">Loading profile…</p>;
-    if (view.isOwner) return <ProfilePageContent />;
+    if (view.isOwner)
+        return (
+            <>
+                {profileSaved && !saveNoticeDismissed && (
+                    <div
+                        role="status"
+                        className="border-feedback-success-border bg-feedback-success-surface text-feedback-success mx-auto mb-6 flex max-w-6xl items-start justify-between gap-4 rounded-[2px] border px-4 py-3 text-sm"
+                    >
+                        <p>Profile changes saved.</p>
+                        <button
+                            type="button"
+                            aria-label="Dismiss save confirmation"
+                            onClick={() => setSaveNoticeDismissed(true)}
+                            className="cursor-pointer underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2"
+                        >
+                            Dismiss
+                        </button>
+                    </div>
+                )}
+                <ProfilePageContent />
+            </>
+        );
 
     return (
         <div className="mx-auto w-full max-w-6xl pb-20">

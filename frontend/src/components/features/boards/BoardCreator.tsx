@@ -17,7 +17,7 @@ import CreatorNotifications, { creatorToastOptions } from "./CreatorNotification
 import CreatorProgress from "./CreatorProgress";
 import { toast } from "sonner";
 import CreatorLeaveDialog from "./CreatorLeaveDialog";
-import { boardEditorFingerprint } from "@/lib/board-editor-safety";
+import { boardEditorFingerprint, type BoardLeaveNavigation } from "@/lib/board-editor-safety";
 import { useBoardLeaveWarning } from "@/lib/use-board-leave-warning";
 import {
     fromBoardDocument,
@@ -67,7 +67,10 @@ export default function BoardCreator({
 }) {
     const [smartStartDate, setSmartStartDate] = useState<string | null>(null);
     const [pendingPlan, setPendingPlan] = useState<SmartCreatePlan | null>(null);
-    const [leaveHref, setLeaveHref] = useState<string | null>(null);
+    const [leaveTarget, setLeaveTarget] = useState<{ href: string; navigation: BoardLeaveNavigation } | null>(null);
+    const requestLeave = useCallback((href: string, navigation: BoardLeaveNavigation) => {
+        setLeaveTarget({ href, navigation });
+    }, []);
     const saveToastId = useId();
     const saveInFlight = useRef(false);
     const [title, setTitle] = useState(
@@ -291,7 +294,7 @@ export default function BoardCreator({
     const dirty = fingerprint !== (savedFingerprint ?? initialFingerprint);
     useBoardLeaveWarning(
         ((!editorDisabled || pendingPlan !== null) && dirty) || saving !== null || uploading,
-        setLeaveHref
+        requestLeave
     );
     useEffect(
         () => () => {
@@ -555,7 +558,7 @@ export default function BoardCreator({
                     }}
                 />
             ) : null}
-            {leaveHref ? <CreatorLeaveDialog href={leaveHref} onClose={() => setLeaveHref(null)} /> : null}
+            {leaveTarget ? <CreatorLeaveDialog {...leaveTarget} onClose={() => setLeaveTarget(null)} /> : null}
             <CreatorProgress
                 dirty={dirty}
                 saved={savedBoard !== null}

@@ -1,10 +1,31 @@
 import assert from "node:assert/strict";
 import test, { type TestContext } from "node:test";
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+import { createElement, type ReactNode } from "react";
+import { renderToStaticMarkup as renderMarkup } from "react-dom/server";
+import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import { DestinationPage } from "../src/components/features/destinations/DestinationPage";
 import { loadPlaceDetails, placeBoardHref } from "../src/lib/destination-places";
 import type { DestinationGuideData, DestinationGuideInput, PlaceDetails } from "../src/lib/destination-guides";
+
+function renderToStaticMarkup(node: ReactNode) {
+    return renderMarkup(
+        createElement(
+            AppRouterContext.Provider,
+            {
+                value: {
+                    bfcacheId: "place-test",
+                    back: () => {},
+                    forward: () => {},
+                    refresh: () => {},
+                    push: () => {},
+                    replace: () => {},
+                    prefetch: () => {}
+                }
+            },
+            node
+        )
+    );
+}
 
 const city: DestinationGuideInput = { name: "Fukuoka", country: "JPN", latitude: 33.5902, longitude: 130.4017 };
 const place = {

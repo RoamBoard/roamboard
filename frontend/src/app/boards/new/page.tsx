@@ -17,7 +17,7 @@ export default async function NewBoardPage({
     const params = await searchParams;
 
     return (
-        <AppShell activeHref="/create">
+        <AppShell activeHref="/create" backHref="/create">
             <BoardCreator
                 initialMode={params.mode === "scratch" ? "scratch" : "smart"}
                 initialPlace={getStartingPlace(params)}
