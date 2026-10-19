@@ -88,7 +88,7 @@ function mount(render: () => ReactNode) {
 test("NotificationsContent renders empty state when signed out or no requests", () => {
     const html = renderToStaticMarkup(createElement(NotificationsContent, { initialRequests: [] }));
     assert.ok(html.includes("NOTIFICATIONS"));
-    assert.ok(html.includes("Sign in to see notifications") || html.includes("All caught up!"));
+    assert.ok(html.includes("Sign in to see notifications") || html.includes("No pending friend requests"));
 });
 
 test("NotificationsContent renders requests list with requester details and actions", () => {

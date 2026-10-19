@@ -34,13 +34,15 @@ async function read<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const searchIndex = (
     query: string,
-    filters: { entityType?: "itinerary" | ""; country: string; category: string }
+    filters: { entityType?: "itinerary" | ""; country: string; category: string },
+    options: { page?: number; signal?: AbortSignal } = {}
 ) => {
     const params = new URLSearchParams({ q: query, limit: "10" });
     if (filters.entityType) params.set("entityType", filters.entityType);
     if (filters.country) params.set("country", filters.country);
     if (filters.category) params.set("category", filters.category);
-    return read<SearchResult>(`/api/v1/search?${params.toString()}`);
+    if (options.page !== undefined) params.set("page", String(options.page));
+    return read<SearchResult>(`/api/v1/search?${params.toString()}`, { signal: options.signal });
 };
 
 export const suggestIndex = (query: string, signal: AbortSignal) =>

@@ -285,11 +285,14 @@ test("the copy and author footer appears for visitors but not the Board owner", 
     assert.match(visitor, /Make it yours/i);
     assert.match(visitor, /Copy board preview/i);
     assert.match(visitor, /About station_walker/i);
+    assert.match(visitor, /id="comments"/i);
+    assert.ok(visitor.indexOf("About station_walker") < visitor.indexOf('id="comments"'));
 
     source.permissions = { canEditContent: true, canManageBoard: true };
     const owner = renderPage({ status: "ready", data: toPublishedBoardData(source) });
     assert.doesNotMatch(owner, /Make it yours|Copy board preview|About station_walker/i);
     assert.match(owner, /Edit Board/i);
+    assert.match(owner, /id="comments"/i);
 });
 
 test("activity details show their saved day date and retain the activity time without dating undated activities", () => {

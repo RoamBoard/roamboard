@@ -102,8 +102,49 @@ test("page loads through the API helpers, searches via its input handler and cle
     control(view(store), (props) => props.id === "board-search").onChange?.({ target: { value: "kyoto" } });
     assert.match(html(store), /Open Journey 1/);
     assert.doesNotMatch(html(store), /Open Journey 2/);
+    assert.match(html(store), /PUBLIC BOARDS/);
+    assert.match(html(store), /Searching public Boards/);
     await control(view(store), (props) => props["aria-label"] === "Clear Board search").onClick?.();
     assert.match(html(store), /Open Journey 2/);
+});
+
+test("the existing Boards input searches public Boards and links to another user's Board", async (t) => {
+    const calls: string[] = [];
+    t.mock.method(globalThis, "fetch", async (input: string) => {
+        const url = new URL(input);
+        calls.push(url.pathname + url.search);
+        if (url.pathname === "/api/v1/search")
+            return Response.json({
+                data: {
+                    hits: [
+                        { document: { id: "1", title: "Turkey by me", city: "", country: "Turkey", description: "" } },
+                        {
+                            document: {
+                                id: "9",
+                                title: "TURKEY TRIP",
+                                city: "Istanbul",
+                                country: "Turkey",
+                                description: ""
+                            }
+                        }
+                    ],
+                    total: 2,
+                    page: 1,
+                    limit: 10
+                }
+            });
+        if (url.search) return Response.json({ data: [summary(1)], meta: { hasMore: false } });
+        return Response.json({ data: document(1) });
+    });
+    const store = createMyBoardsStore();
+    await store.load();
+    control(view(store), (props) => props.id === "board-search").onChange?.({ target: { value: "Turkey" } });
+    await store.retryPublicSearch();
+    assert.ok(calls.some((path) => path.startsWith("/api/v1/search?q=Turkey")));
+    assert.match(html(store), /href="\/boards\/9"/);
+    assert.match(html(store), /TURKEY TRIP/);
+    assert.doesNotMatch(html(store), /Turkey by me/);
+    store.cancel();
 });
 
 test("a failed initial list shows samples and the page retry button loads account Boards", async (t) => {
