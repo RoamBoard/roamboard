@@ -148,11 +148,14 @@ test("ProfileHero renders friends made label in statistics", () => {
         boardsCreated: 4,
         friends: 7,
         activitiesSaved: 12,
+        savesReceived: 43,
         boardsSaved: 2
     };
     const html = renderToStaticMarkup(createElement(ProfileHero, { profile, stats, isOwner: true }));
     assert.match(html, /friends<br\s*\/?>made/);
     assert.doesNotMatch(html, />friend<br\s*\/?>made/);
+    assert.match(html, />43<span/);
+    assert.match(html, /saves<br\s*\/?>received/);
 });
 
 test("visitor profile renders statistics row when stats are provided", () => {
@@ -181,7 +184,8 @@ test("visitor profile renders statistics row when stats are provided", () => {
     assert.match(html, /countries<br\s*\/?>visited/);
     assert.match(html, /boards<br\s*\/?>created/);
     assert.match(html, /friends<br\s*\/?>made/);
-    assert.match(html, /activities<br\s*\/?>saved/);
+    assert.match(html, /saves<br\s*\/?>received/);
+    assert.doesNotMatch(html, /activities<br\s*\/?>saved/);
     assert.match(html, /boards<br\s*\/?>saved/);
 });
 

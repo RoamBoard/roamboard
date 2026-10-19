@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useId, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { Bookmark, Check, Globe2, LoaderCircle, LockKeyhole, UsersRound } from "lucide-react";
+import { Bookmark, Check, Globe2, LoaderCircle, LockKeyhole, Pencil, UsersRound } from "lucide-react";
 import type { PhotoBoardCardData, PhotoBoardCardProps } from "@/types/board-card";
 import { BoardCardFrame, BoardCardPhoto, BoardCardTitle } from "./BoardCardParts";
 
@@ -250,22 +250,38 @@ export function PhotoBoardCardContent({
                 className="overflow-clip text-white [&>a]:focus-visible:outline-offset-[-4px] [&>a]:focus-visible:outline-white"
             >
                 <PhotoCover board={board} sizes={imageSizes} expanded={expanded} />
-                {selection && (
-                    <button
-                        type="button"
+                {selection?.selected && selection.href ? (
+                    <Link
+                        href={selection.href}
                         data-board-selection=""
-                        aria-label={selection.label ?? `Select ${board.title}`}
-                        aria-pressed={selection.selected}
-                        aria-expanded={hasDetails ? expanded : undefined}
-                        aria-controls={hasDetails ? detailsId : undefined}
-                        tabIndex={selection.tabIndex}
-                        onClick={(event) => {
-                            selection.onSelect(event);
-                            if (interactiveDetails && selection.selected && !event.defaultPrevented)
-                                onExpandedChange(!expanded);
-                        }}
-                        className={`absolute inset-0 z-10 cursor-pointer ${focus}`}
-                    />
+                        aria-label={`Edit ${board.title}`}
+                        aria-describedby={hasDetails && expanded ? detailsId : undefined}
+                        className={`group/edit absolute inset-0 z-10 cursor-pointer ${focus}`}
+                    >
+                        <span
+                            className={`absolute top-[60%] left-1/2 grid size-14 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-white/40 bg-black/45 text-white opacity-0 backdrop-blur-sm transition-opacity group-hover/edit:opacity-100 group-focus-visible/edit:opacity-100 motion-reduce:transition-none [@media(hover:none)]:opacity-100`}
+                        >
+                            <Pencil aria-hidden="true" size={23} strokeWidth={1.5} />
+                        </span>
+                    </Link>
+                ) : (
+                    selection && (
+                        <button
+                            type="button"
+                            data-board-selection=""
+                            aria-label={selection.label ?? `Select ${board.title}`}
+                            aria-pressed={selection.selected}
+                            aria-expanded={hasDetails ? expanded : undefined}
+                            aria-controls={hasDetails ? detailsId : undefined}
+                            tabIndex={selection.tabIndex}
+                            onClick={(event) => {
+                                selection.onSelect(event);
+                                if (interactiveDetails && selection.selected && !event.defaultPrevented)
+                                    onExpandedChange(!expanded);
+                            }}
+                            className={`absolute inset-0 z-10 cursor-pointer ${focus}`}
+                        />
+                    )
                 )}
                 <span
                     aria-hidden="true"

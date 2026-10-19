@@ -147,6 +147,7 @@ export function toPublishedBoardData(document: BoardDocument): PublishedBoardDat
         tagLabels: document.tags.map((tag) => tag.name),
         canEditContent: document.permissions.canEditContent,
         canManageBoard: document.permissions.canManageBoard,
-        savedByMe: Boolean(document.savedByMe)
+        savedByMe: Boolean(document.savedByMe),
+        savedCount: document.savedCount
     };
 }

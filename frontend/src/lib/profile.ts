@@ -59,6 +59,7 @@ export type ProfileStats = {
     boardsCreated: number;
     friends: number;
     activitiesSaved: number;
+    savesReceived?: number;
     boardsSaved: number;
 };
 

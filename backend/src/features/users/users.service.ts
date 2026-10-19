@@ -60,7 +60,7 @@ export function createUsersService(
             const [user, boards, userStats, photosUploaded] = await Promise.all([
                 read(userId),
                 repository.listBoards(userId, false, true, viewerId),
-                repository.stats(userId),
+                repository.stats(userId, viewerId),
                 repository.countPublicPhotos(userId, viewerId)
             ]);
             const destinations = boards.flatMap((board) =>
@@ -114,6 +114,7 @@ export function createUsersService(
                 stats: {
                     friends: userStats.friends ?? 0,
                     activitiesSaved: userStats.activitiesSaved ?? 0,
+                    savesReceived: userStats.savesReceived ?? 0,
                     boardsSaved: userStats.boardsSaved ?? 0,
                     ...travelStats(boards),
                     photosUploaded,

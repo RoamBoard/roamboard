@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useRef, type ReactNode } from "react";
 import { AnimatePresence, motion, useMotionValue, useReducedMotion, useSpring } from "motion/react";
-import { ArrowLeft, ArrowRight, ArrowUpRight } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { selectionEditorHref, type SelectionBoard } from "@/lib/board-selection";
 import PhotoBoardCard from "./cards/PhotoBoardCard";
 
@@ -48,7 +47,8 @@ export function BoardSelectionGallery({
     onSelect,
     error,
     onRetry,
-    mode = "continue"
+    mode = "continue",
+    compact = false
 }: {
     boards: SelectionBoard[];
     selected: SelectionBoard;
@@ -56,6 +56,7 @@ export function BoardSelectionGallery({
     error?: string;
     onRetry: () => void;
     mode?: "continue" | "remix";
+    compact?: boolean;
 }) {
     const reduced = useReducedMotion();
     const selectedIndex = boards.findIndex((board) => board.summary.boardId === selected.summary.boardId);
@@ -68,38 +69,15 @@ export function BoardSelectionGallery({
     };
     return (
         <section
-            aria-labelledby="selection-recent-heading"
-            className="mx-auto mt-12 max-w-[1400px] px-4 sm:mt-16 sm:px-10 lg:px-16"
+            aria-label={mode === "continue" ? "Your Boards" : "Saved Boards"}
+            className={`mx-auto mt-12 max-w-[1400px] px-4 sm:mt-16 sm:px-10 lg:px-16 ${compact ? "selection-gallery" : ""}`}
         >
-            <div className="flex items-end justify-between gap-4">
-                <h2
-                    id="selection-recent-heading"
-                    className="font-display text-muted-foreground/65 text-30 sm:text-40 leading-[.9] font-bold"
-                >
-                    {mode === "continue" ? (
-                        <>
-                            RECENTLY
-                            <br />
-                            UPDATED
-                        </>
-                    ) : (
-                        <>
-                            RECENTLY
-                            <br />
-                            SAVED
-                        </>
-                    )}
-                </h2>
-                <p className="text-muted-foreground max-w-36 text-right text-[10px] leading-relaxed sm:max-w-none">
-                    Select a Board. Make room for what’s next.
-                </p>
-            </div>
             <div
                 role="region"
                 aria-roledescription="carousel"
                 aria-label="Featured Boards"
                 tabIndex={0}
-                className={`@container relative mt-8 ${focusClass}`}
+                className={`@container relative ${focusClass}`}
                 onKeyDown={(event) => {
                     if (
                         event.target !== event.currentTarget &&
@@ -115,7 +93,9 @@ export function BoardSelectionGallery({
                     }
                 }}
             >
-                <div className="relative h-[min(calc(110cqw+4rem),36rem)] min-h-[320px] overflow-clip sm:h-[min(calc(60cqw+4rem),36rem)] lg:h-[min(calc(45cqw+4rem),36rem)]">
+                <div
+                    className={`relative h-[min(calc(110cqw+4rem),36rem)] min-h-[320px] overflow-clip sm:h-[min(calc(60cqw+4rem),36rem)] lg:h-[min(calc(45cqw+4rem),36rem)] ${compact ? "selection-stage" : ""}`}
+                >
                     {boards.map((board) => {
                         const active = board.summary.boardId === selected.summary.boardId;
                         const position = positions.get(board.summary.boardId) ?? 0;
@@ -132,7 +112,7 @@ export function BoardSelectionGallery({
                                 }}
                                 transition={reduced ? { duration: 0 } : spring}
                                 style={{ zIndex: active ? 20 : 10 - position, transformOrigin: "top left" }}
-                                className={`absolute ml-[6cqw] w-[min(400px,88cqw)] sm:ml-0 sm:w-[min(400px,48cqw)] lg:w-[min(400px,36cqw)] ${!active ? "hidden sm:block" : ""}`}
+                                className={`absolute ml-[6cqw] w-[min(400px,88cqw)] sm:ml-0 sm:w-[min(400px,48cqw)] lg:w-[min(400px,36cqw)] ${!active ? "hidden sm:block" : ""} ${compact ? "selection-card" : ""}`}
                             >
                                 <TactileBoard active={active}>
                                     <PhotoBoardCard
@@ -142,6 +122,7 @@ export function BoardSelectionGallery({
                                         imageSizes="(max-width: 640px) 80vw, 400px"
                                         selection={{
                                             selected: active,
+                                            href: active && mode === "continue" ? (href ?? undefined) : undefined,
                                             label: `Focus ${board.photo.title}`,
                                             tabIndex: active ? 0 : -1,
                                             onSelect: () => onSelect(board.summary.boardId)
@@ -161,39 +142,16 @@ export function BoardSelectionGallery({
                             </motion.div>
                         );
                     })}
-                    <div className="absolute top-[5%] left-[calc(min(400px,36cqw)+3cqw)] z-30 hidden w-[22cqw] lg:block">
+                    <div
+                        className={`absolute top-[5%] left-[calc(min(400px,36cqw)+3cqw)] z-30 hidden w-[22cqw] lg:block ${compact ? "selection-annotations" : ""}`}
+                    >
                         <SelectionAnnotations board={selected} />
                     </div>
-                    <span
-                        aria-hidden="true"
-                        className="text-muted-foreground/30 absolute right-5 bottom-8 hidden text-[10px] tracking-[.18em] uppercase sm:block"
-                    >
-                        a journey, still unfolding
-                    </span>
                 </div>
-                <div className="border-line relative z-30 flex flex-col items-center gap-3 border-t py-4 sm:flex-row sm:justify-between">
-                    {mode === "continue" && href ? (
-                        <Link
-                            href={href}
-                            className={`group inline-flex min-h-11 items-center gap-4 py-3 text-xs tracking-[.08em] underline underline-offset-8 ${focusClass}`}
-                        >
-                            CONTINUE BOARD{" "}
-                            <ArrowUpRight
-                                size={18}
-                                strokeWidth={1.2}
-                                className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 motion-reduce:transition-none"
-                            />
-                        </Link>
-                    ) : (
-                        <span className="text-muted-foreground text-xs">
-                            {mode === "remix"
-                                ? "Remixing is coming later"
-                                : error || selected.document
-                                  ? "Editing unavailable"
-                                  : "Checking edit access…"}
-                        </span>
-                    )}
-                    <div className="flex items-center justify-center gap-3 sm:ml-auto sm:w-[35%]">
+                <div
+                    className={`border-line relative z-30 flex flex-wrap items-center justify-between gap-3 py-3 ${boards.length > 1 ? "border-t" : ""}`}
+                >
+                    <div className="flex items-center justify-start gap-3">
                         <button
                             type="button"
                             aria-label="Previous Board"
@@ -216,6 +174,15 @@ export function BoardSelectionGallery({
                             <ArrowRight size={24} strokeWidth={1.5} />
                         </button>
                     </div>
+                    {!href && (
+                        <span className="text-muted-foreground text-xs">
+                            {mode === "remix"
+                                ? "Remixing is coming later"
+                                : error || selected.document
+                                  ? "Editing unavailable"
+                                  : "Checking edit access..."}
+                        </span>
+                    )}
                 </div>
                 <div className="pt-4 lg:hidden">
                     <SelectionAnnotations board={selected} />
@@ -298,7 +265,7 @@ function SelectionAnnotations({ board }: { board: SelectionBoard }) {
                 )}
                 {hasSaves && (
                     <div>
-                        <dt className="text-foreground text-xs tracking-[.08em] uppercase">Saved by travelers</dt>
+                        <dt className="text-foreground text-xs tracking-[.08em] uppercase">Saves received</dt>
                         <dd className="mt-1">
                             {new Intl.NumberFormat("en-US").format(savedCount)} {savedCount === 1 ? "save" : "saves"}
                         </dd>
