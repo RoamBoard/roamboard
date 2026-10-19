@@ -1,12 +1,15 @@
-import type { Pool } from "pg";
 import { getPool } from "../../db.js";
 import { AppError } from "../../shared/app-error.js";
 import { countryCodeForName } from "../../shared/countries.js";
 import { continentForCountry } from "../../shared/continents.js";
 import type { UsersRepository, UserProfile, ProfileBoard, MapDestination } from "./users.types.js";
 
-export function createUsersRepository(pool?: Pick<Pool, "query">): UsersRepository {
-    const getDb = () => pool ?? getPool();
+export type RepositoryQueryClient = {
+    query: <R = unknown>(sql: string, values?: readonly unknown[]) => Promise<{ rows: R[]; rowCount?: number | null }>;
+};
+
+export function createUsersRepository(pool?: RepositoryQueryClient): UsersRepository {
+    const getDb = (): RepositoryQueryClient => (pool ?? getPool()) as unknown as RepositoryQueryClient;
     return {
         async read(userId) {
             const result = await getPool().query<{

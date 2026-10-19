@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createUsersRepository } from "../src/features/users/users.repository.js";
+import { createUsersRepository, type RepositoryQueryClient } from "../src/features/users/users.repository.js";
 
 test("acceptFriendRequest updates accepted_at normally when column exists", async () => {
     const executedQueries: string[] = [];
-    const mockDb = {
-        async query(sql: string, params: unknown[]) {
+    const mockDb: RepositoryQueryClient = {
+        async query<R>(sql: string, params?: readonly unknown[]) {
             executedQueries.push(sql);
             assert.deepEqual(params, [10, "alice"]);
-            return { rowCount: 1 };
+            return { rows: [] as R[], rowCount: 1 };
         }
     };
 
@@ -17,13 +17,14 @@ test("acceptFriendRequest updates accepted_at normally when column exists", asyn
 
     assert.equal(accepted, true);
     assert.equal(executedQueries.length, 1);
-    assert.ok(executedQueries[0].includes("accepted_at = CURRENT_TIMESTAMP"));
+    const firstQuery = executedQueries[0];
+    assert.ok(firstQuery && firstQuery.includes("accepted_at = CURRENT_TIMESTAMP"));
 });
 
 test("acceptFriendRequest falls back to unmigrated query when column does not exist (42703)", async () => {
     const executedQueries: string[] = [];
-    const mockDb = {
-        async query(sql: string, params: unknown[]) {
+    const mockDb: RepositoryQueryClient = {
+        async query<R>(sql: string, params?: readonly unknown[]) {
             executedQueries.push(sql);
             if (executedQueries.length === 1) {
                 const err = new Error("column accepted_at does not exist");
@@ -31,7 +32,7 @@ test("acceptFriendRequest falls back to unmigrated query when column does not ex
                 throw err;
             }
             assert.deepEqual(params, [10, "alice"]);
-            return { rowCount: 1 };
+            return { rows: [] as R[], rowCount: 1 };
         }
     };
 
@@ -40,13 +41,15 @@ test("acceptFriendRequest falls back to unmigrated query when column does not ex
 
     assert.equal(accepted, true);
     assert.equal(executedQueries.length, 2);
-    assert.ok(executedQueries[0].includes("accepted_at = CURRENT_TIMESTAMP"));
-    assert.ok(!executedQueries[1].includes("accepted_at"));
-    assert.ok(executedQueries[1].includes("SET status = 'accepted'"));
+    const firstQuery = executedQueries[0];
+    const secondQuery = executedQueries[1];
+    assert.ok(firstQuery && firstQuery.includes("accepted_at = CURRENT_TIMESTAMP"));
+    assert.ok(secondQuery && !secondQuery.includes("accepted_at"));
+    assert.ok(secondQuery && secondQuery.includes("SET status = 'accepted'"));
 });
 
 test("acceptFriendRequest lets non-42703 errors escape", async () => {
-    const mockDb = {
+    const mockDb: RepositoryQueryClient = {
         async query() {
             const err = new Error("connection terminated");
             Object.assign(err, { code: "08006" });
@@ -64,8 +67,8 @@ test("acceptFriendRequest lets non-42703 errors escape", async () => {
 test("listFriends maps rows with acceptedAt timestamp when column exists", async () => {
     const acceptedDate = new Date("2026-10-19T17:00:00.000Z");
     const executedQueries: string[] = [];
-    const mockDb = {
-        async query(sql: string, params: unknown[]) {
+    const mockDb: RepositoryQueryClient = {
+        async query<R>(sql: string, params?: readonly unknown[]) {
             executedQueries.push(sql);
             assert.deepEqual(params, ["user-1"]);
             return {
@@ -80,7 +83,7 @@ test("listFriends maps rows with acceptedAt timestamp when column exists", async
                         biography: "Explorer",
                         location: "Paris"
                     }
-                ]
+                ] as unknown as R[]
             };
         }
     };
@@ -89,7 +92,8 @@ test("listFriends maps rows with acceptedAt timestamp when column exists", async
     const friends = await repository.listFriends("user-1");
 
     assert.equal(executedQueries.length, 1);
-    assert.ok(executedQueries[0].includes("f.accepted_at"));
+    const firstQuery = executedQueries[0];
+    assert.ok(firstQuery && firstQuery.includes("f.accepted_at"));
     assert.deepEqual(friends, [
         {
             friendshipId: 42,
@@ -106,8 +110,8 @@ test("listFriends maps rows with acceptedAt timestamp when column exists", async
 
 test("listFriends falls back to NULL accepted_at when column does not exist (42703)", async () => {
     const executedQueries: string[] = [];
-    const mockDb = {
-        async query(sql: string, params: unknown[]) {
+    const mockDb: RepositoryQueryClient = {
+        async query<R>(sql: string, params?: readonly unknown[]) {
             executedQueries.push(sql);
             if (executedQueries.length === 1) {
                 const err = new Error("column f.accepted_at does not exist");
@@ -127,7 +131,7 @@ test("listFriends falls back to NULL accepted_at when column does not exist (427
                         biography: null,
                         location: null
                     }
-                ]
+                ] as unknown as R[]
             };
         }
     };
@@ -136,8 +140,10 @@ test("listFriends falls back to NULL accepted_at when column does not exist (427
     const friends = await repository.listFriends("user-1");
 
     assert.equal(executedQueries.length, 2);
-    assert.ok(executedQueries[0].includes("f.accepted_at"));
-    assert.ok(executedQueries[1].includes("NULL::timestamptz AS accepted_at"));
+    const firstQuery = executedQueries[0];
+    const secondQuery = executedQueries[1];
+    assert.ok(firstQuery && firstQuery.includes("f.accepted_at"));
+    assert.ok(secondQuery && secondQuery.includes("NULL::timestamptz AS accepted_at"));
     assert.deepEqual(friends, [
         {
             friendshipId: 42,
@@ -153,7 +159,7 @@ test("listFriends falls back to NULL accepted_at when column does not exist (427
 });
 
 test("listFriends lets non-42703 errors escape", async () => {
-    const mockDb = {
+    const mockDb: RepositoryQueryClient = {
         async query() {
             const err = new Error("syntax error");
             Object.assign(err, { code: "42601" });
