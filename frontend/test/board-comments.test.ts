@@ -34,7 +34,7 @@ type ElementProps = {
     "aria-label"?: string;
     "aria-pressed"?: boolean;
     onClick?: () => unknown;
-    onChange?: (event: { target: { value: string } }) => void;
+    onChange?: (value: string) => void;
     onSubmit?: (event: { preventDefault: () => void }) => unknown;
     [key: string]: unknown;
 };
@@ -118,6 +118,7 @@ function comment(commentId: number): BoardComment {
         commentId,
         boardId: 42,
         body: "Loved this route!",
+        mentions: [],
         author: { displayName: "Avery Lee", username: "avery", profilePictureUrl: null },
         createdAt: "2026-10-19T14:00:00.000Z",
         editedAt: null,
@@ -287,6 +288,25 @@ test("long comments start collapsed with a way to reveal the full text", () => {
     assert.doesNotMatch(renderBody("A short comment."), />View more</);
 });
 
+test("a resolved @handle links to the current profile while unknown handles stay plain text", () => {
+    const markup = renderToStaticMarkup(
+        createElement(BoardCommentRow, {
+            comment: {
+                ...comment(81),
+                body: "Thanks @Avery and @unknown",
+                mentions: [{ handle: "avery", username: "renamed" }]
+            },
+            boardId: "42",
+            epoch: 0,
+            loginHref: "/login",
+            onUpdated() {},
+            onDeleted() {}
+        })
+    );
+    assert.match(markup, /href="\/profile\/renamed"[^>]*>@Avery<\/a>/);
+    assert.doesNotMatch(markup, /href="\/profile\/unknown"/);
+});
+
 test("comment targets update after same-page history navigation and fragment changes", (t) => {
     const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
     const browser = Object.assign(new EventTarget(), { location: { hash: "#comment-81" } });
@@ -373,7 +393,7 @@ test("mounted BoardComments retries initial load failures, retains failed post d
 
     const draftInput = loaded.nodes.find((node) => node.props.id === "board-comment-draft");
     assert.ok(draftInput, "Expected comment textarea for signed-in viewer");
-    draftInput.props.onChange?.({ target: { value: "  My retained comment draft  " } });
+    draftInput.props.onChange?.("  My retained comment draft  ");
 
     const withDraft = section.render();
     const form = withDraft.nodes.find((node) => node.type === "form");
@@ -481,7 +501,7 @@ test("mounted BoardCommentRow edits with retained draft on conflict, reloads cur
     const editInput = editing.nodes.find((node) => node.props.id === "edit-comment-81");
     assert.ok(editInput, "Expected edit textarea");
     assert.equal(editInput.props.value, "Original comment");
-    editInput.props.onChange?.({ target: { value: "My edited comment draft" } });
+    editInput.props.onChange?.("My edited comment draft");
 
     const dirtyEdit = row.render();
     const editForm = dirtyEdit.nodes.find((node) => node.type === "form");
@@ -583,11 +603,7 @@ test("toggling the notification bell while post refresh is in flight preserves t
     await flush();
 
     const loaded = section.render();
-    loaded.nodes
-        .find((node) => node.props.id === "board-comment-draft")
-        ?.props.onChange?.({
-            target: { value: "New comment" }
-        });
+    loaded.nodes.find((node) => node.props.id === "board-comment-draft")?.props.onChange?.("New comment");
     await section
         .render()
         .nodes.find((node) => node.type === "form")

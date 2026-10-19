@@ -59,6 +59,7 @@ test("comment notifications keep the Board anchor and plain-text excerpt", () =>
         boardId: 12,
         boardTitle: "Tokyo",
         commentId: 32,
+        kind: "comment",
         commenter: { displayName: "Avery", username: "avery", profilePictureUrl: null },
         excerpt: "Look <here> & enjoy",
         createdAt: "2026-01-01T00:00:00.000Z",
@@ -92,6 +93,7 @@ test("notification links leave modified clicks to the browser", () => {
         boardId: 12,
         boardTitle: "Tokyo",
         commentId: 32,
+        kind: "comment",
         commenter: { displayName: "Avery", username: "avery", profilePictureUrl: null },
         excerpt: "New comment",
         createdAt: "2026-01-01T00:00:00.000Z",
@@ -132,6 +134,37 @@ test("notification links leave modified clicks to the browser", () => {
     assert.equal(state.opened, 0);
     assert.equal(click({}), true);
     assert.equal(state.opened, 1);
+});
+
+test("mention notifications identify the mention in the shared list", () => {
+    const item: CommentNotification = {
+        notificationId: 9,
+        boardId: 12,
+        boardTitle: "Tokyo",
+        commentId: 33,
+        kind: "mention",
+        commenter: { displayName: "Avery", username: "avery", profilePictureUrl: null },
+        excerpt: "Hello @morgan",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        readAt: null
+    };
+    const router = {
+        bfcacheId: "mention-notification-test",
+        back() {},
+        forward() {},
+        refresh() {},
+        push() {},
+        replace() {},
+        prefetch() {}
+    };
+    const html = renderToStaticMarkup(
+        createElement(
+            AppRouterContext.Provider,
+            { value: router },
+            createElement(CommentNotificationList, { items: [item], pendingId: null, onOpen: async () => {} })
+        )
+    );
+    assert.match(html, /Avery mentioned you in Tokyo/);
 });
 
 function elements(node: ReactNode): Array<{ type: unknown; props: Record<string, unknown> }> {
@@ -209,6 +242,7 @@ test("unmounting CommentNotificationsSection while marking a notification read c
         boardId: 12,
         boardTitle: "Tokyo",
         commentId: 32,
+        kind: "comment",
         commenter: { displayName: "Avery", username: "avery", profilePictureUrl: null },
         excerpt: "New comment",
         createdAt: "2026-01-01T00:00:00.000Z",

@@ -102,6 +102,7 @@ function fakeComments(): { repository: CommentsRepository; records: CommentRecor
                 boardId,
                 authorUserId,
                 body,
+                mentions: [],
                 author: { displayName: authorUserId, username: authorUserId, profilePictureUrl: null },
                 createdAt: "2026-10-19T12:00:00.000Z",
                 editedAt: null,

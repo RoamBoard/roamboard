@@ -19,7 +19,7 @@ visitor-only footer when that footer is present. Owners also see the section. A 
 and load older ones. A signed-in viewer can post plain text, edit their own comments, and delete their own comments.
 The Board owner can delete any comment on that Board.
 
-Comments on drafts, replies, rich text, clickable link parsing, image attachments, reactions, notifications, realtime
+Comments on drafts, replies, rich text, general clickable link parsing, image attachments, reactions, notifications, realtime
 updates, and moderation roles beyond the Board owner are outside this version. The open notification issue [#42](https://github.com/RoamBoard/roamboard/issues/42)
 does not yet provide comment notifications.
 

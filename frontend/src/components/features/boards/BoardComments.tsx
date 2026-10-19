@@ -4,8 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { Bell, Pencil, Trash2, UserRound } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
+import CommentMentionEditor from "./CommentMentionEditor";
 import { observeCurrentUser, type AuthUser } from "@/lib/auth";
 import { subscribeBackNavigation } from "@/lib/back-navigation";
+import { commentMentionParts } from "@/lib/comment-mentions";
 import {
     getCommentSubscription,
     notifyCommentNotificationUpdate,
@@ -17,7 +19,6 @@ import {
     commentLength,
     deleteBoardComment,
     editBoardComment,
-    limitCommentLength,
     listBoardComments,
     postBoardComment,
     reloadBoardComment,
@@ -88,6 +89,7 @@ export function BoardCommentRow({
     boardId,
     epoch,
     loginHref,
+    viewer,
     onUpdated,
     onDeleted
 }: {
@@ -95,6 +97,7 @@ export function BoardCommentRow({
     boardId: string;
     epoch: number;
     loginHref: string;
+    viewer?: AuthUser;
     onUpdated: (comment: BoardComment, epoch: number) => void;
     onDeleted: (commentId: number, epoch: number) => void;
 }) {
@@ -245,13 +248,14 @@ export function BoardCommentRow({
                         <label className="sr-only" htmlFor={`edit-comment-${comment.commentId}`}>
                             Edit comment
                         </label>
-                        <textarea
+                        <CommentMentionEditor
                             id={`edit-comment-${comment.commentId}`}
                             value={editDraft}
-                            onChange={(event) => setEditDraft(limitCommentLength(event.target.value))}
-                            aria-describedby={`edit-comment-count-${comment.commentId}`}
+                            onChange={setEditDraft}
+                            describedBy={`edit-comment-count-${comment.commentId}`}
                             className={textareaClass}
                             disabled={busy}
+                            viewer={viewer}
                         />
                         <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
                             <span
@@ -286,7 +290,19 @@ export function BoardCommentRow({
                             id={`comment-body-${comment.commentId}`}
                             className={`text-14 mt-2 leading-6 break-words whitespace-pre-wrap ${expanded ? "" : "max-h-24 overflow-hidden"}`}
                         >
-                            {comment.body}
+                            {commentMentionParts(comment.body, comment.mentions ?? []).map((part, index) =>
+                                part.username ? (
+                                    <Link
+                                        key={index}
+                                        href={`/profile/${encodeURIComponent(part.username)}`}
+                                        className="font-medium underline underline-offset-2"
+                                    >
+                                        {part.text}
+                                    </Link>
+                                ) : (
+                                    <span key={index}>{part.text}</span>
+                                )
+                            )}
                         </p>
                         {canExpand ? (
                             <button
@@ -605,14 +621,15 @@ export default function BoardComments({ boardId }: { boardId: string }) {
                                 <label htmlFor="board-comment-draft" className="sr-only">
                                     Your comment
                                 </label>
-                                <textarea
+                                <CommentMentionEditor
                                     id="board-comment-draft"
                                     value={draft}
-                                    onChange={(event) => setDraft(limitCommentLength(event.target.value))}
+                                    onChange={setDraft}
                                     placeholder="Share a thought about this Board…"
-                                    aria-describedby="board-comment-count"
+                                    describedBy="board-comment-count"
                                     className={textareaClass}
                                     disabled={posting}
+                                    viewer={viewer}
                                 />
                                 <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
                                     <span id="board-comment-count" className="text-muted-foreground text-12">
@@ -673,6 +690,7 @@ export default function BoardComments({ boardId }: { boardId: string }) {
                                 boardId={boardId}
                                 epoch={accountEpoch}
                                 loginHref={loginHref}
+                                viewer={viewer ?? undefined}
                                 onUpdated={updateComment}
                                 onDeleted={removeComment}
                             />
