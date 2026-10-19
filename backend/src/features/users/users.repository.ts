@@ -380,7 +380,7 @@ export function createUsersRepository(): UsersRepository {
         async acceptFriendRequest(recipientId, requestId) {
             const result = await getPool().query(
                 `UPDATE friendship
-                 SET status = 'accepted'
+                 SET status = 'accepted', accepted_at = CURRENT_TIMESTAMP
                  WHERE friendship_id = $1 AND recipient_user_id = $2 AND status = 'pending'`,
                 [requestId, recipientId]
             );
@@ -397,6 +397,7 @@ export function createUsersRepository(): UsersRepository {
         async listFriends(userId) {
             const result = await getPool().query<{
                 friendship_id: number;
+                accepted_at: Date | null;
                 user_id: string;
                 username: string;
                 display_name: string;
@@ -404,7 +405,7 @@ export function createUsersRepository(): UsersRepository {
                 biography: string | null;
                 location: string | null;
             }>(
-                `SELECT f.friendship_id, u.user_id, u.username, u.display_name, u.profile_picture_image_id, u.biography, u.location
+                `SELECT f.friendship_id, f.accepted_at, u.user_id, u.username, u.display_name, u.profile_picture_image_id, u.biography, u.location
                  FROM friendship f
                  JOIN app_user u ON u.user_id = (CASE WHEN f.requester_user_id = $1 THEN f.recipient_user_id ELSE f.requester_user_id END)
                  WHERE (f.requester_user_id = $1 OR f.recipient_user_id = $1) AND f.status = 'accepted'
@@ -413,6 +414,7 @@ export function createUsersRepository(): UsersRepository {
             );
             return result.rows.map((row) => ({
                 friendshipId: row.friendship_id,
+                acceptedAt: row.accepted_at ? row.accepted_at.toISOString() : null,
                 userId: row.user_id,
                 username: row.username,
                 displayName: row.display_name,

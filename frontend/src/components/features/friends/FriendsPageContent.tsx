@@ -53,7 +53,7 @@ export default function FriendsPageContent({
 
     const readVersionRef = useRef(0);
     const latestCompletedReadId = useRef(0);
-    const confirmedRemovedIdsRef = useRef<Set<string>>(new Set());
+    const confirmedRemovalsRef = useRef<Map<string, number>>(new Map());
 
     const [friends, setFriends] = useState<FriendUser[]>(initialFriends ?? []);
     const [loading, setLoading] = useState(initialLoading ?? (!initialFriends && !initialError));
@@ -69,6 +69,12 @@ export default function FriendsPageContent({
     const [unfriendLoading, setUnfriendLoading] = useState(false);
     const [unfriendError, setUnfriendError] = useState<string | null>(null);
 
+    const filterFriends = (data: FriendUser[], readId: number) =>
+        data.filter((f) => {
+            const removedAtReadId = confirmedRemovalsRef.current.get(f.userId);
+            return removedAtReadId === undefined || readId > removedAtReadId;
+        });
+
     const fetchFriends = async () => {
         const readId = ++readVersionRef.current;
         setLoading(true);
@@ -77,7 +83,7 @@ export default function FriendsPageContent({
             const data = await loadFriends();
             if (readId >= latestCompletedReadId.current) {
                 latestCompletedReadId.current = readId;
-                setFriends(data.filter((f) => !confirmedRemovedIdsRef.current.has(f.userId)));
+                setFriends(filterFriends(data, readId));
             }
         } catch (err) {
             if (readId >= latestCompletedReadId.current) {
@@ -102,7 +108,7 @@ export default function FriendsPageContent({
             .then((data) => {
                 if (tracker.active && readId >= latestCompletedReadId.current) {
                     latestCompletedReadId.current = readId;
-                    setFriends(data.filter((f) => !confirmedRemovedIdsRef.current.has(f.userId)));
+                    setFriends(filterFriends(data, readId));
                 }
             })
             .catch((err) => {
@@ -141,6 +147,14 @@ export default function FriendsPageContent({
             sorted.sort((a, b) => b.displayName.localeCompare(a.displayName));
         } else if (sortOption === "recent") {
             sorted.sort((a, b) => {
+                if (a.acceptedAt && b.acceptedAt) {
+                    const timeDiff = new Date(b.acceptedAt).getTime() - new Date(a.acceptedAt).getTime();
+                    if (timeDiff !== 0) return timeDiff;
+                } else if (a.acceptedAt) {
+                    return -1;
+                } else if (b.acceptedAt) {
+                    return 1;
+                }
                 const idA = a.friendshipId ?? 0;
                 const idB = b.friendshipId ?? 0;
                 return idB - idA;
@@ -157,7 +171,7 @@ export default function FriendsPageContent({
         setUnfriendError(null);
         try {
             await removeFriend(target.userId);
-            confirmedRemovedIdsRef.current.add(target.userId);
+            confirmedRemovalsRef.current.set(target.userId, readVersionRef.current);
             readVersionRef.current += 1;
             setFriends((prev) => prev.filter((f) => f.userId !== target.userId));
             setConfirmUnfriendTarget(null);

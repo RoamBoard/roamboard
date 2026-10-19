@@ -96,6 +96,7 @@ function createStatefulHarness(initialProps: FriendsPageContentProps = {}) {
 const sampleFriends: FriendUser[] = [
     {
         friendshipId: 10,
+        acceptedAt: "2026-10-15T12:00:00.000Z",
         userId: "u-alice",
         username: "alice_wonder",
         displayName: "Alice Wonder",
@@ -105,6 +106,7 @@ const sampleFriends: FriendUser[] = [
     },
     {
         friendshipId: 20,
+        acceptedAt: "2026-10-17T12:00:00.000Z",
         userId: "u-bob",
         username: "bob_travels",
         displayName: "Bob Smith",
@@ -114,6 +116,7 @@ const sampleFriends: FriendUser[] = [
     },
     {
         friendshipId: 30,
+        acceptedAt: "2026-10-19T12:00:00.000Z",
         userId: "u-chloe",
         username: "chloe_voyage",
         displayName: "Chloe Martin",
@@ -426,4 +429,100 @@ test("FriendsPageContent renders FindFriendsDialog when find friends button clic
     const dialog = afterClick.nodes.find((n) => n.type === FindFriendsDialog);
     assert.ok(dialog);
     assert.equal(dialog.props.open, true);
+});
+
+test("FriendsPageContent sorts Recently added by acceptance time rather than request creation order", () => {
+    const friendsWithMixedTimes: FriendUser[] = [
+        {
+            friendshipId: 99,
+            acceptedAt: "2026-10-01T10:00:00.000Z", // Requested recently (id 99), but accepted long ago
+            userId: "u-early-accepted",
+            username: "early_friend",
+            displayName: "Early Accepted",
+            profilePictureUrl: null,
+            bio: null,
+            location: null
+        },
+        {
+            friendshipId: 2,
+            acceptedAt: "2026-10-19T10:00:00.000Z", // Requested long ago (id 2), but accepted today
+            userId: "u-late-accepted",
+            username: "late_friend",
+            displayName: "Late Accepted",
+            profilePictureUrl: null,
+            bio: null,
+            location: null
+        }
+    ];
+
+    const harness = createStatefulHarness({ initialFriends: friendsWithMixedTimes });
+    const initial = harness.render();
+
+    const sortSelect = initial.nodes.find((n) => n.type === "select");
+    assert.ok(sortSelect);
+
+    sortSelect.props.onChange?.({ target: { value: "recent" } });
+    const recentRender = harness.render();
+
+    const posLate = recentRender.markup.indexOf("Late Accepted");
+    const posEarly = recentRender.markup.indexOf("Early Accepted");
+    assert.ok(
+        posLate < posEarly,
+        "Friend accepted today (Late Accepted) must sort before friend accepted earlier, despite smaller friendshipId"
+    );
+});
+
+test("FriendsPageContent restores renewed friend after previous unfriend when discovery adds them in fresh read", async (context) => {
+    const fetchFriendsData = { current: sampleFriends };
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {
+        if (init?.method === "DELETE") {
+            return new Response(null, { status: 204 });
+        }
+        return Response.json({ data: fetchFriendsData.current }, { headers: { "content-type": "application/json" } });
+    });
+
+    const harness = createStatefulHarness({ initialFriends: sampleFriends });
+    const initial = harness.render();
+
+    // 1. Unfriend Alice
+    const unfriendAlice = initial.nodes.find(
+        (n) => n.type === "button" && n.props["aria-label"] === "Unfriend Alice Wonder"
+    );
+    assert.ok(unfriendAlice);
+    unfriendAlice.props.onClick?.();
+
+    const dialogRender = harness.render();
+    const confirmDialog = dialogRender.nodes.find((n) => n.type === ConfirmDialog);
+    assert.ok(confirmDialog);
+    await (confirmDialog.props as { onConfirm: () => Promise<void> }).onConfirm();
+
+    // Alice is now removed
+    const afterUnfriend = harness.render();
+    assert.ok(!afterUnfriend.markup.includes("Alice Wonder"));
+    assert.ok(afterUnfriend.markup.includes("my friends (2)"));
+
+    // 2. User accepts/adds Alice again in FindFriendsDialog, triggering onFriendAdded
+    const findFriendsDialog = afterUnfriend.nodes.find((n) => n.type === FindFriendsDialog);
+    assert.ok(findFriendsDialog);
+    const onFriendAdded = findFriendsDialog.props.onFriendAdded as () => void;
+
+    // Simulate fresh loadFriends returning renewed friendship for Alice
+    fetchFriendsData.current = [
+        ...sampleFriends.filter((f) => f.userId !== "u-alice"),
+        {
+            ...sampleFriends[0],
+            acceptedAt: "2026-10-19T18:00:00.000Z"
+        }
+    ];
+
+    onFriendAdded(); // Starts fresh fetchFriends() with readId > removalReadId
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    // 3. Re-render: Alice must be restored because the read was started after the confirmed removal
+    const afterReAdd = harness.render();
+    assert.ok(
+        afterReAdd.markup.includes("Alice Wonder"),
+        "Renewed friend must appear after being re-added in fresh discovery read"
+    );
+    assert.ok(afterReAdd.markup.includes("my friends (3)"));
 });

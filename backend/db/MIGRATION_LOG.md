@@ -1,5 +1,9 @@
 # Shared development database migration log
 
+## Pending friendship acceptance timestamp migration
+
+`012_friendship_accepted_at.sql` adds the `accepted_at` column to `friendship` and backfills it with `CURRENT_TIMESTAMP` for accepted friendships. It has not been applied to the shared Azure database. Apply 012 after 011.
+
 ## Pending board publication timestamp migration
 
 `011_board_published_at.sql` adds the `published_at` column to `board` and backfills it from `created_at` for published boards. It has not been applied to the shared Azure database. Apply 011 after 010.
