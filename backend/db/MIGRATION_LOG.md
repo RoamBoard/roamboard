@@ -2,7 +2,7 @@
 
 ## Pending friendship acceptance timestamp migration
 
-`012_friendship_accepted_at.sql` adds the `accepted_at` column to `friendship` and backfills it with `CURRENT_TIMESTAMP` for accepted friendships. It has not been applied to the shared Azure database. Apply 012 after 011.
+`015_friendship_accepted_at.sql` adds the `accepted_at` column to `friendship` and backfills it with `CURRENT_TIMESTAMP` for accepted friendships. It has not been applied to the shared Azure database. It was renamed from `012_friendship_accepted_at.sql` because 012, 013, and 014 are used by migrations in other branches. Apply 015 after 014.
 
 ## Pending board publication timestamp migration
 
