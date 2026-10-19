@@ -586,3 +586,8 @@ SVG circuit mask instead of 78 masks. Browser performance measurements remain pe
 Decorative published Board spaces use a shared destination/country Unsplash search pool of up to 20 photos, selecting
 distinct candidates randomly per resolution. They show photographer/Unsplash credit, never attach themselves to
 activities, and leave placeholders on failure. Strict place matching still applies to actual activity photos.
+
+The Board editor offers owners a Delete Board text action below View saved Board for persisted drafts and published
+Boards, including saved remix copies. It uses the existing owner-only DELETE endpoint and shared confirmation dialog,
+locks editing during confirmation, retains failures for retry, and returns to `/boards` after deletion. The endpoint
+removes Board children through database cascades and marks uploads for the existing unused-image cleanup.
