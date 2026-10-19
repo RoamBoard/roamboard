@@ -35,8 +35,14 @@ export function createUsersController(service: ReturnType<typeof createUsersServ
             response.json({ data: await service.stats(response.locals.user.userId) });
         },
         destinations: async (_request, response) => {
-            const { scope } = response.locals.query as { scope?: "visited" };
-            response.json({ data: await service.mapDestinations(response.locals.user.userId, scope === "visited") });
+            const { scope } = response.locals.query as { scope?: "visited" | "published" | "saved" };
+            response.json({
+                data: await service.mapDestinations(response.locals.user.userId, scope === "visited", scope === "saved")
+            });
+        },
+        savedMapDestinations: async (_request, response) => {
+            const { handle } = response.locals.params as { handle: string };
+            response.json({ data: await service.savedMapDestinations(handle, response.locals.user.userId) });
         },
         savedBoards: async (_request, response) => {
             const { page, limit } = response.locals.query as { page: number; limit: number };

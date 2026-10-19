@@ -384,10 +384,8 @@ export default function ProfilePageContent({
                                 <p role="alert" className="text-muted-foreground">
                                     The visited map could not be loaded.
                                 </p>
-                            ) : destinations.length ? (
-                                <VisitedWorldMap destinations={destinations} embedded />
                             ) : (
-                                <p className="text-muted-foreground">No visited destinations yet.</p>
+                                <VisitedWorldMap destinations={destinations} embedded allowSaved />
                             )
                         }
                     />
