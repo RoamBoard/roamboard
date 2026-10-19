@@ -97,6 +97,19 @@ This is a living project guide. Agents may and should update `AGENTS.md` when th
 
 ## Current integrated surfaces
 
+`/create/remix` uses the Continue gallery for the signed-in user's saved Boards, without search or filters.
+Only the primary card and its eye open `/boards/<boardId>`; its plus opens `/boards/new?remix=<boardId>`.
+Both actions appear on hover/focus and remain visible on touch devices. Other cards show no hover actions/details
+and move into the primary position when selected. A short intro explains template creation; count spacing matches Continue.
+The primary card shows a 48px profile photo with a small gap below it at the top left with the author's `@handle` to its right, sharing
+one profile link. Plus and eye sit centered as a pair below the details, preserving their gap. The canonical card adapter retains the Board-author photo's
+authorization query; missing/failed photos use the account icon. These profile actions remain remix-only.
+The creator prepares independent photos and content through
+`POST /api/v1/boards/:boardId/remix-content`, deduplicates preparation within the mount and disables editing until
+ready, with retry on failure. Days/order/times and cover selections remain; calendar dates, original ownership,
+completion, memberships and visibility are not copied. Normal new-Board visibility preferences apply. Only Save
+or Publish creates a Board. See [the remix contract](../contracts/saved-board-remix.md).
+
 Secondary screens use the shared `BackLink`: profile/settings, notifications, Board selection/editing/viewing and Discover details. It uses the published Board's small arrow-and-text style and scrolls away with the page content; it has no separate header bar. Keep it inside each screen's actual scroll container. Main navigation destinations omit it. `BackNavigationTracker` records the previous internal URL on browser history entries while preserving router state, so Back uses browser history after refresh or forward/back; direct entries use a route-specific parent fallback. Authentication/welcome screens are excluded as return destinations. Board editor leave confirmation preserves Back or fallback replacement after discarding unsaved changes.
 
 `Sidebar` is shared by `AppShell` and `PublishedBoardShell`. It uses a sticky 64px mobile / 80px desktop rail in the page grid; desktop expansion grows to 176px and resizes the page beside it. Hovering a navigation or account control for 150ms temporarily reveals labels; leaving the rail collapses it after 100ms, and returning cancels that collapse. The logo and navigation positions stay fixed during expansion. Keyboard focus reveals labels immediately. The explicit keep-open choice is saved in `roamboard-sidebar-expanded` local storage. Navigation uses icons with lowercase labels on expansion and an underlined active destination, ordered Roam, Create, Discover, Boards, Social. Mobile expansion opens a native modal drawer. The sidebar account control expands its sign-in/profile, Settings, and Light/Dark choices inline above the trigger. Navigation scrolls at every height; the account panel has a viewport-based height bound and its own scrolling. Active destinations are derived from the pathname, including nested creation, Board, Discover, profile, and developer routes. Discover keeps its own scroll-driven intro behavior independently of navigation expansion; Discover panels and destination chapters use their available container width.

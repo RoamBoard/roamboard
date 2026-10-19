@@ -7,6 +7,7 @@ import helmet from "helmet";
 import { checkDatabase } from "./db.js";
 import { createAuthModule, type AuthModuleOptions } from "./features/auth/auth.module.js";
 import { createBoardsModule } from "./features/boards/boards.module.js";
+import { createBoardsRepository } from "./features/boards/boards.repository.js";
 import type { BoardRepository } from "./features/boards/boards.types.js";
 import { createImagesModule } from "./features/images/images.module.js";
 import type { ImageProvider, ImagesRepository } from "./features/images/images.types.js";
@@ -73,14 +74,15 @@ export function createApp(options: AppOptions = {}): Express {
     const providers = createProviderModule(quota, attachUser);
     const destinations = createDestinationModule(quota);
     const search = createSearchModule(options.searchRepository, options.searchProvider);
-    const boards = createBoardsModule(attachUser, options.boardRepository);
+    const boardRepository = options.boardRepository ?? createBoardsRepository();
     const images = createImagesModule(
         attachUser,
-        boards.repository,
+        boardRepository,
         options.imagesRepository,
         options.imageProvider,
         quota
     );
+    const boards = createBoardsModule(attachUser, boardRepository, images.service.copyForBoard);
     const users = createUsersModule(attachUser, images.repository, boards.repository, options.usersRepository);
     app.use("/api/v1/auth", auth.router);
     app.use(

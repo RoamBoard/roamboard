@@ -6,7 +6,7 @@ import { findCountry } from "./countries";
 
 export type SelectionSummary = DraftSummary & {
     status: "draft" | "published";
-    source: "owned" | "shared";
+    source: "owned" | "shared" | "saved";
     visibility?: BoardDocument["visibility"];
 };
 export type SelectionFilter = "all" | "draft" | "published";

@@ -24,6 +24,7 @@ import {
     fromBoardDocument,
     listBoardTags,
     loadBoardDocument,
+    prepareBoardRemix,
     mergeServerIds,
     mergeServerImages,
     saveBoardDocument,
@@ -57,12 +58,14 @@ function normalizePinOrder(pins: BoardPinDraft[]): BoardPinDraft[] {
 
 export default function BoardCreator({
     initialBoardId,
+    initialRemixBoardId,
     expectedStatus = "draft",
     initialMode = "smart",
     initialPlace,
     backHref
 }: {
     initialBoardId?: number;
+    initialRemixBoardId?: number;
     expectedStatus?: BoardStatus;
     initialMode?: "smart" | "scratch";
     initialPlace?: StartingPlace;
@@ -133,7 +136,10 @@ export default function BoardCreator({
     const [activityUploading, setActivityUploading] = useState(false);
     const uploading = boardUploading || activityUploading;
     const pendingUploadRef = useRef<Promise<unknown> | null>(null);
-    const [draftLoading, setDraftLoading] = useState(initialBoardId !== undefined);
+    const [draftLoading, setDraftLoading] = useState(initialBoardId !== undefined || initialRemixBoardId !== undefined);
+    const [remixReady, setRemixReady] = useState(initialRemixBoardId === undefined);
+    const [remixAttempt, setRemixAttempt] = useState(0);
+    const remixRequest = useRef<ReturnType<typeof prepareBoardRemix> | null>(null);
     const [error, setError] = useState("");
     const [message, setMessage] = useState("");
     const [saveMessage, setSaveMessage] = useState("");
@@ -150,6 +156,7 @@ export default function BoardCreator({
         pendingPlan !== null ||
         saving !== null ||
         draftLoading ||
+        !remixReady ||
         (initialBoardId !== undefined && !savedBoard) ||
         (savedBoard?.status === "published" && expectedStatus !== "published");
     const loadTags = useCallback(
@@ -205,6 +212,37 @@ export default function BoardCreator({
             )
             .finally(() => setDraftLoading(false));
     }, [initialBoardId, expectedStatus]);
+
+    useEffect(() => {
+        if (initialRemixBoardId === undefined) return;
+        const current = { active: true };
+        // Strict Mode replays effects; reuse the in-flight preparation rather than copying photos twice.
+        remixRequest.current ??= prepareBoardRemix(initialRemixBoardId);
+        void remixRequest.current
+            .then((board) => {
+                if (!current.active) return;
+                const restored = fromBoardDocument(board);
+                destinationTouched.current = true;
+                setDestination(restored.destination);
+                setTitle(board.title);
+                setDescription(board.description ?? "");
+                setTags(board.tags.map((tag) => tag.name));
+                setDays(restored.days);
+                setImages(restored.images);
+                setSelectedCoverImageId(board.coverImageId);
+                setRemixReady(true);
+            })
+            .catch((caught: unknown) => {
+                if (current.active)
+                    setError(caught instanceof Error ? caught.message : "Saved Board could not be prepared.");
+            })
+            .finally(() => {
+                if (current.active) setDraftLoading(false);
+            });
+        return () => {
+            current.active = false;
+        };
+    }, [initialRemixBoardId, remixAttempt]);
 
     const uploadedImages = images.filter((image) => image.source === "upload");
     const coverImageId = uploadedImages.some((image) => image.uploadedImageId === selectedCoverImageId)
@@ -591,6 +629,23 @@ export default function BoardCreator({
             </h1>
 
             <div>
+                {initialRemixBoardId !== undefined && !remixReady && !draftLoading && (
+                    <div className="mx-auto max-w-3xl px-5 py-8" role="alert">
+                        <p>{error || "Saved Board could not be prepared."}</p>
+                        <button
+                            type="button"
+                            className="mt-3 min-h-11 underline"
+                            onClick={() => {
+                                remixRequest.current = null;
+                                setDraftLoading(true);
+                                setError("");
+                                setRemixAttempt((attempt) => attempt + 1);
+                            }}
+                        >
+                            Retry saved Board
+                        </button>
+                    </div>
+                )}
                 <fieldset
                     disabled={editorDisabled}
                     aria-busy={draftLoading}

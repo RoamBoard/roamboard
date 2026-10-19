@@ -8,7 +8,7 @@
 
 A signed-in user creates a Board at `/boards/new`, uploads up to 30 photos per batch (repeat batches allowed), arranges days and activities, chooses up to three predefined tags, then saves an incomplete draft or publishes a valid Board. The owner can find and reopen drafts from `/boards`. A save after the first one updates the same Board. Each save submits the complete current Board document; the backend persists its relational changes in one transaction.
 
-This version excludes the separate Vibe and Highlights controls. Vibes are simply choices in the shared tag pool, stored through `board_tag`. It also excludes remixing, invitations/member management UI, saved Boards, discovery/search, and map-provider API design. Existing members and friends still affect read permissions. The Board represents an itinerary or journal without a Board type field.
+This version excludes the separate Vibe and Highlights controls. Vibes are simply choices in the shared tag pool, stored through `board_tag`. It also excludes invitations/member management UI, saved Board membership, discovery/search, and map-provider API design. Saved Board remix preparation is documented in [the remix contract](../contracts/saved-board-remix.md); membership is documented in [the profile contract](../contracts/profile.md). Existing members and friends still affect read permissions. The Board represents an itinerary or journal without a Board type field.
 
 ## Access and lifecycle
 

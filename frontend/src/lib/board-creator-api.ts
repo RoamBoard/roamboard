@@ -182,6 +182,16 @@ export async function listPublishedBoards(page = 1): Promise<{
 export const loadBoardDocument = (boardId: number, signal?: AbortSignal) =>
     request<BoardDocument>(`/api/v1/boards/${boardId}`, { signal });
 
+export type PreparedBoardCopy = Pick<
+    BoardDocument,
+    "title" | "description" | "destination" | "tags" | "images" | "coverImageId"
+> & {
+    days: BoardWriteRequest["days"];
+};
+
+export const prepareBoardRemix = (boardId: number) =>
+    request<PreparedBoardCopy>(`/api/v1/boards/${boardId}/remix-content`, { method: "POST" });
+
 export function saveBoardDocument(input: BoardWriteRequest, board?: BoardDocument | null): Promise<BoardDocument> {
     return board
         ? request<BoardDocument>(`/api/v1/boards/${board.boardId}`, {
@@ -279,12 +289,12 @@ export function toBoardWrite(
     };
 }
 
-export function fromBoardDocument(board: BoardDocument): {
+export function fromBoardDocument(board: PreparedBoardCopy): {
     destination: BoardDestinationDraft | null;
     days: BoardDayDraft[];
     images: BoardImageDraft[];
 } {
-    const pinIds = new Map<number, string>();
+    const pinIds = new Map<object, string>();
     const days: BoardDayDraft[] = board.days.map((day) => ({
         id: crypto.randomUUID(),
         serverDayId: day.dayId,
@@ -292,7 +302,7 @@ export function fromBoardDocument(board: BoardDocument): {
         date: day.date,
         pins: day.activities.map((activity) => {
             const id = crypto.randomUUID();
-            pinIds.set(activity.activityId, id);
+            pinIds.set(activity, id);
             return {
                 id,
                 serverActivityId: activity.activityId,
@@ -323,7 +333,7 @@ export function fromBoardDocument(board: BoardDocument): {
         for (const activity of day.activities) {
             activity.uploadedImageIds.forEach((imageId, order) =>
                 ownerByImage.set(imageId, {
-                    pinId: pinIds.get(activity.activityId)!,
+                    pinId: pinIds.get(activity)!,
                     order
                 })
             );
@@ -352,7 +362,7 @@ export function fromBoardDocument(board: BoardDocument): {
             if (!activity.externalImage) continue;
             images.push({
                 id: crypto.randomUUID(),
-                pinId: pinIds.get(activity.activityId)!,
+                pinId: pinIds.get(activity)!,
                 publicId: activity.externalImage.providerImageId,
                 source: "unsplash",
                 url: activity.externalImage.url,

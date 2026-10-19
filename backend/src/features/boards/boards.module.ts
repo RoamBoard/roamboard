@@ -4,7 +4,7 @@ import { createBoardsController } from "./boards.controller.js";
 import { createBoardsRepository } from "./boards.repository.js";
 import { createBoardsRouter } from "./boards.routes.js";
 import { createBoardsService } from "./boards.service.js";
-import type { BoardRepository, BoardsService } from "./boards.types.js";
+import type { BoardRepository, BoardsService, CopyBoardImage } from "./boards.types.js";
 
 export interface BoardsModule {
     router: Router;
@@ -14,9 +14,10 @@ export interface BoardsModule {
 
 export function createBoardsModule(
     attachUser: RequestHandler,
-    repository: BoardRepository = createBoardsRepository()
+    repository: BoardRepository = createBoardsRepository(),
+    copyImage?: CopyBoardImage
 ): BoardsModule {
-    const service = createBoardsService(repository);
+    const service = createBoardsService(repository, copyImage);
     const controller = createBoardsController(service);
     return { router: createBoardsRouter(controller, attachUser), service, repository };
 }

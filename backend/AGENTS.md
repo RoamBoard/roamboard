@@ -4,6 +4,12 @@ These instructions apply to `backend/`. Use `../layered-backend-demo1/` as the r
 
 ## Current state and sources of truth
 
+- Saved Board remix preparation uses `POST /api/v1/boards/:boardId/remix-content` with session/Origin checks and
+  current saved membership/read access. It stages independently owned authenticated photo copies and returns
+  content with new photo references, no persisted child IDs and no calendar dates. It creates no Board until the
+  existing save endpoint is used. Unattached copies use existing upload cleanup; no migration is needed.
+  See [the remix contract](../contracts/saved-board-remix.md).
+
 - This is a Node.js 24, TypeScript, Express 5 API using npm. `src/app.ts` creates the app; `src/server.ts` starts it. `src/db.ts` owns the shared `pg` pool. The `auth` feature manages Google sign-in and sessions; `boards` and `images` persist canonical documents and protected uploads; `providers`, `destinations`, `users`, `search`, and `quotas` connect the existing frontend API surfaces. See `BOARD_API_CONTRACT.md` and `API_FEATURES_CONTRACT.md` for implemented behavior.
 - Board search reads canonical public, published PostgreSQL Boards on each request and ranks matches in application code; no separate search store or synchronization is needed. Geoapify supplies permanent activity location lookups; confirmed locations are stored in PostgreSQL. Mapbox serves maps, routes and temporary discovery.
 - Public destination guides use selected city/country/coordinates, matched Wikivoyage introductions, distinct Unsplash photos and fresh public Boards within 25 km. Travel-guide sights come from Wikivoyage See listings, including linked district guides when needed. Selecting a sight tries a same-name Mapbox match within 500 m for temporary map display. Original travel-guide data remains canonical for Board preparation, with source attribution. The obsolete permanent-place confirmation endpoint was removed. Wikivoyage introductions, Unsplash photos and Wikivoyage sights have bounded one-hour caches. Existing shared provider budgets remain in use. City tips and selected-place descriptions use Wikivoyage plain-text extracts; listing-linked photos use Commons metadata and license credits. Details are public reads validated against the city sight list. See `API_FEATURES_CONTRACT.md` and the destination schemas/types.

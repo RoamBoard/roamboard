@@ -48,6 +48,7 @@ export type LandscapeBoardCardData = BoardCardSummary & {
 };
 
 export type PhotoBoardCardData = BoardCardSummary & {
+    authorPhotoUrl?: string | null;
     image?: BoardCardImage;
     tags?: readonly string[];
     description?: string;
@@ -78,10 +79,11 @@ export type PhotoBoardCardProps = {
     save?: PhotoBoardSave;
     reduceMotion?: boolean;
     imageSizes?: string;
-    // Galleries own selection; a selected card can navigate once its edit access has resolved.
+    // Continue selects/edits; saved templates expose separate overview and remix links.
     selection?: {
         selected: boolean;
         href?: string;
+        remixHref?: string;
         label?: string;
         onSelect: (event: MouseEvent<HTMLButtonElement>) => void;
         tabIndex?: number;

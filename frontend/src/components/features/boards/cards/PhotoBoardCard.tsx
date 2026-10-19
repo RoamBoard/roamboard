@@ -1,14 +1,43 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useId, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { Bookmark, Check, Globe2, LoaderCircle, LockKeyhole, Pencil, UsersRound } from "lucide-react";
+import {
+    Bookmark,
+    Check,
+    Eye,
+    Globe2,
+    LoaderCircle,
+    LockKeyhole,
+    Pencil,
+    Plus,
+    UserRound,
+    UsersRound
+} from "lucide-react";
 import type { PhotoBoardCardData, PhotoBoardCardProps } from "@/types/board-card";
 import { BoardCardFrame, BoardCardPhoto, BoardCardTitle } from "./BoardCardParts";
 
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-white";
 const validCount = (value: number | undefined) => value !== undefined && Number.isSafeInteger(value) && value >= 0;
+
+export function BoardAuthorAvatar({ src }: { src?: string | null }) {
+    const [failedSource, setFailedSource] = useState<string>();
+    return src && src !== failedSource ? (
+        <Image
+            src={src}
+            alt=""
+            width={48}
+            height={48}
+            unoptimized
+            className="size-full rounded-full object-cover"
+            onError={() => setFailedSource(src)}
+        />
+    ) : (
+        <UserRound aria-hidden="true" size={20} strokeWidth={1.5} />
+    );
+}
 
 function PhotoCover({ board, sizes, expanded }: { board: PhotoBoardCardData; sizes?: string; expanded: boolean }) {
     const [failedSource, setFailedSource] = useState<string>();
@@ -120,6 +149,8 @@ export function PhotoBoardCardContent({
     onFocusChange
 }: ContentProps) {
     const tags = [...new Set(board.tags?.map((tag) => tag.trim()).filter(Boolean))].slice(0, 3);
+    const remix = Boolean(selection?.selected && selection.remixHref);
+    const authorHandle = board.author.trim().replace(/^@/, "");
     const hasCount = validCount(board.savedCount);
     const hasActivities = validCount(board.activityCount);
     const hasDays = validCount(board.durationDays) && board.durationDays! > 0;
@@ -156,11 +187,11 @@ export function PhotoBoardCardContent({
         <>
             <BoardCardTitle
                 board={board}
-                className={`font-body absolute top-[5.75cqw] left-[6.5cqw] line-clamp-2 max-w-[87cqw] text-[10cqw] leading-none font-bold [overflow-wrap:anywhere] ${ownerControl || saveControl ? "pr-[max(44px,10cqw)]" : ""}`}
+                className={`font-body absolute top-[5.75cqw] left-[6.5cqw] line-clamp-2 max-w-[87cqw] text-[10cqw] leading-none font-bold [overflow-wrap:anywhere] ${remix ? "[@media(hover:none)]:top-[calc(6.5%+3.75rem)]" : ""} ${ownerControl || saveControl ? "pr-[max(44px,10cqw)]" : ""}`}
             />
             {board.author && (
                 <p
-                    className={`font-body absolute top-[28.25cqw] left-[6.5cqw] line-clamp-2 max-w-[83cqw] [overflow-wrap:anywhere] ${enhanced ? "text-[max(12px,3.5cqw)] leading-tight" : "text-[3.5cqw] leading-none"}`}
+                    className={`font-body absolute top-[28.25cqw] left-[6.5cqw] line-clamp-2 max-w-[83cqw] [overflow-wrap:anywhere] ${remix ? "[@media(hover:none)]:hidden" : ""} ${enhanced ? "text-[max(12px,3.5cqw)] leading-tight" : "text-[3.5cqw] leading-none"}`}
                     title={`by ${board.author}`}
                 >
                     by {board.author}
@@ -247,21 +278,54 @@ export function PhotoBoardCardContent({
                           }
                         : undefined
                 }
-                className="overflow-clip text-white [&>a]:focus-visible:outline-offset-[-4px] [&>a]:focus-visible:outline-white"
+                className="group/card overflow-clip text-white [&>a]:focus-visible:outline-offset-[-4px] [&>a]:focus-visible:outline-white"
             >
                 <PhotoCover board={board} sizes={imageSizes} expanded={expanded} />
+                {remix && authorHandle && (
+                    <Link
+                        href={`/profile/${encodeURIComponent(authorHandle)}`}
+                        data-board-selection=""
+                        aria-label={`View @${authorHandle}'s profile`}
+                        title={`@${authorHandle}`}
+                        tabIndex={selection?.tabIndex}
+                        className={`absolute top-[6.5%] left-[6.5%] z-20 inline-flex min-h-11 max-w-[87%] items-center gap-3 text-white opacity-0 transition-opacity group-focus-within/card:opacity-100 group-hover/card:opacity-100 motion-reduce:transition-none [@media(hover:none)]:opacity-100 ${focus}`}
+                    >
+                        <span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-full border border-white/40 bg-black/45 backdrop-blur-sm">
+                            <BoardAuthorAvatar src={board.authorPhotoUrl} />
+                        </span>
+                        <span className="min-w-0 truncate text-xs tracking-[.22em] text-white/65">@{authorHandle}</span>
+                    </Link>
+                )}
+                {/* Equal side insets center the pair without changing its previous responsive gap. */}
+                {selection?.selected && selection.remixHref && (
+                    <Link
+                        href={selection.remixHref}
+                        data-board-selection=""
+                        aria-label={`Remix ${board.title}`}
+                        title="Create a new Board from this template"
+                        tabIndex={selection.tabIndex}
+                        className={`absolute top-[60%] left-[calc(28.25%-0.875rem)] z-20 grid size-14 -translate-y-1/2 place-items-center rounded-full border border-white/40 bg-black/45 text-white opacity-0 backdrop-blur-sm transition-opacity group-focus-within/card:opacity-100 group-hover/card:opacity-100 motion-reduce:transition-none [@media(hover:none)]:opacity-100 ${focus}`}
+                    >
+                        <Plus aria-hidden="true" size={23} strokeWidth={1.5} />
+                    </Link>
+                )}
                 {selection?.selected && selection.href ? (
                     <Link
                         href={selection.href}
                         data-board-selection=""
-                        aria-label={`Edit ${board.title}`}
+                        aria-label={`${selection.remixHref ? "View" : "Edit"} ${board.title}`}
+                        tabIndex={selection.tabIndex}
                         aria-describedby={hasDetails && expanded ? detailsId : undefined}
                         className={`group/edit absolute inset-0 z-10 cursor-pointer ${focus}`}
                     >
                         <span
-                            className={`absolute top-[60%] left-1/2 grid size-14 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-white/40 bg-black/45 text-white opacity-0 backdrop-blur-sm transition-opacity group-hover/edit:opacity-100 group-focus-visible/edit:opacity-100 motion-reduce:transition-none [@media(hover:none)]:opacity-100`}
+                            className={`absolute ${selection.remixHref ? "top-[60%] right-[calc(28.25%-0.875rem)]" : "top-[60%] left-1/2 -translate-x-1/2"} grid size-14 -translate-y-1/2 place-items-center rounded-full border border-white/40 bg-black/45 text-white opacity-0 backdrop-blur-sm transition-opacity group-focus-within/card:opacity-100 group-hover/card:opacity-100 motion-reduce:transition-none [@media(hover:none)]:opacity-100`}
                         >
-                            <Pencil aria-hidden="true" size={23} strokeWidth={1.5} />
+                            {selection.remixHref ? (
+                                <Eye aria-hidden="true" size={23} strokeWidth={1.5} />
+                            ) : (
+                                <Pencil aria-hidden="true" size={23} strokeWidth={1.5} />
+                            )}
                         </span>
                     </Link>
                 ) : (
@@ -345,7 +409,13 @@ export function PhotoBoardCardContent({
                         }}
                         className="pointer-events-none absolute inset-x-[6.5%] top-[6.5%] bottom-[19%] flex flex-col"
                     >
-                        <p className="mb-[8cqw] pr-10 text-[10px] tracking-[.22em] text-white/65">THE JOURNEY</p>
+                        {remix && authorHandle ? (
+                            <div aria-hidden="true" className="mb-3 h-12 shrink-0" />
+                        ) : (
+                            <p className="mb-[8cqw] truncate pr-10 text-[10px] tracking-[.22em] text-white/65">
+                                THE JOURNEY
+                            </p>
+                        )}
                         <motion.div
                             variants={{ open: { y: 0, opacity: 1 }, closed: { y: reduceMotion ? 0 : 10, opacity: 0 } }}
                             transition={transition}
@@ -357,7 +427,9 @@ export function PhotoBoardCardContent({
                                 {board.destination.trim() || board.title}
                             </p>
                             {board.description?.trim() && (
-                                <p className="mt-[4cqw] hidden text-[clamp(12px,3.25cqw,15px)] leading-relaxed [overflow-wrap:anywhere] text-white/75 @min-[360px]:line-clamp-2">
+                                <p
+                                    className={`${remix ? "mt-[3cqw]" : "mt-[4cqw]"} hidden text-[clamp(12px,3.25cqw,15px)] leading-relaxed [overflow-wrap:anywhere] text-white/75 @min-[360px]:line-clamp-3`}
+                                >
                                     {board.description}
                                 </p>
                             )}

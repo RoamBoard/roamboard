@@ -125,6 +125,9 @@ export function toPhotoBoardCard(document: BoardDocument): PhotoBoardCardData {
         id: String(document.boardId),
         title,
         author: document.author.username,
+        authorPhotoUrl: document.author.photo
+            ? new URL(document.author.photo.url, process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001").toString()
+            : null,
         destination,
         destinationLabel: singleCountry?.code ?? "",
         image: src
