@@ -106,6 +106,19 @@ test(
                 ]);
             }
             const repository = createUsersRepository();
+            await pool.query(
+                `INSERT INTO saved_boards (user_id,board_id) VALUES
+                 ('friend',$1), ('outsider',$1), ('friend',$2), ('friend',$3), ('friend',$4), ('traveler',$1)`,
+                [published, friends, restricted, draft]
+            );
+            assert.equal((await repository.stats("traveler")).savesReceived, 4);
+            assert.equal((await repository.stats("traveler", null)).savesReceived, 2);
+            assert.equal((await repository.stats("traveler", "outsider")).savesReceived, 2);
+            assert.equal((await repository.stats("traveler", "pending")).savesReceived, 2);
+            assert.equal((await repository.stats("traveler", "friend")).savesReceived, 3);
+            await pool.query("DELETE FROM saved_boards WHERE board_id=ANY($1::int[])", [
+                [published, friends, restricted, draft]
+            ]);
             const service = createUsersService(
                 repository,
                 {} as Parameters<typeof createUsersService>[1],

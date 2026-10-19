@@ -996,6 +996,7 @@ test("the Board API accepts photos from repeated batches and enforces the 31-day
                 coverImageId: 1,
                 author: { username: "owner", bio: "", photo: null },
                 savedByMe: false,
+                savedCount: 0,
                 tags: [],
                 images: [],
                 createdAt: "2026-06-21T09:00:00Z",

@@ -161,6 +161,7 @@ function fakeBoards(memberRole: "editor" | "viewer" | null = null): BoardReposit
                 days,
                 boardId: id,
                 savedByMe: false,
+                savedCount: 0,
                 author: { username: "owner", bio: "", photo: null },
                 revision: (existing?.revision ?? 0) + 1,
                 isCompleted: false,

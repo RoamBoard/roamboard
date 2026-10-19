@@ -132,6 +132,42 @@ test(
             };
             const created = await boards.create("private-google-sub", input);
             await t.test(
+                "save totals are persistent, idempotent, anonymous-readable and decrease on removal",
+                async () => {
+                    const path = `/api/v1/boards/${created.boardId}`;
+                    const readCount = async (expected: number) => {
+                        const response = await request(app).get(path).expect(200);
+                        assert.equal(response.body.data.savedCount, expected);
+                        assert.equal(response.body.data.savedByMe, false);
+                        assert.equal(response.body.data.revision, created.revision);
+                    };
+                    await readCount(0);
+                    for (const [userId, status] of [
+                        ["friend", 201],
+                        ["friend", 200],
+                        ["stranger", 201]
+                    ] as const) {
+                        await request(app)
+                            .put(`${path}/save`)
+                            .set("Cookie", cookies.get(userId)!)
+                            .set("Origin", process.env.CLIENT_ORIGIN ?? "http://localhost:3000")
+                            .expect(status);
+                    }
+                    await readCount(2);
+                    const saved = await request(app).get(path).set("Cookie", cookies.get("friend")!).expect(200);
+                    assert.equal(saved.body.data.savedByMe, true);
+                    assert.equal(saved.body.data.savedCount, 2);
+                    await request(app)
+                        .delete(`${path}/save`)
+                        .set("Cookie", cookies.get("friend")!)
+                        .set("Origin", process.env.CLIENT_ORIGIN ?? "http://localhost:3000")
+                        .expect(204);
+                    await readCount(1);
+                    await pool.query("DELETE FROM saved_boards WHERE board_id=$1", [created.boardId]);
+                    await readCount(0);
+                }
+            );
+            await t.test(
                 "public document uses current username and bio and excludes private account identity",
                 async () => {
                     const response = await request(app).get(`/api/v1/boards/${created.boardId}`).expect(200);

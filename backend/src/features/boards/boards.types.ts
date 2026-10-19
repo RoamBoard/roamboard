@@ -19,6 +19,7 @@ export interface BoardDocument extends BoardWrite {
     };
     boardId: number;
     savedByMe: boolean;
+    savedCount: number;
     revision: number;
     isCompleted: boolean;
     coverImageId: number | null;

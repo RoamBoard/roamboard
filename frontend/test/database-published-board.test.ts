@@ -164,6 +164,59 @@ function document(): BoardDocument {
     };
 }
 
+test("viewer labels current saves, exposes a text save button and counts activities rather than unique places", () => {
+    const saved = document();
+    const first = saved.days[1].activities[0];
+    saved.days[1].activities = [first, { ...first, activityId: 999, position: 1 }];
+    for (const count of [0, 1, 27]) {
+        const data = toPublishedBoardData({ ...saved, savedCount: count });
+        assert.equal(data.savedCount, count);
+        const markup = renderToStaticMarkup(createElement(PublishedBoard, data));
+        assert.match(markup, /aria-label="Save Board"[^>]*>[\s\S]*?Save Board<svg/);
+        assert.ok(markup.includes(`${count} ${count === 1 ? "save" : "saves"}`));
+        assert.match(markup, />activities<\/dt><dd[^>]*>02<\/dd>/);
+        assert.doesNotMatch(markup, />places<\/dt>/);
+    }
+    const savedMarkup = renderToStaticMarkup(
+        createElement(PublishedBoard, toPublishedBoardData({ ...saved, savedByMe: true, savedCount: 1 }))
+    );
+    assert.match(savedMarkup, /aria-label="Unsave Board" aria-pressed="true"/);
+    const ownerMarkup = renderToStaticMarkup(
+        createElement(
+            PublishedBoard,
+            toPublishedBoardData({
+                ...saved,
+                permissions: { canEditContent: true, canManageBoard: true },
+                savedCount: 27
+            })
+        )
+    );
+    assert.match(ownerMarkup, /27 saves/);
+    assert.doesNotMatch(ownerMarkup, /aria-label="Save Board"/);
+});
+
+test("the viewer saves once on repeated activation and refreshes the canonical count with session credentials", async (t) => {
+    const calls: string[] = [];
+    replaceFetch(t, async (input, init) => {
+        assert.equal(init?.credentials, "include");
+        const method = init?.method ?? "GET";
+        calls.push(`${method} ${new URL(String(input)).pathname}`);
+        return Response.json({
+            data: method === "PUT" ? { boardId: 718, saved: true } : { ...document(), savedByMe: true, savedCount: 2 }
+        });
+    });
+    const captured: { tree: ReactNode } = { tree: null };
+    function Probe() {
+        captured.tree = PublishedBoard(toPublishedBoardData({ ...document(), savedCount: 1 }));
+        return captured.tree;
+    }
+    renderToStaticMarkup(createElement(Probe));
+    const save = retryButton(captured.tree);
+    assert.ok(save);
+    await Promise.all([save(), save()]);
+    assert.deepEqual(calls, ["PUT /api/v1/boards/718/save", "GET /api/v1/boards/718"]);
+});
+
 test("database presentation keeps the stored author, cover, empty numbered days and saved activity order", () => {
     const source = document();
     const before = structuredClone(source);
@@ -321,14 +374,14 @@ test("missing author bio and photo stay empty and collaborator visibility is pre
     assert.deepEqual(result.board.items, []);
 });
 
-test("database viewer renders real content and identifies save and copy actions as tab previews", () => {
+test("database viewer renders real content without the persistent activity preview notice", () => {
     const markup = renderToStaticMarkup(createElement(PublishedBoard, toPublishedBoardData(document())));
     assert.match(markup, /Railway weekend/);
     assert.match(markup, /station_walker/);
     assert.match(markup, /I photograph railway stations\./);
     assert.match(markup, /Architecture/);
     assert.match(markup, /Saved first, later in the day/);
-    assert.match(markup, /(?:tab[^<]*preview|preview[^<]*tab|stay[^<]*tab)/i);
+    assert.doesNotMatch(markup, /Activity saves and copies are previews saved in this tab/);
     assert.doesNotMatch(markup, /sample board and author/i);
     assert.match(markup, /href="\/boards\/718\/edit"/);
 });

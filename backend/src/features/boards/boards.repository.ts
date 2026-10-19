@@ -474,12 +474,12 @@ async function readBoardDocument(
                     : null
         });
     }
-    const savedResult = userId
-        ? await client.query<{ saved: boolean }>(
-              "SELECT EXISTS (SELECT 1 FROM saved_boards WHERE board_id=$1 AND user_id=$2) AS saved",
-              [boardId, userId]
-          )
-        : null;
+    const savedResult = await client.query<{ saved: boolean; count: number }>(
+        `SELECT COALESCE(BOOL_OR(user_id=$2), false) AS saved,
+                COUNT(*) FILTER (WHERE user_id<>$3)::int AS count
+         FROM saved_boards WHERE board_id=$1`,
+        [boardId, userId, board.owner_user_id]
+    );
     return {
         author: {
             username: board.author_username,
@@ -495,6 +495,7 @@ async function readBoardDocument(
         boardId: board.board_id,
         destination,
         savedByMe: savedResult?.rows[0]?.saved ?? false,
+        savedCount: board.status === "draft" ? 0 : (savedResult.rows[0]?.count ?? 0),
         revision: board.revision,
         status: board.status,
         title: board.title,
@@ -659,7 +660,7 @@ export function createBoardsRepository(): BoardRepository {
                 if (savedId === null) {
                     const result = await client.query<{ board_id: number }>(
                         `INSERT INTO board (owner_user_id, title, description, visibility, status, is_completed, published_at)
-                         VALUES ($1, $2, $3, $4, $5, $6, CASE WHEN $5 = 'published' THEN NOW() ELSE NULL END) RETURNING board_id`,
+                         VALUES ($1, $2, $3, $4, $5, $6, CASE WHEN $5::varchar = 'published' THEN NOW() ELSE NULL END) RETURNING board_id`,
                         [
                             userId,
                             input.title,
@@ -703,7 +704,7 @@ export function createBoardsRepository(): BoardRepository {
                     await client.query(
                         `UPDATE board SET title=$1, description=$2, visibility=$3, status=$4,
                          revision=revision+1, updated_at=NOW(), cover_image_id=NULL, is_completed=COALESCE($6, is_completed),
-                         published_at=CASE WHEN $4 = 'published' AND published_at IS NULL THEN NOW() ELSE published_at END WHERE board_id=$5`,
+                         published_at=CASE WHEN $4::varchar = 'published' AND published_at IS NULL THEN NOW() ELSE published_at END WHERE board_id=$5`,
                         [
                             input.title,
                             input.description,

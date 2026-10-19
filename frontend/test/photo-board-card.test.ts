@@ -68,6 +68,23 @@ function html(overrides: Partial<CardProps> = {}) {
     return renderToStaticMarkup(createElement(PhotoBoardCardContent, props(overrides)));
 }
 
+test("editable selection uses a native card link and pen; unselected cards still only select", () => {
+    const actions = { selections: 0, disclosures: 0 };
+    const selection = { selected: true, href: "/boards/71/edit", onSelect: () => actions.selections++ };
+    const card = PhotoBoardCardContent(props({ selection, onExpandedChange: () => actions.disclosures++ }));
+    const edit = control(card, (item) => item["aria-label"] === `Edit ${board.title}`);
+    assert.equal(edit.href, "/boards/71/edit");
+    assert.equal(edit.onClick, undefined, "Mouse, touch and keyboard activation keep native link navigation");
+    assert.deepEqual(actions, { selections: 0, disclosures: 0 });
+    const markup = html({ selection });
+    assert.equal((markup.match(/href="\/boards\/71\/edit"/g) ?? []).length, 1);
+    assert.match(markup, /lucide-pencil/);
+    assert.doesNotMatch(markup, /<button\b/);
+    const unselected = html({ selection: { ...selection, selected: false, tabIndex: -1 } });
+    assert.doesNotMatch(unselected, /href="\/boards\/71\/edit"|lucide-pencil/);
+    assert.match(unselected, /aria-pressed="false"/);
+});
+
 function renderedFrame(node: ReactNode): ReactNode {
     if (!isValidElement<ComponentProps<typeof BoardCardFrame>>(node)) return;
     if (node.type === BoardCardFrame) return BoardCardFrame(node.props);

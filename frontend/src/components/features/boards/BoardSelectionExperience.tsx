@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { ArrowUpRight, Search, X } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import {
     createBoardSelectionStore,
     type BoardSelectionState,
@@ -11,6 +11,7 @@ import {
 } from "@/lib/board-selection-store";
 import { filterSelectionBoards, toSelectionBoard, type SelectionFilter } from "@/lib/board-selection";
 import { BoardSelectionCollection, BoardSelectionGallery } from "./BoardSelectionGallery";
+import styles from "./BoardSelectionExperience.module.css";
 
 type Mode = "continue" | "remix";
 const actionClass =
@@ -35,14 +36,16 @@ export function BoardSelectionContent({
     state: BoardSelectionState;
     actions: BoardSelectionStore;
 }) {
-    const [query, setQuery] = useState("");
-    const [status, setStatus] = useState<SelectionFilter>("all");
+    const [status, setStatus] = useState<Exclude<SelectionFilter, "all">>("published");
     const [selectedId, setSelectedId] = useState<number | null>(null);
-    const [sharedLink, setSharedLink] = useState("");
     const galleryRef = useRef<HTMLDivElement>(null);
     const reduced = useReducedMotion();
     const remix = mode === "remix";
-    const matches = filterSelectionBoards(state.items, query, status);
+    const matches = filterSelectionBoards(
+        state.items.filter((item) => item.source === "owned"),
+        "",
+        status
+    );
     const selectedSummary = matches.find((item) => item.boardId === selectedId) ?? matches[0];
     const selected = selectedSummary
         ? toSelectionBoard(selectedSummary, state.documents[selectedSummary.boardId])
@@ -57,7 +60,7 @@ export function BoardSelectionContent({
     const collection = matches
         .filter((item) => !featuredIds.has(item.boardId))
         .map((item) => toSelectionBoard(item, state.documents[item.boardId]));
-    const incomplete = state.scopes.draft.hasMore || state.scopes.published.hasMore;
+    const incomplete = state.scopes[status].hasMore;
     const scopeErrors = Object.entries(state.scopes).filter(([, scope]) => scope.error);
     const featuredKey = featuredSummaries.map((item) => item.boardId).join(",");
     useEffect(() => {
@@ -69,88 +72,55 @@ export function BoardSelectionContent({
                 void actions.loadPreview(Number(id));
             });
     }, [actions, featuredKey, remix]);
-    async function findSharedBoard() {
-        await actions.loadSharedBoard(sharedLink);
-        const id = actions.getSnapshot().sharedBoardId;
-        if (id === null) return;
-        setSelectedId(id);
-        setQuery("");
-        setStatus("all");
-        requestAnimationFrame(() => {
-            galleryRef.current?.scrollIntoView({ behavior: reduced ? "instant" : "smooth", block: "start" });
-            galleryRef.current?.querySelector<HTMLElement>('[role="region"]')?.focus({ preventScroll: true });
-        });
-    }
     function selectFromCollection(id: number) {
         setSelectedId(id);
         galleryRef.current?.scrollIntoView({ behavior: reduced ? "instant" : "smooth", block: "start" });
         galleryRef.current?.querySelector<HTMLElement>('[role="region"]')?.focus({ preventScroll: true });
     }
     return (
-        <article className="font-body min-w-0 overflow-x-clip pb-24 sm:pb-40">
-            <header className="mx-auto max-w-[1400px] px-5 pt-8 text-center sm:px-10 sm:pt-12">
-                <nav
-                    aria-label="Create paths"
-                    className="text-muted-foreground flex flex-wrap items-center justify-end gap-3 text-[10px] tracking-[.05em]"
-                >
-                    <Link
-                        href={remix ? "/create/continue" : "/create/remix"}
-                        className={`inline-flex items-center gap-2 ${actionClass}`}
+        <article className={`font-body min-w-0 overflow-x-clip pb-24 sm:pb-40 ${remix ? "" : styles.page}`}>
+            <header
+                className={`mx-auto max-w-[1400px] px-5 pt-8 text-center sm:px-10 sm:pt-12 ${remix ? "" : styles.header}`}
+            >
+                {remix && (
+                    <nav
+                        aria-label="Create paths"
+                        className="text-muted-foreground flex flex-wrap items-center justify-end gap-3 text-[10px] tracking-[.05em]"
                     >
-                        {remix ? "Continue a Board" : "Saved inspiration"}
-                        <ArrowUpRight size={13} strokeWidth={1.2} />
-                    </Link>
-                </nav>
-                <p className="text-muted-foreground mt-6 text-[10px] tracking-[.18em] uppercase">
-                    {remix ? "Their inspiration, your adventure" : "Pick up wherever you left off"}
-                </p>
+                        <Link
+                            href={remix ? "/create/continue" : "/create/remix"}
+                            className={`inline-flex items-center gap-2 ${actionClass}`}
+                        >
+                            {remix ? "Continue a Board" : "Saved inspiration"}
+                            <ArrowUpRight size={13} strokeWidth={1.2} />
+                        </Link>
+                    </nav>
+                )}
+                {remix && (
+                    <p className="text-muted-foreground mt-6 text-[10px] tracking-[.18em] uppercase">
+                        Their inspiration, your adventure
+                    </p>
+                )}
                 <h1 className="font-display mt-4 text-[clamp(2.5rem,6.3vw,6rem)] leading-[.96] font-bold tracking-[-.045em]">
                     {remix ? "YOUR SAVED BOARDS" : "YOUR BOARDS"}
                 </h1>
+                {!remix && <p className="text-foreground mt-4 text-sm">Pick up wherever you left off</p>}
                 <p className="text-muted-foreground mx-auto mt-5 max-w-md text-xs leading-relaxed sm:text-sm">
                     {remix
                         ? "Great journeys inspire new ones. Find a Board worth making your own."
-                        : "Every journey is a work in progress. Pick up a Board and keep making it yours."}
+                        : "Edit your published Boards or continue a draft."}
                 </p>
-                <div
-                    className={`group border-line focus-within:border-foreground relative mx-auto mt-8 flex max-w-md items-center border-b transition-colors motion-reduce:transition-none ${remix ? "opacity-50" : ""}`}
-                >
-                    <Search aria-hidden="true" size={17} strokeWidth={1.1} className="text-muted-foreground shrink-0" />
-                    <label htmlFor="selection-search" className="sr-only">
-                        Search {remix ? "saved" : "loaded"} Board titles
-                    </label>
-                    <input
-                        id="selection-search"
-                        type="search"
-                        value={query}
-                        disabled={remix}
-                        onChange={(event) => setQuery(event.target.value)}
-                        placeholder={remix ? "saved Board search is coming later" : "search for a board…"}
-                        aria-describedby="selection-search-scope"
-                        className="placeholder:text-muted-foreground min-h-16 w-full min-w-0 bg-transparent px-3 text-center text-sm outline-none [&::-webkit-search-cancel-button]:appearance-none"
-                    />
-                    <button
-                        type="button"
-                        aria-label="Clear Board search"
-                        disabled={!query}
-                        onClick={() => setQuery("")}
-                        className="grid size-11 shrink-0 place-items-center focus-visible:outline-2 disabled:invisible"
-                    >
-                        <X size={15} strokeWidth={1.2} />
-                    </button>
-                </div>
                 {!remix && (
                     <>
                         <div
                             role="group"
                             aria-label="Filter Boards by publication status"
-                            className="mt-2 flex flex-wrap justify-center gap-2"
+                            className="mt-6 flex flex-wrap justify-center gap-2"
                         >
                             {(
                                 [
-                                    ["all", "All Boards"],
-                                    ["draft", "Drafts"],
-                                    ["published", "Published"]
+                                    ["published", "Published"],
+                                    ["draft", "Drafts"]
                                 ] as const
                             ).map(([value, label]) => (
                                 <button
@@ -158,57 +128,20 @@ export function BoardSelectionContent({
                                     type="button"
                                     aria-pressed={status === value}
                                     onClick={() => setStatus(value)}
-                                    className={`focus-visible:outline-foreground min-h-11 cursor-pointer border-b px-4 text-[11px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 motion-reduce:transition-none ${status === value ? "border-foreground" : "text-muted-foreground hover:border-line border-transparent"}`}
+                                    className={`focus-visible:outline-foreground min-h-11 cursor-pointer border-b px-5 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 motion-reduce:transition-none ${status === value ? "border-foreground" : "text-muted-foreground hover:border-line border-transparent"}`}
                                 >
                                     {label}
                                 </button>
                             ))}
                         </div>
                         <p
-                            id="selection-search-scope"
                             role="status"
-                            className="text-muted-foreground mx-auto mt-2 max-w-lg text-[10px] leading-relaxed"
+                            className="text-muted-foreground relative top-5 mx-auto mt-2 max-w-lg text-xs leading-relaxed"
                         >
                             {state.loading
                                 ? "Gathering your Boards…"
-                                : `${matches.length} ${matches.length === 1 ? "Board" : "Boards"}${incomplete ? " loaded" : ""} · title search${incomplete ? " covers loaded pages; load more below to search the rest." : " covers your loaded collection."}`}
+                                : `${matches.length} ${status === "draft" ? (matches.length === 1 ? "draft" : "drafts") : matches.length === 1 ? "published Board" : "published Boards"}${incomplete ? " loaded" : ""}`}
                         </p>
-                        <details className="text-muted-foreground mx-auto mt-2 max-w-lg text-xs leading-relaxed">
-                            <summary className={`inline-flex items-center gap-2 ${actionClass}`}>
-                                Have a shared Board link? <ArrowUpRight size={13} />
-                            </summary>
-                            <p className="mt-3">
-                                Your own drafts and published Boards appear here. Shared Boards cannot be listed yet;
-                                paste a Board link to check your editing access.
-                            </p>
-                            <form
-                                onSubmit={(event) => {
-                                    event.preventDefault();
-                                    void findSharedBoard();
-                                }}
-                                className="mt-4 flex flex-wrap items-center justify-center gap-3"
-                            >
-                                <label htmlFor="shared-board-link" className="sr-only">
-                                    Shared Board link or ID
-                                </label>
-                                <input
-                                    id="shared-board-link"
-                                    value={sharedLink}
-                                    onChange={(event) => setSharedLink(event.target.value)}
-                                    required
-                                    placeholder="Board link or ID"
-                                    className="border-line focus-visible:outline-foreground min-h-11 min-w-0 flex-1 border-b bg-transparent px-2 text-xs focus-visible:outline-1"
-                                />
-                                <button type="submit" disabled={state.sharedLoading} className={actionClass}>
-                                    {state.sharedLoading ? "Checking…" : "Find Board ↗"}
-                                </button>
-                            </form>
-                            {state.sharedError && (
-                                <p role="alert" className="text-foreground mt-3">
-                                    {state.sharedError}
-                                </p>
-                            )}
-                        </details>
                     </>
                 )}
             </header>
@@ -248,7 +181,7 @@ export function BoardSelectionContent({
                     </div>
                 </section>
             ) : (
-                <>
+                <div className={styles.content}>
                     {scopeErrors.length > 0 && (
                         <div
                             role="alert"
@@ -289,6 +222,7 @@ export function BoardSelectionContent({
                         <>
                             <div ref={galleryRef} className="scroll-mt-6">
                                 <BoardSelectionGallery
+                                    compact
                                     boards={featured}
                                     selected={selected}
                                     onSelect={setSelectedId}
@@ -307,38 +241,25 @@ export function BoardSelectionContent({
                             className="mx-auto max-w-lg px-6 py-24 text-center"
                         >
                             <h2 className="font-display text-30 font-bold">
-                                {query || status !== "all"
-                                    ? "No matching Boards in view."
-                                    : scopeErrors.length
-                                      ? "Your collection couldn’t be loaded."
-                                      : "There’s a journey waiting to begin."}
+                                {state.scopes[status].error
+                                    ? "Your collection could not be loaded."
+                                    : status === "draft"
+                                      ? "No drafts here yet."
+                                      : "No published Boards here yet."}
                             </h2>
                             <p className="text-muted-foreground mt-4 text-sm leading-relaxed">
-                                {query || status !== "all"
-                                    ? `Try another title or publication filter.${incomplete ? " More pages are available below." : ""}`
-                                    : scopeErrors.length
-                                      ? "Retry the unavailable pages above. Your Boards are still yours."
-                                      : "Create a Board, or open a shared Board using its link above."}
+                                {state.scopes[status].error
+                                    ? "Retry the unavailable pages above. Your Boards are still yours."
+                                    : incomplete
+                                      ? "Load more Boards below, or switch the publication filter."
+                                      : "Switch the publication filter, or create a new Board."}
                             </p>
-                            {query || status !== "all" ? (
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setQuery("");
-                                        setStatus("all");
-                                    }}
-                                    className={`mt-5 text-xs ${actionClass}`}
-                                >
-                                    Clear search and filters
-                                </button>
-                            ) : (
-                                <Link
-                                    href="/boards/new?mode=scratch"
-                                    className={`mt-5 inline-flex items-center text-xs ${actionClass}`}
-                                >
-                                    Create a new Board ↗
-                                </Link>
-                            )}
+                            <Link
+                                href="/boards/new?mode=scratch"
+                                className={`mt-5 inline-flex items-center text-xs ${actionClass}`}
+                            >
+                                Create a new Board <ArrowUpRight aria-hidden="true" size={13} className="ml-2" />
+                            </Link>
                         </motion.section>
                     )}
                     {!state.loading && incomplete && (
@@ -352,11 +273,11 @@ export function BoardSelectionContent({
                                 {state.loadingMore ? "Loading more Boards…" : "Load more Boards ↓"}
                             </button>
                             <p className="text-muted-foreground mt-3 text-[10px] leading-relaxed">
-                                Search and filters include loaded pages only. Keep loading to explore the rest.
+                                More Boards are available. Keep loading to explore the rest.
                             </p>
                         </div>
                     )}
-                </>
+                </div>
             )}
         </article>
     );

@@ -1,0 +1,64 @@
+@media (min-width: 1024px) and (min-height: 800px) {
+    .page {
+        display: flex;
+        height: calc(100dvh - 5rem);
+        flex-direction: column;
+        justify-content: center;
+        gap: 1.5rem;
+        overflow: hidden;
+        padding-block: 1rem;
+    }
+
+    .header {
+        width: 100%;
+        flex-shrink: 0;
+        padding-top: 0;
+    }
+
+    .header h1 {
+        margin-top: 0;
+        font-size: clamp(2.5rem, 5vw, 4rem);
+    }
+
+    .header > p,
+    .header [role="group"] {
+        margin-top: 0.75rem;
+    }
+
+    .header > p + p {
+        margin-top: 0.5rem;
+    }
+
+    .header [role="status"] {
+        margin-top: 0.25rem;
+    }
+
+    .content {
+        min-height: 0;
+        flex: 0 1 auto;
+        overflow-y: auto;
+    }
+
+    .page :global(.selection-gallery) {
+        margin-top: 0;
+    }
+
+    .page :global(.selection-gallery) > [role="region"] {
+        margin-top: 0;
+    }
+
+    .page :global(.selection-stage) {
+        height: min(516px, calc(100dvh - 414px));
+        min-height: 0;
+    }
+
+    .page :global(.selection-card) {
+        width: min(400px, 36cqw, calc((100dvh - 450px) * 0.8));
+    }
+
+    .page :global(.selection-annotations) {
+        top: 50%;
+        left: calc(min(400px, 36cqw, (100dvh - 450px) * 0.8) + 3cqw);
+        transform: translateY(-50%);
+    }
+}
