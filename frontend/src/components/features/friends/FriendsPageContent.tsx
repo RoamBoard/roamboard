@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState, useEffect } from "react";
+import { useId, useMemo, useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Search, UserRound, Plus, LayoutGrid, List, X, ArrowRight, UserMinus } from "lucide-react";
@@ -51,6 +51,10 @@ export default function FriendsPageContent({
     const searchInputId = useId();
     const sortSelectId = useId();
 
+    const readVersionRef = useRef(0);
+    const latestCompletedReadId = useRef(0);
+    const confirmedRemovedIdsRef = useRef<Set<string>>(new Set());
+
     const [friends, setFriends] = useState<FriendUser[]>(initialFriends ?? []);
     const [loading, setLoading] = useState(initialLoading ?? (!initialFriends && !initialError));
     const [error, setError] = useState<string | null>(initialError);
@@ -66,31 +70,43 @@ export default function FriendsPageContent({
     const [unfriendError, setUnfriendError] = useState<string | null>(null);
 
     const fetchFriends = async () => {
+        const readId = ++readVersionRef.current;
         setLoading(true);
         setError(null);
         try {
             const data = await loadFriends();
-            setFriends(data);
+            if (readId >= latestCompletedReadId.current) {
+                latestCompletedReadId.current = readId;
+                setFriends(data.filter((f) => !confirmedRemovedIdsRef.current.has(f.userId)));
+            }
         } catch (err) {
-            if (requiresLogin(err)) {
-                setLoginRequired(true);
-            } else {
-                setError(err instanceof Error ? err.message : "Failed to load your travel pals.");
+            if (readId >= latestCompletedReadId.current) {
+                if (requiresLogin(err)) {
+                    setLoginRequired(true);
+                } else {
+                    setError(err instanceof Error ? err.message : "Failed to load your travel pals.");
+                }
             }
         } finally {
-            setLoading(false);
+            if (readId >= latestCompletedReadId.current) {
+                setLoading(false);
+            }
         }
     };
 
     useEffect(() => {
         if (initialFriends || initialError) return;
+        const readId = ++readVersionRef.current;
         const tracker = { active: true };
         void loadFriends()
             .then((data) => {
-                if (tracker.active) setFriends(data);
+                if (tracker.active && readId >= latestCompletedReadId.current) {
+                    latestCompletedReadId.current = readId;
+                    setFriends(data.filter((f) => !confirmedRemovedIdsRef.current.has(f.userId)));
+                }
             })
             .catch((err) => {
-                if (!tracker.active) return;
+                if (!tracker.active || readId < latestCompletedReadId.current) return;
                 if (requiresLogin(err)) {
                     setLoginRequired(true);
                 } else {
@@ -98,7 +114,9 @@ export default function FriendsPageContent({
                 }
             })
             .finally(() => {
-                if (tracker.active) setLoading(false);
+                if (tracker.active && readId >= latestCompletedReadId.current) {
+                    setLoading(false);
+                }
             });
         return () => {
             tracker.active = false;
@@ -139,6 +157,8 @@ export default function FriendsPageContent({
         setUnfriendError(null);
         try {
             await removeFriend(target.userId);
+            confirmedRemovedIdsRef.current.add(target.userId);
+            readVersionRef.current += 1;
             setFriends((prev) => prev.filter((f) => f.userId !== target.userId));
             setConfirmUnfriendTarget(null);
         } catch (err) {
