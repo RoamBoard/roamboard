@@ -4,7 +4,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import BoardDocumentPhotoCard from "../src/components/features/boards/cards/BoardDocumentPhotoCard";
 import type { BoardDocument } from "../src/lib/board-creator-api";
-import { toPhotoBoardCard } from "../src/lib/photo-board-card";
+import { toPhotoBoardCard, toSummaryPhotoBoardCard } from "../src/lib/photo-board-card";
 
 function document(): BoardDocument {
     return {
@@ -101,6 +101,38 @@ test("missing metadata and photographs do not fabricate a destination, count, ta
     assert.ok(!board.description);
     assert.equal(board.savedCount, undefined);
     assert.ok(!board.durationDays);
+});
+
+test("V4 itinerary totals count persisted activities independently of attached photos and empty days", () => {
+    const source = document();
+    const activity = source.days[0].activities[0];
+    const board = toPhotoBoardCard({
+        ...source,
+        days: [
+            {
+                ...source.days[0],
+                activities: [
+                    { ...activity, uploadedImageIds: [41, 42] },
+                    { ...activity, activityId: 2, uploadedImageIds: [] }
+                ]
+            },
+            source.days[1],
+            { ...source.days[1], dayId: 3, dayNumber: 5, activities: [] }
+        ]
+    });
+    assert.equal(board.durationDays, 3, "Explicit saved days retain their meaning, including empty days");
+    assert.equal(board.activityCount, 2, "Photos, empty days and gaps in day numbers are not activities");
+    assert.equal(toPhotoBoardCard({ ...source, days: [] }).activityCount, 0);
+    const summary = toSummaryPhotoBoardCard({
+        boardId: 72,
+        title: "Summary only",
+        updatedAt: source.updatedAt,
+        coverImageUrl: null,
+        status: "published"
+    });
+    assert.equal(summary.activityCount, undefined, "A summary without an itinerary does not establish zero activities");
+    assert.equal(summary.durationDays, undefined);
+    assert.equal(summary.savedCount, undefined);
 });
 
 test("unconfirmed locations cannot become claimed Board destinations", () => {

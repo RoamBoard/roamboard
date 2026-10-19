@@ -52,6 +52,7 @@ export type PhotoBoardCardData = BoardCardSummary & {
     tags?: readonly string[];
     description?: string;
     durationDays?: number;
+    activityCount?: number;
     savedCount?: number;
     status?: "draft" | "published";
     visibility?: "public" | "friends" | "collaborators";

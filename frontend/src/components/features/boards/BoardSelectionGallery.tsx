@@ -161,11 +161,7 @@ export function BoardSelectionGallery({
                             </motion.div>
                         );
                     })}
-                    <span
-                        aria-hidden="true"
-                        className="bg-line pointer-events-none absolute top-[calc(25%+5px)] left-[min(400px,36cqw)] hidden h-px w-[3cqw] lg:block"
-                    />
-                    <div className="absolute top-[25%] left-[calc(min(400px,36cqw)+3cqw)] z-30 hidden w-[22cqw] lg:block">
+                    <div className="absolute top-[5%] left-[calc(min(400px,36cqw)+3cqw)] z-30 hidden w-[22cqw] lg:block">
                         <SelectionAnnotations board={selected} />
                     </div>
                     <span
@@ -175,8 +171,8 @@ export function BoardSelectionGallery({
                         a journey, still unfolding
                     </span>
                 </div>
-                <div className="border-line relative z-30 flex flex-wrap items-center justify-between gap-3 border-t py-4">
-                    <div className="flex items-center gap-2">
+                <div className="border-line relative z-30 flex flex-col items-center gap-3 border-t py-4 sm:flex-row sm:justify-between">
+                    <div className="flex items-center justify-center gap-3 sm:order-2 sm:ml-auto sm:w-[35%]">
                         <button
                             type="button"
                             aria-label="Previous Board"
@@ -184,9 +180,9 @@ export function BoardSelectionGallery({
                             onClick={() => selectOffset(-1)}
                             className={`hover:bg-faint grid size-11 cursor-pointer place-items-center disabled:opacity-25 ${focusClass}`}
                         >
-                            <ArrowLeft size={18} strokeWidth={1.2} />
+                            <ArrowLeft size={24} strokeWidth={1.5} />
                         </button>
-                        <span className="text-muted-foreground text-[10px] tabular-nums">
+                        <span className="text-muted-foreground text-sm tabular-nums">
                             {String(selectedIndex + 1).padStart(2, "0")} / {String(boards.length).padStart(2, "0")}
                         </span>
                         <button
@@ -196,13 +192,13 @@ export function BoardSelectionGallery({
                             onClick={() => selectOffset(1)}
                             className={`hover:bg-faint grid size-11 cursor-pointer place-items-center disabled:opacity-25 ${focusClass}`}
                         >
-                            <ArrowRight size={18} strokeWidth={1.2} />
+                            <ArrowRight size={24} strokeWidth={1.5} />
                         </button>
                     </div>
                     {mode === "continue" && href ? (
                         <Link
                             href={href}
-                            className={`group ml-auto inline-flex min-h-11 items-center gap-4 py-3 text-xs tracking-[.08em] underline underline-offset-8 ${focusClass}`}
+                            className={`group inline-flex min-h-11 items-center gap-4 py-3 text-xs tracking-[.08em] underline underline-offset-8 sm:order-1 ${focusClass}`}
                         >
                             CONTINUE BOARD{" "}
                             <ArrowUpRight
@@ -247,7 +243,21 @@ export function BoardSelectionGallery({
 
 function SelectionAnnotations({ board }: { board: SelectionBoard }) {
     const reduced = useReducedMotion();
-    const activities = board.document?.days.reduce((count, day) => count + day.activities.length, 0) ?? 0;
+    const activities = board.document?.days.reduce((count, day) => count + day.activities.length, 0);
+    const status = board.document?.status ?? board.summary.status;
+    const visibility = board.document?.visibility ?? board.photo.visibility;
+    const visibilityText =
+        status === "draft"
+            ? "Only you"
+            : visibility
+              ? {
+                    public: "Public",
+                    friends: "Friends",
+                    collaborators: "Restricted access"
+                }[visibility]
+              : undefined;
+    const savedCount = board.photo.savedCount;
+    const hasSaves = savedCount !== undefined && Number.isSafeInteger(savedCount) && savedCount >= 0;
     return (
         <AnimatePresence mode="wait" initial={false}>
             <motion.dl
@@ -256,36 +266,41 @@ function SelectionAnnotations({ board }: { board: SelectionBoard }) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: reduced ? 0 : 0.16 }}
-                className="text-muted-foreground grid grid-cols-2 gap-5 text-xs leading-relaxed lg:grid-cols-1 lg:gap-8"
+                className="text-muted-foreground grid grid-cols-2 gap-5 text-sm leading-relaxed sm:text-base lg:grid-cols-1 lg:gap-5"
             >
                 <div>
-                    <dt className="text-foreground text-[10px] tracking-[.1em] uppercase">
+                    <dt className="text-foreground text-xs tracking-[.08em] uppercase">
                         {board.ownership === "owner" ? "Your Board" : "Shared with you"}
                     </dt>
                     <dd className="mt-1">
-                        {board.summary.status === "draft"
-                            ? "Unpublished draft"
-                            : board.ownership === "owner"
-                              ? "Published · still yours to shape"
-                              : "Published · editing access"}
+                        {status === "draft" ? "Unpublished draft" : "Published"}
+                        {(status === "draft" || visibility) && ` · ${visibilityText}`}
                     </dd>
                 </div>
                 <div>
-                    <dt className="text-foreground text-[10px] tracking-[.1em] uppercase">Last updated</dt>
+                    <dt className="text-foreground text-xs tracking-[.08em] uppercase">Last updated</dt>
                     <dd className="mt-1">{formatSelectionDate(board.summary.updatedAt)}</dd>
                 </div>
                 {board.destination && (
                     <div>
-                        <dt className="text-foreground text-[10px] tracking-[.1em] uppercase">Destination</dt>
+                        <dt className="text-foreground text-xs tracking-[.08em] uppercase">Destination</dt>
                         <dd className="mt-1 break-words">{board.destination}</dd>
                     </div>
                 )}
                 {board.document && (
                     <div>
-                        <dt className="text-foreground text-[10px] tracking-[.1em] uppercase">In this Board</dt>
+                        <dt className="text-foreground text-xs tracking-[.08em] uppercase">In this Board</dt>
                         <dd className="mt-1">
                             {board.document.days.length} {board.document.days.length === 1 ? "day" : "days"} ·{" "}
                             {activities} {activities === 1 ? "activity" : "activities"}
+                        </dd>
+                    </div>
+                )}
+                {hasSaves && (
+                    <div>
+                        <dt className="text-foreground text-xs tracking-[.08em] uppercase">Saved by travelers</dt>
+                        <dd className="mt-1">
+                            {new Intl.NumberFormat("en-US").format(savedCount)} {savedCount === 1 ? "save" : "saves"}
                         </dd>
                     </div>
                 )}

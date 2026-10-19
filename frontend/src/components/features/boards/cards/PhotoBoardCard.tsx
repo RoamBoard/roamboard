@@ -121,11 +121,19 @@ export function PhotoBoardCardContent({
 }: ContentProps) {
     const tags = [...new Set(board.tags?.map((tag) => tag.trim()).filter(Boolean))].slice(0, 3);
     const hasCount = validCount(board.savedCount);
+    const hasActivities = validCount(board.activityCount);
     const hasDays = validCount(board.durationDays) && board.durationDays! > 0;
     const hasDetails =
         presentation === "details" ||
         (details &&
-            Boolean(board.destination.trim() || tags.length || board.description?.trim() || hasCount || hasDays));
+            Boolean(
+                board.destination.trim() ||
+                tags.length ||
+                board.description?.trim() ||
+                hasCount ||
+                hasDays ||
+                hasActivities
+            ));
     const interactiveDetails = hasDetails && presentation === "interactive";
     const expanded =
         hasDetails && (presentation === "details" || (presentation === "interactive" && requestedExpanded));
@@ -371,11 +379,22 @@ export function PhotoBoardCardContent({
                         <motion.p
                             variants={{ open: { y: 0, opacity: 1 }, closed: { y: reduceMotion ? 0 : 6, opacity: 0 } }}
                             transition={transition}
-                            className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[clamp(12px,3cqw,14px)] text-white/80 tabular-nums"
+                            className="flex flex-col items-start gap-2 text-[clamp(12px,3cqw,14px)] text-white/80 tabular-nums"
                         >
-                            {hasDays && (
-                                <span data-photo-board-field="duration">
-                                    {board.durationDays} {board.durationDays === 1 ? "day" : "days"}
+                            {(hasDays || hasActivities) && (
+                                <span data-photo-board-field="itinerary">
+                                    {hasDays && (
+                                        <span data-photo-board-field="duration">
+                                            {board.durationDays} {board.durationDays === 1 ? "day" : "days"}
+                                        </span>
+                                    )}
+                                    {hasDays && hasActivities && " · "}
+                                    {hasActivities && (
+                                        <span data-photo-board-field="activities">
+                                            {board.activityCount}{" "}
+                                            {board.activityCount === 1 ? "activity" : "activities"}
+                                        </span>
+                                    )}
                                 </span>
                             )}
                             {hasCount && (
