@@ -221,6 +221,11 @@ export default function NotificationControl({
                 ) {
                     setLoadError("Failed to load notifications. Please try again.");
                 }
+            })
+            .finally(() => {
+                if (activeUserIdRef.current === currentUserId && readId === readVersionRef.current) {
+                    setLoading(false);
+                }
             });
     }, [isOpen, sessionUser, onRequestsChange]);
 

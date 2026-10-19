@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -13,8 +13,13 @@ import {
     loadFriendsActivity,
     type FriendUser,
     type FriendBoardSummary,
-    type FriendActivityItem
+    type FriendActivityItem,
+    ProfileApiError
 } from "@/lib/profile";
+
+function requiresLogin(error: unknown): boolean {
+    return error instanceof ProfileApiError && error.status === 401;
+}
 
 function formatRelativeTime(dateString: string): string {
     const date = new Date(dateString);
@@ -127,48 +132,68 @@ export default function SocialFriendsContent({
     const [friendsError, setFriendsError] = useState<string | null>(initialFriendsError);
     const [boardsError, setBoardsError] = useState<string | null>(initialBoardsError);
     const [activitiesError, setActivitiesError] = useState<string | null>(initialActivitiesError);
+    const [loginRequired, setLoginRequired] = useState(false);
     const [searchOpen, setSearchOpen] = useState(false);
+    // Initial loads, full refreshes, and section retries all compete for the same section data.
+    const readVersions = useRef({ friends: 0, boards: 0, activities: 0 });
 
     const reloadFriends = async () => {
+        const readId = ++readVersions.current.friends;
         setFriendsLoading(true);
         setFriendsError(null);
         try {
             const data = await loadFriends();
-            setFriends(data);
-        } catch {
-            setFriendsError("Failed to load your travel pals.");
+            if (readId === readVersions.current.friends) setFriends(data);
+        } catch (error) {
+            if (readId === readVersions.current.friends) {
+                if (requiresLogin(error)) setLoginRequired(true);
+                else setFriendsError("Failed to load your travel pals.");
+            }
         } finally {
-            setFriendsLoading(false);
+            if (readId === readVersions.current.friends) setFriendsLoading(false);
         }
     };
 
     const reloadBoards = async () => {
+        const readId = ++readVersions.current.boards;
         setBoardsLoading(true);
         setBoardsError(null);
         try {
             const data = await loadFriendsBoards(12);
-            setBoards(data);
-        } catch {
-            setBoardsError("Failed to load friends' boards.");
+            if (readId === readVersions.current.boards) setBoards(data);
+        } catch (error) {
+            if (readId === readVersions.current.boards) {
+                if (requiresLogin(error)) setLoginRequired(true);
+                else setBoardsError("Failed to load friends' boards.");
+            }
         } finally {
-            setBoardsLoading(false);
+            if (readId === readVersions.current.boards) setBoardsLoading(false);
         }
     };
 
     const reloadActivities = async () => {
+        const readId = ++readVersions.current.activities;
         setActivitiesLoading(true);
         setActivitiesError(null);
         try {
             const data = await loadFriendsActivity(10);
-            setActivities(data);
-        } catch {
-            setActivitiesError("Failed to load recent friend activity.");
+            if (readId === readVersions.current.activities) setActivities(data);
+        } catch (error) {
+            if (readId === readVersions.current.activities) {
+                if (requiresLogin(error)) setLoginRequired(true);
+                else setActivitiesError("Failed to load recent friend activity.");
+            }
         } finally {
-            setActivitiesLoading(false);
+            if (readId === readVersions.current.activities) setActivitiesLoading(false);
         }
     };
 
     const refreshData = () => {
+        const readIds = {
+            friends: ++readVersions.current.friends,
+            boards: ++readVersions.current.boards,
+            activities: ++readVersions.current.activities
+        };
         setFriendsLoading(true);
         setBoardsLoading(true);
         setActivitiesLoading(true);
@@ -177,56 +202,85 @@ export default function SocialFriendsContent({
         setActivitiesError(null);
         void Promise.allSettled([loadFriends(), loadFriendsBoards(12), loadFriendsActivity(10)])
             .then(([friendsRes, boardsRes, activitiesRes]) => {
-                if (friendsRes.status === "fulfilled") {
-                    setFriends(friendsRes.value);
-                } else {
-                    setFriendsError("Failed to load your travel pals.");
+                if (readIds.friends === readVersions.current.friends) {
+                    if (friendsRes.status === "fulfilled") {
+                        setFriends(friendsRes.value);
+                    } else if (requiresLogin(friendsRes.reason)) {
+                        setLoginRequired(true);
+                    } else {
+                        setFriendsError("Failed to load your travel pals.");
+                    }
                 }
-                if (boardsRes.status === "fulfilled") {
-                    setBoards(boardsRes.value);
-                } else {
-                    setBoardsError("Failed to load friends' boards.");
+                if (readIds.boards === readVersions.current.boards) {
+                    if (boardsRes.status === "fulfilled") {
+                        setBoards(boardsRes.value);
+                    } else if (requiresLogin(boardsRes.reason)) {
+                        setLoginRequired(true);
+                    } else {
+                        setBoardsError("Failed to load friends' boards.");
+                    }
                 }
-                if (activitiesRes.status === "fulfilled") {
-                    setActivities(activitiesRes.value);
-                } else {
-                    setActivitiesError("Failed to load recent friend activity.");
+                if (readIds.activities === readVersions.current.activities) {
+                    if (activitiesRes.status === "fulfilled") {
+                        setActivities(activitiesRes.value);
+                    } else if (requiresLogin(activitiesRes.reason)) {
+                        setLoginRequired(true);
+                    } else {
+                        setActivitiesError("Failed to load recent friend activity.");
+                    }
                 }
             })
             .finally(() => {
-                setFriendsLoading(false);
-                setBoardsLoading(false);
-                setActivitiesLoading(false);
+                if (readIds.friends === readVersions.current.friends) setFriendsLoading(false);
+                if (readIds.boards === readVersions.current.boards) setBoardsLoading(false);
+                if (readIds.activities === readVersions.current.activities) setActivitiesLoading(false);
             });
     };
 
     useEffect(() => {
         if (initialFriends || initialFriendsError || initialBoards || initialActivities) return;
         const tracker = { active: true };
+        const readIds = {
+            friends: ++readVersions.current.friends,
+            boards: ++readVersions.current.boards,
+            activities: ++readVersions.current.activities
+        };
         void Promise.allSettled([loadFriends(), loadFriendsBoards(12), loadFriendsActivity(10)])
             .then(([friendsRes, boardsRes, activitiesRes]) => {
                 if (!tracker.active) return;
-                if (friendsRes.status === "fulfilled") {
-                    setFriends(friendsRes.value);
-                } else {
-                    setFriendsError("Failed to load your travel pals.");
+                if (readIds.friends === readVersions.current.friends) {
+                    if (friendsRes.status === "fulfilled") {
+                        setFriends(friendsRes.value);
+                    } else if (requiresLogin(friendsRes.reason)) {
+                        setLoginRequired(true);
+                    } else {
+                        setFriendsError("Failed to load your travel pals.");
+                    }
                 }
-                if (boardsRes.status === "fulfilled") {
-                    setBoards(boardsRes.value);
-                } else {
-                    setBoardsError("Failed to load friends' boards.");
+                if (readIds.boards === readVersions.current.boards) {
+                    if (boardsRes.status === "fulfilled") {
+                        setBoards(boardsRes.value);
+                    } else if (requiresLogin(boardsRes.reason)) {
+                        setLoginRequired(true);
+                    } else {
+                        setBoardsError("Failed to load friends' boards.");
+                    }
                 }
-                if (activitiesRes.status === "fulfilled") {
-                    setActivities(activitiesRes.value);
-                } else {
-                    setActivitiesError("Failed to load recent friend activity.");
+                if (readIds.activities === readVersions.current.activities) {
+                    if (activitiesRes.status === "fulfilled") {
+                        setActivities(activitiesRes.value);
+                    } else if (requiresLogin(activitiesRes.reason)) {
+                        setLoginRequired(true);
+                    } else {
+                        setActivitiesError("Failed to load recent friend activity.");
+                    }
                 }
             })
             .finally(() => {
                 if (tracker.active) {
-                    setFriendsLoading(false);
-                    setBoardsLoading(false);
-                    setActivitiesLoading(false);
+                    if (readIds.friends === readVersions.current.friends) setFriendsLoading(false);
+                    if (readIds.boards === readVersions.current.boards) setBoardsLoading(false);
+                    if (readIds.activities === readVersions.current.activities) setActivitiesLoading(false);
                 }
             });
         return () => {
@@ -241,6 +295,30 @@ export default function SocialFriendsContent({
             router.push("/discover");
         }
     };
+
+    if (loginRequired) {
+        return (
+            <div className="relative h-full w-full overflow-y-auto px-4 pt-6 pb-20 sm:px-8 sm:pt-8 md:px-12 md:pt-10 lg:px-16">
+                <div className="mx-auto w-full max-w-5xl">
+                    <span className="text-10 tracking-label text-muted-foreground font-bold uppercase">SOCIAL</span>
+                    <h1 className="font-display text-48 sm:text-60 text-foreground mt-1 mb-10 font-bold tracking-tight uppercase">
+                        FRIENDS
+                    </h1>
+                    <div role="alert" className="border-line bg-background rounded-[2px] border p-8 text-center">
+                        <p className="text-14 text-foreground mb-4 font-medium">
+                            Sign in to see your friends, their boards, and recent activity.
+                        </p>
+                        <Link
+                            href="/login"
+                            className="bg-foreground text-background inline-block rounded-[2px] px-5 py-2 font-medium"
+                        >
+                            Sign in
+                        </Link>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="relative h-full w-full overflow-hidden">

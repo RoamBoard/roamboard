@@ -166,7 +166,8 @@ export function createUsersService(
                 if (existing.status === "accepted") throw new AppError(409, "Already friends", "ALREADY_FRIENDS");
                 if (existing.requesterUserId === requesterId)
                     throw new AppError(409, "Friend request already sent", "REQUEST_ALREADY_SENT");
-                await repository.acceptFriendRequest(requesterId, existing.friendshipId);
+                const accepted = await repository.acceptFriendRequest(requesterId, existing.friendshipId);
+                if (!accepted) throw new AppError(404, "Friend request not found", "NOT_FOUND");
                 return { requestId: existing.friendshipId, status: "accepted" as const };
             }
             try {
@@ -181,7 +182,8 @@ export function createUsersService(
                             return { requestId: winning.friendshipId, status: "accepted" as const };
                         }
                         if (winning.requesterUserId === recipientId) {
-                            await repository.acceptFriendRequest(requesterId, winning.friendshipId);
+                            const accepted = await repository.acceptFriendRequest(requesterId, winning.friendshipId);
+                            if (!accepted) throw new AppError(404, "Friend request not found", "NOT_FOUND");
                             return { requestId: winning.friendshipId, status: "accepted" as const };
                         }
                         return { requestId: winning.friendshipId, status: "pending_sent" as const };
