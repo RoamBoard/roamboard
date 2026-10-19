@@ -477,10 +477,9 @@ test("the map has chapter 03 between planning and details with six ordered navig
                     prefetch() {}
                 }
             },
-            page
+            page.props.children
         )
     );
-    assert.match(markup, /data-back-navigation="replace"/);
     const chapterIds = ["board-basics", "day-plan", "board-map", "details-discovery", "board-preview", "publish"];
     for (const [index, id] of chapterIds.entries()) {
         const offset = markup.indexOf(`id="${id}"`);

@@ -108,7 +108,7 @@ function routeInput(node: ReactNode): unknown {
     if (!isValidElement<{ input?: unknown; children?: ReactNode }>(node)) return;
     return node.props.input ?? Children.toArray(node.props.children).map(routeInput).find(Boolean);
 }
-function renderGuide(destination = guide(), extra: Partial<Parameters<typeof DestinationPage>[0]> = {}) {
+function renderWithRouter(content: ReactNode) {
     return renderToStaticMarkup(
         createElement(
             AppRouterContext.Provider,
@@ -123,9 +123,13 @@ function renderGuide(destination = guide(), extra: Partial<Parameters<typeof Des
                     prefetch: () => {}
                 }
             },
-            createElement(DestinationPage, { destination, ...extra })
+            content
         )
     );
+}
+
+function renderGuide(destination = guide(), extra: Partial<Parameters<typeof DestinationPage>[0]> = {}) {
+    return renderWithRouter(createElement(DestinationPage, { destination, ...extra }));
 }
 
 function startingEditor(node: ReactNode): ReactElement<ComponentProps<typeof BoardCreator>> | undefined {
@@ -154,7 +158,7 @@ test("a selected place reaches a new scratch Board as an editable activity witho
     assert.equal(editor.props.initialMode, "scratch");
     assert.deepEqual(editor.props.initialPlace, place);
     assert.equal(editor.props.initialBoardId, undefined);
-    const markup = renderToStaticMarkup(editor);
+    const markup = renderWithRouter(editor);
     assert.match(markup, /Senso-ji &amp; Asakusa/);
     assert.match(markup, /Tokyo board/);
     assert.match(markup, /Day 1/);
@@ -213,7 +217,7 @@ test("travel-guide sights keep canonical coordinates when preparing a Board with
     assert.equal(editor.props.initialPlace?.id, place.id);
     assert.equal(editor.props.initialPlace?.latitude, place.latitude);
     assert.equal(editor.props.initialPlace?.longitude, place.longitude);
-    assert.match(renderToStaticMarkup(editor), /Senso-ji/);
+    assert.match(renderWithRouter(editor), /Senso-ji/);
 });
 
 test("selected-sight map matching sends only location identity and leaves its canonical record unchanged", async (t) => {
