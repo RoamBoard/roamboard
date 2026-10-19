@@ -40,12 +40,12 @@ function WorldMoment({ moment }: { moment: RoamMoment }) {
 }
 
 export default function RoamWorld({
-    focused,
+    focused = true,
     typing,
     leaving,
     reduced
 }: {
-    focused: boolean;
+    focused?: boolean;
     typing: boolean;
     leaving: boolean;
     reduced: boolean;
