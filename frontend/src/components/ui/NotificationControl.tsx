@@ -141,6 +141,9 @@ export default function NotificationControl({
                 requestsRef.current = [];
                 setRequests([]);
                 onRequestsChange?.([]);
+                setActionInProgress({});
+                setActionError(null);
+                onActionErrorChange?.(null);
                 setLoadError(null);
                 setLoading(false);
             } else {
@@ -150,6 +153,13 @@ export default function NotificationControl({
                 const shouldFetch =
                     previousUserId !== user.userId && (previousUserId !== "initial-session" || !initialRequests);
                 if (shouldFetch) {
+                    requestsRef.current = [];
+                    setRequests([]);
+                    onRequestsChange?.([]);
+                    setActionInProgress({});
+                    setActionError(null);
+                    onActionErrorChange?.(null);
+                    setLoadError(null);
                     setLoading(true);
                     const readId = readVersionRef.current;
                     const expectedUserId = user.userId;
@@ -184,7 +194,7 @@ export default function NotificationControl({
                 }
             }
         });
-    }, [initialRequests, onRequestsChange]);
+    }, [initialRequests, onRequestsChange, onActionErrorChange]);
 
     useEffect(() => {
         if (!isOpen || !sessionUser) return;

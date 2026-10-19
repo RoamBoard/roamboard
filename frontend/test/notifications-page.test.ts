@@ -448,3 +448,63 @@ test("NotificationsContent ignores action completion from earlier account after 
 
     assert.deepEqual(tracker.requests, requests2);
 });
+
+test("NotificationsContent clears requests and pending action state immediately on account switch, and does not restore old requests on read failure", async (context) => {
+    const user1: AuthUser = { userId: "user-1", username: "user1", displayName: "User One" };
+    const user2: AuthUser = { userId: "user-2", username: "user2", displayName: "User Two" };
+
+    const deferredRead: { resolve: (val: Response) => void; reject: (err: unknown) => void } = {
+        resolve: () => {},
+        reject: () => {}
+    };
+    const readPromise = new Promise<Response>((resolve, reject) => {
+        deferredRead.resolve = resolve;
+        deferredRead.reject = reject;
+    });
+
+    const requests1: FriendRequest[] = [
+        {
+            requestId: 201,
+            requester: { userId: "u-201", username: "alice", displayName: "Alice", profilePictureUrl: null }
+        }
+    ];
+
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+        const url = String(input);
+        if (url.includes("/api/v1/auth/google")) {
+            return Response.json({ data: { user: user1, isNew: false } });
+        }
+        if (url.includes("/api/v1/users/me/friend-requests")) {
+            return readPromise;
+        }
+        return Response.json({ data: [] });
+    });
+
+    await signInWithGoogle("user1-token");
+
+    const tracker = { requests: requests1, actionError: null as string | null };
+    const { unmount } = mount(() =>
+        NotificationsContent({
+            initialRequests: requests1,
+            initialUserId: user1.userId,
+            onRequestsChange: (reqs) => {
+                tracker.requests = reqs;
+            },
+            onActionErrorChange: (err) => {
+                tracker.actionError = err;
+            }
+        })
+    );
+    context.after(unmount);
+
+    assert.equal(tracker.requests.length, 1);
+
+    publishAccountUpdate(user2);
+
+    assert.deepEqual(tracker.requests, []);
+
+    deferredRead.reject(new Error("Failed to load"));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    assert.deepEqual(tracker.requests, []);
+});

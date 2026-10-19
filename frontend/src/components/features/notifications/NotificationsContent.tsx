@@ -74,7 +74,7 @@ export default function NotificationsContent({
             if (!expectedUserId) return;
             setLoading(true);
             setLoadError(null);
-            const version = requestVersionRef.current;
+            const version = ++requestVersionRef.current;
             void loadFriendRequests()
                 .then((data) => {
                     if (activeUserIdRef.current === expectedUserId && version === requestVersionRef.current) {
@@ -89,7 +89,7 @@ export default function NotificationsContent({
                     }
                 })
                 .finally(() => {
-                    if (activeUserIdRef.current === expectedUserId) {
+                    if (activeUserIdRef.current === expectedUserId && version === requestVersionRef.current) {
                         setLoading(false);
                     }
                 });
@@ -99,13 +99,16 @@ export default function NotificationsContent({
 
     useEffect(() => {
         return observeCurrentUser((user) => {
+            requestVersionRef.current += 1;
             if (!user) {
                 activeUserIdRef.current = null;
-                requestVersionRef.current += 1;
                 setSessionUser(null);
                 requestsRef.current = [];
                 setRequests([]);
                 onRequestsChange?.([]);
+                setActionInProgress({});
+                setActionError(null);
+                onActionErrorChange?.(null);
                 setLoading(false);
                 setLoadError(null);
             } else {
@@ -115,11 +118,18 @@ export default function NotificationsContent({
                 const shouldFetch =
                     previousUserId !== user.userId && (previousUserId !== "initial-session" || !initialRequests);
                 if (shouldFetch) {
+                    requestsRef.current = [];
+                    setRequests([]);
+                    onRequestsChange?.([]);
+                    setActionInProgress({});
+                    setActionError(null);
+                    onActionErrorChange?.(null);
+                    setLoadError(null);
                     fetchRequests(user.userId);
                 }
             }
         });
-    }, [fetchRequests, initialRequests, onRequestsChange]);
+    }, [fetchRequests, initialRequests, onRequestsChange, onActionErrorChange]);
 
     const handleAccept = async (requestId: number) => {
         requestVersionRef.current += 1;
