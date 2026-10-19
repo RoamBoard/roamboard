@@ -2,13 +2,17 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import UnderlineTabs from "@/components/ui/UnderlineTabs";
+import Image from "next/image";
+import { Plus, UserRound } from "lucide-react";
 import {
+    loadFriends,
     loadMapDestinations,
     loadProfile,
     loadProfileStats,
     loadPublishedBoards,
+    removeFriend,
     ProfileApiError,
+    type FriendUser,
     type MapDestination,
     type ProfileStats,
     type PublishedBoardSummary,
@@ -17,6 +21,8 @@ import {
 import ProfileHero from "./ProfileHero";
 import TravelMapSection from "./TravelMapSection";
 import VisitedWorldMap from "./VisitedWorldMap";
+import FindFriendsDialog from "@/components/features/social/FindFriendsDialog";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 import AccountPhotoBoardCard from "@/components/features/boards/cards/AccountPhotoBoardCard";
 import SavedBoardGrid from "@/components/features/boards/SavedBoardGrid";
@@ -42,20 +48,61 @@ export function LiveBoardCard({
     );
 }
 
-export default function ProfilePageContent() {
-    const [activeFilter, setActiveFilter] = useState<"ME" | "FRIENDS" | "EXPLORE">("ME");
-    const [profile, setProfile] = useState<UserProfile | null>(null);
-    const [stats, setStats] = useState<ProfileStats | null>(null);
-    const [published, setPublished] = useState<PublishedBoardSummary[]>([]);
+function FriendAvatar({ friend }: { friend: FriendUser }) {
+    const [failed, setFailed] = useState(false);
+    if (friend.profilePictureUrl && !failed) {
+        return (
+            <Image
+                src={friend.profilePictureUrl}
+                alt=""
+                width={64}
+                height={64}
+                unoptimized
+                className="size-full object-cover"
+                onError={() => setFailed(true)}
+            />
+        );
+    }
+    return <UserRound size={28} strokeWidth={1.5} className="text-muted-foreground" />;
+}
+
+export type ProfilePageContentProps = {
+    initialProfile?: UserProfile | null;
+    initialStats?: ProfileStats | null;
+    initialPublished?: PublishedBoardSummary[];
+    initialFriends?: FriendUser[];
+    initialDestinations?: MapDestination[];
+    initialConfirmUnfriendTarget?: FriendUser | null;
+    initialSectionErrors?: string[];
+};
+
+export default function ProfilePageContent({
+    initialProfile = null,
+    initialStats = null,
+    initialPublished = [],
+    initialFriends = [],
+    initialDestinations = [],
+    initialConfirmUnfriendTarget = null,
+    initialSectionErrors = []
+}: ProfilePageContentProps = {}) {
+    const [profile, setProfile] = useState<UserProfile | null>(initialProfile);
+    const [stats, setStats] = useState<ProfileStats | null>(initialStats);
+    const [published, setPublished] = useState<PublishedBoardSummary[]>(initialPublished);
     const [savedStore] = useState(() => createSavedBoardsStore(3));
     const saved = useSyncExternalStore(savedStore.subscribe, savedStore.getSnapshot, savedStore.getSnapshot);
-    const [destinations, setDestinations] = useState<MapDestination[]>([]);
+    const [friends, setFriends] = useState<FriendUser[]>(initialFriends);
+    const [confirmUnfriendTarget, setConfirmUnfriendTarget] = useState<FriendUser | null>(initialConfirmUnfriendTarget);
+    const [unfriendError, setUnfriendError] = useState<string | null>(null);
+    const [unfriendLoading, setUnfriendLoading] = useState(false);
+    const [destinations, setDestinations] = useState<MapDestination[]>(initialDestinations);
+    const [searchOpen, setSearchOpen] = useState(false);
     const [error, setError] = useState("");
-    const [sectionErrors, setSectionErrors] = useState<string[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [sectionErrors, setSectionErrors] = useState<string[]>(initialSectionErrors);
+    const [loading, setLoading] = useState(!initialProfile);
     const [retry, setRetry] = useState(0);
 
     useEffect(() => {
+        if (initialProfile && retry === 0) return;
         const request = { active: true };
         void loadProfile()
             .then(async (user) => {
@@ -65,7 +112,8 @@ export default function ProfilePageContent() {
                     loadProfileStats(),
                     loadPublishedBoards(),
                     savedStore.loadFirst(),
-                    loadMapDestinations()
+                    loadMapDestinations(),
+                    loadFriends()
                 ]);
                 if (!request.active) return;
                 const failures: string[] = [];
@@ -75,6 +123,8 @@ export default function ProfilePageContent() {
                 else failures.push("My boards could not be loaded.");
                 if (results[3].status === "fulfilled") setDestinations(results[3].value);
                 else failures.push("The visited map could not be loaded.");
+                if (results[4].status === "fulfilled") setFriends(results[4].value);
+                else failures.push("Travel pals could not be loaded.");
                 setSectionErrors(failures);
             })
             .catch((caught: unknown) => {
@@ -93,7 +143,7 @@ export default function ProfilePageContent() {
         return () => {
             request.active = false;
         };
-    }, [retry, savedStore]);
+    }, [initialProfile, retry, savedStore]);
 
     function reload() {
         setLoading(true);
@@ -105,16 +155,10 @@ export default function ProfilePageContent() {
     return (
         <div className="mx-auto w-full max-w-6xl pb-20">
             <header className="mb-8">
-                <span className="text-10 tracking-label text-muted-foreground font-bold uppercase">SOCIAL</span>
+                <span className="text-10 tracking-label text-muted-foreground font-bold uppercase">ACCOUNT</span>
                 <h1 className="font-display text-48 sm:text-60 text-foreground mt-1 font-bold tracking-tight uppercase">
-                    {activeFilter}
+                    PROFILE
                 </h1>
-                <UnderlineTabs
-                    tabs={["ME", "FRIENDS", "EXPLORE"]}
-                    activeTab={activeFilter}
-                    onChange={setActiveFilter}
-                    ariaLabel="Audience filter"
-                />
             </header>
             {loading && <p role="status">Loading profile…</p>}
             {error && (
@@ -131,10 +175,7 @@ export default function ProfilePageContent() {
                     )}
                 </div>
             )}
-            {!loading && !error && activeFilter !== "ME" && (
-                <p className="text-muted-foreground">This section is coming soon.</p>
-            )}
-            {!loading && !error && profile && activeFilter === "ME" && (
+            {!loading && !error && profile && (
                 <main className="flex flex-col">
                     {sectionErrors.length > 0 && (
                         <div role="alert" className="text-muted-foreground mb-6 text-sm">
@@ -145,6 +186,112 @@ export default function ProfilePageContent() {
                         </div>
                     )}
                     <ProfileHero profile={profile} stats={stats} />
+                    <section aria-label="My friends" className="border-line mt-12 border-t pt-8">
+                        <div className="mb-4 flex items-end justify-between">
+                            <div>
+                                <h3 className="font-display text-20 sm:text-22 text-foreground font-bold">
+                                    my friends ({friends.length})
+                                </h3>
+                                <p className="text-12 text-muted-foreground mt-0.5 font-medium">
+                                    fellow travelers you&apos;re connected with
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setSearchOpen(true)}
+                                    className="font-body text-12 text-muted-foreground hover:text-foreground cursor-pointer underline-offset-4 hover:underline"
+                                >
+                                    + find friends
+                                </button>
+                                <Link
+                                    href="/social"
+                                    className="text-12 text-muted-foreground hover:text-foreground hover:underline"
+                                >
+                                    social hub →
+                                </Link>
+                            </div>
+                        </div>
+
+                        {sectionErrors.some((message) => message.startsWith("Travel pals")) ? (
+                            <div
+                                role="alert"
+                                className="border-line bg-background text-12 text-muted-foreground rounded-[2px] border p-8 text-center font-medium"
+                            >
+                                <p className="mb-2 text-red-500">Travel pals could not be loaded.</p>
+                                <button
+                                    type="button"
+                                    onClick={reload}
+                                    className="text-foreground cursor-pointer font-medium underline underline-offset-4 hover:opacity-80"
+                                >
+                                    Retry
+                                </button>
+                            </div>
+                        ) : friends.length === 0 ? (
+                            <div className="border-line bg-background rounded-[2px] border p-8 text-center sm:p-10">
+                                <div className="bg-muted text-muted-foreground mx-auto mb-3 flex size-12 items-center justify-center rounded-full">
+                                    <UserRound size={22} strokeWidth={1.5} />
+                                </div>
+                                <h4 className="font-display text-18 text-foreground font-bold">No travel pals yet</h4>
+                                <p className="text-12 text-muted-foreground mx-auto mt-1.5 max-w-sm font-medium">
+                                    Connect with other travelers on Roamboard to see their shared boards and latest
+                                    trips.
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => setSearchOpen(true)}
+                                    className="bg-foreground text-background font-body text-12 mt-5 inline-flex cursor-pointer items-center gap-1.5 rounded-[2px] px-4 py-2 font-medium transition-opacity hover:opacity-90"
+                                >
+                                    <Plus size={14} strokeWidth={2} /> Find Friends
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="flex items-start gap-6 overflow-x-auto overscroll-contain pt-1 pb-3">
+                                {friends.map((friend) => (
+                                    <div
+                                        key={friend.userId}
+                                        className="group flex w-20 shrink-0 flex-col items-center text-center"
+                                    >
+                                        <Link
+                                            href={`/profile/${encodeURIComponent(friend.username)}`}
+                                            className="flex w-full flex-col items-center text-center"
+                                        >
+                                            <div className="border-line bg-muted relative mb-2 flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-full border transition-transform duration-150 group-hover:scale-105">
+                                                <FriendAvatar friend={friend} />
+                                            </div>
+                                            <span className="text-12 text-foreground w-full truncate font-medium group-hover:underline">
+                                                {friend.displayName}
+                                            </span>
+                                            <span className="text-10 text-muted-foreground w-full truncate">
+                                                @{friend.username}
+                                            </span>
+                                        </Link>
+                                        <button
+                                            type="button"
+                                            onClick={() => setConfirmUnfriendTarget(friend)}
+                                            aria-label={`Unfriend ${friend.displayName}`}
+                                            className="text-10 text-muted-foreground font-body mt-1 cursor-pointer rounded-[2px] border border-transparent px-2 py-0.5 font-medium transition-all hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-500"
+                                        >
+                                            unfriend
+                                        </button>
+                                    </div>
+                                ))}
+
+                                <button
+                                    type="button"
+                                    onClick={() => setSearchOpen(true)}
+                                    className="group flex w-20 shrink-0 cursor-pointer flex-col items-center text-center focus-visible:outline-2"
+                                >
+                                    <div className="border-line hover:border-foreground bg-faint/40 text-muted-foreground hover:text-foreground mb-2 flex size-16 shrink-0 items-center justify-center rounded-full border border-dashed transition-all duration-150 group-hover:scale-105">
+                                        <Plus size={22} strokeWidth={1.5} />
+                                    </div>
+                                    <span className="text-12 text-muted-foreground group-hover:text-foreground font-medium">
+                                        add friends
+                                    </span>
+                                </button>
+                            </div>
+                        )}
+                    </section>
                     <section aria-label="Currently inspired by" className="border-line mt-12 border-t pt-8">
                         <div className="flex items-end justify-between">
                             <div>
@@ -245,6 +392,53 @@ export default function ProfilePageContent() {
                         }
                     />
                 </main>
+            )}
+            <FindFriendsDialog
+                open={searchOpen}
+                onClose={() => setSearchOpen(false)}
+                onFriendAdded={() => {
+                    void loadFriends()
+                        .then(setFriends)
+                        .catch(() => {
+                            setSectionErrors((prev) =>
+                                prev.includes("Travel pals could not be loaded.")
+                                    ? prev
+                                    : [...prev, "Travel pals could not be loaded."]
+                            );
+                        });
+                }}
+            />
+            {confirmUnfriendTarget && (
+                <ConfirmDialog
+                    title={`Unfriend ${confirmUnfriendTarget.displayName}?`}
+                    description={`Are you sure you want to remove @${confirmUnfriendTarget.username} from your friends? You will no longer see each other's friends-only boards.`}
+                    confirmLabel="Unfriend"
+                    error={unfriendError}
+                    loading={unfriendLoading}
+                    onCancel={() => {
+                        setConfirmUnfriendTarget(null);
+                        setUnfriendError(null);
+                    }}
+                    onConfirm={async () => {
+                        const target = confirmUnfriendTarget;
+                        setUnfriendLoading(true);
+                        setUnfriendError(null);
+                        try {
+                            await removeFriend(target.userId);
+                            setFriends((prev) => prev.filter((f) => f.userId !== target.userId));
+                            setStats((prev) => (prev ? { ...prev, friends: Math.max(0, prev.friends - 1) } : null));
+                            setConfirmUnfriendTarget(null);
+                        } catch (caught) {
+                            setUnfriendError(
+                                caught instanceof Error
+                                    ? caught.message
+                                    : `Failed to remove ${target.displayName} from friends.`
+                            );
+                        } finally {
+                            setUnfriendLoading(false);
+                        }
+                    }}
+                />
             )}
         </div>
     );

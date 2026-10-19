@@ -16,6 +16,7 @@ import {
     X
 } from "lucide-react";
 import ProfileControl, { type ProfileControlProps } from "@/components/ui/ProfileControl";
+import NotificationControl from "@/components/ui/NotificationControl";
 import { getSidebarExpanded, getSidebarServerSnapshot, setSidebarExpanded, subscribeSidebar } from "./sidebar-state";
 
 const navigation = [
@@ -23,9 +24,9 @@ const navigation = [
     { href: "/create", label: "create", icon: Plus },
     { href: "/discover", label: "discover", icon: Compass },
     { href: "/boards", label: "boards", icon: Layers },
-    { href: "/social", label: "social", icon: Users }
+    { href: "/social", label: "social", icon: Users },
+    { href: "/dev/providers", label: "labs", icon: FlaskConical }
 ];
-const labs = { href: "/dev/providers", label: "labs", icon: FlaskConical };
 
 function subscribeDesktop(callback: () => void) {
     const query = window.matchMedia("(min-width: 768px)");
@@ -37,7 +38,7 @@ const getDesktopServerSnapshot = () => true;
 
 function activeDestination(pathname: string | null, fallback: string) {
     if (!pathname) return fallback;
-    if (pathname.startsWith("/dev")) return labs.href;
+    if (pathname.startsWith("/dev")) return "/dev/providers";
     if (
         pathname === "/boards/new" ||
         pathname.startsWith("/boards/drafts") ||
@@ -45,17 +46,18 @@ function activeDestination(pathname: string | null, fallback: string) {
     ) {
         return "/create";
     }
-    if (pathname === "/profile" || pathname === "/settings") return "/social";
+    if (pathname === "/profile" || pathname === "/settings" || pathname === "/notifications") return "/social";
     return navigation.find(({ href }) => pathname === href || pathname.startsWith(`${href}/`))?.href ?? fallback;
 }
 
 type NavigationProps = {
     activeHref: string;
     expanded: boolean;
+    compactTop?: boolean;
     onNavigate?: () => void;
 };
 
-function SidebarNavigation({ activeHref, expanded, onNavigate }: NavigationProps) {
+function SidebarNavigation({ activeHref, expanded, compactTop = false, onNavigate }: NavigationProps) {
     const reducedMotion = useReducedMotion();
     function renderLink({ href, label, icon: Icon }: (typeof navigation)[number]) {
         const active = activeHref === href;
@@ -66,11 +68,14 @@ function SidebarNavigation({ activeHref, expanded, onNavigate }: NavigationProps
                     aria-label={label}
                     aria-current={active ? "page" : undefined}
                     onClick={onNavigate}
-                    className={`relative flex h-11 items-center transition-colors duration-150 focus-visible:outline-1 focus-visible:outline-offset-4 motion-reduce:transition-none ${expanded ? "w-full" : "w-11"} ${active ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                    className={`relative flex h-11 w-full items-center transition-colors duration-150 focus-visible:outline-1 focus-visible:outline-offset-4 motion-reduce:transition-none ${expanded ? "justify-start px-3" : "justify-center"} ${active ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
                 >
-                    <Icon aria-hidden="true" className="mx-3 size-5 shrink-0" strokeWidth={1.5} />
+                    <Icon aria-hidden="true" className="size-5 shrink-0" strokeWidth={1.5} />
                     {!expanded && active && (
-                        <span aria-hidden="true" className="absolute bottom-1 left-3 h-px w-5 bg-current" />
+                        <span
+                            aria-hidden="true"
+                            className="absolute bottom-1 left-1/2 h-px w-5 -translate-x-1/2 bg-current"
+                        />
                     )}
                     <motion.span
                         aria-hidden="true"
@@ -91,12 +96,13 @@ function SidebarNavigation({ activeHref, expanded, onNavigate }: NavigationProps
     return (
         <nav
             aria-label="Main navigation"
-            className={`flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-contain ${expanded ? "px-4" : "px-2.5 md:px-[18px]"}`}
+            className={`flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-contain transition-all duration-200 ${expanded ? "justify-start px-4" : "justify-center px-2.5 md:px-4"}`}
         >
-            <ul className="mb-6 flex w-full shrink-0 flex-col gap-2 pt-8 [@media(max-height:650px)]:pt-0">
+            <ul
+                className={`flex w-full shrink-0 flex-col gap-2 transition-[margin,padding] duration-200 ${expanded ? "mt-0 pt-2" : compactTop ? "my-auto pt-1" : "my-auto py-4 [@media(max-height:650px)]:py-0"}`}
+            >
                 {navigation.map(renderLink)}
             </ul>
-            <ul className="border-line mt-auto w-full shrink-0 border-t pt-4">{renderLink(labs)}</ul>
         </nav>
     );
 }
@@ -189,9 +195,11 @@ export default function Sidebar({ activeHref, profile = {} }: { activeHref: stri
     const savedExpanded = useSyncExternalStore(subscribeSidebar, getSidebarExpanded, getSidebarServerSnapshot);
     const desktop = useSyncExternalStore(subscribeDesktop, getDesktopSnapshot, getDesktopServerSnapshot);
     const [accountOpen, setAccountOpen] = useState(false);
+    const [notificationsOpen, setNotificationsOpen] = useState(false);
     const [hovered, setHovered] = useState(false);
-    const expanded = (desktop && (savedExpanded || hovered)) || accountOpen;
+    const expanded = (desktop && (savedExpanded || hovered)) || accountOpen || notificationsOpen;
     const sidebarWidth = expanded ? "176px" : "80px";
+    const compactTop = accountOpen || notificationsOpen;
     const [mobileOpen, setMobileOpen] = useState(false);
     const triggerRef = useRef<HTMLButtonElement>(null);
     const reducedMotion = useReducedMotion();
@@ -217,15 +225,24 @@ export default function Sidebar({ activeHref, profile = {} }: { activeHref: stri
                 }}
                 onPointerLeave={() => setHovered(false)}
                 onKeyDown={(event) => {
-                    if (event.key === "Escape" && expanded) {
-                        setAccountOpen(false);
+                    if (event.key === "Escape") {
+                        if (notificationsOpen) {
+                            setNotificationsOpen(false);
+                        }
+                        if (accountOpen) {
+                            setAccountOpen(false);
+                        }
                         setHovered(false);
-                        setSidebarExpanded(false);
+                        if (savedExpanded) {
+                            setSidebarExpanded(false);
+                        }
                     }
                 }}
-                className={`bg-background text-foreground border-line fixed inset-y-0 left-0 z-40 flex overflow-x-hidden overflow-y-auto ${accountOpen ? "w-56" : "w-16"} flex-col border-r pt-[env(safe-area-inset-top)] pb-[max(1.5rem,env(safe-area-inset-bottom))] md:w-[var(--sidebar-width)] [@media(max-height:400px)]:pb-2 ${expanded ? "shadow-[16px_0_40px_-24px_rgb(0_0_0/0.25)]" : ""}`}
+                className={`bg-background text-foreground border-line fixed inset-y-0 left-0 z-40 flex ${accountOpen ? "w-56" : "w-16"} flex-col border-r pt-[env(safe-area-inset-top)] pb-[max(1.5rem,env(safe-area-inset-bottom))] md:w-[var(--sidebar-width)] [@media(max-height:400px)]:pb-2 ${expanded ? "shadow-[16px_0_40px_-24px_rgb(0_0_0/0.25)]" : ""}`}
             >
-                <header className="relative h-[clamp(11rem,25dvh,15rem)] shrink-0 [@media(max-height:400px)]:h-12 [@media(max-height:650px)]:h-20">
+                <header
+                    className={`relative shrink-0 transition-[height] duration-200 ease-out ${expanded || compactTop ? "h-16 md:h-20" : "h-[clamp(11rem,25dvh,15rem)]"} [@media(max-height:400px)]:h-12 [@media(max-height:650px)]:h-20`}
+                >
                     <Link
                         href="/home"
                         aria-label="Roamboard home"
@@ -245,19 +262,32 @@ export default function Sidebar({ activeHref, profile = {} }: { activeHref: stri
                         )}
                     </Link>
                 </header>
-                <div id={panelId} className="flex min-h-11 min-w-0 flex-1 flex-col">
-                    <SidebarNavigation activeHref={selectedHref} expanded={expanded} />
+                <div id={panelId} className="flex min-h-0 min-w-0 flex-1 flex-col">
+                    <SidebarNavigation activeHref={selectedHref} expanded={expanded} compactTop={compactTop} />
                 </div>
-                <div className="mx-2.5 mt-2 shrink-0 md:mx-4">
+                <div aria-hidden="true" className="border-line mx-2.5 mt-auto mb-2 border-t md:mx-4" />
+                <div className="mx-2.5 flex shrink-0 flex-col gap-1 md:mx-4">
+                    <NotificationControl
+                        sidebar
+                        iconOnly={!expanded}
+                        open={notificationsOpen}
+                        onOpenChange={(open) => {
+                            setNotificationsOpen(open);
+                            if (open) setAccountOpen(false);
+                        }}
+                    />
                     <ProfileControl
                         {...profile}
                         sidebar
                         iconOnly={!expanded}
                         sidebarAccountOpen={accountOpen}
-                        onSidebarOpenChange={setAccountOpen}
+                        onSidebarOpenChange={(open) => {
+                            setAccountOpen(open);
+                            if (open) setNotificationsOpen(false);
+                        }}
                     />
                 </div>
-                <div aria-hidden="true" className="border-line mx-2.5 mt-3 border-t md:mx-4" />
+                <div aria-hidden="true" className="border-line mx-2.5 mt-2 border-t md:mx-4" />
                 <button
                     type="button"
                     ref={triggerRef}
@@ -276,6 +306,7 @@ export default function Sidebar({ activeHref, profile = {} }: { activeHref: stri
                     onClick={() => {
                         if (desktop) {
                             setAccountOpen(false);
+                            setNotificationsOpen(false);
                             setHovered(false);
                             setSidebarExpanded(!savedExpanded);
                         } else setMobileOpen(true);

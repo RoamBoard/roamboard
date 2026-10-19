@@ -124,7 +124,13 @@ export function createImagesRepository(): ImagesRepository {
                 longitude: string | null;
             }>(
                 `SELECT i.uploaded_image_id, i.storage_key, i.uploaded_by_user_id,
-                  bi.board_id, i.captured_at, i.latitude, i.longitude,i.presentation_edit,i.presentation_revision,
+                  COALESCE(
+                    bi.board_id,
+                    (SELECT a.board_id FROM activity_image ai JOIN activity a ON a.activity_id = ai.activity_id WHERE ai.uploaded_image_id = i.uploaded_image_id LIMIT 1),
+                    (SELECT b.board_id FROM board b WHERE b.cover_image_id = i.uploaded_image_id LIMIT 1),
+                    (SELECT a.board_id FROM activity a WHERE a.cover_image_id = i.uploaded_image_id LIMIT 1)
+                  ) AS board_id,
+                  i.captured_at, i.latitude, i.longitude, i.presentation_edit, i.presentation_revision,
                   profile_owner.user_id AS profile_owner_user_id,
                   profile_owner.username AS profile_owner_username
                  FROM uploaded_image i

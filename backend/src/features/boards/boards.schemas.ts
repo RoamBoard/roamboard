@@ -129,14 +129,22 @@ export const boardListQuerySchema = z
 
 export const imageVariantQuerySchema = z
     .object({
-        v: z.coerce.number().int().nonnegative().optional(),
-        variant: z.enum(["display", "thumbnail", "original"]).default("display"),
+        v: z.preprocess((val) => (Array.isArray(val) ? val[0] : val), z.coerce.number().int().nonnegative()).optional(),
+        variant: z
+            .preprocess((val) => (Array.isArray(val) ? val[0] : val), z.enum(["display", "thumbnail", "original"]))
+            .default("display"),
         // Author photos carry Board context so the image service can enforce the same read permissions.
-        boardId: z.coerce.number().int().positive().optional(),
+        boardId: z
+            .preprocess((val) => (Array.isArray(val) ? val[0] : val), z.coerce.number().int().positive())
+            .optional(),
         profileHandle: z
-            .string()
-            .regex(/^(?:[a-z0-9]|[a-z0-9][a-z0-9._]*[a-z0-9])$/)
-            .max(64)
+            .preprocess(
+                (val) => (Array.isArray(val) ? val[0] : val),
+                z
+                    .string()
+                    .regex(/^(?:[a-z0-9]|[a-z0-9][a-z0-9._]*[a-z0-9])$/)
+                    .max(64)
+            )
             .optional()
     })
     .strict()

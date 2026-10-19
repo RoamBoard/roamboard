@@ -1,14 +1,31 @@
-import { Fragment } from "react";
+"use client";
+
+import { Fragment, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { apiOrigin, type PublicProfile, type ProfileStats } from "@/lib/profile";
+import { useRouter } from "next/navigation";
+import { AtSign, Check, Pencil } from "lucide-react";
+import {
+    apiOrigin,
+    sendFriendRequest,
+    removeFriendByHandle,
+    ProfileApiError,
+    type PublicProfile,
+    type ProfileStats,
+    type FriendshipStatus
+} from "@/lib/profile";
 import { boardTags, boardTagHref } from "@/data/board-tags";
 import TagIcon from "@/components/ui/TagIcon";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 type Props = {
     profile: PublicProfile;
     stats: ProfileStats | null;
     isOwner?: boolean;
+    friendshipStatus?: FriendshipStatus;
+    initialConfirmUnfriendOpen?: boolean;
+    onFriendshipStatusChange?: (status: FriendshipStatus) => void;
+    onActionErrorChange?: (error: string | null) => void;
 };
 
 function getNameStyle(nameStr: string): string {
@@ -25,9 +42,70 @@ function getNameStyle(nameStr: string): string {
     return "text-48 sm:text-60 leading-[0.85] -mt-8 sm:-mt-12";
 }
 
-export default function ProfileHero({ profile, stats, isOwner = true }: Props) {
+function useOptionalRouter() {
+    try {
+        return useRouter();
+    } catch {
+        return null;
+    }
+}
+
+export default function ProfileHero({
+    profile,
+    stats,
+    isOwner = true,
+    friendshipStatus,
+    initialConfirmUnfriendOpen = false,
+    onFriendshipStatusChange,
+    onActionErrorChange
+}: Props) {
+    const router = useOptionalRouter();
+    const [actionStatus, setActionStatus] = useState<FriendshipStatus | null>(null);
+    const [actionError, setActionError] = useState<string | null>(null);
+    const [pending, setPending] = useState(false);
+    const [confirmUnfriendOpen, setConfirmUnfriendOpen] = useState(initialConfirmUnfriendOpen);
+
+    const [portraitFailed, setPortraitFailed] = useState(false);
+
+    const currentStatus = actionStatus ?? friendshipStatus ?? "none";
+
+    const handleFriendAction = async () => {
+        if (pending || currentStatus === "accepted" || currentStatus === "pending_sent") return;
+        setPending(true);
+        setActionError(null);
+        onActionErrorChange?.(null);
+        try {
+            const res = await sendFriendRequest(profile.username);
+            setActionStatus(res.status);
+            onFriendshipStatusChange?.(res.status);
+        } catch (caught) {
+            if (caught instanceof ProfileApiError && caught.status === 401) {
+                router?.push("/login");
+            } else {
+                const errMsg = caught instanceof Error ? caught.message : "Failed to send friend request.";
+                setActionError(errMsg);
+                onActionErrorChange?.(errMsg);
+            }
+        } finally {
+            setPending(false);
+        }
+    };
+
+    const getFriendButtonLabel = () => {
+        if (pending) return "+ sending…";
+        if (currentStatus === "pending_sent") return "request sent";
+        if (currentStatus === "pending_received") return "+ accept request";
+        if (currentStatus === "accepted") return "friends";
+        return "+ add friends";
+    };
+
     const portraitUrl = profile.profilePicture ? new URL(profile.profilePicture.url, apiOrigin) : null;
-    portraitUrl?.searchParams.set("variant", "display");
+    if (portraitUrl) {
+        portraitUrl.searchParams.set("variant", "display");
+        if (profile.username) {
+            portraitUrl.searchParams.set("profileHandle", profile.username);
+        }
+    }
     const occupation = profile.occupation;
     const languages = profile.languages;
     const rawTags = profile.interests;
@@ -41,7 +119,7 @@ export default function ProfileHero({ profile, stats, isOwner = true }: Props) {
             {/* Left column: Hero photo + Name */}
             <div className="flex flex-col lg:col-span-5">
                 <div className="bg-faint border-line relative aspect-square w-full overflow-hidden rounded-[2px] border">
-                    {portraitUrl ? (
+                    {portraitUrl && !portraitFailed ? (
                         <Image
                             src={portraitUrl.toString()}
                             alt={`Portrait of ${profile.displayName}`}
@@ -50,6 +128,7 @@ export default function ProfileHero({ profile, stats, isOwner = true }: Props) {
                             unoptimized
                             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 40vw, 380px"
                             className="object-cover"
+                            onError={() => setPortraitFailed(true)}
                         />
                     ) : (
                         <div className="text-muted-foreground flex h-full items-center justify-center">
@@ -69,50 +148,107 @@ export default function ProfileHero({ profile, stats, isOwner = true }: Props) {
                 >
                     {profile.displayName}
                 </h2>
-                <p className="text-12 text-muted-foreground mt-2 px-1">@{profile.username}</p>
             </div>
 
             {/* Right column: Location, Buttons, Headline, Bio, Stats with vertical lines, Platinum Tier */}
             <div className="flex flex-col justify-between lg:col-span-7">
                 <div>
-                    {/* Top sub-bar: Location & Action buttons */}
-                    <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-2.5">
-                            <svg
-                                width="18"
-                                height="18"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="1.75"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="text-foreground shrink-0"
-                                aria-hidden="true"
-                            >
-                                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-                                <circle cx="12" cy="10" r="3" />
-                            </svg>
-                            <div>
-                                <span className="text-10 text-muted-foreground block leading-none font-medium">
-                                    based in
-                                </span>
-                                <span className="text-14 text-foreground block leading-tight font-bold">
-                                    {profile.location || "—"}
-                                </span>
+                    {/* Top sub-bar: Handle, Location & Action buttons */}
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div className="flex flex-wrap items-center gap-6 sm:gap-8">
+                            {/* Handle (only needed on own profile since visitor profiles display handle as page title) */}
+                            {isOwner && (
+                                <div className="flex items-center gap-2.5">
+                                    <AtSign
+                                        size={18}
+                                        strokeWidth={1.75}
+                                        className="text-foreground shrink-0"
+                                        aria-hidden="true"
+                                    />
+                                    <div>
+                                        <span className="text-10 text-muted-foreground block leading-none font-medium">
+                                            handle
+                                        </span>
+                                        <span className="text-14 text-foreground block leading-tight font-bold">
+                                            @{profile.username}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Location */}
+                            <div className="flex items-center gap-2.5">
+                                <svg
+                                    width="18"
+                                    height="18"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="1.75"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    className="text-foreground shrink-0"
+                                    aria-hidden="true"
+                                >
+                                    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+                                    <circle cx="12" cy="10" r="3" />
+                                </svg>
+                                <div>
+                                    <span className="text-10 text-muted-foreground block leading-none font-medium">
+                                        based in
+                                    </span>
+                                    <span className="text-14 text-foreground block leading-tight font-bold">
+                                        {profile.location || "—"}
+                                    </span>
+                                </div>
                             </div>
                         </div>
 
-                        {/* Top right button: [ edit profile ] */}
-                        {isOwner && (
+                        {/* Top right button: [ edit profile ] or [ friends / unfriend / + add friends ] */}
+                        {isOwner ? (
                             <div className="flex items-center gap-2">
                                 <Link
                                     href="/settings"
-                                    className="border-line text-12 text-muted-foreground hover:text-foreground hover:border-foreground font-body cursor-pointer rounded-[2px] border px-3.5 py-1 font-medium transition-colors"
+                                    className="border-line text-12 text-muted-foreground hover:text-foreground hover:border-foreground font-body inline-flex h-7 cursor-pointer items-center justify-center gap-1.5 rounded-[2px] border px-3.5 font-medium transition-colors"
                                 >
+                                    <Pencil size={12} strokeWidth={2} className="shrink-0" />
                                     edit profile
                                 </Link>
                             </div>
+                        ) : (
+                            <div className="flex items-center gap-2">
+                                {currentStatus === "accepted" ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => setConfirmUnfriendOpen(true)}
+                                        disabled={pending}
+                                        aria-label={`Unfriend ${profile.displayName}`}
+                                        className="border-line group text-12 font-body inline-flex h-7 min-w-[96px] cursor-pointer items-center justify-center rounded-[2px] border px-3.5 text-center font-medium transition-colors hover:border-red-500/60 hover:bg-red-500/10 disabled:cursor-default disabled:opacity-60"
+                                    >
+                                        <span className="text-muted-foreground inline-flex items-center justify-center gap-1.5 leading-none group-hover:hidden">
+                                            <Check size={12} strokeWidth={2} className="shrink-0" /> friends
+                                        </span>
+                                        <span className="hidden items-center justify-center leading-none font-medium text-red-500 group-hover:inline-flex">
+                                            unfriend
+                                        </span>
+                                    </button>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={handleFriendAction}
+                                        disabled={pending || currentStatus === "pending_sent"}
+                                        aria-label="Add friend"
+                                        className="border-line text-12 text-muted-foreground hover:text-foreground hover:border-foreground font-body disabled:hover:text-muted-foreground disabled:hover:border-line inline-flex h-7 cursor-pointer items-center justify-center rounded-[2px] border px-3.5 font-medium transition-colors disabled:cursor-default disabled:opacity-60"
+                                    >
+                                        {getFriendButtonLabel()}
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                        {actionError && (
+                            <p role="alert" className="text-12 mt-1.5 font-medium text-red-500">
+                                {actionError}
+                            </p>
                         )}
                     </div>
 
@@ -268,7 +404,7 @@ export default function ProfileHero({ profile, stats, isOwner = true }: Props) {
                                     </div>
                                 </div>
 
-                                {/* Stat 3: friend made */}
+                                {/* Stat 3: friends made */}
                                 <div className="px-3">
                                     <div className="font-display text-24 sm:text-30 text-foreground flex items-center gap-1.5 font-bold">
                                         {stats.friends}
@@ -277,7 +413,7 @@ export default function ProfileHero({ profile, stats, isOwner = true }: Props) {
                                         </span>
                                     </div>
                                     <div className="text-10 text-muted-foreground mt-1 leading-tight font-medium">
-                                        friend
+                                        friends
                                         <br />
                                         made
                                     </div>
@@ -317,6 +453,39 @@ export default function ProfileHero({ profile, stats, isOwner = true }: Props) {
                     )}
                 </div>
             </div>
+            {confirmUnfriendOpen && (
+                <ConfirmDialog
+                    title={`Unfriend ${profile.displayName}?`}
+                    description={`Are you sure you want to remove @${profile.username} from your friends? You will no longer see each other's friends-only boards.`}
+                    confirmLabel="Unfriend"
+                    error={actionError}
+                    loading={pending}
+                    onCancel={() => {
+                        setConfirmUnfriendOpen(false);
+                        setActionError(null);
+                    }}
+                    onConfirm={async () => {
+                        setPending(true);
+                        setActionError(null);
+                        onActionErrorChange?.(null);
+                        try {
+                            await removeFriendByHandle(profile.username);
+                            setActionStatus("none");
+                            onFriendshipStatusChange?.("none");
+                            setConfirmUnfriendOpen(false);
+                        } catch (caught) {
+                            const errMsg =
+                                caught instanceof Error
+                                    ? caught.message
+                                    : `Failed to remove @${profile.username} from friends.`;
+                            setActionError(errMsg);
+                            onActionErrorChange?.(errMsg);
+                        } finally {
+                            setPending(false);
+                        }
+                    }}
+                />
+            )}
         </section>
     );
 }

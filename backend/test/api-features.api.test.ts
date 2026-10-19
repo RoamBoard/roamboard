@@ -249,7 +249,16 @@ test("profile reads and writes use the session owner and reject forged identity"
             return 0;
         },
         async stats() {
-            return { boardsCreated: 0 };
+            return {
+                countriesVisited: 0,
+                citiesExplored: 0,
+                continentsCovered: 0,
+                photosUploaded: 0,
+                boardsCreated: 0,
+                friends: 0,
+                activitiesSaved: 0,
+                boardsSaved: 0
+            };
         },
         async listSavedBoards() {
             return { items: [], hasMore: false };
@@ -259,6 +268,39 @@ test("profile reads and writes use the session owner and reject forged identity"
         },
         async unsaveBoard() {
             return;
+        },
+        async getFriendship() {
+            return null;
+        },
+        async sendFriendRequest() {
+            return 1;
+        },
+        async listIncomingFriendRequests() {
+            return [];
+        },
+        async acceptFriendRequest() {
+            return true;
+        },
+        async rejectFriendRequest() {
+            return true;
+        },
+        async listFriends() {
+            return [];
+        },
+        async searchUsers() {
+            return [];
+        },
+        async listFriendsBoards() {
+            return [];
+        },
+        async listFriendsActivity() {
+            return [];
+        },
+        async removeFriend() {
+            return true;
+        },
+        async removeFriendByHandle() {
+            return true;
         }
     };
     const app = createApp({
@@ -289,6 +331,9 @@ test("profile reads and writes use the session owner and reject forged identity"
     assert.equal(publicProfile.body.data.isOwner, false);
     assert.equal("revision" in publicProfile.body.data.profile, false);
     assert.equal("defaultBoardVisibility" in publicProfile.body.data.profile, false);
+    assert.equal(typeof publicProfile.body.data.stats.friends, "number");
+    assert.equal(typeof publicProfile.body.data.stats.activitiesSaved, "number");
+    assert.equal(typeof publicProfile.body.data.stats.boardsSaved, "number");
     assert.equal(
         (await request(app).get("/api/v1/users/by-handle/owner").set("Cookie", cookie)).body.data.isOwner,
         true
@@ -411,4 +456,300 @@ test("search and suggestions only return current public database documents", asy
     assert.deepEqual((await request(app).get("/api/v1/search/suggestions?q=tok")).body.data, ["Tokyo today"]);
     assert.deepEqual(publicIds, [["7"], ["7"]]);
     assert.equal((await request(app).get("/api/v1/search?q=tokyo&limit=100")).status, 400);
+});
+
+test("friendship lifecycle handles requests, public profile status, accept, reject and conflict safety", async () => {
+    const requests: Array<{
+        friendshipId: number;
+        status: "pending" | "accepted";
+        requesterUserId: string;
+        recipientUserId: string;
+    }> = [];
+    const users: UsersRepository = {
+        async read(id) {
+            return {
+                id,
+                username: id,
+                displayName: id.toUpperCase(),
+                description: "",
+                location: null,
+                occupation: null,
+                languages: [],
+                interests: [],
+                profilePicture: null,
+                defaultBoardVisibility: "public",
+                revision: 1,
+                createdAt: "2026-10-18T00:00:00Z",
+                updatedAt: "2026-10-18T00:00:00Z"
+            };
+        },
+        async findIdByHandle(handle) {
+            if (handle === "owner" || handle === "alice" || handle === "bob") return handle;
+            return null;
+        },
+        async update() {},
+        async setPicture() {},
+        async listBoards() {
+            return [];
+        },
+        async countPublicPhotos() {
+            return 0;
+        },
+        async stats() {
+            return { friends: requests.filter((r) => r.status === "accepted").length };
+        },
+        async listSavedBoards() {
+            return { items: [], hasMore: false };
+        },
+        async saveBoard() {
+            return true;
+        },
+        async unsaveBoard() {},
+        async getFriendship(u1, u2) {
+            const found = requests.find(
+                (r) =>
+                    (r.requesterUserId === u1 && r.recipientUserId === u2) ||
+                    (r.requesterUserId === u2 && r.recipientUserId === u1)
+            );
+            return found ? { ...found } : null;
+        },
+        async sendFriendRequest(requesterId, recipientId) {
+            const nextId = requests.length + 1;
+            requests.push({
+                friendshipId: nextId,
+                status: "pending",
+                requesterUserId: requesterId,
+                recipientUserId: recipientId
+            });
+            return nextId;
+        },
+        async listIncomingFriendRequests(userId) {
+            return requests
+                .filter((r) => r.recipientUserId === userId && r.status === "pending")
+                .map((r) => ({
+                    requestId: r.friendshipId,
+                    requester: {
+                        userId: r.requesterUserId,
+                        username: r.requesterUserId,
+                        displayName: r.requesterUserId.toUpperCase(),
+                        profilePictureUrl: null
+                    }
+                }));
+        },
+        async acceptFriendRequest(recipientId, requestId) {
+            const found = requests.find((r) => r.friendshipId === requestId && r.recipientUserId === recipientId);
+            if (!found) return false;
+            found.status = "accepted";
+            return true;
+        },
+        async rejectFriendRequest(userId, requestId) {
+            const idx = requests.findIndex(
+                (r) => r.friendshipId === requestId && (r.recipientUserId === userId || r.requesterUserId === userId)
+            );
+            if (idx === -1) return false;
+            requests.splice(idx, 1);
+            return true;
+        },
+        async listFriends(userId) {
+            const friendIds = requests
+                .filter(
+                    (r) => r.status === "accepted" && (r.requesterUserId === userId || r.recipientUserId === userId)
+                )
+                .map((r) => (r.requesterUserId === userId ? r.recipientUserId : r.requesterUserId));
+            return friendIds.map((id) => ({
+                userId: id,
+                username: id,
+                displayName: id.toUpperCase(),
+                profilePictureUrl: null,
+                bio: null,
+                location: null
+            }));
+        },
+        async searchUsers(_userId, query) {
+            const clean = query.replace(/^@+/, "").trim();
+            if (clean && clean !== "alice") return [];
+            return [
+                {
+                    userId: "alice",
+                    username: "alice",
+                    displayName: "ALICE",
+                    profilePictureUrl: null,
+                    bio: null,
+                    location: null,
+                    friendshipStatus: "accepted",
+                    requestId: 1
+                }
+            ];
+        },
+        async listFriendsBoards() {
+            return [];
+        },
+        async listFriendsActivity() {
+            return [];
+        },
+        async removeFriend(userId, targetUserId) {
+            const idx = requests.findIndex(
+                (r) =>
+                    r.status === "accepted" &&
+                    ((r.requesterUserId === userId && r.recipientUserId === targetUserId) ||
+                        (r.requesterUserId === targetUserId && r.recipientUserId === userId))
+            );
+            if (idx === -1) return false;
+            requests.splice(idx, 1);
+            return true;
+        },
+        async removeFriendByHandle(userId, handle) {
+            return this.removeFriend(userId, handle.replace(/^@+/, "").toLowerCase());
+        }
+    };
+
+    const app = createApp({ repository, usersRepository: users });
+
+    // 1. Unauthenticated or wrong origin rejected
+    assert.equal((await request(app).post("/api/v1/users/by-handle/alice/friend-request")).status, 401);
+    assert.equal(
+        (
+            await request(app)
+                .post("/api/v1/users/by-handle/alice/friend-request")
+                .set("Cookie", cookie)
+                .set("Origin", "https://malicious.site")
+        ).status,
+        403
+    );
+
+    // 2. Cannot friend self
+    assert.equal(
+        (
+            await request(app)
+                .post("/api/v1/users/by-handle/owner/friend-request")
+                .set("Cookie", cookie)
+                .set("Origin", origin)
+        ).status,
+        400
+    );
+
+    // 3. Unknown user
+    assert.equal(
+        (
+            await request(app)
+                .post("/api/v1/users/by-handle/nonexistent/friend-request")
+                .set("Cookie", cookie)
+                .set("Origin", origin)
+        ).status,
+        404
+    );
+
+    // 4. Initial status on public profile is "none"
+    const initialAliceProfile = await request(app).get("/api/v1/users/by-handle/alice").set("Cookie", cookie);
+    assert.equal(initialAliceProfile.body.data.friendshipStatus, "none");
+
+    // 5. Send friend request to Alice
+    const sendRes = await request(app)
+        .post("/api/v1/users/by-handle/alice/friend-request")
+        .set("Cookie", cookie)
+        .set("Origin", origin);
+    assert.equal(sendRes.status, 201);
+    assert.deepEqual(sendRes.body.data, { requestId: 1, status: "pending_sent" });
+
+    // 6. Profile now shows "pending_sent"
+    const pendingAliceProfile = await request(app).get("/api/v1/users/by-handle/alice").set("Cookie", cookie);
+    assert.equal(pendingAliceProfile.body.data.friendshipStatus, "pending_sent");
+
+    // 7. Duplicate send rejected with 409
+    const dupRes = await request(app)
+        .post("/api/v1/users/by-handle/alice/friend-request")
+        .set("Cookie", cookie)
+        .set("Origin", origin);
+    assert.equal(dupRes.status, 409);
+
+    // 8. Bob sends friend request to owner
+    requests.push({
+        friendshipId: 2,
+        status: "pending",
+        requesterUserId: "bob",
+        recipientUserId: "owner"
+    });
+
+    // 9. Profile of bob shows "pending_received"
+    const bobProfile = await request(app).get("/api/v1/users/by-handle/bob").set("Cookie", cookie);
+    assert.equal(bobProfile.body.data.friendshipStatus, "pending_received");
+
+    // 10. List incoming friend requests for owner
+    const incomingRes = await request(app).get("/api/v1/users/me/friend-requests").set("Cookie", cookie);
+    assert.equal(incomingRes.status, 200);
+    assert.equal(incomingRes.body.data.length, 1);
+    assert.equal(incomingRes.body.data[0].requestId, 2);
+    assert.equal(incomingRes.body.data[0].requester.username, "bob");
+
+    // 11. Reject Bob's friend request
+    const rejectRes = await request(app)
+        .delete("/api/v1/users/me/friend-requests/2")
+        .set("Cookie", cookie)
+        .set("Origin", origin);
+    assert.equal(rejectRes.status, 204);
+
+    // 12. Incoming requests is now empty
+    const emptyIncoming = await request(app).get("/api/v1/users/me/friend-requests").set("Cookie", cookie);
+    assert.equal(emptyIncoming.body.data.length, 0);
+
+    // 13. Alice accepts owner's request (simulated)
+    assert.ok(requests[0]);
+    requests[0].status = "accepted";
+    const acceptedAliceProfile = await request(app).get("/api/v1/users/by-handle/alice").set("Cookie", cookie);
+    assert.equal(acceptedAliceProfile.body.data.friendshipStatus, "accepted");
+
+    // 14. List accepted friends
+    const friendsRes = await request(app).get("/api/v1/users/me/friends").set("Cookie", cookie);
+    assert.equal(friendsRes.status, 200);
+    assert.equal(friendsRes.body.data.length, 1);
+    assert.equal(friendsRes.body.data[0].userId, "alice");
+
+    // 15. Search users (by handle, with @ prefix, and empty query for suggestions)
+    const searchRes = await request(app).get("/api/v1/users/search?q=alice").set("Cookie", cookie);
+    assert.equal(searchRes.status, 200);
+    assert.equal(searchRes.body.data.length, 1);
+    assert.equal(searchRes.body.data[0].username, "alice");
+    assert.equal(searchRes.body.data[0].friendshipStatus, "accepted");
+
+    const searchAtRes = await request(app).get("/api/v1/users/search?q=@alice").set("Cookie", cookie);
+    assert.equal(searchAtRes.status, 200);
+    assert.equal(searchAtRes.body.data.length, 1);
+
+    const searchEmptyRes = await request(app).get("/api/v1/users/search").set("Cookie", cookie);
+    assert.equal(searchEmptyRes.status, 200);
+    assert.equal(searchEmptyRes.body.data.length, 1);
+
+    // 16. Friends boards and activity
+    const boardsRes = await request(app).get("/api/v1/users/me/friends/boards").set("Cookie", cookie);
+    assert.equal(boardsRes.status, 200);
+    assert.deepEqual(boardsRes.body.data, []);
+
+    const activityRes = await request(app).get("/api/v1/users/me/friends/activity").set("Cookie", cookie);
+    assert.equal(activityRes.status, 200);
+    assert.deepEqual(activityRes.body.data, []);
+
+    // 17. Unfriend Alice
+    const unfriendRes = await request(app)
+        .delete("/api/v1/users/me/friends/alice")
+        .set("Cookie", cookie)
+        .set("Origin", origin);
+    assert.equal(unfriendRes.status, 204);
+
+    const friendsAfter = await request(app).get("/api/v1/users/me/friends").set("Cookie", cookie);
+    assert.equal(friendsAfter.body.data.length, 0);
+
+    const unfriendAliceProfile = await request(app).get("/api/v1/users/by-handle/alice").set("Cookie", cookie);
+    assert.equal(unfriendAliceProfile.body.data.friendshipStatus, "none");
+
+    // 18. Unfriending non-friend returns 404
+    assert.equal(
+        (await request(app).delete("/api/v1/users/me/friends/alice").set("Cookie", cookie).set("Origin", origin))
+            .status,
+        404
+    );
+    assert.equal(
+        (await request(app).delete("/api/v1/users/by-handle/alice/friend").set("Cookie", cookie).set("Origin", origin))
+            .status,
+        404
+    );
 });

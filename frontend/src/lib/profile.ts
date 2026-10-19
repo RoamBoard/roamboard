@@ -29,13 +29,23 @@ export type PublicProfile = Pick<
     | "profilePicture"
 >;
 
+export type FriendshipStatus = "none" | "pending_sent" | "pending_received" | "accepted";
+
+export type FriendRequest = {
+    requestId: number;
+    requester: {
+        userId: string;
+        username: string;
+        displayName: string;
+        profilePictureUrl: string | null;
+    };
+};
+
 export type PublicProfileView = {
     profile: PublicProfile;
     isOwner: boolean;
-    stats: Pick<
-        ProfileStats,
-        "countriesVisited" | "citiesExplored" | "continentsCovered" | "photosUploaded" | "boardsCreated"
-    >;
+    friendshipStatus?: FriendshipStatus;
+    stats: ProfileStats;
     boards: PublishedBoardSummary[];
     destinations: MapDestination[];
 };
@@ -306,4 +316,165 @@ function resolveProfilePicture<T extends { profilePicture: UserProfile["profileP
             url: new URL(profile.profilePicture.url, apiOrigin).toString()
         }
     };
+}
+
+export function sendFriendRequest(handle: string) {
+    return apiRequest<{ requestId: number; status: FriendshipStatus }>(
+        `/api/v1/users/by-handle/${encodeURIComponent(handle)}/friend-request`,
+        { method: "POST" }
+    );
+}
+
+export function loadFriendRequests() {
+    return apiRequest<FriendRequest[]>("/api/v1/users/me/friend-requests").then((requests) =>
+        requests.map((req) => ({
+            ...req,
+            requester: {
+                ...req.requester,
+                profilePictureUrl: req.requester.profilePictureUrl
+                    ? new URL(req.requester.profilePictureUrl, apiOrigin).toString()
+                    : null
+            }
+        }))
+    );
+}
+
+export type FriendRequestEvent = {
+    type: "accept" | "reject";
+    requestId: number;
+};
+
+const friendRequestListeners = new Set<(event: FriendRequestEvent) => void>();
+
+export function subscribeToFriendRequestUpdates(listener: (event: FriendRequestEvent) => void): () => void {
+    friendRequestListeners.add(listener);
+    return () => {
+        friendRequestListeners.delete(listener);
+    };
+}
+
+export function notifyFriendRequestAction(event: FriendRequestEvent): void {
+    friendRequestListeners.forEach((listener) => {
+        try {
+            listener(event);
+        } catch {
+            // noop
+        }
+    });
+}
+
+export async function acceptFriendRequest(requestId: number) {
+    const result = await apiRequest<{ requestId: number; status: "accepted" }>(
+        `/api/v1/users/me/friend-requests/${requestId}/accept`,
+        { method: "PUT" }
+    );
+    notifyFriendRequestAction({ type: "accept", requestId });
+    return result;
+}
+
+export async function rejectFriendRequest(requestId: number) {
+    await apiRequest<void>(`/api/v1/users/me/friend-requests/${requestId}`, { method: "DELETE" });
+    notifyFriendRequestAction({ type: "reject", requestId });
+}
+
+export function removeFriend(targetUserId: string) {
+    return apiRequest<void>(`/api/v1/users/me/friends/${encodeURIComponent(targetUserId)}`, { method: "DELETE" });
+}
+
+export function removeFriendByHandle(handle: string) {
+    return apiRequest<void>(`/api/v1/users/by-handle/${encodeURIComponent(handle)}/friend`, { method: "DELETE" });
+}
+
+export type FriendUser = {
+    userId: string;
+    username: string;
+    displayName: string;
+    profilePictureUrl: string | null;
+    bio: string | null;
+    location: string | null;
+};
+
+export type UserSearchResult = FriendUser & {
+    friendshipStatus: "none" | "pending_sent" | "pending_received" | "accepted";
+    requestId?: number;
+};
+
+export type FriendBoardSummary = {
+    boardId: number;
+    title: string;
+    description: string | null;
+    owner: {
+        userId: string;
+        username: string;
+        displayName: string;
+        profilePictureUrl: string | null;
+    };
+    coverImageUrl: string | null;
+    createdAt: string;
+};
+
+export type FriendActivityItem = {
+    activityType: "published_board";
+    boardId: number;
+    title: string;
+    owner: {
+        userId: string;
+        username: string;
+        displayName: string;
+        profilePictureUrl: string | null;
+    };
+    coverImageUrl: string | null;
+    timestamp: string;
+};
+
+export function loadFriends() {
+    return apiRequest<FriendUser[]>("/api/v1/users/me/friends").then((friends) =>
+        friends.map((friend) => ({
+            ...friend,
+            profilePictureUrl: friend.profilePictureUrl ? new URL(friend.profilePictureUrl, apiOrigin).toString() : null
+        }))
+    );
+}
+
+export function searchUsers(query = "", limit = 20) {
+    const cleanQuery = query.replace(/^@+/, "").trim();
+    const endpoint = cleanQuery
+        ? `/api/v1/users/search?q=${encodeURIComponent(cleanQuery)}&limit=${limit}`
+        : `/api/v1/users/search?limit=${limit}`;
+    return apiRequest<UserSearchResult[]>(endpoint).then((users) =>
+        users.map((user) => ({
+            ...user,
+            profilePictureUrl: user.profilePictureUrl ? new URL(user.profilePictureUrl, apiOrigin).toString() : null
+        }))
+    );
+}
+
+export function loadFriendsBoards(limit = 20) {
+    return apiRequest<FriendBoardSummary[]>(`/api/v1/users/me/friends/boards?limit=${limit}`).then((boards) =>
+        boards.map((board) => ({
+            ...board,
+            coverImageUrl: board.coverImageUrl ? new URL(board.coverImageUrl, apiOrigin).toString() : null,
+            owner: {
+                ...board.owner,
+                profilePictureUrl: board.owner.profilePictureUrl
+                    ? new URL(board.owner.profilePictureUrl, apiOrigin).toString()
+                    : null
+            }
+        }))
+    );
+}
+
+export function loadFriendsActivity(limit = 20) {
+    return apiRequest<FriendActivityItem[]>(`/api/v1/users/me/friends/activity?limit=${limit}`).then((items) =>
+        items.map((item) => ({
+            ...item,
+            coverImageUrl: item.coverImageUrl ? new URL(item.coverImageUrl, apiOrigin).toString() : null,
+            owner: {
+                ...item.owner,
+                profilePictureUrl: item.owner.profilePictureUrl
+                    ? new URL(item.owner.profilePictureUrl, apiOrigin).toString()
+                    : null
+            }
+        }))
+    );
 }

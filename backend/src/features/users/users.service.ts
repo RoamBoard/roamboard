@@ -22,9 +22,10 @@ export function createUsersService(
         async publicProfile(handle: string, viewerId: string | null): Promise<PublicProfileView> {
             const userId = await repository.findIdByHandle(handle);
             if (!userId) throw new AppError(404, "Profile not found", "NOT_FOUND");
-            const [user, boards, photosUploaded] = await Promise.all([
+            const [user, boards, userStats, photosUploaded] = await Promise.all([
                 read(userId),
                 repository.listBoards(userId, false, true),
+                repository.stats(userId),
                 repository.countPublicPhotos(userId)
             ]);
             const destinations = boards
@@ -48,6 +49,21 @@ export function createUsersService(
                 const continent = continentForCountry(place.countryCode);
                 if (continent) continents.add(continent);
             }
+            let friendshipStatus: PublicProfileView["friendshipStatus"] = undefined;
+            if (viewerId && viewerId !== userId) {
+                const friendship = await repository.getFriendship(viewerId, userId);
+                if (!friendship) {
+                    friendshipStatus = "none";
+                } else if (friendship.status === "accepted") {
+                    friendshipStatus = "accepted";
+                } else if (friendship.requesterUserId === viewerId) {
+                    friendshipStatus = "pending_sent";
+                } else {
+                    friendshipStatus = "pending_received";
+                }
+            } else if (!viewerId) {
+                friendshipStatus = "none";
+            }
             return {
                 profile: {
                     username: user.username,
@@ -60,12 +76,20 @@ export function createUsersService(
                     profilePicture: user.profilePicture
                         ? {
                               ...user.profilePicture,
-                              url: `${user.profilePicture.url}&profileHandle=${encodeURIComponent(user.username)}`
+                              url: user.profilePicture.url.includes("profileHandle=")
+                                  ? user.profilePicture.url
+                                  : `${user.profilePicture.url}${
+                                        user.profilePicture.url.includes("?") ? "&" : "?"
+                                    }profileHandle=${encodeURIComponent(user.username)}`
                           }
                         : null
                 },
                 isOwner: viewerId === userId,
+                friendshipStatus,
                 stats: {
+                    friends: userStats.friends ?? 0,
+                    activitiesSaved: userStats.activitiesSaved ?? 0,
+                    boardsSaved: userStats.boardsSaved ?? 0,
                     countriesVisited: countries.size,
                     citiesExplored: cities.size,
                     continentsCovered: continents.size,
@@ -131,6 +155,64 @@ export function createUsersService(
                 throw new AppError(403, "You cannot save your own Board", "CANNOT_SAVE_OWN_BOARD");
             return repository.saveBoard(userId, boardId);
         },
-        unsaveBoard: (userId: string, boardId: number) => repository.unsaveBoard(userId, boardId)
+        unsaveBoard: (userId: string, boardId: number) => repository.unsaveBoard(userId, boardId),
+        async sendFriendRequest(requesterId: string, handle: string) {
+            const recipientId = await repository.findIdByHandle(handle);
+            if (!recipientId) throw new AppError(404, "User not found", "NOT_FOUND");
+            if (requesterId === recipientId)
+                throw new AppError(400, "Cannot add yourself as a friend", "INVALID_REQUEST");
+            const existing = await repository.getFriendship(requesterId, recipientId);
+            if (existing) {
+                if (existing.status === "accepted") throw new AppError(409, "Already friends", "ALREADY_FRIENDS");
+                if (existing.requesterUserId === requesterId)
+                    throw new AppError(409, "Friend request already sent", "REQUEST_ALREADY_SENT");
+                const accepted = await repository.acceptFriendRequest(requesterId, existing.friendshipId);
+                if (!accepted) throw new AppError(404, "Friend request not found", "NOT_FOUND");
+                return { requestId: existing.friendshipId, status: "accepted" as const };
+            }
+            try {
+                const requestId = await repository.sendFriendRequest(requesterId, recipientId);
+                return { requestId, status: "pending_sent" as const };
+            } catch (error: unknown) {
+                const pgError = error as { code?: string; message?: string };
+                if (pgError.code === "23505" || pgError.message?.includes("uq_friendship_pair")) {
+                    const winning = await repository.getFriendship(requesterId, recipientId);
+                    if (winning) {
+                        if (winning.status === "accepted") {
+                            return { requestId: winning.friendshipId, status: "accepted" as const };
+                        }
+                        if (winning.requesterUserId === recipientId) {
+                            const accepted = await repository.acceptFriendRequest(requesterId, winning.friendshipId);
+                            if (!accepted) throw new AppError(404, "Friend request not found", "NOT_FOUND");
+                            return { requestId: winning.friendshipId, status: "accepted" as const };
+                        }
+                        return { requestId: winning.friendshipId, status: "pending_sent" as const };
+                    }
+                }
+                throw error;
+            }
+        },
+        listFriendRequests: (userId: string) => repository.listIncomingFriendRequests(userId),
+        async acceptFriendRequest(userId: string, requestId: number) {
+            const updated = await repository.acceptFriendRequest(userId, requestId);
+            if (!updated) throw new AppError(404, "Friend request not found", "NOT_FOUND");
+            return { requestId, status: "accepted" as const };
+        },
+        async rejectFriendRequest(userId: string, requestId: number) {
+            const deleted = await repository.rejectFriendRequest(userId, requestId);
+            if (!deleted) throw new AppError(404, "Friend request not found", "NOT_FOUND");
+        },
+        listFriends: (userId: string) => repository.listFriends(userId),
+        searchUsers: (userId: string, query: string, limit: number) => repository.searchUsers(userId, query, limit),
+        listFriendsBoards: (userId: string, limit: number) => repository.listFriendsBoards(userId, limit),
+        listFriendsActivity: (userId: string, limit: number) => repository.listFriendsActivity(userId, limit),
+        async removeFriend(userId: string, targetUserId: string) {
+            const deleted = await repository.removeFriend(userId, targetUserId);
+            if (!deleted) throw new AppError(404, "Friendship not found", "NOT_FOUND");
+        },
+        async removeFriendByHandle(userId: string, handle: string) {
+            const deleted = await repository.removeFriendByHandle(userId, handle);
+            if (!deleted) throw new AppError(404, "Friendship not found", "NOT_FOUND");
+        }
     };
 }

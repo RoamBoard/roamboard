@@ -24,6 +24,7 @@ interface BoardRow {
     cover_image_id: number | null;
     primary_location_id: number | null;
     primary_location_kind: "city" | "region" | "country" | null;
+    published_at: Date | null;
     created_at: Date;
     updated_at: Date;
 }
@@ -657,8 +658,8 @@ export function createBoardsRepository(): BoardRepository {
                 let savedId = boardId;
                 if (savedId === null) {
                     const result = await client.query<{ board_id: number }>(
-                        `INSERT INTO board (owner_user_id, title, description, visibility, status, is_completed)
-                         VALUES ($1, $2, $3, $4, $5, $6) RETURNING board_id`,
+                        `INSERT INTO board (owner_user_id, title, description, visibility, status, is_completed, published_at)
+                         VALUES ($1, $2, $3, $4, $5, $6, CASE WHEN $5 = 'published' THEN NOW() ELSE NULL END) RETURNING board_id`,
                         [
                             userId,
                             input.title,
@@ -701,7 +702,8 @@ export function createBoardsRepository(): BoardRepository {
                     }
                     await client.query(
                         `UPDATE board SET title=$1, description=$2, visibility=$3, status=$4,
-                         revision=revision+1, updated_at=NOW(), cover_image_id=NULL, is_completed=COALESCE($6, is_completed) WHERE board_id=$5`,
+                         revision=revision+1, updated_at=NOW(), cover_image_id=NULL, is_completed=COALESCE($6, is_completed),
+                         published_at=CASE WHEN $4 = 'published' AND published_at IS NULL THEN NOW() ELSE published_at END WHERE board_id=$5`,
                         [
                             input.title,
                             input.description,

@@ -41,7 +41,8 @@ test(
                 "007_profile_tag_catalog.sql",
                 "008_board_destination.sql",
                 "009_image_presentation.sql",
-                "010_guest_accounts.sql"
+                "010_guest_accounts.sql",
+                "011_board_published_at.sql"
             ]) {
                 await pool.query(await readFile(new URL(`../db/migrations/${name}`, import.meta.url), "utf8"));
             }

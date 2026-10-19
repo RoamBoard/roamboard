@@ -45,6 +45,8 @@ try {
     report(true, "Board destination migration 008 exists.");
     await getPool().query("SELECT presentation_edit,presentation_revision FROM uploaded_image LIMIT 0");
     report(true, "Photo presentation migration 009 exists.");
+    await getPool().query("SELECT published_at FROM board LIMIT 0");
+    report(true, "Board published_at migration 011 exists.");
     const quotaKey = await getPool().query<{ compact: boolean }>(
         `SELECT EXISTS (
             SELECT 1 FROM pg_constraint

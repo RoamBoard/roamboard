@@ -7,7 +7,11 @@ import {
     profileChangesSchema,
     publicProfileParamsSchema,
     savedBoardsQuerySchema,
-    mapQuerySchema
+    mapQuerySchema,
+    friendRequestIdParamsSchema,
+    userSearchQuerySchema,
+    friendsQuerySchema,
+    targetUserParamsSchema
 } from "./users.schemas.js";
 import { createUsersController } from "./users.controller.js";
 import { boardIdParamsSchema } from "../boards/boards.schemas.js";
@@ -19,7 +23,24 @@ export function createUsersRouter(
 ): Router {
     const router = Router();
     router.get("/by-handle/:handle", validateParams(publicProfileParamsSchema), attachUser, controller.publicRead);
+    router.post(
+        "/by-handle/:handle/friend-request",
+        validateParams(publicProfileParamsSchema),
+        attachUser,
+        requireSessionUser,
+        requireFrontendOrigin,
+        controller.sendFriendRequest
+    );
+    router.delete(
+        "/by-handle/:handle/friend",
+        validateParams(publicProfileParamsSchema),
+        attachUser,
+        requireSessionUser,
+        requireFrontendOrigin,
+        controller.removeFriendByHandle
+    );
     router.use(attachUser, requireSessionUser);
+    router.get("/search", validateQuery(userSearchQuerySchema), controller.search);
     router.get("/me", controller.read);
     router.patch("/me", requireFrontendOrigin, validateBody(profileChangesSchema), controller.update);
     router.put("/me/profile-picture", requireFrontendOrigin, validateBody(pictureSchema), controller.setPicture);
@@ -29,6 +50,28 @@ export function createUsersRouter(
     router.get("/me/stats", controller.stats);
     router.get("/me/map-destinations", validateQuery(mapQuerySchema), controller.destinations);
     router.get("/me/saved-boards", validateQuery(savedBoardsQuerySchema), controller.savedBoards);
+    router.get("/me/friends", controller.friends);
+    router.delete(
+        "/me/friends/:targetUserId",
+        requireFrontendOrigin,
+        validateParams(targetUserParamsSchema),
+        controller.removeFriend
+    );
+    router.get("/me/friends/boards", validateQuery(friendsQuerySchema), controller.friendsBoards);
+    router.get("/me/friends/activity", validateQuery(friendsQuerySchema), controller.friendsActivity);
+    router.get("/me/friend-requests", controller.listFriendRequests);
+    router.put(
+        "/me/friend-requests/:requestId/accept",
+        requireFrontendOrigin,
+        validateParams(friendRequestIdParamsSchema),
+        controller.acceptFriendRequest
+    );
+    router.delete(
+        "/me/friend-requests/:requestId",
+        requireFrontendOrigin,
+        validateParams(friendRequestIdParamsSchema),
+        controller.rejectFriendRequest
+    );
     return router;
 }
 
