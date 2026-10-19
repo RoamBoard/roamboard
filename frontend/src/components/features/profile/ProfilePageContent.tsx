@@ -22,6 +22,7 @@ import TravelMapSection from "./TravelMapSection";
 import VisitedWorldMap from "./VisitedWorldMap";
 import FindFriendsDialog from "@/components/features/social/FindFriendsDialog";
 
+import { BoardLibraryCarousel, BoardLibrarySlide } from "@/components/features/boards/BoardLibrary";
 import AccountPhotoBoardCard from "@/components/features/boards/cards/AccountPhotoBoardCard";
 import SavedBoardGrid from "@/components/features/boards/SavedBoardGrid";
 import { createSavedBoardsStore } from "@/lib/saved-boards-store";
@@ -43,6 +44,34 @@ export function LiveBoardCard({
             ownership={ownership}
             href={`/boards/${board.boardId}`}
         />
+    );
+}
+
+export function LiveBoardLibrary({
+    boards,
+    author,
+    ownership,
+    publicView = false
+}: {
+    boards: PublishedBoardSummary[];
+    author: string;
+    ownership: PhotoBoardCardProps["ownership"];
+    publicView?: boolean;
+}) {
+    if (!boards.length) return null;
+    return (
+        <BoardLibraryCarousel
+            id="profile-published-library"
+            title={publicView ? "Profile Boards" : "My Boards"}
+            count={boards.length}
+            variant="profile"
+        >
+            {boards.map((board, index) => (
+                <BoardLibrarySlide key={board.boardId} title={board.title} index={index} count={boards.length}>
+                    <LiveBoardCard board={{ ...board, author }} ownership={ownership} publicView={publicView} />
+                </BoardLibrarySlide>
+            ))}
+        </BoardLibraryCarousel>
     );
 }
 
@@ -278,8 +307,8 @@ export default function ProfilePageContent({
                         )}
                     </section>
                     <section aria-label="Currently inspired by" className="border-line mt-12 border-t pt-8">
-                        <div className="flex items-end justify-between">
-                            <div>
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="min-w-0">
                                 <h3 className="font-display text-20 sm:text-22 text-foreground font-bold">
                                     currently inspired by
                                 </h3>
@@ -289,7 +318,7 @@ export default function ProfilePageContent({
                             </div>
                             <Link
                                 href="/boards"
-                                className="text-12 text-muted-foreground hover:text-foreground hover:underline"
+                                className="text-12 text-muted-foreground hover:text-foreground inline-flex min-h-11 shrink-0 items-center whitespace-nowrap hover:underline"
                             >
                                 view all →
                             </Link>
@@ -320,6 +349,7 @@ export default function ProfilePageContent({
                             </p>
                         )}
                         <SavedBoardGrid
+                            presentation="library"
                             boards={saved.items}
                             onUnsave={(boardId) => {
                                 savedStore.removeConfirmed(boardId);
@@ -335,8 +365,8 @@ export default function ProfilePageContent({
                         )}
                     </section>
                     <section aria-label="My boards" className="border-line mt-12 border-t pt-8">
-                        <div className="flex items-end justify-between">
-                            <div>
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="min-w-0">
                                 <h3 className="font-display text-20 sm:text-22 text-foreground font-bold">my boards</h3>
                                 <p className="text-12 text-muted-foreground mt-0.5 font-medium">
                                     turns out daydreams of new trips looks better as Roamboards
@@ -344,20 +374,12 @@ export default function ProfilePageContent({
                             </div>
                             <Link
                                 href="/boards/mine"
-                                className="text-12 text-muted-foreground hover:text-foreground hover:underline"
+                                className="text-12 text-muted-foreground hover:text-foreground inline-flex min-h-11 shrink-0 items-center whitespace-nowrap hover:underline"
                             >
                                 view all →
                             </Link>
                         </div>
-                        <div className="mt-8 grid grid-cols-1 items-start gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
-                            {published.map((board) => (
-                                <LiveBoardCard
-                                    key={board.boardId}
-                                    board={{ ...board, author: profile.username }}
-                                    ownership="owner"
-                                />
-                            ))}
-                        </div>
+                        <LiveBoardLibrary boards={published} author={profile.username} ownership="owner" />
                         {published.length === 0 && !sectionErrors.some((message) => message.startsWith("My")) && (
                             <p className="text-muted-foreground mt-6 text-sm">No published boards yet.</p>
                         )}

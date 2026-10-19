@@ -456,6 +456,15 @@ model to the shared collage layout.
 or fitted to the available width. Its bookmarks only change local gallery state. Reusable cards accept an optional
 navigation URL and controlled bookmark callback; they perform no backend requests or persistence.
 
+### Board Library reuse (Issue #90)
+
+`BoardLibraryCarousel` and `BoardLibrarySlide` expose the existing horizontal browsing behavior to account-aware
+profile cards and tag-linked Vibe samples. Profile previews keep their existing limits and View All. Saved profile
+cards opt into `SavedBoardGrid`'s library presentation; confirmed removal still refreshes page one and transfers
+focus to another card or the persistent empty list. Other saved grids, map highlighting, V3 Featured and RoamFlow
+remain unchanged. Discover Collections stays unavailable until its live source is connected. See
+[the focused Issue #90 handoff](../docs/ISSUE_90_GALLERY_REFINEMENTS.md).
+
 ### Shared V4 enhancement (Stage 2)
 
 `PhotoBoardCard` / `photo` retains the original 4:5 photographic cover by default. Opt-in `details` reveals supplied
