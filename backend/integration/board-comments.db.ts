@@ -36,7 +36,7 @@ test(
                     "002_auth_session.sql",
                     "003_board_creator.sql",
                     "011_board_published_at.sql",
-                    "012_friendship_accepted_at.sql",
+                    "015_friendship_accepted_at.sql",
                     "013_board_comments.sql",
                     "014_board_comment_notifications.sql"
                 ])
