@@ -83,8 +83,7 @@ export default function PublishedBoardList() {
 
     return (
         <article className="text-foreground mx-auto min-h-[70dvh] w-full max-w-6xl px-5 py-16 sm:px-10">
-            <p className="text-10 tracking-label text-stone font-bold uppercase">Your journeys</p>
-            <h1 className="font-display text-48 sm:text-72 mt-3 leading-none font-bold">MY BOARDS</h1>
+            <h1 className="font-display text-48 sm:text-72 leading-none font-bold">MY BOARDS</h1>
             <p className="text-14 text-graphite mt-4">Your published Boards, newest first.</p>
             {error ? (
                 <p className="text-14 mt-8" role="alert">

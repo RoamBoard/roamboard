@@ -273,9 +273,6 @@ export default function FindFriendsDialog({
             >
                 <div className="border-line flex items-center justify-between border-b px-5 py-4">
                     <div>
-                        <span className="text-10 tracking-label text-muted-foreground block font-bold uppercase">
-                            COMMUNITY
-                        </span>
                         <h2 className="font-display text-20 text-foreground font-bold">Find Travelers</h2>
                     </div>
                     <button
