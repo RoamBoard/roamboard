@@ -84,6 +84,7 @@ export default function FindFriendsDialog({
         onResultsChange?.(initialResults ?? []);
         setError(null);
         onErrorChange?.(null);
+        setLoading(false);
         setSearchRetry(0);
         setUnfriendError(null);
         onUnfriendErrorChange?.(null);
@@ -403,7 +404,7 @@ export default function FindFriendsDialog({
                                                 <div className="min-w-0 flex-1">
                                                     <Link
                                                         href={`/profile/${encodeURIComponent(user.username)}`}
-                                                        onClick={onClose}
+                                                        onClick={handleClose}
                                                         className="text-12 text-foreground block truncate font-medium hover:underline"
                                                     >
                                                         {user.displayName}
@@ -466,7 +467,7 @@ export default function FindFriendsDialog({
                 <div className="border-line flex justify-end border-t px-5 py-3">
                     <button
                         type="button"
-                        onClick={onClose}
+                        onClick={handleClose}
                         className="border-line text-12 text-muted-foreground hover:text-foreground font-body cursor-pointer rounded-[2px] border px-4 py-1.5 font-medium transition-colors"
                     >
                         Close

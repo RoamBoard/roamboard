@@ -911,6 +911,66 @@ test("FindFriendsDialog closing dialog cancels pending search and discards resul
     assert.equal(state.results.length, 0);
 });
 
+for (const closePath of ["footer", "profile link"] as const) {
+    test(`FindFriendsDialog ${closePath} clears search state and discards a pending result`, async (context) => {
+        const deferredSearch: { resolve: (value: Response) => void } = { resolve: () => {} };
+        context.mock.method(
+            globalThis,
+            "fetch",
+            () =>
+                new Promise<Response>((resolve) => {
+                    deferredSearch.resolve = resolve;
+                })
+        );
+
+        const initialResult: UserSearchResult = {
+            userId: "u-alice",
+            username: "alice",
+            displayName: "Alice",
+            profilePictureUrl: null,
+            bio: null,
+            location: null,
+            friendshipStatus: "none"
+        };
+        const state = { results: [initialResult], closes: 0 };
+        const { nodes } = capture(() =>
+            FindFriendsDialog({
+                open: true,
+                onClose: () => {
+                    state.closes += 1;
+                },
+                initialResults: [initialResult],
+                onResultsChange: (results) => {
+                    state.results = results;
+                }
+            })
+        );
+        const input = nodes.find((node) => node.type === "input");
+        assert.ok(input);
+        const search = (input.props.onKeyDown as (event: unknown) => Promise<void>)({
+            key: "Enter",
+            target: { value: "bob" },
+            preventDefault: () => {}
+        });
+
+        const closeControl = nodes.find((node) =>
+            closePath === "footer"
+                ? node.type === "button" && node.props.children === "Close"
+                : node.props.href === "/profile/alice"
+        );
+        assert.ok(closeControl);
+        closeControl.props.onClick?.();
+        assert.equal(state.closes, 1);
+        assert.deepEqual(state.results, [initialResult]);
+
+        deferredSearch.resolve(
+            Response.json({ data: [{ ...initialResult, userId: "u-bob", username: "bob", displayName: "Bob" }] })
+        );
+        await search;
+        assert.deepEqual(state.results, [initialResult]);
+    });
+}
+
 test("FindFriendsDialog preserves confirmed add friend status when search completes afterward with stale data", async (context) => {
     const deferredSend: { resolve: (val: Response) => void } = { resolve: () => {} };
     const sendPromise = new Promise<Response>((res) => {
