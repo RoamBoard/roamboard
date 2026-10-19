@@ -107,25 +107,21 @@ export default function VisitedWorldMap({
         [publishedCountries, savedCountries]
     );
     const destinationOptions = useMemo(
-        () => [
-            ...countryCodes.map((code) => ({
-                value: `country:${code}`,
-                label: countryName(code),
-                selection: { kind: "country" as const, key: code }
-            })),
-            ...[
-                ...new Map(places.filter((place) => place.boardId).map((place) => [locationKey(place), place])).values()
+        () =>
+            [
+                ...new Set(
+                    destinations
+                        .filter((place) => place.collection !== "saved")
+                        .flatMap((place) => (place.countryCode ? [place.countryCode] : []))
+                )
             ]
-                .map((place) => ({
-                    value: `location:${locationKey(place)}`,
-                    label: [place.city ?? place.boardTitle ?? "Board location", place.country]
-                        .filter(Boolean)
-                        .join(", "),
-                    selection: { kind: "location" as const, key: locationKey(place) }
+                .map((code) => ({
+                    value: "country:" + code,
+                    label: countryName(code),
+                    selection: { kind: "country" as const, key: code }
                 }))
-                .sort((a, b) => a.label.localeCompare(b.label))
-        ],
-        [countryCodes, places]
+                .sort((a, b) => a.label.localeCompare(b.label)),
+        [destinations]
     );
     const activeHighlight = selectedBoards.some((board) => String(board.boardId) === highlightedBoard)
         ? highlightedBoard
@@ -341,37 +337,66 @@ export default function VisitedWorldMap({
             className={embedded ? "w-full min-w-0" : "border-line mt-16 border-t pt-10"}
             aria-label="Board destinations"
         >
-            <div className="mb-3 flex flex-wrap items-center gap-2" role="group" aria-label="Map filters">
-                <button
-                    type="button"
-                    aria-pressed={showPublished}
-                    onClick={() => setShowPublished((shown) => !shown)}
-                    className={
-                        "rounded-full border px-4 py-2 text-sm transition-colors " +
-                        (showPublished
-                            ? "text-foreground border-[#b7473e] bg-[#b7473e]/20"
-                            : "border-line text-muted-foreground")
-                    }
-                >
-                    <span aria-hidden="true" className="mr-2 inline-block size-2 rounded-full bg-[#b7473e]" />
-                    Published
-                </button>
-                {allowSaved && (
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Map filters">
                     <button
                         type="button"
-                        aria-pressed={showSaved}
-                        onClick={() => setShowSaved((shown) => !shown)}
+                        aria-pressed={showPublished}
+                        onClick={() => setShowPublished((shown) => !shown)}
                         className={
                             "rounded-full border px-4 py-2 text-sm transition-colors " +
-                            (showSaved
-                                ? "text-foreground border-[#cb782c] bg-[#cb782c]/20"
+                            (showPublished
+                                ? "text-foreground border-[#b7473e] bg-[#b7473e]/20"
                                 : "border-line text-muted-foreground")
                         }
                     >
-                        <span aria-hidden="true" className="mr-2 inline-block size-2 rounded-full bg-[#cb782c]" />
-                        Saved
+                        <span aria-hidden="true" className="mr-2 inline-block size-2 rounded-full bg-[#b7473e]" />
+                        Published
                     </button>
-                )}
+                    {allowSaved && (
+                        <button
+                            type="button"
+                            aria-pressed={showSaved}
+                            onClick={() => setShowSaved((shown) => !shown)}
+                            className={
+                                "rounded-full border px-4 py-2 text-sm transition-colors " +
+                                (showSaved
+                                    ? "text-foreground border-[#cb782c] bg-[#cb782c]/20"
+                                    : "border-line text-muted-foreground")
+                            }
+                        >
+                            <span aria-hidden="true" className="mr-2 inline-block size-2 rounded-full bg-[#cb782c]" />
+                            Saved
+                        </button>
+                    )}
+                </div>
+                <label className="text-foreground ml-auto flex flex-wrap items-center gap-2 text-sm">
+                    select country
+                    <select
+                        className="border-line bg-background max-w-full rounded border px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2"
+                        value={
+                            destinationOptions.find((option) =>
+                                selection ? option.value === `${selection.kind}:${selection.key}` : false
+                            )?.value ?? ""
+                        }
+                        onChange={(event) => {
+                            setHighlightedBoard(null);
+                            setSelection(
+                                destinationOptions.find((option) => option.value === event.target.value)?.selection ??
+                                    null
+                            );
+                        }}
+                    >
+                        <option value="">
+                            {destinationOptions.length ? "Choose a destination" : "No destinations"}
+                        </option>
+                        {destinationOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                                {option.label}
+                            </option>
+                        ))}
+                    </select>
+                </label>
             </div>
             {allowSaved && showSaved && !savedDestinations && !savedError && (
                 <p role="status" className="text-muted-foreground text-sm">
@@ -393,30 +418,7 @@ export default function VisitedWorldMap({
                     </button>
                 </p>
             )}
-            <label className="text-foreground mb-3 flex flex-wrap items-center gap-2 text-sm">
-                Explore destination
-                <select
-                    className="border-line bg-background max-w-full rounded border px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2"
-                    value={
-                        destinationOptions.find((option) =>
-                            selection ? option.value === `${selection.kind}:${selection.key}` : false
-                        )?.value ?? ""
-                    }
-                    onChange={(event) => {
-                        setHighlightedBoard(null);
-                        setSelection(
-                            destinationOptions.find((option) => option.value === event.target.value)?.selection ?? null
-                        );
-                    }}
-                >
-                    <option value="">{destinationOptions.length ? "Choose a destination" : "No destinations"}</option>
-                    {destinationOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                            {option.label}
-                        </option>
-                    ))}
-                </select>
-            </label>
+
             <div className="relative">
                 <AnimatePresence>
                     {tooltipCountry && tooltipCountry === hoveredCountry && hoverBoards.length > 0 && (

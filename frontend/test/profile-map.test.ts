@@ -90,7 +90,7 @@ test("globe enables both permitted collections by default and keeps map explorat
     assert.doesNotMatch(empty, /No board locations|Browse individual locations|Close previews/);
 });
 
-test("destination selector opens the production carousel without a map click and follows collection filters", (context) => {
+test("destination selector lists published countries only and opens the production carousel", (context) => {
     // Preserve production state across server renders; browser keyboard/default-event behavior needs browser review.
     const state: Array<{ value: unknown }> = [];
     const cursor = { value: 0 };
@@ -146,7 +146,10 @@ test("destination selector opens the production carousel without a map click and
         initial.some((node) => node.type === ProfileMapBoardLibrary),
         false
     );
-    assert.equal(initial.filter((node) => node.type === "option" && node.props.value === "location:106:10").length, 1);
+    assert.deepEqual(
+        initial.filter((node) => node.type === "option").map((node) => node.props.value),
+        ["", "country:VNM"]
+    );
     const selector = initial.find((node) => node.type === "select");
     assert.ok(selector?.props.onChange);
     selector.props.onChange({ target: { value: "country:VNM" } });
@@ -155,14 +158,7 @@ test("destination selector opens the production carousel without a map click and
         country.find((node) => node.type === ProfileMapBoardLibrary)?.props.places?.map((place) => place.boardId),
         [41, 52]
     );
-    country.find((node) => node.type === "select")?.props.onChange?.({ target: { value: "location:106:10" } });
-    const location = render();
-    assert.equal(location.find((node) => node.type === "select")?.props.value, "location:106:10");
-    assert.deepEqual(
-        location.find((node) => node.type === ProfileMapBoardLibrary)?.props.places?.map((place) => place.boardId),
-        [41, 52]
-    );
-    location.find((node) => node.type === "select")?.props.onChange?.({ target: { value: "" } });
+    country.find((node) => node.type === "select")?.props.onChange?.({ target: { value: "" } });
     const cleared = render();
     assert.equal(
         cleared.some((node) => node.type === ProfileMapBoardLibrary),
@@ -174,7 +170,7 @@ test("destination selector opens the production carousel without a map click and
     const hidden = render();
     assert.deepEqual(
         hidden.filter((node) => node.type === "option").map((node) => node.props.value),
-        [""]
+        ["", "country:VNM"]
     );
     hidden
         .find((node) => node.type === "button" && Children.toArray(node.props.children).includes("Published"))
