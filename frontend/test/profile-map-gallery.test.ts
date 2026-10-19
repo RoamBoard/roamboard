@@ -262,6 +262,39 @@ test("inaccessible map Boards disappear while network and server failures retain
     assert.equal(result.boards[2].photo?.title, "Saigon after the rain");
 });
 
+test("a stalled Board times out while successful details survive and the fallback can be retried", async (context) => {
+    context.mock.timers.enable({ apis: ["setTimeout"] });
+    const signals: AbortSignal[] = [];
+    const attempts = { stalled: true };
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {
+        const boardId = Number(String(input).split("/").at(-1));
+        assert.ok(init?.signal);
+        signals.push(init.signal);
+        if (boardId === 52 && attempts.stalled) {
+            return new Promise<Response>((_resolve, reject) => {
+                init.signal!.addEventListener("abort", () => reject(init.signal!.reason), { once: true });
+            });
+        }
+        return Response.json({ data: fullBoard(boardId) });
+    });
+    const pending = loadMapBoardGallery([places[0], places[3]]);
+    // Let the successful response finish, including reading its JSON body.
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    context.mock.timers.tick(10_000);
+    const result = await pending;
+    assert.equal(signals[0].aborted, false, "completed requests clear their deadline");
+    assert.equal(signals[1].aborted, true, "the stalled request is cancelled at the deadline");
+    assert.equal(result.failed, true, "the component can now offer Retry");
+    assert.equal(result.boards[0].photo?.title, "Saigon after the rain");
+    assert.equal(result.boards[1].photo?.title, "Journey 52");
+    attempts.stalled = false;
+    const retry = await loadMapBoardGallery([places[3]]);
+    assert.equal(retry.failed, false);
+    assert.equal(retry.boards[0].photo?.title, "Saigon after the rain");
+    context.mock.timers.tick(10_000);
+    assert.equal(signals[2].aborted, false);
+});
+
 test("an empty map selection makes no Board requests and a retry replaces summary metadata", async (context) => {
     const attempts = { count: 0 };
     const fetch = context.mock.method(globalThis, "fetch", async () => {

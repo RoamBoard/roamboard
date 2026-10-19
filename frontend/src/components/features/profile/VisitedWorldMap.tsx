@@ -106,6 +106,27 @@ export default function VisitedWorldMap({
             ),
         [publishedCountries, savedCountries]
     );
+    const destinationOptions = useMemo(
+        () => [
+            ...countryCodes.map((code) => ({
+                value: `country:${code}`,
+                label: countryName(code),
+                selection: { kind: "country" as const, key: code }
+            })),
+            ...[
+                ...new Map(places.filter((place) => place.boardId).map((place) => [locationKey(place), place])).values()
+            ]
+                .map((place) => ({
+                    value: `location:${locationKey(place)}`,
+                    label: [place.city ?? place.boardTitle ?? "Board location", place.country]
+                        .filter(Boolean)
+                        .join(", "),
+                    selection: { kind: "location" as const, key: locationKey(place) }
+                }))
+                .sort((a, b) => a.label.localeCompare(b.label))
+        ],
+        [countryCodes, places]
+    );
     const activeHighlight = selectedBoards.some((board) => String(board.boardId) === highlightedBoard)
         ? highlightedBoard
         : null;
@@ -372,6 +393,30 @@ export default function VisitedWorldMap({
                     </button>
                 </p>
             )}
+            <label className="text-foreground mb-3 flex flex-wrap items-center gap-2 text-sm">
+                Explore destination
+                <select
+                    className="border-line bg-background max-w-full rounded border px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2"
+                    value={
+                        destinationOptions.find((option) =>
+                            selection ? option.value === `${selection.kind}:${selection.key}` : false
+                        )?.value ?? ""
+                    }
+                    onChange={(event) => {
+                        setHighlightedBoard(null);
+                        setSelection(
+                            destinationOptions.find((option) => option.value === event.target.value)?.selection ?? null
+                        );
+                    }}
+                >
+                    <option value="">{destinationOptions.length ? "Choose a destination" : "No destinations"}</option>
+                    {destinationOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                            {option.label}
+                        </option>
+                    ))}
+                </select>
+            </label>
             <div className="relative">
                 <AnimatePresence>
                     {tooltipCountry && tooltipCountry === hoveredCountry && hoverBoards.length > 0 && (

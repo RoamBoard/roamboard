@@ -178,7 +178,8 @@ export async function listPublishedBoards(page = 1): Promise<{
         hasMore: response.meta?.hasMore ?? false
     };
 }
-export const loadBoardDocument = (boardId: number) => request<BoardDocument>(`/api/v1/boards/${boardId}`);
+export const loadBoardDocument = (boardId: number, signal?: AbortSignal) =>
+    request<BoardDocument>(`/api/v1/boards/${boardId}`, { signal });
 
 export function saveBoardDocument(input: BoardWriteRequest, board?: BoardDocument | null): Promise<BoardDocument> {
     return board

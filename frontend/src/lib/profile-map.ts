@@ -55,12 +55,18 @@ export async function loadMapBoardGallery(places: MapDestination[]) {
     const boards = mapBoardGallery([...new Map(places.map((place) => [place.boardId, place])).values()]);
     const results = await Promise.allSettled(
         boards.map(async (board) => {
-            const document = await loadBoardDocument(Number(board.compact.id));
-            return {
-                ...board,
-                photo: toPhotoBoardCard(document),
-                ownership: document.permissions.canManageBoard ? ("owner" as const) : ("other" as const)
-            };
+            const controller = new AbortController();
+            const deadline = setTimeout(() => controller.abort(), 10_000);
+            try {
+                const document = await loadBoardDocument(Number(board.compact.id), controller.signal);
+                return {
+                    ...board,
+                    photo: toPhotoBoardCard(document),
+                    ownership: document.permissions.canManageBoard ? ("owner" as const) : ("other" as const)
+                };
+            } finally {
+                clearTimeout(deadline);
+            }
         })
     );
     return {

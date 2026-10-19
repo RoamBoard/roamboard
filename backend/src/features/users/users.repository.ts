@@ -177,12 +177,14 @@ export function createUsersRepository(): UsersRepository {
                     (SELECT COUNT(*)::int FROM activity WHERE board_id=b.board_id) AS activity_count,
                     COALESCE((SELECT jsonb_agg(d) FROM (
                     SELECT DISTINCT l.location_id::text AS id, l.country, l.city, l.latitude::float8 AS latitude, l.longitude::float8 AS longitude
-                    FROM location l WHERE l.country IS NOT NULL AND (
-                        l.location_id=b.primary_location_id OR EXISTS (
-                            SELECT 1 FROM activity a WHERE a.board_id=b.board_id
-                                AND a.location_confirmed AND a.location_id=l.location_id
-                        )
-                    )
+                    FROM (
+                        SELECT b.primary_location_id AS location_id
+                        UNION
+                        SELECT a.location_id FROM activity a
+                        WHERE a.board_id=b.board_id AND a.location_confirmed
+                    ) board_locations
+                    JOIN location l ON l.location_id=board_locations.location_id
+                    WHERE l.country IS NOT NULL
                 ) d), '[]') AS destinations
                  FROM board b WHERE ${
                      saved

@@ -16,8 +16,8 @@ export default function TravelMapSection({ stats, mapComponent, publicView = fal
               [stats.countriesVisited, "countries visited"],
               [stats.citiesExplored, "cities explored"],
               [stats.continentsCovered, "continents covered"],
-              [stats.photosUploaded.toLocaleString("en-US"), "photos uploaded"],
-              [stats.activitiesDone.toLocaleString("en-US"), "activities done"]
+              [stats.photosUploaded?.toLocaleString("en-US") ?? "Unavailable", "photos uploaded"],
+              [stats.activitiesDone?.toLocaleString("en-US") ?? "Unavailable", "activities done"]
           ]
         : [];
 
