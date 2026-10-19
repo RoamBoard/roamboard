@@ -276,17 +276,18 @@ export default function Sidebar({ activeHref, profile = {} }: { activeHref: stri
                     onClick={() => {
                         if (desktop) {
                             setAccountOpen(false);
+                            setHovered(false);
                             setSidebarExpanded(!savedExpanded);
                         } else setMobileOpen(true);
                     }}
-                    className={`text-muted-foreground/50 hover:text-muted-foreground mx-2.5 mt-3 flex h-11 shrink-0 cursor-pointer items-center focus-visible:outline-2 focus-visible:outline-offset-4 md:mx-4 ${expanded ? "px-3" : "justify-center"}`}
+                    className={`text-muted-foreground/50 hover:text-muted-foreground mx-2.5 mt-3 flex h-11 shrink-0 cursor-pointer items-center focus-visible:outline-2 focus-visible:outline-offset-4 md:mx-4 ${desktop && expanded ? "px-3" : "justify-center"}`}
                 >
-                    {savedExpanded ? (
+                    {desktop && savedExpanded ? (
                         <PanelLeftClose aria-hidden="true" size={20} strokeWidth={1.5} />
                     ) : (
                         <PanelLeftOpen aria-hidden="true" size={20} strokeWidth={1.5} />
                     )}
-                    {expanded && (
+                    {desktop && expanded && (
                         <span className="text-12 ml-3 whitespace-nowrap">
                             {savedExpanded ? "collapse" : "keep open"}
                         </span>
