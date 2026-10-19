@@ -576,7 +576,9 @@ test("friendship lifecycle handles requests, public profile status, accept, reje
                     (r) => r.status === "accepted" && (r.requesterUserId === userId || r.recipientUserId === userId)
                 )
                 .map((r) => (r.requesterUserId === userId ? r.recipientUserId : r.requesterUserId));
-            return friendIds.map((id) => ({
+            return friendIds.map((id, index) => ({
+                friendshipId: index + 1,
+                acceptedAt: "2026-10-19T14:30:00.000Z",
                 userId: id,
                 username: id,
                 displayName: id.toUpperCase(),

@@ -46,7 +46,8 @@ function activeDestination(pathname: string | null, fallback: string) {
     ) {
         return "/create";
     }
-    if (pathname === "/profile" || pathname === "/settings" || pathname === "/notifications") return "/social";
+    if (pathname === "/profile" || pathname === "/settings" || pathname === "/notifications" || pathname === "/friends")
+        return "/social";
     return navigation.find(({ href }) => pathname === href || pathname.startsWith(`${href}/`))?.href ?? fallback;
 }
 

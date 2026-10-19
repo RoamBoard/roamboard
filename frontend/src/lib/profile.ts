@@ -393,6 +393,8 @@ export function removeFriendByHandle(handle: string) {
 }
 
 export type FriendUser = {
+    friendshipId?: number;
+    acceptedAt?: string | null;
     userId: string;
     username: string;
     displayName: string;

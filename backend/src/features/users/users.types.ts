@@ -117,6 +117,8 @@ export interface SavedBoard {
 }
 
 export interface FriendUser {
+    friendshipId?: number;
+    acceptedAt?: string | null;
     userId: string;
     username: string;
     displayName: string;

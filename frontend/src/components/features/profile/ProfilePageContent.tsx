@@ -10,7 +10,6 @@ import {
     loadProfile,
     loadProfileStats,
     loadPublishedBoards,
-    removeFriend,
     ProfileApiError,
     type FriendUser,
     type MapDestination,
@@ -22,7 +21,6 @@ import ProfileHero from "./ProfileHero";
 import TravelMapSection from "./TravelMapSection";
 import VisitedWorldMap from "./VisitedWorldMap";
 import FindFriendsDialog from "@/components/features/social/FindFriendsDialog";
-import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 import AccountPhotoBoardCard from "@/components/features/boards/cards/AccountPhotoBoardCard";
 import SavedBoardGrid from "@/components/features/boards/SavedBoardGrid";
@@ -72,7 +70,6 @@ export type ProfilePageContentProps = {
     initialPublished?: PublishedBoardSummary[];
     initialFriends?: FriendUser[];
     initialDestinations?: MapDestination[];
-    initialConfirmUnfriendTarget?: FriendUser | null;
     initialSectionErrors?: string[];
 };
 
@@ -82,7 +79,6 @@ export default function ProfilePageContent({
     initialPublished = [],
     initialFriends = [],
     initialDestinations = [],
-    initialConfirmUnfriendTarget = null,
     initialSectionErrors = []
 }: ProfilePageContentProps = {}) {
     const [profile, setProfile] = useState<UserProfile | null>(initialProfile);
@@ -91,9 +87,6 @@ export default function ProfilePageContent({
     const [savedStore] = useState(() => createSavedBoardsStore(3));
     const saved = useSyncExternalStore(savedStore.subscribe, savedStore.getSnapshot, savedStore.getSnapshot);
     const [friends, setFriends] = useState<FriendUser[]>(initialFriends);
-    const [confirmUnfriendTarget, setConfirmUnfriendTarget] = useState<FriendUser | null>(initialConfirmUnfriendTarget);
-    const [unfriendError, setUnfriendError] = useState<string | null>(null);
-    const [unfriendLoading, setUnfriendLoading] = useState(false);
     const [destinations, setDestinations] = useState<MapDestination[]>(initialDestinations);
     const [searchOpen, setSearchOpen] = useState(false);
     const [error, setError] = useState("");
@@ -205,10 +198,10 @@ export default function ProfilePageContent({
                                     + find friends
                                 </button>
                                 <Link
-                                    href="/social"
+                                    href="/friends"
                                     className="text-12 text-muted-foreground hover:text-foreground hover:underline"
                                 >
-                                    social hub →
+                                    view all ({friends.length}) →
                                 </Link>
                             </div>
                         </div>
@@ -266,14 +259,6 @@ export default function ProfilePageContent({
                                                 @{friend.username}
                                             </span>
                                         </Link>
-                                        <button
-                                            type="button"
-                                            onClick={() => setConfirmUnfriendTarget(friend)}
-                                            aria-label={`Unfriend ${friend.displayName}`}
-                                            className="text-10 text-muted-foreground font-body mt-1 cursor-pointer rounded-[2px] border border-transparent px-2 py-0.5 font-medium transition-all hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-500"
-                                        >
-                                            unfriend
-                                        </button>
                                     </div>
                                 ))}
 
@@ -406,38 +391,6 @@ export default function ProfilePageContent({
                         });
                 }}
             />
-            {confirmUnfriendTarget && (
-                <ConfirmDialog
-                    title={`Unfriend ${confirmUnfriendTarget.displayName}?`}
-                    description={`Are you sure you want to remove @${confirmUnfriendTarget.username} from your friends? You will no longer see each other's friends-only boards.`}
-                    confirmLabel="Unfriend"
-                    error={unfriendError}
-                    loading={unfriendLoading}
-                    onCancel={() => {
-                        setConfirmUnfriendTarget(null);
-                        setUnfriendError(null);
-                    }}
-                    onConfirm={async () => {
-                        const target = confirmUnfriendTarget;
-                        setUnfriendLoading(true);
-                        setUnfriendError(null);
-                        try {
-                            await removeFriend(target.userId);
-                            setFriends((prev) => prev.filter((f) => f.userId !== target.userId));
-                            setStats((prev) => (prev ? { ...prev, friends: Math.max(0, prev.friends - 1) } : null));
-                            setConfirmUnfriendTarget(null);
-                        } catch (caught) {
-                            setUnfriendError(
-                                caught instanceof Error
-                                    ? caught.message
-                                    : `Failed to remove ${target.displayName} from friends.`
-                            );
-                        } finally {
-                            setUnfriendLoading(false);
-                        }
-                    }}
-                />
-            )}
         </div>
     );
 }

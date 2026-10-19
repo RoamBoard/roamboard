@@ -3,7 +3,7 @@ import AppShell from "@/components/layout/AppShell";
 import SocialFriendsContent from "@/components/features/social/SocialFriendsContent";
 
 export const metadata: Metadata = {
-    title: "Friends | Roamboard",
+    title: "Social | Roamboard",
     description: "Connect with travel pals, explore friends' boards, and stay inspired on Roamboard."
 };
 

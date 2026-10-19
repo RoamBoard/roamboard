@@ -4,7 +4,6 @@ import { Children, createElement, isValidElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import ProfilePageContent from "@/components/features/profile/ProfilePageContent";
-import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import type { UserProfile, FriendUser } from "@/lib/profile";
 
 const mockRouter = {
@@ -107,14 +106,7 @@ test("ProfilePageContent renders empty travel pals state when there are no error
     assert.ok(!markup.includes("Travel pals could not be loaded."));
 });
 
-test("ProfilePageContent unfriend failure keeps ConfirmDialog open and surfaces error", async (context) => {
-    context.mock.method(globalThis, "fetch", async () => {
-        return Response.json(
-            { error: { code: "SERVER_ERROR", message: "Failed to remove friendship." } },
-            { status: 500, headers: { "content-type": "application/json" } }
-        );
-    });
-
+test("ProfilePageContent renders friends rail without unfriend button and links to /friends", () => {
     const targetFriend: FriendUser = {
         userId: "u-target",
         username: "targetfriend",
@@ -124,50 +116,16 @@ test("ProfilePageContent unfriend failure keeps ConfirmDialog open and surfaces 
         location: null
     };
 
-    const { nodes } = capture(() =>
+    const { markup } = capture(() =>
         ProfilePageContent({
             initialProfile: mockProfile,
-            initialFriends: [targetFriend],
-            initialConfirmUnfriendTarget: targetFriend
+            initialFriends: [targetFriend]
         })
     );
 
-    const confirmDialog = nodes.find((n) => n.type === ConfirmDialog);
-    assert.ok(confirmDialog, "Expected ConfirmDialog to be open");
-
-    await (confirmDialog.props as { onConfirm: () => Promise<void> }).onConfirm();
-});
-
-test("ProfilePageContent unfriend succeeds and removes friend from list", async (context) => {
-    const calls: Array<{ url: string; method?: string }> = [];
-    context.mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {
-        calls.push({ url: String(input), method: init?.method });
-        return new Response(null, { status: 204 });
-    });
-
-    const targetFriend: FriendUser = {
-        userId: "u-target",
-        username: "targetfriend",
-        displayName: "Target Friend",
-        profilePictureUrl: null,
-        bio: null,
-        location: null
-    };
-
-    const { nodes } = capture(() =>
-        ProfilePageContent({
-            initialProfile: mockProfile,
-            initialFriends: [targetFriend],
-            initialConfirmUnfriendTarget: targetFriend
-        })
-    );
-
-    const confirmDialog = nodes.find((n) => n.type === ConfirmDialog);
-    assert.ok(confirmDialog, "Expected ConfirmDialog to be open");
-
-    await (confirmDialog.props as { onConfirm: () => Promise<void> }).onConfirm();
-
-    assert.equal(calls.length, 1);
-    assert.ok(calls[0].url.endsWith("/api/v1/users/me/friends/u-target"));
-    assert.equal(calls[0].method, "DELETE");
+    assert.ok(markup.includes("Target Friend"));
+    assert.ok(markup.includes("@targetfriend"));
+    assert.ok(!markup.includes("unfriend"), "Expected friends rail on profile to not include unfriend button");
+    assert.ok(markup.includes("/friends"), "Expected link to /friends page");
+    assert.ok(markup.includes("view all (1)"), "Expected view all (1) link");
 });

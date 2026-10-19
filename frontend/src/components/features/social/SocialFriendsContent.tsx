@@ -300,9 +300,8 @@ export default function SocialFriendsContent({
         return (
             <div className="relative h-full w-full overflow-y-auto px-4 pt-6 pb-20 sm:px-8 sm:pt-8 md:px-12 md:pt-10 lg:px-16">
                 <div className="mx-auto w-full max-w-5xl">
-                    <span className="text-10 tracking-label text-muted-foreground font-bold uppercase">SOCIAL</span>
                     <h1 className="font-display text-48 sm:text-60 text-foreground mt-1 mb-10 font-bold tracking-tight uppercase">
-                        FRIENDS
+                        SOCIAL
                     </h1>
                     <div role="alert" className="border-line bg-background rounded-[2px] border p-8 text-center">
                         <p className="text-14 text-foreground mb-4 font-medium">
@@ -325,9 +324,8 @@ export default function SocialFriendsContent({
             <div className="h-full w-full overflow-y-auto px-4 pt-6 pb-20 sm:px-8 sm:pt-8 md:px-12 md:pt-10 lg:px-16">
                 <div className="mx-auto w-full max-w-5xl pb-20">
                     <header className="mb-10">
-                        <span className="text-10 tracking-label text-muted-foreground font-bold uppercase">SOCIAL</span>
                         <h1 className="font-display text-48 sm:text-60 text-foreground mt-1 font-bold tracking-tight uppercase">
-                            FRIENDS
+                            SOCIAL
                         </h1>
                         <UnderlineTabs
                             tabs={["ME", "FRIENDS", "EXPLORE"] as const}
@@ -365,13 +363,21 @@ export default function SocialFriendsContent({
                                     keep up with your travel pals
                                 </p>
                             </div>
-                            <button
-                                type="button"
-                                onClick={() => setSearchOpen(true)}
-                                className="font-body text-12 text-muted-foreground hover:text-foreground cursor-pointer underline-offset-4 hover:underline"
-                            >
-                                + find friends
-                            </button>
+                            <div className="flex items-center gap-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setSearchOpen(true)}
+                                    className="font-body text-12 text-muted-foreground hover:text-foreground cursor-pointer underline-offset-4 hover:underline"
+                                >
+                                    + find friends
+                                </button>
+                                <Link
+                                    href="/friends"
+                                    className="text-12 text-muted-foreground hover:text-foreground hover:underline"
+                                >
+                                    view all ({friends.length}) →
+                                </Link>
+                            </div>
                         </div>
 
                         {friendsLoading && friends.length === 0 ? (
