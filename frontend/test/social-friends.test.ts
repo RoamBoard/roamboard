@@ -227,6 +227,132 @@ test("FindFriendsDialog runs searchUsers on Enter and updates results with frien
     assert.equal(state.results[0].friendshipStatus, "none");
 });
 
+test("FindFriendsDialog discards older in-flight Enter search when newer search completes first", async (context) => {
+    const deferredAlice: { resolve: (val: Response) => void } = { resolve: () => {} };
+    const alicePromise = new Promise<Response>((resolve) => {
+        deferredAlice.resolve = resolve;
+    });
+
+    const aliceResult: UserSearchResult = {
+        userId: "u-alice",
+        username: "alice",
+        displayName: "Alice",
+        profilePictureUrl: null,
+        bio: null,
+        location: null,
+        friendshipStatus: "none"
+    };
+
+    const bobResult: UserSearchResult = {
+        userId: "u-bob",
+        username: "bob",
+        displayName: "Bob",
+        profilePictureUrl: null,
+        bio: null,
+        location: null,
+        friendshipStatus: "none"
+    };
+
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+        const url = String(input);
+        if (url.includes("q=alice")) {
+            return alicePromise;
+        }
+        if (url.includes("q=bob")) {
+            return Response.json({ data: [bobResult] });
+        }
+        return Response.json({ data: [] });
+    });
+
+    const state = { results: [] as UserSearchResult[] };
+    const { nodes } = capture(() =>
+        FindFriendsDialog({
+            open: true,
+            onClose: () => {},
+            onResultsChange: (r) => {
+                state.results = r;
+            }
+        })
+    );
+    const input = nodes.find((n) => n.type === "input");
+    assert.ok(input);
+
+    input.props.onChange?.({ target: { value: "alice" } });
+    const aliceSearch = (input.props.onKeyDown as (e: unknown) => Promise<void>)?.({
+        key: "Enter",
+        target: { value: "alice" },
+        preventDefault: () => {}
+    });
+
+    input.props.onChange?.({ target: { value: "bob" } });
+    await (input.props.onKeyDown as (e: unknown) => Promise<void>)?.({
+        key: "Enter",
+        target: { value: "bob" },
+        preventDefault: () => {}
+    });
+
+    assert.equal(state.results.length, 1);
+    assert.equal(state.results[0].username, "bob");
+
+    deferredAlice.resolve(Response.json({ data: [aliceResult] }));
+    await aliceSearch;
+
+    assert.equal(state.results.length, 1);
+    assert.equal(state.results[0].username, "bob");
+});
+
+test("FindFriendsDialog cancels in-flight search when query changes while typing", async (context) => {
+    const deferredAlice: { resolve: (val: Response) => void } = { resolve: () => {} };
+    const alicePromise = new Promise<Response>((resolve) => {
+        deferredAlice.resolve = resolve;
+    });
+
+    const aliceResult: UserSearchResult = {
+        userId: "u-alice",
+        username: "alice",
+        displayName: "Alice",
+        profilePictureUrl: null,
+        bio: null,
+        location: null,
+        friendshipStatus: "none"
+    };
+
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+        const url = String(input);
+        if (url.includes("q=alice")) {
+            return alicePromise;
+        }
+        return Response.json({ data: [] });
+    });
+
+    const state = { results: [] as UserSearchResult[] };
+    const { nodes } = capture(() =>
+        FindFriendsDialog({
+            open: true,
+            onClose: () => {},
+            onResultsChange: (r) => {
+                state.results = r;
+            }
+        })
+    );
+    const input = nodes.find((n) => n.type === "input");
+    assert.ok(input);
+
+    input.props.onChange?.({ target: { value: "alice" } });
+    const aliceSearch = (input.props.onKeyDown as (e: unknown) => Promise<void>)?.({
+        key: "Enter",
+        target: { value: "alice" },
+        preventDefault: () => {}
+    });
+
+    input.props.onChange?.({ target: { value: "bob" } });
+
+    deferredAlice.resolve(Response.json({ data: [aliceResult] }));
+    await aliceSearch;
+
+    assert.equal(state.results.length, 0);
+});
+
 test("FindFriendsDialog displays visible error alert when searchUsers fails", async (context) => {
     context.mock.method(globalThis, "fetch", async () => {
         return Response.json(

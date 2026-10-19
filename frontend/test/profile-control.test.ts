@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { Children, createElement, isValidElement, type ReactNode } from "react";
+import React, { Children, createElement, isValidElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import ProfileControl from "../src/components/ui/ProfileControl";
@@ -8,7 +8,7 @@ import NotificationControl from "../src/components/ui/NotificationControl";
 import Sidebar from "../src/components/layout/Sidebar";
 import { getMockAuthState, getMockAuthStateServerSnapshot, setMockAuthState } from "../src/data/mock-social";
 import { subscribeToFriendRequestUpdates, type FriendRequest } from "../src/lib/profile";
-import { signOut } from "../src/lib/auth";
+import { publishAccountUpdate, signInWithGoogle, type AuthUser } from "../src/lib/auth";
 
 const mockRouter = {
     back: () => {},
@@ -52,6 +52,37 @@ function capture(render: () => ReactNode) {
     }
     const markup = renderToStaticMarkup(createElement(RouterWrapper, null, createElement(Probe)));
     return { markup, nodes: holder.nodes, tree: holder.tree };
+}
+
+function mount(render: () => ReactNode) {
+    if (typeof (globalThis as unknown as { self?: unknown }).self === "undefined") {
+        (globalThis as unknown as { self: unknown }).self = globalThis;
+    }
+    const effects: Array<() => void | (() => void)> = [];
+    const originalUseEffect = React.useEffect;
+    React.useEffect = (effect: () => void | (() => void)) => {
+        effects.push(effect);
+    };
+    try {
+        const captured = capture(render);
+        const cleanups: Array<() => void> = [];
+        for (const effect of effects) {
+            const cleanup = effect();
+            if (typeof cleanup === "function") {
+                cleanups.push(cleanup);
+            }
+        }
+        return {
+            ...captured,
+            unmount: () => {
+                for (const cleanup of cleanups) {
+                    cleanup();
+                }
+            }
+        };
+    } finally {
+        React.useEffect = originalUseEffect;
+    }
 }
 
 test("mock auth defaults to signed out and updates via setMockAuthState", () => {
@@ -568,49 +599,72 @@ test("NotificationControl concurrent accept and reject updates retain both chang
     assert.equal(tracker.requests.length, 0);
 });
 
-test("NotificationControl ignores action completion from earlier account after account switch or sign out", async (context) => {
+test("NotificationControl ignores action completion from earlier account after account switch", async (context) => {
+    const user1: AuthUser = { userId: "user-1", username: "user1", displayName: "User One" };
+    const user2: AuthUser = { userId: "user-2", username: "user2", displayName: "User Two" };
+
     const deferredAccept: { resolve: (val: Response) => void } = { resolve: () => {} };
     const acceptPromise = new Promise<Response>((res) => {
         deferredAccept.resolve = res;
     });
 
-    context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
-        const url = String(input);
-        if (url.includes("/accept")) {
-            return acceptPromise;
-        }
-        return Response.json({ data: [] });
-    });
-
-    const requests: FriendRequest[] = [
+    const requests1: FriendRequest[] = [
         {
             requestId: 1,
             requester: { userId: "u-1", username: "alice", displayName: "Alice", profilePictureUrl: null }
         }
     ];
 
-    const tracker = { requests };
-    const { nodes } = capture(() =>
+    const requests2: FriendRequest[] = [
+        {
+            requestId: 2,
+            requester: { userId: "u-2", username: "bob", displayName: "Bob", profilePictureUrl: null }
+        }
+    ];
+
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+        const url = String(input);
+        if (url.includes("/accept")) {
+            return acceptPromise;
+        }
+        if (url.includes("/api/v1/auth/google")) {
+            return Response.json({ data: { user: user1, isNew: false } });
+        }
+        if (url.includes("/api/v1/users/me/friend-requests")) {
+            return Response.json({ data: requests2 });
+        }
+        return Response.json({ data: [] });
+    });
+
+    await signInWithGoogle("user1-token");
+
+    const tracker = { requests: requests1 };
+    const { nodes, unmount } = mount(() =>
         NotificationControl({
             sidebar: true,
             iconOnly: false,
             open: true,
-            initialRequests: requests,
+            initialRequests: requests1,
+            initialUserId: user1.userId,
             onRequestsChange: (reqs) => {
                 tracker.requests = reqs;
             }
         })
     );
+    context.after(unmount);
 
     const acceptBtn = nodes.find((n) => n.type === "button" && n.props.children === "accept");
     assert.ok(acceptBtn);
 
     const actionPromise = acceptBtn.props.onClick?.();
 
-    await signOut().catch(() => {});
+    publishAccountUpdate(user2);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    assert.deepEqual(tracker.requests, requests2);
 
     deferredAccept.resolve(Response.json({ data: { requestId: 1, status: "accepted" } }));
     await actionPromise;
 
-    assert.equal(tracker.requests.length, 0);
+    assert.deepEqual(tracker.requests, requests2);
 });

@@ -38,6 +38,7 @@ export default function FindFriendsDialog({
     onUnfriendErrorChange
 }: FindFriendsDialogProps) {
     const [query, setQuery] = useState("");
+    const currentQueryRef = useRef(query);
     const [results, setResults] = useState<UserSearchResult[]>(initialResults ?? []);
     const resultsRef = useRef<UserSearchResult[]>(initialResults ?? []);
 
@@ -61,6 +62,7 @@ export default function FindFriendsDialog({
 
     const handleClose = useCallback(() => {
         searchVersionRef.current += 1;
+        currentQueryRef.current = "";
         if (debounceTimerRef.current) {
             clearTimeout(debounceTimerRef.current);
             debounceTimerRef.current = null;
@@ -82,7 +84,30 @@ export default function FindFriendsDialog({
 
     useDialogFocus(dialogRef, handleClose, open && confirmUnfriendUser === null);
 
+    useEffect(() => {
+        if (!open) {
+            searchVersionRef.current += 1;
+            currentQueryRef.current = "";
+            if (debounceTimerRef.current) {
+                clearTimeout(debounceTimerRef.current);
+                debounceTimerRef.current = null;
+            }
+        }
+    }, [open]);
+
+    useEffect(() => {
+        return () => {
+            searchVersionRef.current += 1;
+            if (debounceTimerRef.current) {
+                clearTimeout(debounceTimerRef.current);
+                debounceTimerRef.current = null;
+            }
+        };
+    }, []);
+
     const handleQueryChange = (val: string) => {
+        searchVersionRef.current += 1;
+        currentQueryRef.current = val;
         setQuery(val);
         setError(null);
         onErrorChange?.(null);
@@ -91,26 +116,27 @@ export default function FindFriendsDialog({
     const executeSearch = useCallback(
         async (searchQuery: string) => {
             const searchId = ++searchVersionRef.current;
+            currentQueryRef.current = searchQuery;
             const trimmed = searchQuery.trim();
             setLoading(true);
             setError(null);
             onErrorChange?.(null);
             try {
                 const data = await searchUsers(trimmed);
-                if (searchId === searchVersionRef.current) {
+                if (searchId === searchVersionRef.current && trimmed === currentQueryRef.current.trim()) {
                     resultsRef.current = data;
                     setResults(data);
                     onResultsChange?.(data);
                 }
             } catch (caught) {
-                if (searchId === searchVersionRef.current) {
+                if (searchId === searchVersionRef.current && trimmed === currentQueryRef.current.trim()) {
                     const message =
                         caught instanceof Error ? caught.message : "Failed to search users. Please try again.";
                     setError(message);
                     onErrorChange?.(message);
                 }
             } finally {
-                if (searchId === searchVersionRef.current) {
+                if (searchId === searchVersionRef.current && trimmed === currentQueryRef.current.trim()) {
                     setLoading(false);
                 }
             }

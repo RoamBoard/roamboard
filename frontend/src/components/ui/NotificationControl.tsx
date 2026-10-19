@@ -21,6 +21,7 @@ export type NotificationControlProps = {
     onOpenChange?: (open: boolean) => void;
     initialRequests?: FriendRequest[];
     initialError?: string | null;
+    initialUserId?: string;
     onRequestsChange?: (requests: FriendRequest[]) => void;
     onActionErrorChange?: (error: string | null) => void;
 };
@@ -32,6 +33,7 @@ export default function NotificationControl({
     onOpenChange,
     initialRequests,
     initialError = null,
+    initialUserId,
     onRequestsChange,
     onActionErrorChange
 }: NotificationControlProps) {
@@ -49,7 +51,7 @@ export default function NotificationControl({
     const [failedAvatars, setFailedAvatars] = useState<Record<number, boolean>>({});
     const [sessionUser, setSessionUser] = useState<AuthUser | null>(
         initialRequests || initialError
-            ? ({ userId: "initial-session", username: "", displayName: "" } as AuthUser)
+            ? ({ userId: initialUserId ?? "initial-session", username: "", displayName: "" } as AuthUser)
             : null
     );
 
@@ -71,7 +73,9 @@ export default function NotificationControl({
         [onOpenChange]
     );
 
-    const activeUserIdRef = useRef<string | null>(initialRequests || initialError ? "initial-session" : null);
+    const activeUserIdRef = useRef<string | null>(
+        initialUserId ?? (initialRequests || initialError ? "initial-session" : null)
+    );
     const readVersionRef = useRef(0);
     const requestVersionRef = useRef(0);
     const requestsRef = useRef<FriendRequest[]>(initialRequests ?? []);
@@ -140,48 +144,47 @@ export default function NotificationControl({
                 setLoadError(null);
                 setLoading(false);
             } else {
+                const previousUserId = activeUserIdRef.current;
                 activeUserIdRef.current = user.userId;
                 setSessionUser(user);
-                if (!initialRequests) {
+                const shouldFetch =
+                    previousUserId !== user.userId && (previousUserId !== "initial-session" || !initialRequests);
+                if (shouldFetch) {
                     setLoading(true);
+                    const readId = readVersionRef.current;
+                    const expectedUserId = user.userId;
+                    const requestVersion = requestVersionRef.current;
+                    void loadFriendRequests()
+                        .then((data) => {
+                            if (
+                                activeUserIdRef.current === expectedUserId &&
+                                readId === readVersionRef.current &&
+                                requestVersion === requestVersionRef.current
+                            ) {
+                                requestsRef.current = data;
+                                setRequests(data);
+                                onRequestsChange?.(data);
+                                setLoadError(null);
+                            }
+                        })
+                        .catch(() => {
+                            if (
+                                activeUserIdRef.current === expectedUserId &&
+                                readId === readVersionRef.current &&
+                                requestVersion === requestVersionRef.current
+                            ) {
+                                setLoadError("Failed to load notifications. Please try again.");
+                            }
+                        })
+                        .finally(() => {
+                            if (activeUserIdRef.current === expectedUserId && readId === readVersionRef.current) {
+                                setLoading(false);
+                            }
+                        });
                 }
             }
         });
     }, [initialRequests, onRequestsChange]);
-
-    useEffect(() => {
-        if (!sessionUser || initialRequests) return;
-        const readId = ++readVersionRef.current;
-        const currentUserId = activeUserIdRef.current;
-        const requestVersion = requestVersionRef.current;
-        void loadFriendRequests()
-            .then((data) => {
-                if (
-                    activeUserIdRef.current === currentUserId &&
-                    readId === readVersionRef.current &&
-                    requestVersion === requestVersionRef.current
-                ) {
-                    requestsRef.current = data;
-                    setRequests(data);
-                    onRequestsChange?.(data);
-                    setLoadError(null);
-                }
-            })
-            .catch(() => {
-                if (
-                    activeUserIdRef.current === currentUserId &&
-                    readId === readVersionRef.current &&
-                    requestVersion === requestVersionRef.current
-                ) {
-                    setLoadError("Failed to load notifications. Please try again.");
-                }
-            })
-            .finally(() => {
-                if (activeUserIdRef.current === currentUserId && readId === readVersionRef.current) {
-                    setLoading(false);
-                }
-            });
-    }, [sessionUser, initialRequests, onRequestsChange]);
 
     useEffect(() => {
         if (!isOpen || !sessionUser) return;
@@ -285,7 +288,7 @@ export default function NotificationControl({
     const flyoutPlacement = sidebar ? "bottom-0 left-[calc(100%+1.75rem)]" : "top-[calc(100%+0.5rem)] right-0";
 
     useEffect(() => {
-        if (!isOpen) return;
+        if (!isOpen || typeof document === "undefined") return;
         const handlePointerDown = (event: PointerEvent) => {
             if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
                 toggleOpen(false);

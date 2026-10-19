@@ -1,10 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Children, createElement, isValidElement, type ReactNode } from "react";
+import React, { Children, createElement, isValidElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import NotificationsContent from "@/components/features/notifications/NotificationsContent";
 import { subscribeToFriendRequestUpdates, type FriendRequest } from "@/lib/profile";
-import { signOut } from "@/lib/auth";
+import { publishAccountUpdate, signInWithGoogle, type AuthUser } from "@/lib/auth";
 
 type ElementProps = {
     children?: ReactNode;
@@ -31,6 +31,37 @@ function capture(render: () => ReactNode) {
     }
     const markup = renderToStaticMarkup(createElement(Probe));
     return { markup, nodes: holder.nodes, tree: holder.tree };
+}
+
+function mount(render: () => ReactNode) {
+    if (typeof (globalThis as unknown as { self?: unknown }).self === "undefined") {
+        (globalThis as unknown as { self: unknown }).self = globalThis;
+    }
+    const effects: Array<() => void | (() => void)> = [];
+    const originalUseEffect = React.useEffect;
+    React.useEffect = (effect: () => void | (() => void)) => {
+        effects.push(effect);
+    };
+    try {
+        const captured = capture(render);
+        const cleanups: Array<() => void> = [];
+        for (const effect of effects) {
+            const cleanup = effect();
+            if (typeof cleanup === "function") {
+                cleanups.push(cleanup);
+            }
+        }
+        return {
+            ...captured,
+            unmount: () => {
+                for (const cleanup of cleanups) {
+                    cleanup();
+                }
+            }
+        };
+    } finally {
+        React.useEffect = originalUseEffect;
+    }
 }
 
 test("NotificationsContent renders empty state when signed out or no requests", () => {
@@ -351,46 +382,69 @@ test("NotificationsContent concurrent accept and reject updates retain both chan
     assert.equal(tracker.requests.length, 0);
 });
 
-test("NotificationsContent ignores action completion from earlier account after account switch or sign out", async (context) => {
+test("NotificationsContent ignores action completion from earlier account after account switch", async (context) => {
+    const user1: AuthUser = { userId: "user-1", username: "user1", displayName: "User One" };
+    const user2: AuthUser = { userId: "user-2", username: "user2", displayName: "User Two" };
+
     const deferredAccept: { resolve: (val: Response) => void } = { resolve: () => {} };
     const acceptPromise = new Promise<Response>((res) => {
         deferredAccept.resolve = res;
     });
 
-    context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
-        const url = String(input);
-        if (url.includes("/accept")) {
-            return acceptPromise;
-        }
-        return Response.json({ data: [] });
-    });
-
-    const requests: FriendRequest[] = [
+    const requests1: FriendRequest[] = [
         {
             requestId: 201,
             requester: { userId: "u-201", username: "alice", displayName: "Alice", profilePictureUrl: null }
         }
     ];
 
-    const tracker = { requests };
-    const { nodes } = capture(() =>
+    const requests2: FriendRequest[] = [
+        {
+            requestId: 301,
+            requester: { userId: "u-301", username: "bob", displayName: "Bob", profilePictureUrl: null }
+        }
+    ];
+
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+        const url = String(input);
+        if (url.includes("/accept")) {
+            return acceptPromise;
+        }
+        if (url.includes("/api/v1/auth/google")) {
+            return Response.json({ data: { user: user1, isNew: false } });
+        }
+        if (url.includes("/api/v1/users/me/friend-requests")) {
+            return Response.json({ data: requests2 });
+        }
+        return Response.json({ data: [] });
+    });
+
+    await signInWithGoogle("user1-token");
+
+    const tracker = { requests: requests1 };
+    const { nodes, unmount } = mount(() =>
         NotificationsContent({
-            initialRequests: requests,
+            initialRequests: requests1,
+            initialUserId: user1.userId,
             onRequestsChange: (reqs) => {
                 tracker.requests = reqs;
             }
         })
     );
+    context.after(unmount);
 
     const acceptBtn = nodes.find((n) => n.type === "button" && n.props.children === "accept");
     assert.ok(acceptBtn);
 
     const actionPromise = acceptBtn.props.onClick?.();
 
-    await signOut().catch(() => {});
+    publishAccountUpdate(user2);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    assert.deepEqual(tracker.requests, requests2);
 
     deferredAccept.resolve(Response.json({ data: { requestId: 201, status: "accepted" } }));
     await actionPromise;
 
-    assert.equal(tracker.requests.length, 0);
+    assert.deepEqual(tracker.requests, requests2);
 });

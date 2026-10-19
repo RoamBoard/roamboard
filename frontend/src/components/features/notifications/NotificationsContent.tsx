@@ -16,11 +16,13 @@ import {
 export default function NotificationsContent({
     initialRequests,
     initialError = null,
+    initialUserId,
     onRequestsChange,
     onActionErrorChange
 }: {
     initialRequests?: FriendRequest[];
     initialError?: string | null;
+    initialUserId?: string;
     onRequestsChange?: (requests: FriendRequest[]) => void;
     onActionErrorChange?: (error: string | null) => void;
 }) {
@@ -29,14 +31,16 @@ export default function NotificationsContent({
     const [loadError, setLoadError] = useState<string | null>(initialError);
     const [sessionUser, setSessionUser] = useState<AuthUser | null>(
         initialRequests || initialError
-            ? ({ userId: "initial-session", username: "", displayName: "" } as AuthUser)
+            ? ({ userId: initialUserId ?? "initial-session", username: "", displayName: "" } as AuthUser)
             : null
     );
     const [actionInProgress, setActionInProgress] = useState<Record<number, "accepting" | "rejecting">>({});
     const [actionError, setActionError] = useState<string | null>(null);
     const [failedAvatars, setFailedAvatars] = useState<Record<number, boolean>>({});
 
-    const activeUserIdRef = useRef<string | null>(initialRequests || initialError ? "initial-session" : null);
+    const activeUserIdRef = useRef<string | null>(
+        initialUserId ?? (initialRequests || initialError ? "initial-session" : null)
+    );
     const requestVersionRef = useRef(0);
     const requestsRef = useRef<FriendRequest[]>(initialRequests ?? []);
 
@@ -105,12 +109,17 @@ export default function NotificationsContent({
                 setLoading(false);
                 setLoadError(null);
             } else {
+                const previousUserId = activeUserIdRef.current;
                 activeUserIdRef.current = user.userId;
                 setSessionUser(user);
-                fetchRequests(user.userId);
+                const shouldFetch =
+                    previousUserId !== user.userId && (previousUserId !== "initial-session" || !initialRequests);
+                if (shouldFetch) {
+                    fetchRequests(user.userId);
+                }
             }
         });
-    }, [fetchRequests, onRequestsChange]);
+    }, [fetchRequests, initialRequests, onRequestsChange]);
 
     const handleAccept = async (requestId: number) => {
         requestVersionRef.current += 1;
