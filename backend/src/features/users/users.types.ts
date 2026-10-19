@@ -113,6 +113,7 @@ export interface SavedBoard {
 }
 
 export interface FriendUser {
+    friendshipId?: number;
     userId: string;
     username: string;
     displayName: string;

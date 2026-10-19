@@ -386,6 +386,7 @@ export function removeFriendByHandle(handle: string) {
 }
 
 export type FriendUser = {
+    friendshipId?: number;
     userId: string;
     username: string;
     displayName: string;

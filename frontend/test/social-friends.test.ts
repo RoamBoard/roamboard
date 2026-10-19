@@ -120,6 +120,8 @@ test("SocialFriendsContent renders friends, activity, and friends boards when av
     assert.ok(html.includes("published a new board"));
     assert.ok(html.includes("add friends"));
     assert.ok(!html.includes("unfriend"));
+    assert.ok(html.includes("/friends"));
+    assert.ok(html.includes("view all (1)"));
 });
 
 type ElementProps = {
