@@ -59,6 +59,7 @@ export interface ProfileStats {
     citiesExplored: number;
     continentsCovered: number;
     photosUploaded: number;
+    activitiesDone: number;
     boardsCreated: number;
     friends: number;
     activitiesSaved: number;
@@ -69,6 +70,8 @@ export interface MapDestination {
     id: string;
     boardId?: number;
     boardTitle?: string;
+    coverImageUrl?: string | null;
+    collection?: "published" | "saved";
     country: string;
     countryCode: string | null;
     city: string | null;
@@ -87,6 +90,7 @@ export interface ProfileBoard {
     isCompleted: boolean;
     destinations: MapDestination[];
     createdAt: string;
+    activityCount?: number;
     updatedAt: string;
     coverImageUrl: string | null;
 }
@@ -161,8 +165,14 @@ export interface UsersRepository {
     findIdByHandle(handle: string): Promise<string | null>;
     update(userId: string, input: ProfileChanges): Promise<void>;
     setPicture(userId: string, imageId: number | null): Promise<void>;
-    listBoards(userId: string, recent: boolean, publicOnly?: boolean): Promise<ProfileBoard[]>;
-    countPublicPhotos(userId: string): Promise<number>;
+    listBoards(
+        userId: string,
+        recent: boolean,
+        publicOnly?: boolean,
+        viewerId?: string | null,
+        saved?: boolean
+    ): Promise<ProfileBoard[]>;
+    countPublicPhotos(userId: string, viewerId?: string | null): Promise<number>;
     stats(userId: string): Promise<Record<string, number>>;
     listSavedBoards(userId: string, page: number, limit: number): Promise<{ items: SavedBoard[]; hasMore: boolean }>;
     saveBoard(userId: string, boardId: number): Promise<boolean>;

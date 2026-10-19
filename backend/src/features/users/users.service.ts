@@ -5,7 +5,26 @@ import type { BoardRepository } from "../boards/boards.types.js";
 import { canReadBoard } from "../boards/boards.types.js";
 import { spokenLanguages } from "../../shared/spoken-languages.js";
 import { continentForCountry } from "../../shared/continents.js";
-import type { PublicProfileView } from "./users.types.js";
+import type { PublicProfileView, ProfileBoard } from "./users.types.js";
+
+function travelStats(boards: ProfileBoard[]) {
+    const countries = new Set<string>();
+    const cities = new Set<string>();
+    const continents = new Set<string>();
+    for (const place of boards.flatMap((board) => board.destinations)) {
+        if (!place.countryCode) continue;
+        countries.add(place.countryCode);
+        if (place.city?.trim()) cities.add(`${place.countryCode}:${place.city.trim().toLocaleLowerCase("en")}`);
+        const continent = continentForCountry(place.countryCode);
+        if (continent) continents.add(continent);
+    }
+    return {
+        countriesVisited: countries.size,
+        citiesExplored: cities.size,
+        continentsCovered: continents.size,
+        activitiesDone: boards.reduce((sum, board) => sum + (board.activityCount ?? 0), 0)
+    };
+}
 
 export function createUsersService(
     repository: UsersRepository,
@@ -17,6 +36,22 @@ export function createUsersService(
         if (!profile) throw new AppError(404, "Profile not found", "NOT_FOUND");
         return profile;
     };
+    const mapDestinations = async (userId: string, visitedOnly = false, saved = false, viewerId = userId) => {
+        const boards = await repository.listBoards(userId, false, true, viewerId, saved);
+        return boards
+            .filter((board) => board.status === "published" && (!visitedOnly || board.isCompleted))
+            .flatMap((board) =>
+                board.destinations.map((place) => ({
+                    ...place,
+                    id: `${board.id}:${place.id}`,
+                    boardId: Number(board.id),
+                    boardTitle: board.title,
+                    coverImageUrl: board.coverImageUrl,
+                    collection: saved ? ("saved" as const) : ("published" as const),
+                    isCompleted: board.isCompleted
+                }))
+            );
+    };
     return {
         read,
         async publicProfile(handle: string, viewerId: string | null): Promise<PublicProfileView> {
@@ -24,31 +59,21 @@ export function createUsersService(
             if (!userId) throw new AppError(404, "Profile not found", "NOT_FOUND");
             const [user, boards, userStats, photosUploaded] = await Promise.all([
                 read(userId),
-                repository.listBoards(userId, false, true),
+                repository.listBoards(userId, false, true, viewerId),
                 repository.stats(userId),
-                repository.countPublicPhotos(userId)
+                repository.countPublicPhotos(userId, viewerId)
             ]);
-            const destinations = boards
-                .filter((board) => board.isCompleted)
-                .flatMap((board) =>
-                    board.destinations.map((place) => ({
-                        ...place,
-                        id: `${board.id}:${place.id}`,
-                        boardId: Number(board.id),
-                        boardTitle: board.title,
-                        isCompleted: true
-                    }))
-                );
-            const countries = new Set<string>();
-            const cities = new Set<string>();
-            const continents = new Set<string>();
-            for (const place of destinations) {
-                if (!place.countryCode) continue;
-                countries.add(place.countryCode);
-                if (place.city?.trim()) cities.add(`${place.countryCode}:${place.city.trim().toLocaleLowerCase("en")}`);
-                const continent = continentForCountry(place.countryCode);
-                if (continent) continents.add(continent);
-            }
+            const destinations = boards.flatMap((board) =>
+                board.destinations.map((place) => ({
+                    ...place,
+                    id: `${board.id}:${place.id}`,
+                    boardId: Number(board.id),
+                    boardTitle: board.title,
+                    isCompleted: board.isCompleted,
+                    coverImageUrl: board.coverImageUrl,
+                    collection: "published" as const
+                }))
+            );
             let friendshipStatus: PublicProfileView["friendshipStatus"] = undefined;
             if (viewerId && viewerId !== userId) {
                 const friendship = await repository.getFriendship(viewerId, userId);
@@ -90,9 +115,7 @@ export function createUsersService(
                     friends: userStats.friends ?? 0,
                     activitiesSaved: userStats.activitiesSaved ?? 0,
                     boardsSaved: userStats.boardsSaved ?? 0,
-                    countriesVisited: countries.size,
-                    citiesExplored: cities.size,
-                    continentsCovered: continents.size,
+                    ...travelStats(boards),
                     photosUploaded,
                     boardsCreated: boards.length
                 },
@@ -130,20 +153,24 @@ export function createUsersService(
             return read(userId);
         },
         listBoards: (userId: string, recent = false) => repository.listBoards(userId, recent),
-        stats: (userId: string) => repository.stats(userId),
-        async mapDestinations(userId: string, visitedOnly = false) {
-            const boards = await repository.listBoards(userId, false);
-            return boards
-                .filter((board) => board.status === "published" && (!visitedOnly || board.isCompleted))
-                .flatMap((board) =>
-                    board.destinations.map((place) => ({
-                        ...place,
-                        id: `${board.id}:${place.id}`,
-                        boardId: Number(board.id),
-                        boardTitle: board.title,
-                        isCompleted: board.isCompleted
-                    }))
-                );
+        async stats(userId: string) {
+            const [stats, boards, photosUploaded] = await Promise.all([
+                repository.stats(userId),
+                repository.listBoards(userId, false, true, userId),
+                repository.countPublicPhotos(userId, userId)
+            ]);
+            return { ...stats, ...travelStats(boards), photosUploaded };
+        },
+        mapDestinations,
+        async savedMapDestinations(handle: string, viewerId: string) {
+            const userId = await repository.findIdByHandle(handle);
+            if (!userId) throw new AppError(404, "Profile not found", "NOT_FOUND");
+            if (viewerId !== userId) {
+                const friendship = await repository.getFriendship(viewerId, userId);
+                if (friendship?.status !== "accepted")
+                    throw new AppError(403, "Saved maps are shared with friends only", "FORBIDDEN");
+            }
+            return mapDestinations(userId, false, true, viewerId);
         },
         listSavedBoards: (userId: string, page: number, limit: number) =>
             repository.listSavedBoards(userId, page, limit),

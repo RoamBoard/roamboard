@@ -158,7 +158,7 @@ export function createUsersRepository(): UsersRepository {
                 client.release();
             }
         },
-        async listBoards(userId, recent, publicOnly = false) {
+        async listBoards(userId, recent, publicOnly = false, viewerId = null, saved = false) {
             const result = await getPool().query<{
                 board_id: number;
                 owner_user_id: string;
@@ -171,16 +171,38 @@ export function createUsersRepository(): UsersRepository {
                 updated_at: Date;
                 cover_image_id: number | null;
                 destinations: MapDestination[];
+                activity_count: number;
             }>(
-                `SELECT b.*, COALESCE((SELECT jsonb_agg(d) FROM (
+                `SELECT b.*,
+                    (SELECT COUNT(*)::int FROM activity WHERE board_id=b.board_id) AS activity_count,
+                    COALESCE((SELECT jsonb_agg(d) FROM (
                     SELECT DISTINCT l.location_id::text AS id, l.country, l.city, l.latitude::float8 AS latitude, l.longitude::float8 AS longitude
-                    FROM activity a JOIN location l ON l.location_id=a.location_id WHERE a.board_id=b.board_id
-                        AND a.location_confirmed AND l.country IS NOT NULL
+                    FROM (
+                        SELECT b.primary_location_id AS location_id
+                        UNION
+                        SELECT a.location_id FROM activity a
+                        WHERE a.board_id=b.board_id AND a.location_confirmed
+                    ) board_locations
+                    JOIN location l ON l.location_id=board_locations.location_id
+                    WHERE l.country IS NOT NULL
                 ) d), '[]') AS destinations
-                 FROM board b WHERE b.owner_user_id=$1
-                 ${publicOnly ? "AND b.status='published' AND b.visibility='public'" : ""}
+                 FROM board b WHERE ${
+                     saved
+                         ? "EXISTS (SELECT 1 FROM saved_boards sb WHERE sb.board_id=b.board_id AND sb.user_id=$1) AND b.owner_user_id<>$1"
+                         : "b.owner_user_id=$1"
+                 }
+                 ${
+                     publicOnly || saved
+                         ? `AND b.status='published' AND (b.visibility='public' OR
+                    (b.visibility='friends' AND ($2=b.owner_user_id OR EXISTS (
+                        SELECT 1 FROM friendship f WHERE f.status='accepted' AND
+                        ((f.requester_user_id=b.owner_user_id AND f.recipient_user_id=$2) OR
+                         (f.recipient_user_id=b.owner_user_id AND f.requester_user_id=$2))
+                    ))))`
+                         : ""
+                 }
                  ORDER BY b.updated_at DESC, b.board_id DESC ${recent ? "LIMIT 6" : ""}`,
-                [userId]
+                publicOnly || saved ? [userId, viewerId] : [userId]
             );
             return result.rows.map((row) => ({
                 id: String(row.board_id),
@@ -190,6 +212,7 @@ export function createUsersRepository(): UsersRepository {
                 visibility: row.visibility,
                 status: row.status,
                 isCompleted: row.is_completed,
+                activityCount: row.activity_count,
                 destinations: row.destinations.map((place) => ({
                     ...place,
                     countryCode: countryCodeForName(place.country)
@@ -202,12 +225,17 @@ export function createUsersRepository(): UsersRepository {
                         : `/api/v1/images/${row.cover_image_id}/content?variant=thumbnail`
             }));
         },
-        async countPublicPhotos(userId) {
+        async countPublicPhotos(userId, viewerId = null) {
             const result = await getPool().query<{ count: number }>(
                 `SELECT COUNT(DISTINCT bi.uploaded_image_id)::int AS count
                  FROM board_image bi JOIN board b ON b.board_id=bi.board_id
-                 WHERE b.owner_user_id=$1 AND b.status='published' AND b.visibility='public' AND b.is_completed`,
-                [userId]
+                 WHERE b.owner_user_id=$1 AND b.status='published' AND (b.visibility='public' OR
+                    (b.visibility='friends' AND ($2=b.owner_user_id OR EXISTS (
+                        SELECT 1 FROM friendship f WHERE f.status='accepted' AND
+                        ((f.requester_user_id=b.owner_user_id AND f.recipient_user_id=$2) OR
+                         (f.recipient_user_id=b.owner_user_id AND f.requester_user_id=$2))
+                    ))))`,
+                [userId, viewerId]
             );
             return result.rows[0]?.count ?? 0;
         },

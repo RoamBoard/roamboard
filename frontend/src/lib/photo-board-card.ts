@@ -93,7 +93,7 @@ export function toEditorialPhotoBoardCard(board: CollageBoardCardData): PhotoBoa
     };
 }
 
-// Adapt a document already loaded by the parent; never request documents just for hover metadata.
+// Adapt a document loaded by the parent. The adapter and card never fetch their own data.
 export function toPhotoBoardCard(document: BoardDocument): PhotoBoardCardData {
     const activities = document.days.flatMap((day) => day.activities);
     const locations = activities.flatMap((activity) =>

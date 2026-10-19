@@ -177,17 +177,17 @@ Preview coordinates are not proof of a validated persistent location.
 Paths below are relative to `/api/v1/users/me` and return the types in
 `frontend/src/lib/profile.ts`.
 
-| Method | Suffix              | Behavior                                                                                                                      |
-| ------ | ------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| GET    | None                | Caller profile, biography as `description`, tag names, image reference and timestamps                                         |
-| PATCH  | None                | Replace `{ displayName, description, location, interests }`; return saved profile                                             |
-| PUT    | `/profile-picture`  | Set `{ imageId }` only for an existing image uploaded by the caller; return saved profile                                     |
-| DELETE | `/profile-picture`  | Unlink picture; return saved profile; unreferenced files enter normal orphan cleanup                                          |
-| GET    | `/stats`            | Completed published Board countries, all owned Board count, accepted friends, saved activities as `placesSaved`, saved Boards |
-| GET    | `/boards`           | All owned Boards, newest updated first, destinations derived from activity locations                                          |
-| GET    | `/recent-boards`    | Latest six owned Boards by update time; not browsing history                                                                  |
-| GET    | `/map-destinations` | Owned published Board locations with Board IDs/titles and completion flags                                                    |
-| GET    | `/saved-boards`     | Saved Boards pagination (`page` positive integer default 1, `limit` integer 1–100 default 20)                                 |
+| Method | Suffix              | Behavior                                                                                                          |
+| ------ | ------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| GET    | None                | Caller profile, biography as `description`, tag names, image reference and timestamps                             |
+| PATCH  | None                | Replace `{ displayName, description, location, interests }`; return saved profile                                 |
+| PUT    | `/profile-picture`  | Set `{ imageId }` only for an existing image uploaded by the caller; return saved profile                         |
+| DELETE | `/profile-picture`  | Unlink picture; return saved profile; unreferenced files enter normal orphan cleanup                              |
+| GET    | `/stats`            | Visible published Board travel totals, published activities, owned Board count, accepted friends and saved totals |
+| GET    | `/boards`           | All owned Boards, newest updated first, primary destinations and confirmed activity locations                     |
+| GET    | `/recent-boards`    | Latest six owned Boards by update time; not browsing history                                                      |
+| GET    | `/map-destinations` | Visible published or owner-saved locations with Board IDs/titles, covers and completion flags                     |
+| GET    | `/saved-boards`     | Saved Boards pagination (`page` positive integer default 1, `limit` integer 1–100 default 20)                     |
 
 Strings use the existing 500-character columns. Display name is required;
 description can be empty and location nullable. Interests are up to three
@@ -221,9 +221,28 @@ alphanumeric plus dots and underscores). It returns `{ data: PublicProfileView }
 - `profile`: `{ username, displayName, description, location, occupation, languages, interests, profilePicture }`
 - `isOwner`: boolean (`true` when the caller session matches the profile owner)
 - `friendshipStatus`: `"none" | "pending_sent" | "pending_received" | "accepted"` (`"none"` for anonymous callers or viewing own profile; otherwise reflects relation between caller and user)
-- `stats`: `{ countriesVisited, citiesExplored, continentsCovered, photosUploaded, boardsCreated, friends, activitiesSaved }`
-- `boards`: public published boards owned by user
-- `destinations`: list of completed board destinations with coordinates, city, and country code
+- `stats`: `{ countriesVisited, citiesExplored, continentsCovered, photosUploaded, activitiesDone, boardsCreated, friends, activitiesSaved, boardsSaved }`
+- `boards`: public published boards, plus friends-only published boards when the viewer is the owner or an accepted friend
+- `destinations`: primary destinations and confirmed activity locations on those same visible published boards, with coordinates, city, country code, board ID/title, cover URL, completion flag and `collection: "published"`
+
+Profile maps exclude drafts and collaborator-only boards, including for owners. Countries, cities and continents count
+distinct locations across visible published boards, whether completed or not. Photos count distinct uploaded images
+attached to those boards. `activitiesDone` currently counts all activity rows on visible published boards. Restricting it to completed boards
+is deferred until completion controls are implemented; activities have no individual completion flag. Saved boards do not increase travel totals.
+
+`GET /api/v1/users/me/map-destinations?scope=published` returns the caller's public and friends-only published locations.
+`scope=saved` returns locations of bookmarked public boards and friends-only boards whose author is currently an
+accepted friend. It excludes collaborator-only boards, including bookmarked boards to which membership grants access.
+Saved locations carry `collection: "saved"`; this `/me` route always reads the session owner's collection. The historical
+`scope=visited` additionally restricts the published collection to completed boards. Omitted scope means published.
+Unsupported scopes return `400 INVALID_REQUEST`; unauthenticated map reads return `401 UNAUTHENTICATED`.
+
+`GET /api/v1/users/by-handle/:handle/saved-map-destinations` shares a profile's saved map with the profile owner
+and accepted friends only. It requires a session (`401`), returns `403 FORBIDDEN` to other viewers (including pending
+friends), and `404 NOT_FOUND` for a missing profile. Every returned saved board must also be public or friends-only
+with the actual viewer authorized through friendship with its author (or author ownership). Friendship with the profile
+owner does not grant access to another author's friends-only board. Drafts and collaborator-only boards remain excluded.
+Each request checks current friendships, including revoked access. Saved locations never increase travel totals.
 
 Missing handles return `404 NOT_FOUND`. Invalid handle formats return `400 INVALID_REQUEST`.
 

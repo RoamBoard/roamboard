@@ -22,6 +22,8 @@ type Props = {
     hasMore?: boolean;
     loadingMore?: boolean;
     onLoadMore?: () => Promise<void>;
+    onBoardHighlight?: (boardId: string | null) => void;
+    embedded?: boolean;
 };
 
 export default function BoardLibrary({
@@ -32,13 +34,16 @@ export default function BoardLibrary({
     id = "board-library",
     title = "YOUR COLLECTION",
     description,
-    archived = false
+    archived = false,
+    onBoardHighlight,
+    embedded = false
 }: Props) {
     const collectionName = title.toLowerCase().replace(/ boards$/, "");
     const [api, setApi] = useState<CarouselApi>();
     const [position, setPosition] = useState({ progress: 0, visible: 1 });
     const reducedMotion = useReducedMotion();
     const requestedLength = useRef(-1);
+    const interaction = useRef<{ hovered: string | null; focused: string | null }>({ hovered: null, focused: null });
 
     useEffect(() => {
         if (!api) return;
@@ -91,7 +96,10 @@ export default function BoardLibrary({
     }, [api, reducedMotion]);
 
     return (
-        <section aria-labelledby={`${id}-heading`} className="mx-auto mt-20 max-w-[1320px] md:mt-24">
+        <section
+            aria-labelledby={`${id}-heading`}
+            className={embedded ? "mt-3 min-w-0" : "mx-auto mt-20 max-w-[1320px] md:mt-24"}
+        >
             <Carousel
                 setApi={setApi}
                 opts={{
@@ -105,7 +113,13 @@ export default function BoardLibrary({
                 tabIndex={0}
                 className="outline-offset-[-2px] focus-visible:outline-1"
             >
-                <div className="mx-5 mb-6 flex items-center justify-between gap-4 sm:mx-12">
+                <div
+                    className={
+                        embedded
+                            ? "mb-2 flex items-center justify-between gap-4"
+                            : "mx-5 mb-6 flex items-center justify-between gap-4 sm:mx-12"
+                    }
+                >
                     <h2 id={`${id}-heading`} className="font-display text-foreground/60 text-24 md:text-36 font-medium">
                         {title}
                     </h2>
@@ -127,13 +141,39 @@ export default function BoardLibrary({
                     </p>
                 )}
                 {boards.length > 0 && (
-                    <div className="border-line/50 mx-3 border-x sm:mx-10">
-                        <CarouselContent className="cursor-grab py-5 select-none active:cursor-grabbing md:py-8">
+                    <div className={embedded ? "border-line/50 border-x" : "border-line/50 mx-3 border-x sm:mx-10"}>
+                        <CarouselContent
+                            className={
+                                embedded
+                                    ? "cursor-grab py-2 select-none active:cursor-grabbing"
+                                    : "cursor-grab py-5 select-none active:cursor-grabbing md:py-8"
+                            }
+                        >
                             {boards.map((board, index) => (
                                 <CarouselItem
                                     key={board.compact.id}
                                     aria-label={`${index + 1} of ${boards.length}: ${board.compact.title}`}
-                                    className="border-line/60 relative flex basis-[90%] justify-center border-r px-3 py-5 last:border-r sm:basis-[340px] sm:px-6 sm:py-8"
+                                    className={
+                                        "border-line/60 relative flex basis-[90%] justify-center border-r px-3 last:border-r sm:basis-[340px] sm:px-6 " +
+                                        (embedded ? "py-2" : "py-5 sm:py-8")
+                                    }
+                                    onMouseEnter={() => {
+                                        interaction.current.hovered = board.compact.id;
+                                        onBoardHighlight?.(board.compact.id);
+                                    }}
+                                    onMouseLeave={() => {
+                                        interaction.current.hovered = null;
+                                        onBoardHighlight?.(interaction.current.focused);
+                                    }}
+                                    onFocusCapture={() => {
+                                        interaction.current.focused = board.compact.id;
+                                        onBoardHighlight?.(board.compact.id);
+                                    }}
+                                    onBlurCapture={(event) => {
+                                        if (event.currentTarget.contains(event.relatedTarget)) return;
+                                        interaction.current.focused = null;
+                                        onBoardHighlight?.(interaction.current.hovered);
+                                    }}
                                 >
                                     <div className="w-full max-w-[292px] shrink-0 transition-transform duration-200 motion-safe:hover:-translate-y-1 motion-reduce:transition-none">
                                         <BoardCard

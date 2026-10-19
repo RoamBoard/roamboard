@@ -23,6 +23,13 @@ export function createUsersRouter(
 ): Router {
     const router = Router();
     router.get("/by-handle/:handle", validateParams(publicProfileParamsSchema), attachUser, controller.publicRead);
+    router.get(
+        "/by-handle/:handle/saved-map-destinations",
+        validateParams(publicProfileParamsSchema),
+        attachUser,
+        requireSessionUser,
+        controller.savedMapDestinations
+    );
     router.post(
         "/by-handle/:handle/friend-request",
         validateParams(publicProfileParamsSchema),

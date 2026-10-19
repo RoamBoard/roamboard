@@ -227,6 +227,7 @@ test("profile reads and writes use the session owner and reject forged identity"
         updatedAt: "2026-10-14T00:00:00Z"
     };
     const seen: string[] = [];
+    const mapReads: unknown[][] = [];
     const users: UsersRepository = {
         async read(id) {
             seen.push(id);
@@ -242,7 +243,8 @@ test("profile reads and writes use the session owner and reject forged identity"
         async setPicture() {
             throw new Error("must not be called");
         },
-        async listBoards() {
+        async listBoards(...args) {
+            mapReads.push(args);
             return [];
         },
         async countPublicPhotos() {
@@ -339,6 +341,24 @@ test("profile reads and writes use the session owner and reject forged identity"
         true
     );
     assert.equal((await request(app).get("/api/v1/users/by-handle/missing")).status, 404);
+    assert.equal((await request(app).get("/api/v1/users/me/map-destinations?scope=saved")).status, 401);
+    assert.equal((await request(app).get("/api/v1/users/by-handle/owner/saved-map-destinations")).status, 401);
+    assert.equal(
+        (await request(app).get("/api/v1/users/by-handle/owner/saved-map-destinations").set("Cookie", cookie)).status,
+        200
+    );
+    for (const scope of ["published", "saved", "visited"]) {
+        const result = await request(app)
+            .get(`/api/v1/users/me/map-destinations?scope=${scope}&userId=forged`)
+            .set("Cookie", cookie);
+        assert.equal(result.status, 200);
+        assert.deepEqual(result.body.data, []);
+        assert.deepEqual(mapReads.at(-1), ["owner", false, true, "owner", scope === "saved"]);
+    }
+    assert.equal(
+        (await request(app).get("/api/v1/users/me/map-destinations?scope=private").set("Cookie", cookie)).status,
+        400
+    );
     assert.equal((await request(app).get("/api/v1/users/me").set("x-demo-user-id", "owner")).status, 401);
     const changes = {
         revision: 1,
@@ -644,6 +664,10 @@ test("friendship lifecycle handles requests, public profile status, accept, reje
     // 4. Initial status on public profile is "none"
     const initialAliceProfile = await request(app).get("/api/v1/users/by-handle/alice").set("Cookie", cookie);
     assert.equal(initialAliceProfile.body.data.friendshipStatus, "none");
+    assert.equal(
+        (await request(app).get("/api/v1/users/by-handle/alice/saved-map-destinations").set("Cookie", cookie)).status,
+        403
+    );
 
     // 5. Send friend request to Alice
     const sendRes = await request(app)
@@ -656,6 +680,10 @@ test("friendship lifecycle handles requests, public profile status, accept, reje
     // 6. Profile now shows "pending_sent"
     const pendingAliceProfile = await request(app).get("/api/v1/users/by-handle/alice").set("Cookie", cookie);
     assert.equal(pendingAliceProfile.body.data.friendshipStatus, "pending_sent");
+    assert.equal(
+        (await request(app).get("/api/v1/users/by-handle/alice/saved-map-destinations").set("Cookie", cookie)).status,
+        403
+    );
 
     // 7. Duplicate send rejected with 409
     const dupRes = await request(app)
@@ -699,6 +727,10 @@ test("friendship lifecycle handles requests, public profile status, accept, reje
     requests[0].status = "accepted";
     const acceptedAliceProfile = await request(app).get("/api/v1/users/by-handle/alice").set("Cookie", cookie);
     assert.equal(acceptedAliceProfile.body.data.friendshipStatus, "accepted");
+    assert.equal(
+        (await request(app).get("/api/v1/users/by-handle/alice/saved-map-destinations").set("Cookie", cookie)).status,
+        200
+    );
 
     // 14. List accepted friends
     const friendsRes = await request(app).get("/api/v1/users/me/friends").set("Cookie", cookie);
@@ -739,6 +771,10 @@ test("friendship lifecycle handles requests, public profile status, accept, reje
 
     const friendsAfter = await request(app).get("/api/v1/users/me/friends").set("Cookie", cookie);
     assert.equal(friendsAfter.body.data.length, 0);
+    assert.equal(
+        (await request(app).get("/api/v1/users/by-handle/alice/saved-map-destinations").set("Cookie", cookie)).status,
+        403
+    );
 
     const unfriendAliceProfile = await request(app).get("/api/v1/users/by-handle/alice").set("Cookie", cookie);
     assert.equal(unfriendAliceProfile.body.data.friendshipStatus, "none");

@@ -32,7 +32,7 @@ export const savedBoardsQuerySchema = z.object({
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(20)
 });
-export const mapQuerySchema = z.object({ scope: z.literal("visited").optional() });
+export const mapQuerySchema = z.object({ scope: z.enum(["visited", "published", "saved"]).optional() });
 export const friendRequestIdParamsSchema = z.object({
     requestId: z.coerce.number().int().positive()
 });

@@ -150,7 +150,7 @@ export default function HandleProfileContent({
                 <section aria-label="Public boards" className="border-line mt-12 border-t pt-8">
                     <h2 className="font-display text-20 sm:text-22 text-foreground font-bold">boards</h2>
                     <p className="text-12 text-muted-foreground mt-0.5 font-medium">
-                        public boards by {view.profile.displayName}
+                        boards shared by {view.profile.displayName}
                     </p>
                     <div className="mt-8 grid grid-cols-1 items-start gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
                         {view.boards.map((board) => (
@@ -170,11 +170,13 @@ export default function HandleProfileContent({
                     stats={view.stats}
                     publicView
                     mapComponent={
-                        view.destinations.length ? (
-                            <VisitedWorldMap destinations={view.destinations} embedded />
-                        ) : (
-                            <p className="text-muted-foreground">No visited destinations on public boards yet.</p>
-                        )
+                        <VisitedWorldMap
+                            key={view.profile.username}
+                            destinations={view.destinations}
+                            embedded
+                            allowSaved={view.friendshipStatus === "accepted"}
+                            profileHandle={view.profile.username}
+                        />
                     }
                 />
             </main>
