@@ -419,18 +419,18 @@ export default function ProfileHero({
                                     </div>
                                 </div>
 
-                                {/* Stat 4: places saved */}
+                                {/* Stat 4: saves received on this author's Boards */}
                                 <div className="px-3">
                                     <div className="font-display text-24 sm:text-30 text-foreground flex items-center gap-1.5 font-bold">
-                                        {stats.activitiesSaved}
+                                        {stats.savesReceived ?? "—"}
                                         <span className="text-14 text-muted-foreground font-normal" aria-hidden="true">
                                             →
                                         </span>
                                     </div>
                                     <div className="text-10 text-muted-foreground mt-1 leading-tight font-medium">
-                                        activities
+                                        saves
                                         <br />
-                                        saved
+                                        received
                                     </div>
                                 </div>
 

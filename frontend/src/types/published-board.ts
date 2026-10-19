@@ -16,6 +16,7 @@ export type PublishedBoardData = {
     canEditContent?: boolean;
     canManageBoard?: boolean;
     savedByMe?: boolean;
+    savedCount?: number;
 };
 
 export type PublishedBoardState = {

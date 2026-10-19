@@ -78,9 +78,10 @@ export type PhotoBoardCardProps = {
     save?: PhotoBoardSave;
     reduceMotion?: boolean;
     imageSizes?: string;
-    // Galleries own selection; navigation remains a separate action in that context.
+    // Galleries own selection; a selected card can navigate once its edit access has resolved.
     selection?: {
         selected: boolean;
+        href?: string;
         label?: string;
         onSelect: (event: MouseEvent<HTMLButtonElement>) => void;
         tabIndex?: number;

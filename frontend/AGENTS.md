@@ -268,17 +268,34 @@ protection; it never substitutes sample data. Reopening still uses `/boards/draf
 
 The Create entry now links to `/create/continue` and `/create/remix`. Continue combines the production
 owner-draft and owner-published list endpoints, with independent pagination, partial-error retries, and explicit
-loaded-title search scope. `board-selection-store.ts` clears cached documents on refresh, rejects stale responses,
+Published/Drafts filters (Published first and selected initially), without search or shared-link lookup on this page.
+Its heading identifies drafts and published Boards as editable work, with the pick-up subtitle below Your Boards.
+The standard top-left BackLink returns to Create; Saved inspiration is removed, and remix remains a creation choice
+at `/create`. On desktop viewports at least 1024px wide and 800px tall, the composition is vertically centered below
+the BackLink, fits the viewport and its Board area handles overflow; smaller/zoomed layouts retain page scrolling.
+The gallery has no Recently Updated heading, decorative footer text or separate Continue link. A selected card
+opens its existing editor only after edit permission resolves; its central pen appears on hover/focus and stays
+visible on touch devices. Unselected cards still select, and carousel arrows sit at the left below the cards.
+`board-selection-store.ts` clears cached documents on refresh, rejects stale responses,
 and checks fresh document identity and `canEditContent` before showing an editor link. Drafts reopen at
 `/boards/drafts/[boardId]`; published Boards reopen at `/boards/[boardId]/edit`, preserving ID, revision, and status.
-Production APIs cannot enumerate shared editable Boards; a shared-link/ID lookup checks the canonical document
-permission instead. No developer listing endpoint is used. The shared presentation uses a Motion V4 photographic focus gallery and a smaller V4 collection that promotes selected Boards into the same gallery, without duplicates. It retains spring rearrangement, mouse-only 3D tilt, keyboard selection, animated annotations and fresh-document editor gates. V4 selection controls share the card surface; inactive featured cards leave the tab order. Ownership comes from the owner-list scope or canonical management permission; shared edit access does not imply ownership.
+Production APIs cannot enumerate shared editable Boards. Shared-link lookup is deferred in the Continue UI;
+the existing store helper is not exposed by the page. No developer listing endpoint is used. The shared presentation uses a Motion V4 photographic focus gallery and a smaller V4 collection that promotes selected Boards into the same gallery, without duplicates. It retains spring rearrangement, mouse-only 3D tilt, keyboard selection, animated annotations and fresh-document editor gates. V4 selection controls share the card surface; inactive featured cards leave the tab order. Ownership comes from the owner-list scope or canonical management permission; shared edit access does not imply ownership.
 V1=`collage`, V2=`compact`, V3=`landscape`, and V4=`photo` retain their existing names and identifiers.
 V4 is the primary card throughout the migrated product. Continue, Drafts, creator preview, saved/owned lists, profile collections and Discover results are migrated; Featured Boards intentionally retain V3. Legacy variants remain available in the development gallery.
 The Remix page remains an unavailable state. The production account-saved Board list now exists, but this page
 does not consume it yet; persistent remix creation is still unavailable. Session preview bookmarks are separate
 from account saves. Completing remix requires frontend saved-list integration and agreed independent-copy/media
 rules; no original Board update or fake remix is performed. Photo cards omit the author line when author data is absent.
+
+Canonical Board documents supply `savedCount` to V4 and the Continue metadata column (Saves received).
+The published viewer shows a text Save Board/Unsave Board button followed by its bookmark icon and the current
+save total, including zero. Successful changes refresh the canonical count; a failed refresh shows unavailable
+instead of estimating it. Owners see the count without a self-save button. The header counts activities rather
+than distinct places. Profile statistics replace Activities saved with Saves received (`savesReceived`), preserving
+the existing saved-activity data. These are current bookmarks, not lifetime save events; visitor profile totals
+respect public/friend Board visibility. Regression tests were authored alongside implementation; independent
+coverage review and visual browser acceptance remain pending.
 
 The creator's ruled sticky chapter navigation also shows its real loading/uploading/saving and unsaved state.
 `board-editor-safety.ts` compares persisted content, excluding transient IDs and protected-image URL refreshes.

@@ -122,6 +122,7 @@ export type BoardDocument = Omit<BoardWriteRequest, "days"> & {
     };
     boardId: number;
     savedByMe?: boolean;
+    savedCount?: number;
     revision: number;
     permissions: { canEditContent: boolean; canManageBoard: boolean };
     coverImageId: number | null;

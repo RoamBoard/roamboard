@@ -29,6 +29,16 @@ The backend takes the caller from the HTTP-only session cookie; the browser send
 
 ## Data and validation
 
+Board documents include read-only `savedCount`: the current number of other accounts with a persisted Board
+bookmark, including zero. It is returned only with an authorized document read; no saver identities are exposed.
+Saving again does not increase the count, and removing a save decreases it. Drafts return zero. This is a current
+bookmark count, not a lifetime save-event total. It does not change Board revisions and cannot be supplied in writes.
+
+Profile responses and owner statistics include `savesReceived`, the sum of current saves by other accounts on the
+owner's published Boards. Owners see all their published Boards; other profile visitors count only public Boards
+and friends-only Boards visible through accepted friendship. Hidden Board saves do not affect a visitor's total.
+The profile labels this “Saves received” in place of “Activities saved”; saved activity data is retained.
+
 ### Board, tags, and days
 
 - Board and activity IDs are database-generated positive integers. Creator UUIDs are local identifiers only and must not be treated as database IDs.

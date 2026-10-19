@@ -144,6 +144,7 @@ export function toPhotoBoardCard(document: BoardDocument): PhotoBoardCardData {
         description: document.description?.trim() || undefined,
         durationDays: document.days.length,
         activityCount: activities.length,
+        savedCount: document.savedCount,
         visibility: document.visibility,
         status: document.status
     };

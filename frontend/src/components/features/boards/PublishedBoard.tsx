@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import BackLink from "@/components/ui/BackLink";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import ActivityDetailsDialog from "@/components/features/boards/ActivityDetailsDialog";
 import BoardCopyEditor from "@/components/features/boards/BoardCopyEditor";
 import BoardDialog from "@/components/features/boards/BoardDialog";
@@ -15,6 +15,7 @@ import { getBoardDays, getBoardPlaceNames } from "@/lib/board-presentation";
 import type { BoardActivity } from "@/types/board";
 import type { PublishedBoardData } from "@/types/published-board";
 import { ProfileApiError, saveBoardBookmark, unsaveBoardBookmark } from "@/lib/profile";
+import { loadBoardDocument } from "@/lib/board-creator-api";
 
 const actionClasses =
     "border-line hover:bg-faint inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 border px-5 py-2 text-14 focus-visible:outline-2 focus-visible:outline-offset-4";
@@ -43,23 +44,28 @@ export default function PublishedBoard({
     tagLabels = board.tags,
     canEditContent = false,
     canManageBoard = false,
-    savedByMe = false
+    savedByMe = false,
+    savedCount
 }: PublishedBoardData) {
     const days = getBoardDays(board);
     const places = getBoardPlaceNames(board);
+    const activityCount = board.items.filter((item) => item.type === "activity").length;
     const automaticPhotos = useBoardPhotos(board, tagLabels);
     const cover = board.coverImage?.url ? board.coverImage : automaticPhotos.photos.cover;
     const coverLabel = automaticPhotos.slots.find((slot) => slot.id === "cover")?.label || board.title;
     const [selectedActivity, setSelectedActivity] = useState<BoardActivity | null>(null);
     const [bookmarked, setBookmarked] = useState(savedByMe);
+    const [currentSaveCount, setCurrentSaveCount] = useState(savedCount);
     const [bookmarkBusy, setBookmarkBusy] = useState(false);
+    const bookmarkPending = useRef(false);
     const [bookmarkMessage, setBookmarkMessage] = useState("");
     const [signInToSave, setSignInToSave] = useState(false);
     // Preview saves and copies only stay in this browser tab.
     const preview = useBoardPreview(board, selectedActivity);
 
     async function toggleBookmark() {
-        if (bookmarkBusy) return;
+        if (bookmarkPending.current) return;
+        bookmarkPending.current = true;
         setBookmarkBusy(true);
         setBookmarkMessage("");
         setSignInToSave(false);
@@ -70,10 +76,19 @@ export default function PublishedBoard({
             setBookmarkMessage(
                 bookmarked ? "Board removed from your saved collection." : "Board saved to your collection."
             );
+            try {
+                const current = await loadBoardDocument(Number(board.id));
+                setCurrentSaveCount(current.savedCount);
+                setBookmarked(Boolean(current.savedByMe));
+            } catch {
+                // The save succeeded, but do not invent a total if its refresh fails.
+                setCurrentSaveCount(undefined);
+            }
         } catch (caught) {
             setSignInToSave(caught instanceof ProfileApiError && caught.status === 401);
             setBookmarkMessage(caught instanceof Error ? caught.message : "The Board could not be saved.");
         } finally {
+            bookmarkPending.current = false;
             setBookmarkBusy(false);
         }
     }
@@ -95,9 +110,11 @@ export default function PublishedBoard({
 
     const feedback = (
         <>
-            <p role="status" className="text-muted-foreground text-12 mt-3">
-                {preview.message || "Activity saves and copies are previews saved in this tab."}
-            </p>
+            {preview.message && (
+                <p role="status" className="text-muted-foreground text-12 mt-3">
+                    {preview.message}
+                </p>
+            )}
             {preview.error ? (
                 <p role="alert" className="text-14 mt-3">
                     {preview.error}
@@ -146,15 +163,33 @@ export default function PublishedBoard({
                     {!canManageBoard && (
                         <button
                             type="button"
-                            onClick={() => void toggleBookmark()}
+                            onClick={toggleBookmark}
                             disabled={bookmarkBusy}
-                            aria-label={bookmarked ? "Remove saved Board" : "Save Board"}
+                            aria-label={bookmarked ? "Unsave Board" : "Save Board"}
                             aria-pressed={bookmarked}
-                            className="hover:bg-faint mt-7 inline-flex size-11 cursor-pointer items-center justify-center focus-visible:outline-2 focus-visible:outline-offset-4"
+                            className="hover:bg-faint text-14 mt-7 inline-flex min-h-11 cursor-pointer items-center justify-center gap-3 px-4 focus-visible:outline-2 focus-visible:outline-offset-4 disabled:cursor-wait disabled:opacity-60"
                         >
+                            {bookmarkBusy
+                                ? bookmarked
+                                    ? "Removing…"
+                                    : "Saving…"
+                                : bookmarked
+                                  ? "Unsave Board"
+                                  : "Save Board"}
                             <BoardIcon name="bookmark" className={`size-5 ${bookmarked ? "fill-current" : ""}`} />
                         </button>
                     )}
+                    <p
+                        role="status"
+                        className="text-muted-foreground text-16 mt-4 flex items-center justify-center gap-2 tabular-nums"
+                    >
+                        <BoardIcon name="bookmark" className="size-4" />
+                        {currentSaveCount !== undefined &&
+                        Number.isSafeInteger(currentSaveCount) &&
+                        currentSaveCount >= 0
+                            ? `${new Intl.NumberFormat("en-US").format(currentSaveCount)} ${currentSaveCount === 1 ? "save" : "saves"}`
+                            : "Save count unavailable"}
+                    </p>
                     {bookmarkMessage && (
                         <p role="status" className="text-12 text-muted-foreground">
                             {bookmarkMessage}{" "}
@@ -178,8 +213,8 @@ export default function PublishedBoard({
                             <dd className="text-36 leading-none">{numberLabel(days.length)}</dd>
                         </div>
                         <div className="flex items-baseline gap-1 pl-8">
-                            <dt className="text-12 order-2">places</dt>
-                            <dd className="text-36 leading-none">{numberLabel(places.length)}</dd>
+                            <dt className="text-12 order-2">{activityCount === 1 ? "activity" : "activities"}</dt>
+                            <dd className="text-36 leading-none">{numberLabel(activityCount)}</dd>
                         </div>
                     </dl>
                     {/* Only show the first three tags. */}
@@ -259,9 +294,6 @@ export default function PublishedBoard({
                                 />
                             </div>
                         </section>
-                        <p className="text-muted-foreground text-10">
-                            Activity saves and copies are previews saved in this tab.
-                        </p>
                     </footer>
                 )}
             </article>

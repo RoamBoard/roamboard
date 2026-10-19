@@ -580,14 +580,30 @@ test("Continue annotations use canonical publication visibility and keep travele
         for (const group of groups) {
             assert.ok(group.includes(`Your Board Published · ${label}`));
             assert.match(group, /In this Board 1 day · 1 activity/);
-            assert.match(group, /Saved by travelers 128 saves/);
+            assert.match(group, /Saves received 128 saves/);
             assert.doesNotMatch(group, /1 activity[^a-zA-Z]*128 saves|[Pp]rivate|[Cc]ollaborat/);
         }
     }
     const draft = toSelectionBoard(summary(84), { ...document(84), visibility: "public" });
     for (const group of annotationGroups(selectionMarkup([draft]))) {
         assert.match(group, /Your Board Unpublished draft · Only you/);
-        assert.doesNotMatch(group, /Saved by travelers|\bPublic\b/);
+        assert.doesNotMatch(group, /Saves received|\bPublic\b/);
+    }
+});
+
+test("Continue receives the canonical save total through its real adapter, including zero", () => {
+    for (const count of [0, 1, 1200]) {
+        const selected = toSelectionBoard(summary(85, "published"), {
+            ...document(85, "published"),
+            savedCount: count
+        });
+        assert.equal(selected.photo.savedCount, count);
+        for (const group of annotationGroups(selectionMarkup([selected])))
+            assert.ok(
+                group.includes(
+                    `Saves received ${new Intl.NumberFormat("en-US").format(count)} ${count === 1 ? "save" : "saves"}`
+                )
+            );
     }
 });
 
@@ -596,27 +612,25 @@ test("Continue annotates zero saves honestly and omits invalid or unavailable sa
     for (const value of [undefined, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1]) {
         selected.photo = { ...selected.photo, savedCount: value };
         for (const group of annotationGroups(selectionMarkup([selected]))) {
-            assert.doesNotMatch(group, /Saved by travelers|\bsaves?\b/);
+            assert.doesNotMatch(group, /Saves received|\bsaves?\b/);
         }
     }
     selected.photo = { ...selected.photo, savedCount: 0 };
-    for (const group of annotationGroups(selectionMarkup([selected])))
-        assert.match(group, /Saved by travelers 0 saves/);
+    for (const group of annotationGroups(selectionMarkup([selected]))) assert.match(group, /Saves received 0 saves/);
     selected.photo = { ...selected.photo, savedCount: 1 };
-    for (const group of annotationGroups(selectionMarkup([selected])))
-        assert.match(group, /Saved by travelers 1 save\b/);
+    for (const group of annotationGroups(selectionMarkup([selected]))) assert.match(group, /Saves received 1 save\b/);
 });
 
 test("Continue summaries show only known visibility and never invent missing itinerary or saves", () => {
     const unknown = toSelectionBoard(summary(86, "published"));
     for (const group of annotationGroups(selectionMarkup([unknown]))) {
         assert.match(group, /Your Board Published/);
-        assert.doesNotMatch(group, /Public|Friends|Restricted access|In this Board|Saved by travelers/);
+        assert.doesNotMatch(group, /Public|Friends|Restricted access|In this Board|Saves received/);
     }
     const known = toSelectionBoard({ ...summary(87, "published"), visibility: "collaborators" });
     for (const group of annotationGroups(selectionMarkup([known]))) {
         assert.match(group, /Your Board Published · Restricted access/);
-        assert.doesNotMatch(group, /[Pp]rivate|In this Board|Saved by travelers/);
+        assert.doesNotMatch(group, /[Pp]rivate|In this Board|Saves received/);
     }
 });
 
@@ -626,7 +640,7 @@ function v4Cards(markup: string) {
     );
 }
 
-test("Continue featured cards retain native focus selection, honest owner visibility and permission-gated editing", () => {
+test("Continue opens the selected Board through its card, while other cards select and access stays permission-gated", () => {
     const owned = toSelectionBoard(summary(91, "published"), { ...document(91, "published"), visibility: "public" });
     const shared = toSelectionBoard(
         { ...summary(92, "published"), source: "shared" },
@@ -638,8 +652,10 @@ test("Continue featured cards retain native focus selection, honest owner visibi
     assert.match(cards[0], /aria-label="Public — anyone can view this Board"/);
     assert.match(cards[0], /Architecture/);
     assert.match(cards[0], /Paris, France/);
-    assert.match(cards[0], /aria-label="Focus Journey 91"[^>]*aria-pressed="true"[^>]*aria-expanded="false"/);
-    assert.match(cards[0], /tabindex="0"/);
+    assert.match(cards[0], /href="\/boards\/91\/edit"/);
+    assert.match(cards[0], /aria-label="Edit Journey 91"/);
+    assert.match(cards[0], /lucide-pencil/);
+    assert.doesNotMatch(cards[0], /<button\b/);
     assert.match(cards[1], /aria-label="Focus Journey 92"[^>]*aria-pressed="false"/);
     assert.match(cards[1], /tabindex="-1"/);
     assert.doesNotMatch(cards[1], /aria-label="(?:Public|Friends|Restricted access) —|aria-label="(?:Save|Unsave) /);
@@ -648,6 +664,7 @@ test("Continue featured cards retain native focus selection, honest owner visibi
     assert.match(markup, /aria-label="Previous Board"/);
     assert.match(markup, /aria-label="Next Board"/);
     assert.match(markup, /aria-live="polite"/);
+    assert.doesNotMatch(markup, /CONTINUE BOARD|RECENTLY|a journey, still unfolding/);
     assert.doesNotMatch(markup, />(?:Details|Close)(?:<|$)|[\d,]+ saves/);
     assert.doesNotMatch(markup, /<button\b[^>]*>(?:(?!<\/button>)[\s\S])*<button\b/);
     const revoked = toSelectionBoard(summary(91, "published"), {

@@ -63,6 +63,7 @@ export interface ProfileStats {
     boardsCreated: number;
     friends: number;
     activitiesSaved: number;
+    savesReceived: number;
     boardsSaved: number;
 }
 
@@ -173,7 +174,7 @@ export interface UsersRepository {
         saved?: boolean
     ): Promise<ProfileBoard[]>;
     countPublicPhotos(userId: string, viewerId?: string | null): Promise<number>;
-    stats(userId: string): Promise<Record<string, number>>;
+    stats(userId: string, viewerId?: string | null): Promise<Record<string, number>>;
     listSavedBoards(userId: string, page: number, limit: number): Promise<{ items: SavedBoard[]; hasMore: boolean }>;
     saveBoard(userId: string, boardId: number): Promise<boolean>;
     unsaveBoard(userId: string, boardId: number): Promise<void>;

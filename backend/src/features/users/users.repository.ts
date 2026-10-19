@@ -244,7 +244,7 @@ export function createUsersRepository(pool?: RepositoryQueryClient): UsersReposi
             );
             return result.rows[0]?.count ?? 0;
         },
-        async stats(userId) {
+        async stats(userId, viewerId = userId) {
             const [locations, counts] = await Promise.all([
                 getPool().query<{ country: string; city: string | null }>(
                     `SELECT DISTINCT l.country, l.city FROM board b
@@ -258,6 +258,7 @@ export function createUsersRepository(pool?: RepositoryQueryClient): UsersReposi
                     boardsCreated: number;
                     friends: number;
                     activitiesSaved: number;
+                    savesReceived: number;
                     boardsSaved: number;
                 }>(
                     `SELECT
@@ -268,13 +269,19 @@ export function createUsersRepository(pool?: RepositoryQueryClient): UsersReposi
                         (requester_user_id=$1 OR recipient_user_id=$1)) AS friends,
                      (SELECT COUNT(*)::int FROM saved_activities WHERE user_id=$1) AS "activitiesSaved",
                      (SELECT COUNT(*)::int FROM saved_boards sb JOIN board b ON b.board_id=sb.board_id
+                        WHERE b.owner_user_id=$1 AND b.status='published' AND sb.user_id<>$1 AND
+                        ($2=$1 OR b.visibility='public' OR
+                         (b.visibility='friends' AND EXISTS (SELECT 1 FROM friendship f WHERE f.status='accepted' AND
+                            ((f.requester_user_id=$1 AND f.recipient_user_id=$2) OR
+                             (f.recipient_user_id=$1 AND f.requester_user_id=$2)))))) AS "savesReceived",
+                     (SELECT COUNT(*)::int FROM saved_boards sb JOIN board b ON b.board_id=sb.board_id
                         WHERE sb.user_id=$1 AND b.status='published' AND b.owner_user_id<>$1 AND
                         (b.visibility='public' OR
                          (b.visibility='friends' AND EXISTS (SELECT 1 FROM friendship f WHERE f.status='accepted' AND
                             ((f.requester_user_id=b.owner_user_id AND f.recipient_user_id=$1) OR
                              (f.recipient_user_id=b.owner_user_id AND f.requester_user_id=$1)))) OR
                          EXISTS (SELECT 1 FROM board_member bm WHERE bm.board_id=b.board_id AND bm.user_id=$1))) AS "boardsSaved"`,
-                    [userId]
+                    [userId, viewerId]
                 )
             ]);
             const countries = new Set<string>();
@@ -297,6 +304,7 @@ export function createUsersRepository(pool?: RepositoryQueryClient): UsersReposi
                 boardsCreated: countRow?.boardsCreated ?? 0,
                 friends: countRow?.friends ?? 0,
                 activitiesSaved: countRow?.activitiesSaved ?? 0,
+                savesReceived: countRow?.savesReceived ?? 0,
                 boardsSaved: countRow?.boardsSaved ?? 0
             };
         },
