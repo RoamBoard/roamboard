@@ -55,6 +55,7 @@ export type ProfileStats = {
     citiesExplored: number;
     continentsCovered: number;
     photosUploaded: number;
+    activitiesDone: number;
     boardsCreated: number;
     friends: number;
     activitiesSaved: number;
@@ -96,6 +97,8 @@ export type MapDestination = {
     id: string;
     boardId?: number;
     boardTitle?: string;
+    coverImageUrl?: string | null;
+    collection?: "published" | "saved";
     country: string;
     countryCode: string | null;
     city: string | null;
@@ -228,8 +231,12 @@ export function loadRecentBoards() {
     return apiRequest<ProfileBoard[]>("/api/v1/users/me/recent-boards");
 }
 
-export function loadMapDestinations() {
-    return apiRequest<MapDestination[]>("/api/v1/users/me/map-destinations?scope=visited");
+export function loadMapDestinations(scope: "published" | "saved" = "published", profileHandle?: string) {
+    if (scope === "saved" && profileHandle)
+        return apiRequest<MapDestination[]>(
+            `/api/v1/users/by-handle/${encodeURIComponent(profileHandle)}/saved-map-destinations`
+        );
+    return apiRequest<MapDestination[]>(`/api/v1/users/me/map-destinations?scope=${scope}`);
 }
 
 export function loadLanguages() {
