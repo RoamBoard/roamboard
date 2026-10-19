@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Children, createElement, isValidElement, type ComponentProps, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import AddActivityDialog from "../src/components/features/boards/AddActivityDialog";
 import ActivityEditorDialog from "../src/components/features/boards/ActivityEditorDialog";
 import PlannerDayColumn from "../src/components/features/boards/PlannerDayColumn";
@@ -462,7 +463,23 @@ test("the image order chosen while creating an activity is preserved when its st
 
 test("the map has chapter 03 between planning and details with six ordered navigation chapters", async () => {
     const page = await NewBoardPage({ searchParams: Promise.resolve({}) });
-    const markup = renderToStaticMarkup(page.props.children);
+    const markup = renderToStaticMarkup(
+        createElement(
+            AppRouterContext.Provider,
+            {
+                value: {
+                    bfcacheId: "activity-planner-test",
+                    back() {},
+                    forward() {},
+                    refresh() {},
+                    push() {},
+                    replace() {},
+                    prefetch() {}
+                }
+            },
+            page.props.children
+        )
+    );
     const chapterIds = ["board-basics", "day-plan", "board-map", "details-discovery", "board-preview", "publish"];
     for (const [index, id] of chapterIds.entries()) {
         const offset = markup.indexOf(`id="${id}"`);
