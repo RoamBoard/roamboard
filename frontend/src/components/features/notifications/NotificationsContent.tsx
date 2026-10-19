@@ -18,16 +18,25 @@ export default function NotificationsContent({
     initialError = null,
     initialUserId,
     onRequestsChange,
-    onActionErrorChange
+    onActionErrorChange,
+    onLoadingChange
 }: {
     initialRequests?: FriendRequest[];
     initialError?: string | null;
     initialUserId?: string;
     onRequestsChange?: (requests: FriendRequest[]) => void;
     onActionErrorChange?: (error: string | null) => void;
+    onLoadingChange?: (loading: boolean) => void;
 }) {
     const [requests, setRequests] = useState<FriendRequest[]>(initialRequests ?? []);
     const [loading, setLoading] = useState(false);
+    const updateLoading = useCallback(
+        (val: boolean) => {
+            setLoading(val);
+            onLoadingChange?.(val);
+        },
+        [onLoadingChange]
+    );
     const [loadError, setLoadError] = useState<string | null>(initialError);
     const [sessionUser, setSessionUser] = useState<AuthUser | null>(
         initialRequests || initialError
@@ -41,6 +50,7 @@ export default function NotificationsContent({
     const activeUserIdRef = useRef<string | null>(
         initialUserId ?? (initialRequests || initialError ? "initial-session" : null)
     );
+    const readVersionRef = useRef(0);
     const requestVersionRef = useRef(0);
     const requestsRef = useRef<FriendRequest[]>(initialRequests ?? []);
 
@@ -72,33 +82,43 @@ export default function NotificationsContent({
         (targetUserId?: string) => {
             const expectedUserId = targetUserId ?? activeUserIdRef.current;
             if (!expectedUserId) return;
-            setLoading(true);
+            updateLoading(true);
             setLoadError(null);
-            const version = ++requestVersionRef.current;
+            const readId = ++readVersionRef.current;
+            const version = requestVersionRef.current;
             void loadFriendRequests()
                 .then((data) => {
-                    if (activeUserIdRef.current === expectedUserId && version === requestVersionRef.current) {
+                    if (
+                        activeUserIdRef.current === expectedUserId &&
+                        readId === readVersionRef.current &&
+                        version === requestVersionRef.current
+                    ) {
                         requestsRef.current = data;
                         setRequests(data);
                         onRequestsChange?.(data);
                     }
                 })
                 .catch(() => {
-                    if (activeUserIdRef.current === expectedUserId && version === requestVersionRef.current) {
+                    if (
+                        activeUserIdRef.current === expectedUserId &&
+                        readId === readVersionRef.current &&
+                        version === requestVersionRef.current
+                    ) {
                         setLoadError("Failed to load friend requests. Please check your connection.");
                     }
                 })
                 .finally(() => {
-                    if (activeUserIdRef.current === expectedUserId && version === requestVersionRef.current) {
-                        setLoading(false);
+                    if (activeUserIdRef.current === expectedUserId && readId === readVersionRef.current) {
+                        updateLoading(false);
                     }
                 });
         },
-        [onRequestsChange]
+        [onRequestsChange, updateLoading]
     );
 
     useEffect(() => {
         return observeCurrentUser((user) => {
+            readVersionRef.current += 1;
             requestVersionRef.current += 1;
             if (!user) {
                 activeUserIdRef.current = null;
@@ -109,7 +129,7 @@ export default function NotificationsContent({
                 setActionInProgress({});
                 setActionError(null);
                 onActionErrorChange?.(null);
-                setLoading(false);
+                updateLoading(false);
                 setLoadError(null);
             } else {
                 const previousUserId = activeUserIdRef.current;
@@ -129,7 +149,7 @@ export default function NotificationsContent({
                 }
             }
         });
-    }, [fetchRequests, initialRequests, onRequestsChange, onActionErrorChange]);
+    }, [fetchRequests, initialRequests, onRequestsChange, onActionErrorChange, updateLoading]);
 
     const handleAccept = async (requestId: number) => {
         requestVersionRef.current += 1;

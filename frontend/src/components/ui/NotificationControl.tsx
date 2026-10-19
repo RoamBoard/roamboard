@@ -86,7 +86,6 @@ export default function NotificationControl({
 
     useEffect(() => {
         return subscribeToFriendRequestUpdates((event) => {
-            readVersionRef.current += 1;
             requestVersionRef.current += 1;
             const next = requestsRef.current.filter((r) => r.requestId !== event.requestId);
             requestsRef.current = next;
@@ -226,7 +225,6 @@ export default function NotificationControl({
     }, [isOpen, sessionUser, onRequestsChange]);
 
     const handleAccept = async (requestId: number) => {
-        readVersionRef.current += 1;
         requestVersionRef.current += 1;
         const currentUserId = activeUserIdRef.current;
         if (!currentUserId) return;
@@ -260,7 +258,6 @@ export default function NotificationControl({
     };
 
     const handleReject = async (requestId: number) => {
-        readVersionRef.current += 1;
         requestVersionRef.current += 1;
         const currentUserId = activeUserIdRef.current;
         if (!currentUserId) return;

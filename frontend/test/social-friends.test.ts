@@ -1139,6 +1139,67 @@ test("FindFriendsDialog preserves confirmed unfriend status when search complete
     assert.equal(state.results[0].friendshipStatus, "none");
 });
 
+test("FindFriendsDialog fresh search started after write finished shows current server friendship status", async (context) => {
+    const aliceResult: UserSearchResult = {
+        userId: "u-alice",
+        username: "alice",
+        displayName: "Alice",
+        profilePictureUrl: null,
+        bio: null,
+        location: null,
+        friendshipStatus: "none"
+    };
+
+    const serverState = { status: "none" as UserSearchResult["friendshipStatus"] };
+
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+        const url = String(input);
+        if (url.includes("/friend-request")) {
+            return Response.json(
+                { data: { requestId: 101, status: "pending_sent" } },
+                { status: 201, headers: { "content-type": "application/json" } }
+            );
+        }
+        if (url.includes("/search")) {
+            return Response.json({
+                data: [{ ...aliceResult, friendshipStatus: serverState.status }]
+            });
+        }
+        return Response.json({ data: [] });
+    });
+
+    const state = { results: [aliceResult] as UserSearchResult[] };
+    const { nodes } = capture(() =>
+        FindFriendsDialog({
+            open: true,
+            onClose: () => {},
+            initialResults: [aliceResult],
+            onResultsChange: (r) => {
+                state.results = r;
+            }
+        })
+    );
+
+    const addBtn = nodes.find((n) => n.type === "button" && n.props.children === "+ add friend");
+    assert.ok(addBtn);
+
+    await addBtn.props.onClick?.();
+    assert.equal(state.results[0].friendshipStatus, "pending_sent");
+
+    serverState.status = "accepted";
+
+    const input = nodes.find((n) => n.type === "input");
+    assert.ok(input);
+    const onKeyDown = input.props.onKeyDown as (e: unknown) => Promise<void>;
+    await onKeyDown({
+        key: "Enter",
+        target: { value: "alice" },
+        preventDefault: () => {}
+    });
+
+    assert.equal(state.results[0].friendshipStatus, "accepted");
+});
+
 test("SocialFriendsContent retry handlers track loading state and keep empty state hidden", async (context) => {
     const deferred: { resolve: (val: FriendUser[]) => void } = { resolve: () => {} };
     const friendsPromise = new Promise<FriendUser[]>((res) => {

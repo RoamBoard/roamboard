@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import React, { Children, createElement, isValidElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import NotificationsContent from "@/components/features/notifications/NotificationsContent";
-import { subscribeToFriendRequestUpdates, type FriendRequest } from "@/lib/profile";
+import { notifyFriendRequestAction, subscribeToFriendRequestUpdates, type FriendRequest } from "@/lib/profile";
 import { publishAccountUpdate, signInWithGoogle, type AuthUser } from "@/lib/auth";
 
 type ElementProps = {
@@ -506,5 +506,62 @@ test("NotificationsContent clears requests and pending action state immediately 
     deferredRead.reject(new Error("Failed to load"));
     await new Promise((resolve) => setTimeout(resolve, 0));
 
+    assert.deepEqual(tracker.requests, []);
+});
+
+test("NotificationsContent completes loading even when shared friend request update arrives while reading", async (context) => {
+    const user1: AuthUser = { userId: "user-1", username: "user1", displayName: "User One" };
+
+    const deferredRead: { resolve: (val: Response) => void } = {
+        resolve: () => {}
+    };
+    const readPromise = new Promise<Response>((resolve) => {
+        deferredRead.resolve = resolve;
+    });
+
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+        const url = String(input);
+        if (url.includes("/api/v1/auth/google")) {
+            return Response.json({ data: { user: user1, isNew: false } });
+        }
+        if (url.includes("/api/v1/users/me/friend-requests")) {
+            return readPromise;
+        }
+        return Response.json({ data: [] });
+    });
+
+    const tracker = { loading: false, requests: [] as FriendRequest[] };
+    const { unmount } = mount(() =>
+        NotificationsContent({
+            onLoadingChange: (l) => {
+                tracker.loading = l;
+            },
+            onRequestsChange: (reqs) => {
+                tracker.requests = reqs;
+            }
+        })
+    );
+    context.after(unmount);
+
+    publishAccountUpdate(user1);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    assert.equal(tracker.loading, true);
+
+    notifyFriendRequestAction({ type: "accept", requestId: 999 });
+
+    deferredRead.resolve(
+        Response.json({
+            data: [
+                {
+                    requestId: 999,
+                    requester: { userId: "u-999", username: "u", displayName: "U", profilePictureUrl: null }
+                }
+            ]
+        })
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    assert.equal(tracker.loading, false);
     assert.deepEqual(tracker.requests, []);
 });

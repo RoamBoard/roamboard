@@ -49,7 +49,14 @@ export default function FindFriendsDialog({
     const searchVersionRef = useRef(0);
     const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const confirmedFriendshipsRef = useRef<
-        Record<string, { friendshipStatus: UserSearchResult["friendshipStatus"]; requestId?: number }>
+        Record<
+            string,
+            {
+                friendshipStatus: UserSearchResult["friendshipStatus"];
+                requestId?: number;
+                maxSearchId: number;
+            }
+        >
     >({});
 
     const [loading, setLoading] = useState(false);
@@ -133,13 +140,16 @@ export default function FindFriendsDialog({
                     const merged = data.map((u) => {
                         const confirmed = confirmedFriendshipsRef.current[u.userId];
                         if (confirmed) {
-                            return {
-                                ...u,
-                                friendshipStatus: confirmed.friendshipStatus,
-                                requestId:
-                                    confirmed.requestId ??
-                                    (confirmed.friendshipStatus === "none" ? undefined : u.requestId)
-                            };
+                            if (searchId <= confirmed.maxSearchId) {
+                                return {
+                                    ...u,
+                                    friendshipStatus: confirmed.friendshipStatus,
+                                    requestId:
+                                        confirmed.requestId ??
+                                        (confirmed.friendshipStatus === "none" ? undefined : u.requestId)
+                                };
+                            }
+                            delete confirmedFriendshipsRef.current[u.userId];
                         }
                         return u;
                     });
@@ -191,7 +201,8 @@ export default function FindFriendsDialog({
             const result = await sendFriendRequest(handle);
             confirmedFriendshipsRef.current[userId] = {
                 friendshipStatus: result.status,
-                requestId: result.requestId
+                requestId: result.requestId,
+                maxSearchId: searchVersionRef.current
             };
             setActionState((prev) => ({ ...prev, [userId]: "done" }));
             const next: UserSearchResult[] = resultsRef.current.map((u): UserSearchResult =>
@@ -222,7 +233,8 @@ export default function FindFriendsDialog({
             await acceptFriendRequest(requestId);
             confirmedFriendshipsRef.current[userId] = {
                 friendshipStatus: "accepted",
-                requestId: undefined
+                requestId: undefined,
+                maxSearchId: searchVersionRef.current
             };
             setActionState((prev) => ({ ...prev, [userId]: "done" }));
             const next: UserSearchResult[] = resultsRef.current.map((u): UserSearchResult =>
@@ -482,7 +494,8 @@ export default function FindFriendsDialog({
                             await removeFriend(target.userId);
                             confirmedFriendshipsRef.current[target.userId] = {
                                 friendshipStatus: "none",
-                                requestId: undefined
+                                requestId: undefined,
+                                maxSearchId: searchVersionRef.current
                             };
                             const next: UserSearchResult[] = resultsRef.current.map((u): UserSearchResult =>
                                 u.userId === target.userId
