@@ -225,7 +225,7 @@ export function DestinationStories({
                                 onClick={() => select(selected - 1)}
                                 className="hover:bg-faint grid size-11 place-items-center focus-visible:outline-2 disabled:opacity-30"
                             >
-                                <ArrowLeft size={20} strokeWidth={1} />
+                                <ArrowLeft size={24} strokeWidth={1.5} />
                             </button>
                             <span className="text-muted-foreground shrink-0 text-[10px] whitespace-nowrap tabular-nums">
                                 {String(selected + 1).padStart(2, "0")} / {String(boards.length).padStart(2, "0")}
@@ -237,7 +237,7 @@ export function DestinationStories({
                                 onClick={() => select(selected + 1)}
                                 className="hover:bg-faint grid size-11 place-items-center focus-visible:outline-2 disabled:opacity-30"
                             >
-                                <ArrowRight size={20} strokeWidth={1} />
+                                <ArrowRight size={24} strokeWidth={1.5} />
                             </button>
                         </div>
                         <AnimatePresence mode="wait" initial={false}>

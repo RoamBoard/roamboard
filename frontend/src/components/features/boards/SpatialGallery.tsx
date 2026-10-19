@@ -170,7 +170,7 @@ export default function SpatialGallery({
                     </div>
 
                     <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 pb-8 sm:px-10">
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center gap-3">
                             <button
                                 type="button"
                                 aria-label={saved ? "Previous saved Board" : "Previous Board"}
@@ -178,7 +178,7 @@ export default function SpatialGallery({
                                 onClick={() => select(selectedIndex - 1)}
                                 className="hover:bg-faint grid size-11 cursor-pointer place-items-center focus-visible:outline-1 disabled:cursor-default disabled:opacity-25"
                             >
-                                <ArrowLeft size={19} strokeWidth={1.5} />
+                                <ArrowLeft size={24} strokeWidth={1.5} />
                             </button>
                             <span className="text-10 text-muted-foreground tabular-nums">
                                 {String(selectedIndex + 1).padStart(2, "0")} / {String(boards.length).padStart(2, "0")}
@@ -190,7 +190,7 @@ export default function SpatialGallery({
                                 onClick={() => select(selectedIndex + 1)}
                                 className="hover:bg-faint grid size-11 cursor-pointer place-items-center focus-visible:outline-1 disabled:cursor-default disabled:opacity-25"
                             >
-                                <ArrowRight size={19} strokeWidth={1.5} />
+                                <ArrowRight size={24} strokeWidth={1.5} />
                             </button>
                         </div>
                         <AnimatePresence mode="wait" initial={false}>

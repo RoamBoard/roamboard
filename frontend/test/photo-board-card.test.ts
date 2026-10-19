@@ -130,6 +130,32 @@ test("metadata is opt-in, disclosed with a labelled control and truthful when ex
     requireNoVisibleDisclosure(expanded);
 });
 
+test("V4 details pair persisted itinerary totals and place valid save totals beneath them", () => {
+    const markup = html({ board: { ...board, durationDays: 4, activityCount: 12, savedCount: 128 }, expanded: true });
+    const text = markup.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+    assert.match(text, /4 days · 12 activities/);
+    assert.match(text, /128 saves/);
+    assert.ok(text.indexOf("4 days · 12 activities") < text.indexOf("128 saves"));
+    const singular = html({ board: { ...board, durationDays: 1, activityCount: 1, savedCount: 1 }, expanded: true });
+    assert.match(singular.replace(/<[^>]+>/g, " ").replace(/\s+/g, " "), /1 day · 1 activity/);
+    assert.match(singular, /1 save(?:<|\s)/);
+});
+
+test("V4 details omit unavailable or invalid optional counts while preserving a known zero", () => {
+    const render = (overrides: Partial<PhotoBoardCardData>) =>
+        html({ board: { ...board, durationDays: undefined, savedCount: undefined, ...overrides }, expanded: true })
+            .replace(/<[^>]+>/g, " ")
+            .replace(/\s+/g, " ");
+    assert.doesNotMatch(render({}), /\b(?:days?|activities|activity|saves?)\b/);
+    assert.match(render({ activityCount: 0, savedCount: 0 }), /0 activities\s+0 saves/);
+    for (const invalid of [-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1]) {
+        assert.doesNotMatch(
+            render({ activityCount: invalid, savedCount: invalid }),
+            /\b(?:activities|activity|saves?)\b/
+        );
+    }
+});
+
 test("an unlinked card reveals its story through a single full-card action and Escape dismisses it", () => {
     const expandedStates: boolean[] = [];
     const events = { stopped: 0, prevented: 0 };

@@ -544,7 +544,7 @@ test("an owner opened through a shared-link lookup keeps owner annotations rathe
     const board = toSelectionBoard({ ...summary(82, "published"), source: "shared" }, document(82, "published"));
     const markup = selectionMarkup([board]);
     assert.match(markup, />Your Board<\/dt>/);
-    assert.match(markup, /Published · still yours to shape/);
+    assert.match(markup, /Published · Friends/);
     assert.doesNotMatch(markup, /Shared with you|Published · editing access/);
     assert.match(markup, /href="\/boards\/82\/edit"/);
 });
@@ -560,6 +560,65 @@ function selectionMarkup(boards: ReturnType<typeof toSelectionBoard>[], selected
         })
     );
 }
+
+function annotationGroups(markup: string) {
+    return [...markup.matchAll(/<dl\b[^>]*>([\s\S]*?)<\/dl>/g)].map((match) =>
+        match[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ")
+    );
+}
+
+test("Continue annotations use canonical publication visibility and keep traveler saves separate from itinerary", () => {
+    for (const [visibility, label] of [
+        ["public", "Public"],
+        ["friends", "Friends"],
+        ["collaborators", "Restricted access"]
+    ] as const) {
+        const selected = toSelectionBoard(summary(83, "published"), { ...document(83, "published"), visibility });
+        selected.photo = { ...selected.photo, visibility: "public", savedCount: 128 };
+        const groups = annotationGroups(selectionMarkup([selected]));
+        assert.ok(groups.length > 0, "The selected Board has a readable description list");
+        for (const group of groups) {
+            assert.ok(group.includes(`Your Board Published · ${label}`));
+            assert.match(group, /In this Board 1 day · 1 activity/);
+            assert.match(group, /Saved by travelers 128 saves/);
+            assert.doesNotMatch(group, /1 activity[^a-zA-Z]*128 saves|[Pp]rivate|[Cc]ollaborat/);
+        }
+    }
+    const draft = toSelectionBoard(summary(84), { ...document(84), visibility: "public" });
+    for (const group of annotationGroups(selectionMarkup([draft]))) {
+        assert.match(group, /Your Board Unpublished draft · Only you/);
+        assert.doesNotMatch(group, /Saved by travelers|\bPublic\b/);
+    }
+});
+
+test("Continue annotates zero saves honestly and omits invalid or unavailable save counts", () => {
+    const selected = toSelectionBoard(summary(85, "published"), document(85, "published"));
+    for (const value of [undefined, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1]) {
+        selected.photo = { ...selected.photo, savedCount: value };
+        for (const group of annotationGroups(selectionMarkup([selected]))) {
+            assert.doesNotMatch(group, /Saved by travelers|\bsaves?\b/);
+        }
+    }
+    selected.photo = { ...selected.photo, savedCount: 0 };
+    for (const group of annotationGroups(selectionMarkup([selected])))
+        assert.match(group, /Saved by travelers 0 saves/);
+    selected.photo = { ...selected.photo, savedCount: 1 };
+    for (const group of annotationGroups(selectionMarkup([selected])))
+        assert.match(group, /Saved by travelers 1 save\b/);
+});
+
+test("Continue summaries show only known visibility and never invent missing itinerary or saves", () => {
+    const unknown = toSelectionBoard(summary(86, "published"));
+    for (const group of annotationGroups(selectionMarkup([unknown]))) {
+        assert.match(group, /Your Board Published/);
+        assert.doesNotMatch(group, /Public|Friends|Restricted access|In this Board|Saved by travelers/);
+    }
+    const known = toSelectionBoard({ ...summary(87, "published"), visibility: "collaborators" });
+    for (const group of annotationGroups(selectionMarkup([known]))) {
+        assert.match(group, /Your Board Published · Restricted access/);
+        assert.doesNotMatch(group, /[Pp]rivate|In this Board|Saved by travelers/);
+    }
+});
 
 function v4Cards(markup: string) {
     return [...markup.matchAll(/<article\b[^>]*style="aspect-ratio:400 \/ 500"[^>]*>[\s\S]*?<\/article>/g)].map(
