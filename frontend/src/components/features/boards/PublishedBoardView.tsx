@@ -210,8 +210,7 @@ export default function PublishedBoardView({
     if (error)
         return (
             <div className="px-6 py-20 sm:px-12">
-                <p className="text-10 tracking-label text-muted-foreground uppercase">Board inspector</p>
-                <h1 className="font-display text-48 mt-4 font-bold">Could not load Board</h1>
+                <h1 className="font-display text-48 font-bold">Could not load Board</h1>
                 <p className="text-14 text-muted-foreground mt-4" role="alert">
                     {error}
                 </p>
