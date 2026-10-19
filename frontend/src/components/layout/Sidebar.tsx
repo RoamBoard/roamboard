@@ -189,7 +189,9 @@ export default function Sidebar({ activeHref, profile = {} }: { activeHref: stri
     const savedExpanded = useSyncExternalStore(subscribeSidebar, getSidebarExpanded, getSidebarServerSnapshot);
     const desktop = useSyncExternalStore(subscribeDesktop, getDesktopSnapshot, getDesktopServerSnapshot);
     const [accountOpen, setAccountOpen] = useState(false);
-    const expanded = (desktop && savedExpanded) || accountOpen;
+    const [hovered, setHovered] = useState(false);
+    const expanded = (desktop && (savedExpanded || hovered)) || accountOpen;
+    const sidebarWidth = expanded ? "176px" : "80px";
     const [mobileOpen, setMobileOpen] = useState(false);
     const triggerRef = useRef<HTMLButtonElement>(null);
     const reducedMotion = useReducedMotion();
@@ -208,11 +210,16 @@ export default function Sidebar({ activeHref, profile = {} }: { activeHref: stri
             <motion.aside
                 aria-label="Roamboard sidebar"
                 initial={false}
-                animate={{ "--sidebar-width": expanded ? "224px" : "80px" }}
+                animate={{ "--sidebar-width": sidebarWidth }}
                 transition={{ duration: reducedMotion ? 0 : 0.24, ease: [0.22, 1, 0.36, 1] }}
+                onPointerEnter={(event) => {
+                    if (desktop && event.pointerType !== "touch") setHovered(true);
+                }}
+                onPointerLeave={() => setHovered(false)}
                 onKeyDown={(event) => {
                     if (event.key === "Escape" && expanded) {
                         setAccountOpen(false);
+                        setHovered(false);
                         setSidebarExpanded(false);
                     }
                 }}
@@ -222,12 +229,20 @@ export default function Sidebar({ activeHref, profile = {} }: { activeHref: stri
                     <Link
                         href="/home"
                         aria-label="Roamboard home"
-                        className="font-display text-24 md:text-30 absolute top-7 left-[20px] leading-none font-bold tracking-tight focus-visible:outline-2 focus-visible:outline-offset-4 md:left-[25px] [@media(max-height:400px)]:top-3"
+                        className={`font-display absolute top-7 left-[20px] leading-none font-bold tracking-tight whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-4 md:left-[25px] [@media(max-height:400px)]:top-3 ${expanded ? "text-20" : "text-24 md:text-30"}`}
                     >
-                        <span className="[writing-mode:vertical-rl] [@media(max-height:650px)]:hidden">ROAMBOARD</span>
-                        <span className="hidden [@media(max-height:650px)]:inline" aria-hidden="true">
-                            R.
-                        </span>
+                        {expanded ? (
+                            <span>Roamboard</span>
+                        ) : (
+                            <>
+                                <span className="[writing-mode:vertical-rl] [@media(max-height:650px)]:hidden">
+                                    ROAMBOARD
+                                </span>
+                                <span className="hidden [@media(max-height:650px)]:inline" aria-hidden="true">
+                                    R.
+                                </span>
+                            </>
+                        )}
                     </Link>
                 </header>
                 <div id={panelId} className="flex min-h-11 min-w-0 flex-1 flex-col">
@@ -246,24 +261,37 @@ export default function Sidebar({ activeHref, profile = {} }: { activeHref: stri
                 <button
                     type="button"
                     ref={triggerRef}
-                    aria-label={desktop ? (expanded ? "Collapse navigation" : "Expand navigation") : "Open navigation"}
+                    aria-label={
+                        desktop
+                            ? savedExpanded
+                                ? "Collapse navigation"
+                                : expanded
+                                  ? "Keep navigation expanded"
+                                  : "Expand navigation"
+                            : "Open navigation"
+                    }
                     aria-expanded={desktop ? expanded : mobileOpen}
                     aria-haspopup={desktop ? undefined : "dialog"}
                     aria-controls={desktop ? panelId : `${panelId}-drawer`}
                     onClick={() => {
                         if (desktop) {
                             setAccountOpen(false);
-                            setSidebarExpanded(!expanded);
+                            setHovered(false);
+                            setSidebarExpanded(!savedExpanded);
                         } else setMobileOpen(true);
                     }}
-                    className={`text-muted-foreground/50 hover:text-muted-foreground mx-2.5 mt-3 flex h-11 shrink-0 cursor-pointer items-center focus-visible:outline-2 focus-visible:outline-offset-4 md:mx-4 ${expanded ? "px-3" : "justify-center"}`}
+                    className={`text-muted-foreground/50 hover:text-muted-foreground mx-2.5 mt-3 flex h-11 shrink-0 cursor-pointer items-center focus-visible:outline-2 focus-visible:outline-offset-4 md:mx-4 ${desktop && expanded ? "px-3" : "justify-center"}`}
                 >
-                    {expanded ? (
+                    {desktop && savedExpanded ? (
                         <PanelLeftClose aria-hidden="true" size={20} strokeWidth={1.5} />
                     ) : (
                         <PanelLeftOpen aria-hidden="true" size={20} strokeWidth={1.5} />
                     )}
-                    {expanded && <span className="text-12 ml-3 whitespace-nowrap">collapse</span>}
+                    {desktop && expanded && (
+                        <span className="text-12 ml-3 whitespace-nowrap">
+                            {savedExpanded ? "collapse" : "keep open"}
+                        </span>
+                    )}
                 </button>
             </motion.aside>
             {mobileOpen && (
