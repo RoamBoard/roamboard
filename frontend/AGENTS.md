@@ -515,6 +515,12 @@ photos use the Board-scoped image authorization described in
 browser so protected requests carry its session cookie. The presentation model retains optional dates/times and
 explicit saved day numbers, including empty days and gaps.
 
+`BoardComments` renders the approved Editorial layout after the published Board, including on the owner's view. It calls
+the Board comment API proposed in `contracts/board-comments.md`, shows independent loading/error states, uses
+server-provided comment permissions for edit/delete, and validates a Board return path through Google and guest login.
+The backend endpoints and migration file are implemented. Comments persist after migration 013 is applied to the shared
+database; applying it is a separate deployment step.
+
 Published Board routes use the database viewer exclusively. The former hardcoded Tokyo document and sample
 lookup were removed after importing Tokyo into the user's account through the canonical Board/image services.
 The retired sample slug has no database alias and shows the missing-Board state. The old `PublishedBoardView`

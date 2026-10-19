@@ -4,6 +4,7 @@ import Link from "next/link";
 import BackLink from "@/components/ui/BackLink";
 import { useRef, useState } from "react";
 import ActivityDetailsDialog from "@/components/features/boards/ActivityDetailsDialog";
+import BoardComments from "@/components/features/boards/BoardComments";
 import BoardCopyEditor from "@/components/features/boards/BoardCopyEditor";
 import BoardDialog from "@/components/features/boards/BoardDialog";
 import BoardIcon from "@/components/features/boards/BoardIcon";
@@ -297,6 +298,7 @@ export default function PublishedBoard({
                     </footer>
                 )}
             </article>
+            <BoardComments boardId={board.id} />
             {selectedActivity && (
                 <ActivityDetailsDialog
                     activity={selectedActivity}

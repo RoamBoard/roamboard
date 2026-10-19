@@ -1,5 +1,9 @@
 # Shared development database migration log
 
+## Pending Board comment migrations
+
+`013_board_comments.sql` creates persisted Board comments. `014_board_comment_notifications.sql` adds comment bell preferences and in-app notifications. Neither migration was applied to the shared database in this implementation session. The requester applies migrations; check the actual schema and migration history first, particularly if the earlier `012_board_comments.sql` filename was already used. Apply 014 only after the comment table exists.
+
 ## Pending friendship acceptance timestamp migration
 
 `012_friendship_accepted_at.sql` adds the `accepted_at` column to `friendship` and backfills it with `CURRENT_TIMESTAMP` for accepted friendships. It has not been applied to the shared Azure database. Apply 012 after 011.

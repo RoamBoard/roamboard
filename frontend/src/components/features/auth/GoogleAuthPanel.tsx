@@ -5,6 +5,7 @@ import Script from "next/script";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { signInWithGoogle } from "@/lib/auth";
+import { loginDestinationAfterBoardComment } from "@/lib/board-comment-return";
 import { setMockAuthState } from "@/data/mock-social";
 import GuestAuthPanel from "./GuestAuthPanel";
 
@@ -34,7 +35,7 @@ export default function GoogleAuthPanel({ mode }: Props) {
         try {
             const result = await signInWithGoogle(response.credential);
             setMockAuthState(true);
-            router.replace(result.isNew ? "/home" : "/welcome");
+            router.replace(loginDestinationAfterBoardComment(result.isNew ? "/home" : "/welcome"));
         } catch (cause) {
             setStatus("");
             setError(
