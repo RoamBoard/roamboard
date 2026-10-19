@@ -226,46 +226,48 @@ export default function PublishedBoard({
                 ) : (
                     <p className="text-muted-foreground px-5 py-16 text-center">This board has no activities yet.</p>
                 )}
-                <footer className="border-line grid min-h-[42rem] grid-cols-1 gap-24 border-t px-5 py-10 sm:px-9 lg:gap-36 lg:py-12">
-                    <section>
-                        <p className="text-muted-foreground text-12">like this board?</p>
-                        <h2 className="font-display text-36 mt-1 font-bold uppercase">Make it yours</h2>
-                        <p className="text-muted-foreground text-14 mt-1 max-w-60">
-                            Create a preview copy in this tab and add your own ideas.
-                        </p>
-                        <button type="button" onClick={preview.copyBoard} className={`${actionClasses} mt-5`}>
-                            <BoardIcon name="copy" className="size-4" />
-                            Copy board preview
-                        </button>
-                    </section>
-                    <section
-                        aria-labelledby="board-author-heading"
-                        className="w-full max-w-lg min-w-0 self-end justify-self-end"
-                    >
-                        <h2
-                            id="board-author-heading"
-                            className="font-display text-36 text-right leading-none font-bold uppercase"
+                {!canManageBoard && (
+                    <footer className="border-line grid min-h-[42rem] grid-cols-1 gap-24 border-t px-5 py-10 sm:px-9 lg:gap-36 lg:py-12">
+                        <section>
+                            <p className="text-muted-foreground text-12">like this board?</p>
+                            <h2 className="font-display text-36 mt-1 font-bold uppercase">Make it yours</h2>
+                            <p className="text-muted-foreground text-14 mt-1 max-w-60">
+                                Create a preview copy in this tab and add your own ideas.
+                            </p>
+                            <button type="button" onClick={preview.copyBoard} className={`${actionClasses} mt-5`}>
+                                <BoardIcon name="copy" className="size-4" />
+                                Copy board preview
+                            </button>
+                        </section>
+                        <section
+                            aria-labelledby="board-author-heading"
+                            className="w-full max-w-lg min-w-0 self-end justify-self-end"
                         >
-                            About {author.name}
-                        </h2>
-                        <p className="text-muted-foreground text-12 mt-3 ml-auto max-w-60 text-right">
-                            Every board starts with a person. Here is the traveller behind this one.
-                        </p>
-                        <div className="mt-6 grid gap-5 sm:grid-cols-[1fr_1.1fr]">
-                            <div className="text-muted-foreground text-right">
-                                <p className="text-14 leading-snug whitespace-pre-line">{author.bio}</p>
+                            <h2
+                                id="board-author-heading"
+                                className="font-display text-36 text-right leading-none font-bold uppercase"
+                            >
+                                About {author.name}
+                            </h2>
+                            <p className="text-muted-foreground text-12 mt-3 ml-auto max-w-60 text-right">
+                                Every board starts with a person. Here is the traveller behind this one.
+                            </p>
+                            <div className="mt-6 grid gap-5 sm:grid-cols-[1fr_1.1fr]">
+                                <div className="text-muted-foreground text-right">
+                                    <p className="text-14 leading-snug whitespace-pre-line">{author.bio}</p>
+                                </div>
+                                <BoardPhoto
+                                    image={author.photo}
+                                    placeholderLabel={`${author.name}'s profile photo`}
+                                    className="aspect-[3/4] min-h-72"
+                                />
                             </div>
-                            <BoardPhoto
-                                image={author.photo}
-                                placeholderLabel={`${author.name}'s profile photo`}
-                                className="aspect-[3/4] min-h-72"
-                            />
-                        </div>
-                    </section>
-                    <p className="text-muted-foreground text-10">
-                        Activity saves and copies are previews saved in this tab.
-                    </p>
-                </footer>
+                        </section>
+                        <p className="text-muted-foreground text-10">
+                            Activity saves and copies are previews saved in this tab.
+                        </p>
+                    </footer>
+                )}
             </article>
             {selectedActivity && (
                 <ActivityDetailsDialog
