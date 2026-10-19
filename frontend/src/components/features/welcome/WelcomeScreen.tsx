@@ -1,16 +1,22 @@
-import Image from "@/components/images/LibraryImage";
+import Image, { LibraryCredit } from "@/components/images/LibraryImage";
 import EnterTransition from "@/components/features/welcome/EnterTransition";
 import WelcomeUsername from "@/components/features/welcome/WelcomeUsername";
 import ThemeSelect from "@/components/ui/ThemeSelect";
 
-type Props = {
-    username: string;
-};
+type Props = { variant: "start" } | { variant?: "returning"; username: string };
 
-export default function WelcomeScreen({ username }: Props) {
+const startPhotos = [
+    { source: "library:frontend.images.destinations.inari", credit: "Jeremy Goldberg", photoId: "AiC8MRukmBg" },
+    { source: "library:frontend.images.destinations.paris.hero", credit: "Diogo Fagundes", photoId: "dbBKeN1s8GY" },
+    { source: "library:frontend.images.destinations.nyhavn", credit: "Nick Karvounis", photoId: "z9omP7AT_2s" }
+];
+
+export default function WelcomeScreen(props: Props) {
+    const isStart = props.variant === "start";
+    const username = props.variant === "start" ? "" : props.username;
     return (
         <main className="font-body bg-background text-foreground relative h-dvh min-h-128 w-full overflow-hidden">
-            <h1 className="sr-only">Welcome back, {username}</h1>
+            <h1 className="sr-only">{isStart ? "THE WORLD AWAITS" : `Welcome back, ${username}`}</h1>
 
             <div className="pointer-events-none absolute inset-0" aria-hidden="true">
                 <span className="bg-faint absolute inset-y-0 left-[2.25%] w-px" />
@@ -20,9 +26,9 @@ export default function WelcomeScreen({ username }: Props) {
             </div>
 
             <p className="text-muted-foreground absolute top-[3.5%] right-[2.25%] text-right text-[length:clamp(0.625rem,0.8vw,1rem)] leading-[1.05]">
-                THE WORLD
+                {isStart ? "WHERE WILL" : "THE WORLD"}
                 <br />
-                AWAITS
+                {isStart ? "YOU GO NEXT?" : "AWAITS"}
             </p>
 
             <div
@@ -31,7 +37,7 @@ export default function WelcomeScreen({ username }: Props) {
             >
                 <div className="absolute top-[6.25%] left-[6.5%] h-[70.4%] w-[26%] overflow-hidden">
                     <Image
-                        src="library:frontend.images.welcome.blossoms"
+                        src={isStart ? startPhotos[0].source : "library:frontend.images.welcome.blossoms"}
                         alt=""
                         fill
                         sizes="26vw"
@@ -41,17 +47,17 @@ export default function WelcomeScreen({ username }: Props) {
                 </div>
                 <div className="absolute top-[8.7%] left-[41.9%] h-[65.8%] w-[36.5%] overflow-hidden">
                     <Image
-                        src="library:frontend.images.welcome.water"
+                        src={isStart ? startPhotos[1].source : "library:frontend.images.welcome.water"}
                         alt=""
                         fill
                         sizes="75vw"
                         preload
-                        className="origin-top scale-[2.05] object-cover object-top"
+                        className={isStart ? "object-cover" : "origin-top scale-[2.05] object-cover object-top"}
                     />
                 </div>
                 <div className="absolute top-[13%] left-[26.9%] z-1 h-[68.8%] w-[26.9%] overflow-hidden">
                     <Image
-                        src="library:frontend.images.welcome.flowers"
+                        src={isStart ? startPhotos[2].source : "library:frontend.images.welcome.flowers"}
                         alt=""
                         fill
                         sizes="27vw"
@@ -61,12 +67,18 @@ export default function WelcomeScreen({ username }: Props) {
                 </div>
 
                 <span className="absolute top-[8.6%] left-[15%] z-2 origin-top-left rotate-90 text-[length:min(8cqw,12.37cqh)] leading-none font-normal text-white">
-                    WELCOME
+                    {isStart ? "THE" : "WELCOME"}
                 </span>
                 <span className="absolute bottom-[20%] left-[28.3%] z-2 text-[length:min(8.15cqw,12.61cqh)] leading-none font-normal text-white">
-                    BACK
+                    {isStart ? "WORLD" : "BACK"}
                 </span>
-                <WelcomeUsername username={username} />
+                {isStart ? (
+                    <span className="absolute top-[13.8%] left-[44.75%] z-2 text-[length:min(8cqw,12.37cqh)] leading-none font-normal text-white">
+                        AWAITS
+                    </span>
+                ) : (
+                    <WelcomeUsername username={username} />
+                )}
             </div>
 
             <p
@@ -81,10 +93,39 @@ export default function WelcomeScreen({ username }: Props) {
                 DISCOVER IT?
             </p>
 
-            <EnterTransition />
-            <div className="absolute right-[2.25%] bottom-[calc(3.5%+2.5rem)] z-10">
-                <ThemeSelect side="top" />
-            </div>
+            {isStart ? (
+                <>
+                    <EnterTransition />
+                    <details className="text-muted-foreground absolute top-[3.5%] left-[2.25%] z-10 max-w-[65%] text-[10px] sm:text-xs">
+                        <summary className="min-h-11 cursor-pointer py-2 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4">
+                            Photo credits
+                        </summary>
+                        <ul className="bg-background border-line space-y-2 border p-3">
+                            {startPhotos.map((photo) => (
+                                <li key={photo.source}>
+                                    <LibraryCredit source={photo.source}>
+                                        <a
+                                            href={`https://unsplash.com/photos/${photo.photoId}`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="underline underline-offset-4"
+                                        >
+                                            {photo.credit} / Unsplash
+                                        </a>
+                                    </LibraryCredit>
+                                </li>
+                            ))}
+                        </ul>
+                    </details>
+                </>
+            ) : (
+                <>
+                    <EnterTransition />
+                    <div className="absolute right-[2.25%] bottom-[calc(3.5%+2.5rem)] z-10">
+                        <ThemeSelect side="top" />
+                    </div>
+                </>
+            )}
         </main>
     );
 }
