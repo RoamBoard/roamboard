@@ -206,6 +206,19 @@ test("published day headings show exact saved dates even on empty days and leave
     assert.doesNotMatch(header(5), /<time\b|2026-10-/i);
 });
 
+test("the copy and author footer appears for visitors but not the Board owner", () => {
+    const source = document();
+    const visitor = renderPage({ status: "ready", data: toPublishedBoardData(source) });
+    assert.match(visitor, /Make it yours/i);
+    assert.match(visitor, /Copy board preview/i);
+    assert.match(visitor, /About station_walker/i);
+
+    source.permissions = { canEditContent: true, canManageBoard: true };
+    const owner = renderPage({ status: "ready", data: toPublishedBoardData(source) });
+    assert.doesNotMatch(owner, /Make it yours|Copy board preview|About station_walker/i);
+    assert.match(owner, /Edit Board/i);
+});
+
 test("activity details show their saved day date and retain the activity time without dating undated activities", () => {
     const source = document();
     const renderDetails = () => {
