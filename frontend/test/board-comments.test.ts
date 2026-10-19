@@ -549,3 +549,74 @@ test("mounted BoardCommentRow edits with retained draft on conflict, reloads cur
 
     assert.deepEqual(deletedIds, [81]);
 });
+
+test("toggling the notification bell while post refresh is in flight preserves the newer bell choice", async (t) => {
+    const subscriptionReads: Array<(response: Response) => void> = [];
+    replaceFetch(t, async (input, init) => {
+        const url = new URL(String(input));
+        if (url.pathname === "/api/v1/auth/me") {
+            return json({ data: { userId: "user-1", username: "avery", displayName: "Avery Lee" } });
+        }
+        if (url.pathname === "/api/v1/boards/42/comment-subscription") {
+            if (init?.method === "PUT") {
+                const payload = JSON.parse(String(init.body)) as { enabled: boolean };
+                return json({ data: { enabled: payload.enabled } });
+            }
+            if (subscriptionReads.length === 0) {
+                subscriptionReads.push(noop);
+                return json({ data: { enabled: true } });
+            }
+            return new Promise<Response>((resolve) => {
+                subscriptionReads.push(resolve);
+            });
+        }
+        if (url.pathname === "/api/v1/boards/42/comments" && init?.method === "POST") {
+            return json({ data: { ...comment(99), body: "New comment" } }, 201);
+        }
+        if (url.pathname === "/api/v1/boards/42/comments") {
+            return json({ data: [], meta: { nextCursor: null, hasMore: false } });
+        }
+        throw new Error(`Unexpected request: ${url.pathname}`);
+    });
+
+    const section = mount(t, () => BoardComments({ boardId: "42" }));
+    await flush();
+
+    const loaded = section.render();
+    loaded.nodes
+        .find((node) => node.props.id === "board-comment-draft")
+        ?.props.onChange?.({
+            target: { value: "New comment" }
+        });
+    await section
+        .render()
+        .nodes.find((node) => node.type === "form")
+        ?.props.onSubmit?.({ preventDefault: noop });
+    await flush();
+
+    assert.equal(subscriptionReads.length, 2, "Posting a comment should start a subscription refresh");
+
+    const bellBeforeToggle = section
+        .render()
+        .nodes.find((node) => node.props["aria-label"] === "Turn off comment notifications");
+    assert.ok(bellBeforeToggle, "Bell should initially be enabled");
+    await bellBeforeToggle.props.onClick?.();
+    await flush();
+
+    assert.ok(
+        section.render().nodes.some((node) => node.props["aria-label"] === "Turn on comment notifications"),
+        "Bell should reflect the confirmed off choice"
+    );
+
+    subscriptionReads[1](json({ data: { enabled: true } }));
+    await flush();
+
+    const finalRender = section.render();
+    assert.ok(
+        finalRender.nodes.some(
+            (node) =>
+                node.props["aria-label"] === "Turn on comment notifications" && node.props["aria-pressed"] === false
+        ),
+        "Stale GET after post must not overwrite the newer bell toggle"
+    );
+});

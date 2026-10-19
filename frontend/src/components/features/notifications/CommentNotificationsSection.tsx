@@ -19,7 +19,7 @@ export default function CommentNotificationsSection({ userId }: { userId: string
     const [error, setError] = useState("");
     const [openingId, setOpeningId] = useState<number | null>(null);
     const versionRef = useRef(0);
-    const userRef = useRef(userId);
+    const userRef = useRef<string | null>(userId);
 
     const read = useCallback((expectedUserId: string, nextCursor?: string) => {
         const version = ++versionRef.current;
@@ -50,18 +50,25 @@ export default function CommentNotificationsSection({ userId }: { userId: string
     }, []);
 
     useEffect(() => {
-        const expectedUserId = userId;
-        void Promise.resolve().then(() => read(expectedUserId));
+        userRef.current = userId;
+        void Promise.resolve().then(() => read(userId));
         return () => {
+            userRef.current = null;
             versionRef.current += 1;
         };
     }, [userId, read]);
 
-    useEffect(() => subscribeToCommentNotificationUpdates(() => read(userRef.current)), [read]);
+    useEffect(
+        () =>
+            subscribeToCommentNotificationUpdates(() => {
+                if (userRef.current) read(userRef.current);
+            }),
+        [read]
+    );
 
     async function open(notification: CommentNotification) {
         const expectedUserId = userRef.current;
-        if (openingId !== null) return;
+        if (!expectedUserId || openingId !== null) return;
         setOpeningId(notification.notificationId);
         setError("");
         try {
@@ -85,7 +92,7 @@ export default function CommentNotificationsSection({ userId }: { userId: string
                     <button
                         type="button"
                         className="cursor-pointer underline"
-                        onClick={() => read(userRef.current, items.length > 0 ? (cursor ?? undefined) : undefined)}
+                        onClick={() => read(userId, items.length > 0 ? (cursor ?? undefined) : undefined)}
                     >
                         Retry
                     </button>
@@ -99,7 +106,7 @@ export default function CommentNotificationsSection({ userId }: { userId: string
             {cursor && (
                 <button
                     type="button"
-                    onClick={() => read(userRef.current, cursor)}
+                    onClick={() => read(userId, cursor)}
                     disabled={loading}
                     className="border-line text-12 mt-4 cursor-pointer border px-4 py-2 disabled:opacity-50"
                 >

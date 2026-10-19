@@ -1,9 +1,17 @@
 import assert from "node:assert/strict";
-import test from "node:test";
-import { createElement, type MouseEvent as ReactMouseEvent, type ReactElement } from "react";
+import test, { type TestContext } from "node:test";
+import React, {
+    Children,
+    createElement,
+    isValidElement,
+    type MouseEvent as ReactMouseEvent,
+    type ReactElement,
+    type ReactNode
+} from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import CommentNotificationList from "@/components/features/notifications/CommentNotificationList";
+import CommentNotificationsSection from "@/components/features/notifications/CommentNotificationsSection";
 import {
     commentNotificationHref,
     getCommentSubscription,
@@ -124,4 +132,110 @@ test("notification links leave modified clicks to the browser", () => {
     assert.equal(state.opened, 0);
     assert.equal(click({}), true);
     assert.equal(state.opened, 1);
+});
+
+function elements(node: ReactNode): Array<{ type: unknown; props: Record<string, unknown> }> {
+    if (!isValidElement<Record<string, unknown> & { children?: ReactNode }>(node)) return [];
+    return [{ type: node.type, props: node.props }, ...Children.toArray(node.props.children).flatMap(elements)];
+}
+
+function mountSection(context: TestContext, userId: string) {
+    const destinations: string[] = [];
+    const states: unknown[] = [];
+    const refs: Array<{ current: unknown }> = [];
+    const effects: Array<() => void | (() => void)> = [];
+    const cleanups: Array<() => void> = [];
+    const mounted = { value: false };
+    const router = {
+        bfcacheId: "comment-notification-section-test",
+        back() {},
+        forward() {},
+        refresh() {},
+        push: (url: string) => destinations.push(url),
+        replace: (url: string) => destinations.push(url),
+        prefetch() {}
+    };
+    const render = () => {
+        const cursor = { state: 0, ref: 0 };
+        const original = {
+            useState: React.useState,
+            useRef: React.useRef,
+            useCallback: React.useCallback,
+            useEffect: React.useEffect
+        };
+        const holder: { tree: ReactNode } = { tree: null };
+        function Probe() {
+            React.useState = ((initial: unknown) => {
+                const index = cursor.state++;
+                if (!(index in states)) states[index] = typeof initial === "function" ? initial() : initial;
+                return [
+                    states[index],
+                    (next: unknown) => {
+                        states[index] = typeof next === "function" ? next(states[index]) : next;
+                    }
+                ];
+            }) as typeof React.useState;
+            React.useRef = ((initial: unknown) => (refs[cursor.ref++] ??= { current: initial })) as typeof React.useRef;
+            React.useCallback = ((callback: unknown) => callback) as typeof React.useCallback;
+            React.useEffect = (effect) => {
+                if (!mounted.value) effects.push(effect);
+            };
+            try {
+                holder.tree = CommentNotificationsSection({ userId });
+                return holder.tree;
+            } finally {
+                Object.assign(React, original);
+            }
+        }
+        renderToStaticMarkup(createElement(AppRouterContext.Provider, { value: router }, createElement(Probe)));
+        if (!mounted.value) {
+            mounted.value = true;
+            for (const effect of effects) {
+                const cleanup = effect();
+                if (typeof cleanup === "function") cleanups.push(cleanup);
+            }
+        }
+        return elements(holder.tree);
+    };
+    render();
+    const unmount = () => cleanups.splice(0).forEach((cleanup) => cleanup());
+    context.after(unmount);
+    return { render, unmount, destinations };
+}
+
+test("unmounting CommentNotificationsSection while marking a notification read cancels navigation", async (context) => {
+    const notification: CommentNotification = {
+        notificationId: 7,
+        boardId: 12,
+        boardTitle: "Tokyo",
+        commentId: 32,
+        commenter: { displayName: "Avery", username: "avery", profilePictureUrl: null },
+        excerpt: "New comment",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        readAt: null
+    };
+    const pendingRead: { resolve?: (response: Response) => void } = {};
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+        if (String(input).endsWith("/read")) {
+            return new Promise<Response>((resolve) => {
+                pendingRead.resolve = resolve;
+            });
+        }
+        return Response.json({ data: [notification], meta: { nextCursor: null, hasMore: false, unreadCount: 1 } });
+    });
+
+    const section = mountSection(context, "user-1");
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    const listNode = section.render().find((node) => node.type === CommentNotificationList);
+    assert.ok(listNode, "Expected notification list to render");
+    const onOpen = listNode.props.onOpen as (item: CommentNotification) => Promise<void>;
+    const openPromise = onOpen(notification);
+    assert.ok(pendingRead.resolve, "Expected read request to be in flight");
+
+    section.unmount();
+    pendingRead.resolve(Response.json({ data: { notificationId: 7, readAt: "2026-01-01T00:00:00.000Z" } }));
+    await openPromise;
+
+    assert.deepEqual(section.destinations, []);
 });

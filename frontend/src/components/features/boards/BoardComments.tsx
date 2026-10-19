@@ -368,20 +368,23 @@ export default function BoardComments({ boardId }: { boardId: string }) {
     const [subscriptionError, setSubscriptionError] = useState("");
     const readVersionRef = useRef(0);
     const accountEpochRef = useRef(0);
+    const subscriptionVersionRef = useRef(0);
     const postingRef = useRef(false);
     const olderRef = useRef(false);
     const loginHref = `/login?returnTo=${encodeURIComponent(`/boards/${boardId}#comments`)}`;
 
     const refreshSubscription = useCallback(
         async (epoch: number) => {
+            const version = ++subscriptionVersionRef.current;
             try {
                 const result = await getCommentSubscription(boardId);
-                if (epoch === accountEpochRef.current) {
+                if (epoch === accountEpochRef.current && version === subscriptionVersionRef.current) {
                     setSubscription(result.enabled);
                     setSubscriptionError("");
                 }
             } catch (cause) {
-                if (epoch === accountEpochRef.current) setSubscriptionError(commentError(cause));
+                if (epoch === accountEpochRef.current && version === subscriptionVersionRef.current)
+                    setSubscriptionError(commentError(cause));
             }
         },
         [boardId]
@@ -416,6 +419,7 @@ export default function BoardComments({ boardId }: { boardId: string }) {
     useEffect(() => {
         const unsubscribe = observeCurrentUser((user) => {
             accountEpochRef.current += 1;
+            subscriptionVersionRef.current += 1;
             setAccountEpoch(accountEpochRef.current);
             postingRef.current = false;
             olderRef.current = false;
@@ -433,6 +437,7 @@ export default function BoardComments({ boardId }: { boardId: string }) {
         return () => {
             readVersionRef.current += 1;
             accountEpochRef.current += 1;
+            subscriptionVersionRef.current += 1;
             unsubscribe();
         };
     }, [loadFirst, refreshSubscription]);
@@ -521,13 +526,16 @@ export default function BoardComments({ boardId }: { boardId: string }) {
     async function toggleSubscription() {
         if (!viewer || subscription === null || subscriptionBusy) return;
         const epoch = accountEpochRef.current;
+        const version = ++subscriptionVersionRef.current;
         setSubscriptionBusy(true);
         setSubscriptionError("");
         try {
             const result = await setCommentSubscription(boardId, !subscription);
-            if (epoch === accountEpochRef.current) setSubscription(result.enabled);
+            if (epoch === accountEpochRef.current && version === subscriptionVersionRef.current)
+                setSubscription(result.enabled);
         } catch (cause) {
-            if (epoch === accountEpochRef.current) setSubscriptionError(commentError(cause));
+            if (epoch === accountEpochRef.current && version === subscriptionVersionRef.current)
+                setSubscriptionError(commentError(cause));
         } finally {
             if (epoch === accountEpochRef.current) setSubscriptionBusy(false);
         }
