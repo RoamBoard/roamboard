@@ -172,7 +172,28 @@ export function BoardSelectionGallery({
                     </span>
                 </div>
                 <div className="border-line relative z-30 flex flex-col items-center gap-3 border-t py-4 sm:flex-row sm:justify-between">
-                    <div className="flex items-center justify-center gap-3 sm:order-2 sm:ml-auto sm:w-[35%]">
+                    {mode === "continue" && href ? (
+                        <Link
+                            href={href}
+                            className={`group inline-flex min-h-11 items-center gap-4 py-3 text-xs tracking-[.08em] underline underline-offset-8 ${focusClass}`}
+                        >
+                            CONTINUE BOARD{" "}
+                            <ArrowUpRight
+                                size={18}
+                                strokeWidth={1.2}
+                                className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 motion-reduce:transition-none"
+                            />
+                        </Link>
+                    ) : (
+                        <span className="text-muted-foreground text-xs">
+                            {mode === "remix"
+                                ? "Remixing is coming later"
+                                : error || selected.document
+                                  ? "Editing unavailable"
+                                  : "Checking edit access…"}
+                        </span>
+                    )}
+                    <div className="flex items-center justify-center gap-3 sm:ml-auto sm:w-[35%]">
                         <button
                             type="button"
                             aria-label="Previous Board"
@@ -195,27 +216,6 @@ export function BoardSelectionGallery({
                             <ArrowRight size={24} strokeWidth={1.5} />
                         </button>
                     </div>
-                    {mode === "continue" && href ? (
-                        <Link
-                            href={href}
-                            className={`group inline-flex min-h-11 items-center gap-4 py-3 text-xs tracking-[.08em] underline underline-offset-8 sm:order-1 ${focusClass}`}
-                        >
-                            CONTINUE BOARD{" "}
-                            <ArrowUpRight
-                                size={18}
-                                strokeWidth={1.2}
-                                className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 motion-reduce:transition-none"
-                            />
-                        </Link>
-                    ) : (
-                        <span className="text-muted-foreground text-xs">
-                            {mode === "remix"
-                                ? "Remixing is coming later"
-                                : error || selected.document
-                                  ? "Editing unavailable"
-                                  : "Checking edit access…"}
-                        </span>
-                    )}
                 </div>
                 <div className="pt-4 lg:hidden">
                     <SelectionAnnotations board={selected} />
