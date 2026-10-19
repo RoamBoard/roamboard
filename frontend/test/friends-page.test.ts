@@ -526,3 +526,75 @@ test("FriendsPageContent restores renewed friend after previous unfriend when di
     );
     assert.ok(afterReAdd.markup.includes("my friends (3)"));
 });
+
+test("FriendsPageContent renders accessible aria-label on avatar links in both grid and list views", () => {
+    const harness = createStatefulHarness({ initialFriends: sampleFriends });
+    const gridRender = harness.render();
+
+    // Check grid view avatar link
+    const gridAvatarLink = gridRender.nodes.find((n) => n.props["aria-label"] === "Alice Wonder's profile");
+    assert.ok(gridAvatarLink, "Grid view avatar link must have accessible aria-label naming the friend");
+
+    // Switch to list view
+    const listBtn = gridRender.nodes.find((n) => n.type === "button" && n.props["aria-label"] === "List view");
+    assert.ok(listBtn);
+    listBtn.props.onClick?.();
+
+    const listRender = harness.render();
+    const listAvatarLink = listRender.nodes.find((n) => n.props["aria-label"] === "Alice Wonder's profile");
+    assert.ok(listAvatarLink, "List view avatar link must have accessible aria-label naming the friend");
+});
+
+test("FriendsPageContent ignores failure from superseded read when newer read succeeds", async (context) => {
+    const r1Deferred: { reject: (err: Error) => void } = { reject: () => {} };
+    const r1Promise = new Promise<Response>((_, reject) => {
+        r1Deferred.reject = reject;
+    });
+
+    const callTracker = { count: 0 };
+    context.mock.method(globalThis, "fetch", async () => {
+        callTracker.count++;
+        if (callTracker.count === 1) {
+            // First read is delayed and will later fail
+            return r1Promise;
+        }
+        // Second read succeeds immediately
+        return Response.json({ data: sampleFriends }, { headers: { "content-type": "application/json" } });
+    });
+
+    const harness = createStatefulHarness({ initialFriends: [] });
+    const initial = harness.render();
+
+    const findFriendsDialog = initial.nodes.find((n) => n.type === FindFriendsDialog);
+    assert.ok(findFriendsDialog);
+    const onFriendAdded = findFriendsDialog.props.onFriendAdded as () => void;
+
+    // Trigger read 1 (delayed)
+    onFriendAdded();
+    assert.equal(callTracker.count, 1);
+
+    // Trigger read 2 (supersedes read 1, succeeds)
+    onFriendAdded();
+    assert.equal(callTracker.count, 2);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    // Newer read succeeded
+    const afterSuccess = harness.render();
+    assert.ok(afterSuccess.markup.includes("Alice Wonder"));
+    assert.ok(!afterSuccess.markup.includes("Failed to load your travel pals."));
+
+    // Now older read 1 fails
+    r1Deferred.reject(new Error("Network connection dropped on read 1"));
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    // Re-render: older failure must be ignored and not overwrite friends list
+    const finalRender = harness.render();
+    assert.ok(
+        finalRender.markup.includes("Alice Wonder"),
+        "Friends list must remain visible and not be replaced by older failure"
+    );
+    assert.ok(
+        !finalRender.markup.includes("Failed to load your travel pals."),
+        "Error from older superseded read must not be displayed"
+    );
+});

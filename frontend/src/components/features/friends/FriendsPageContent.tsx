@@ -52,7 +52,6 @@ export default function FriendsPageContent({
     const sortSelectId = useId();
 
     const readVersionRef = useRef(0);
-    const latestCompletedReadId = useRef(0);
     const confirmedRemovalsRef = useRef<Map<string, number>>(new Map());
 
     const [friends, setFriends] = useState<FriendUser[]>(initialFriends ?? []);
@@ -81,12 +80,12 @@ export default function FriendsPageContent({
         setError(null);
         try {
             const data = await loadFriends();
-            if (readId >= latestCompletedReadId.current) {
-                latestCompletedReadId.current = readId;
+            if (readId === readVersionRef.current) {
+                setError(null);
                 setFriends(filterFriends(data, readId));
             }
         } catch (err) {
-            if (readId >= latestCompletedReadId.current) {
+            if (readId === readVersionRef.current) {
                 if (requiresLogin(err)) {
                     setLoginRequired(true);
                 } else {
@@ -94,7 +93,7 @@ export default function FriendsPageContent({
                 }
             }
         } finally {
-            if (readId >= latestCompletedReadId.current) {
+            if (readId === readVersionRef.current) {
                 setLoading(false);
             }
         }
@@ -106,13 +105,13 @@ export default function FriendsPageContent({
         const tracker = { active: true };
         void loadFriends()
             .then((data) => {
-                if (tracker.active && readId >= latestCompletedReadId.current) {
-                    latestCompletedReadId.current = readId;
+                if (tracker.active && readId === readVersionRef.current) {
+                    setError(null);
                     setFriends(filterFriends(data, readId));
                 }
             })
             .catch((err) => {
-                if (!tracker.active || readId < latestCompletedReadId.current) return;
+                if (!tracker.active || readId !== readVersionRef.current) return;
                 if (requiresLogin(err)) {
                     setLoginRequired(true);
                 } else {
@@ -120,7 +119,7 @@ export default function FriendsPageContent({
                 }
             })
             .finally(() => {
-                if (tracker.active && readId >= latestCompletedReadId.current) {
+                if (tracker.active && readId === readVersionRef.current) {
                     setLoading(false);
                 }
             });
@@ -172,7 +171,6 @@ export default function FriendsPageContent({
         try {
             await removeFriend(target.userId);
             confirmedRemovalsRef.current.set(target.userId, readVersionRef.current);
-            readVersionRef.current += 1;
             setFriends((prev) => prev.filter((f) => f.userId !== target.userId));
             setConfirmUnfriendTarget(null);
         } catch (err) {
@@ -397,6 +395,7 @@ export default function FriendsPageContent({
                                         <div className="flex items-start justify-between gap-3">
                                             <Link
                                                 href={`/profile/${encodeURIComponent(friend.username)}`}
+                                                aria-label={`${friend.displayName}'s profile`}
                                                 className="border-line bg-muted relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full border transition-transform duration-150 group-hover:scale-105"
                                             >
                                                 <FriendAvatar friend={friend} size={56} />
@@ -459,6 +458,7 @@ export default function FriendsPageContent({
                                     <div className="flex min-w-0 items-center gap-3.5">
                                         <Link
                                             href={`/profile/${encodeURIComponent(friend.username)}`}
+                                            aria-label={`${friend.displayName}'s profile`}
                                             className="border-line bg-muted relative flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full border transition-transform duration-150 hover:scale-105"
                                         >
                                             <FriendAvatar friend={friend} size={44} />
