@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import TagIcon from "@/components/ui/TagIcon";
 import { getBoardTag } from "@/data/board-tags";
-import DiscoverBoardCard from "@/components/features/discover/DiscoverBoardCard";
+import DiscoverBoardLibrary from "@/components/features/discover/DiscoverBoardLibrary";
 import { getDiscoverPreviewBoardsByTag } from "@/data/discover-boards";
 
 type Props = { params: Promise<{ id: string }> };
@@ -41,14 +41,7 @@ export default async function VibePage({ params }: Props) {
                     </p>
                 </header>
                 {boards.length ? (
-                    <section
-                        aria-label={`${tag.name} Boards`}
-                        className="mt-12 grid max-w-[1440px] items-start gap-x-7 gap-y-12 md:grid-cols-2 xl:grid-cols-3"
-                    >
-                        {boards.map((board) => (
-                            <DiscoverBoardCard key={board.id} board={board} activeTagId={tag.id} />
-                        ))}
-                    </section>
+                    <DiscoverBoardLibrary boards={boards} title={`${tag.name} Boards`} activeTagId={tag.id} />
                 ) : (
                     <section className="border-line mt-8 border p-8">
                         <h2 className="font-display text-24">No sample Boards for {tag.name} yet.</h2>

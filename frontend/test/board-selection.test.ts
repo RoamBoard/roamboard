@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createElement } from "react";
+import { Children, createElement, isValidElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
     BoardSelectionCollection,
@@ -560,6 +560,59 @@ function selectionMarkup(boards: ReturnType<typeof toSelectionBoard>[], selected
         })
     );
 }
+
+test("Continue arrows wrap between real Boards and retain the selected card's canonical editor link in both layouts", () => {
+    type Props = { children?: ReactNode; onClick?: () => void; [key: string]: unknown };
+    function elements(node: ReactNode): Array<{ type: unknown; props: Props }> {
+        if (!isValidElement<Props>(node)) return [];
+        return [{ type: node.type, props: node.props }, ...Children.toArray(node.props.children).flatMap(elements)];
+    }
+    const boards = [
+        toSelectionBoard(summary(301, "published"), document(301, "published")),
+        toSelectionBoard(summary(302), document(302)),
+        toSelectionBoard(summary(303, "published"), document(303, "published"))
+    ];
+    for (const compact of [false, true]) {
+        for (const index of [0, 1, 2]) {
+            const selections: number[] = [];
+            const captured: { nodes: ReturnType<typeof elements> } = { nodes: [] };
+            function Probe() {
+                const tree = BoardSelectionGallery({
+                    boards,
+                    selected: boards[index],
+                    compact,
+                    onSelect: (boardId) => selections.push(boardId),
+                    onRetry() {}
+                });
+                captured.nodes = elements(tree);
+                return tree;
+            }
+            const html = renderToStaticMarkup(createElement(Probe));
+            const previous = captured.nodes.find((node) => node.props["aria-label"] === "Previous Board");
+            const next = captured.nodes.find((node) => node.props["aria-label"] === "Next Board");
+            assert.ok(previous?.props.onClick);
+            assert.ok(next?.props.onClick);
+            previous.props.onClick();
+            next.props.onClick();
+            assert.deepEqual(selections, [
+                boards[(index + 2) % 3].summary.boardId,
+                boards[(index + 1) % 3].summary.boardId
+            ]);
+            assert.ok(html.includes(`href="${selectionEditorHref(boards[index].document!)}"`));
+            assert.equal(html.match(/aria-label="Previous Board"/g)?.length, 1);
+            assert.equal(html.match(/aria-label="Next Board"/g)?.length, 1);
+            const controls = captured.nodes.find((node) => node.props["aria-label"] === "Board selection controls");
+            assert.ok(controls);
+            assert.equal(controls.props.role, "group");
+            const controlButtons = Children.toArray(controls.props.children)
+                .flatMap(elements)
+                .filter((node) => node.type === "button")
+                .map((node) => node.props["aria-label"]);
+            assert.deepEqual(controlButtons, ["Previous Board", "Next Board"]);
+            assert.doesNotMatch(html, /sm:order-|CONTINUE BOARD/);
+        }
+    }
+});
 
 function annotationGroups(markup: string) {
     return [...markup.matchAll(/<dl\b[^>]*>([\s\S]*?)<\/dl>/g)].map((match) =>
