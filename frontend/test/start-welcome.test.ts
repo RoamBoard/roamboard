@@ -94,7 +94,9 @@ test("start page only shows THE WORLD AWAITS when not logged in and redirects lo
         );
     });
 
-    const pendingHtml = markup(createElement(StartPage), router({ replace: (href) => replaces.push(href) }));
+    const customRouter = router({ replace: (href) => replaces.push(href) });
+
+    const pendingHtml = markup(createElement(StartPage), customRouter);
     assert.doesNotMatch(pendingHtml, /THE WORLD AWAITS/, "Start screen must not flash before checking auth");
     assert.match(pendingHtml, /Loading your welcome…/);
 
@@ -106,13 +108,13 @@ test("start page only shows THE WORLD AWAITS when not logged in and redirects lo
     replaces.length = 0;
     state.status = 401;
 
-    markup(createElement(StartWelcome), router({ replace: (href) => replaces.push(href) }));
+    markup(createElement(StartWelcome), customRouter);
     effects.splice(0).forEach((run) => run());
     await new Promise((resolve) => setImmediate(resolve));
-    assert.deepEqual(replaces, []);
+    assert.deepEqual(replaces, [] as string[]);
     assert.equal(state.signedOut, true);
 
-    const signedOutHtml = markup(createElement(StartWelcome), router({ replace: (href) => replaces.push(href) }));
+    const signedOutHtml = markup(createElement(StartWelcome), customRouter);
     assert.match(signedOutHtml, /<h1\b[^>]*>THE WORLD AWAITS<\/h1>/);
 });
 
