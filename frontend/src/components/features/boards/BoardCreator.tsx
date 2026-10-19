@@ -59,12 +59,14 @@ export default function BoardCreator({
     initialBoardId,
     expectedStatus = "draft",
     initialMode = "smart",
-    initialPlace
+    initialPlace,
+    backHref
 }: {
     initialBoardId?: number;
     expectedStatus?: BoardStatus;
     initialMode?: "smart" | "scratch";
     initialPlace?: StartingPlace;
+    backHref?: string;
 }) {
     const [smartStartDate, setSmartStartDate] = useState<string | null>(null);
     const [pendingPlan, setPendingPlan] = useState<SmartCreatePlan | null>(null);
@@ -573,6 +575,7 @@ export default function BoardCreator({
             ) : null}
             {leaveTarget ? <CreatorLeaveDialog {...leaveTarget} onClose={() => setLeaveTarget(null)} /> : null}
             <CreatorProgress
+                backHref={backHref}
                 dirty={dirty}
                 saved={savedBoard !== null}
                 loading={draftLoading}

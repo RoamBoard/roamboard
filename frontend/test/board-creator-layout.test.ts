@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createElement, isValidElement, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 
 import NewBoardPage from "../src/app/boards/new/page";
 import EditDraftPage from "../src/app/boards/drafts/[boardId]/page";
@@ -11,11 +12,27 @@ import BoardCoverHero from "../src/components/features/boards/BoardCoverHero";
 import BoardImageIntake from "../src/components/features/boards/BoardImageIntake";
 import type { BoardImageDraft } from "../src/types/board-creator";
 
-// Render the real route's editor child without the sidebar's browser navigation context.
+// The editor's Back link uses the same router context as the real route.
 function editorMarkup(page: ReactElement<{ children: unknown }>): string {
     assert.ok(isValidElement(page.props.children));
     assert.equal(page.props.children.type, BoardCreator);
-    return renderToStaticMarkup(page.props.children);
+    return renderToStaticMarkup(
+        createElement(
+            AppRouterContext.Provider,
+            {
+                value: {
+                    bfcacheId: "editor-test",
+                    back() {},
+                    forward() {},
+                    refresh() {},
+                    push() {},
+                    replace() {},
+                    prefetch() {}
+                }
+            },
+            page.props.children
+        )
+    );
 }
 
 function sharedEditorControls(markup: string) {
