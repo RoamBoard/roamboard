@@ -65,7 +65,7 @@ test("owner profile's published preview uses the horizontal library without losi
     assert.match(own, /touch-pan-y/);
     assert.match(own, /aria-label="Previous [^"]+"/);
     assert.match(own, /aria-label="Next [^"]+"/);
-    assert.match(own, /href="\/boards\/mine"/);
+    assert.match(own, /href="\/boards\/collections\/mine\?status=published"/);
     for (const board of published) assert.ok(own.includes(`href="/boards/${board.boardId}"`));
     assert.match(own, /Public — anyone/);
     assert.match(own, /Friends — you, your friends and invited Board members/);
@@ -187,7 +187,8 @@ test("Vibes routes tag-filtered sample Boards through the shared browsing presen
     assert.match(html, /aria-current="page"/);
     assert.ok(html.includes(`href="/discover/vibes/${encodeURIComponent(tag.id)}"`));
     for (const board of expected) assert.ok(html.includes(board.title));
-    assert.doesNotMatch(html, /href="\/boards\/|aria-label="(?:Save |Unsave )|aria-pressed=|\d[\d,]* saves/);
+    assert.match(html, /href="\/boards\/collections\/samples\?tag=/);
+    assert.doesNotMatch(html, /href="\/boards\/\d|aria-label="(?:Save |Unsave )|aria-pressed=|\d[\d,]* saves/);
     assert.equal(fetch.mock.callCount(), 0);
 });
 

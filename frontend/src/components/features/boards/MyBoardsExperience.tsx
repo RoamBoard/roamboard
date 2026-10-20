@@ -202,9 +202,13 @@ export function MyBoardsContent({ state, actions }: { state: MyBoardsState; acti
             )}
             {!loading && matches.length > 0 && (
                 <>
-                    <SpatialGallery boards={matches.slice(0, 10)} />
+                    <SpatialGallery
+                        boards={matches.slice(0, 10)}
+                        viewAllHref="/boards/collections/mine?status=published"
+                    />
                     <BoardLibrary
                         title="RECENTLY CREATED"
+                        viewAllHref="/boards/collections/mine?status=published"
                         id="created-library"
                         description={
                             preview

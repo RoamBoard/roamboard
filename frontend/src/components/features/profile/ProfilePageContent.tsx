@@ -358,8 +358,8 @@ export default function ProfilePageContent({
                                 </p>
                             </div>
                             <Link
-                                href="/boards"
-                                className="text-12 text-muted-foreground hover:text-foreground inline-flex min-h-11 shrink-0 items-center whitespace-nowrap hover:underline"
+                                href={`/boards/collections/profile-saved?handle=${encodeURIComponent(profile.username)}`}
+                                className="text-muted-foreground hover:text-foreground inline-flex min-h-11 shrink-0 items-center text-sm whitespace-nowrap hover:underline"
                             >
                                 view all →
                             </Link>
@@ -414,8 +414,8 @@ export default function ProfilePageContent({
                                 </p>
                             </div>
                             <Link
-                                href="/boards/mine"
-                                className="text-12 text-muted-foreground hover:text-foreground inline-flex min-h-11 shrink-0 items-center whitespace-nowrap hover:underline"
+                                href="/boards/collections/mine?status=published"
+                                className="text-muted-foreground hover:text-foreground inline-flex min-h-11 shrink-0 items-center text-sm whitespace-nowrap hover:underline"
                             >
                                 view all →
                             </Link>

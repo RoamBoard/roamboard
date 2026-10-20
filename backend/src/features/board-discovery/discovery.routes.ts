@@ -4,7 +4,14 @@ import { requireSessionUser } from "../../middleware/session-user.js";
 import { validateBody, validateParams, validateQuery } from "../../middleware/validate.js";
 import { boardIdParamsSchema } from "../boards/boards.schemas.js";
 import type { createDiscoveryController } from "./discovery.controller.js";
-import { discoveryPageSchema, discoverySearchSchema, featuredSchema, viewSchema } from "./discovery.schemas.js";
+import {
+    collectionParamsSchema,
+    collectionQuerySchema,
+    discoveryPageSchema,
+    discoverySearchSchema,
+    featuredSchema,
+    viewSchema
+} from "./discovery.schemas.js";
 
 export function createDiscoveryRouter(
     controller: ReturnType<typeof createDiscoveryController>,
@@ -16,6 +23,13 @@ export function createDiscoveryRouter(
         next();
     };
     const read = [attachUser, privateResponse];
+    router.get(
+        "/boards/collections/:context",
+        ...read,
+        validateParams(collectionParamsSchema),
+        validateQuery(collectionQuerySchema),
+        controller.collection
+    );
     router.get("/boards/search/suggestions", ...read, validateQuery(discoverySearchSchema), controller.suggestions);
     router.get("/boards/search", ...read, validateQuery(discoverySearchSchema), controller.search);
     router.get("/boards/featured", ...read, validateQuery(featuredSchema), controller.featured);

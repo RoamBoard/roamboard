@@ -45,7 +45,7 @@ function board(boardId: number, fields: Partial<DiscoveryCandidate> = {}): Disco
 const search = (items: DiscoveryCandidate[], q: string, location: "auto" | "off" = "auto") =>
     rankSearch(items, { q, location, page: 1, limit: 20 }).boards.map((item) => item.boardId);
 
-test("search requires real locations, excludes owned boards, and prefers topics over destination-only matches", () => {
+test("search includes owned Boards and direct title matches alongside location matches", () => {
     const items = [
         board(1),
         board(2, {
@@ -56,8 +56,8 @@ test("search requires real locations, excludes owned boards, and prefers topics 
         board(3, { title: "Stockholm food", destination: copenhagen, savedCount: 10000 }),
         board(4, { title: "Stockholm food", owned: true })
     ];
-    assert.deepEqual(search(items, "Stockholm food"), [2, 1]);
-    assert.deepEqual(search(items, "Stockholm"), [1, 2]);
+    assert.deepEqual(search(items, "Stockholm food"), [4, 3, 2, 1]);
+    assert.deepEqual(search(items, "Stockholm"), [4, 1, 3, 2]);
 });
 
 test("topics are optional within a location; café synonyms outrank quiet descriptors", () => {
@@ -75,12 +75,12 @@ test("topics are optional within a location; café synonyms outrank quiet descri
 
 test("removing location interpretation permits normal text search", () => {
     const items = [board(1), board(2, { title: "Stockholm reading list", destination: copenhagen })];
-    assert.deepEqual(search(items, "Stockholm"), [1]);
-    assert.deepEqual(search(items, "Stockholm", "off"), [2]);
+    assert.deepEqual(search(items, "Stockholm"), [1, 2]);
+    assert.deepEqual(search(items, "Stockholm", "off"), [2, 1]);
 });
 
-test("known location with no matching boards must not fall back to a misleading title mention", () => {
-    assert.deepEqual(search([board(1, { title: "Stockholm inspiration", destination: copenhagen })], "Stockholm"), []);
+test("a direct title match remains eligible without matching location metadata", () => {
+    assert.deepEqual(search([board(1, { title: "Stockholm inspiration", destination: copenhagen })], "Stockholm"), [1]);
 });
 
 test("punctuation-only queries return empty results rather than crashing", async () => {
@@ -230,4 +230,66 @@ test("view HTTP requires Origin, challenges before counting, excludes owners and
         404
     );
     assert.equal(calls.starts, 1);
+});
+
+test("Bali title remains searchable with missing metadata and Indonesia matches canonical country", () => {
+    const items = [
+        board(31, { title: "bali vila with da boys", destination: null, owned: true }),
+        board(32, { title: "Island holiday", destination: { name: "Bali", city: null, country: "IDN", address: null } })
+    ];
+    assert.deepEqual(new Set(search(items, "Bali")), new Set([31, 32]));
+    assert.deepEqual(search(items, "Indonesia"), [32]);
+    assert.deepEqual(
+        search(
+            [board(33, { owner: { username: "traveler", displayName: "Teoman", photoUrl: null } })],
+            "Teoman",
+            "off"
+        ),
+        [33]
+    );
+});
+
+test("collection HTTP paginates all matches, sorts, validates contexts, and protects personal reads", async () => {
+    const { app } = harness(
+        Array.from({ length: 25 }, (_, index) =>
+            board(index + 1, { title: index === 0 ? "Zebra Bali" : "Bali adventure", savedCount: index })
+        )
+    );
+    const response = await request(app).get("/api/v1/boards/collections/recent?q=Bali&sort=saved-count-desc&page=2");
+    assert.equal(response.status, 200);
+    assert.equal(response.body.data.total, 25);
+    assert.equal(response.body.data.items.length, 5);
+    assert.equal(response.body.data.items[0].boardId, 5);
+    assert.equal(response.body.data.sort, "saved-count-desc");
+    const alphabetical = await request(app).get("/api/v1/boards/collections/recent?sort=title-desc");
+    assert.equal(alphabetical.body.data.items[0].boardId, 1);
+    for (const context of ["mine", "saved", "friends"])
+        assert.equal((await request(app).get("/api/v1/boards/collections/" + context)).status, 401);
+    for (const path of [
+        "unknown",
+        "profile",
+        "category",
+        "recent?sort=relevance",
+        "recent?sort=saved-at-desc",
+        "recent?limit=10",
+        "recent?q=x",
+        "recent?page=0",
+        "recent?handle=someone",
+        "map?country=SWE&longitude=0&latitude=0",
+        "map?longitude=0"
+    ])
+        assert.equal(
+            (
+                await request(app)
+                    .get("/api/v1/boards/collections/" + path)
+                    .set("x-test-user", "viewer")
+            ).status,
+            400,
+            path
+        );
+    const own = await request(app).get("/api/v1/boards/collections/mine").set("x-test-user", "owner");
+    assert.equal(own.body.data.sort, "updated-desc");
+    const empty = await request(app).get("/api/v1/boards/collections/recent?q=unmatched");
+    assert.deepEqual(empty.body.data.items, []);
+    assert.equal(empty.body.data.total, 0);
 });

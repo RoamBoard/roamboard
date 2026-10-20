@@ -36,6 +36,12 @@ These instructions apply to `backend/`. Use `../layered-backend-demo1/` as the r
 - Keep `backend/.env` and credentials out of Git. Document new variables in `.env.example` and `README.md` without real secrets.
 - Team development uses a shared PostgreSQL container on Azure through SSH tunnels; the backend still runs locally. See `README.md` for onboarding and `deploy/README.md` for maintenance. Do not recreate the shared database or rerun applied migrations when onboarding. `npm run check:setup` checks auth configuration and database access without changing data. Backend `GOOGLE_CLIENT_ID` must match frontend `NEXT_PUBLIC_GOOGLE_CLIENT_ID`.
 
+`GET /api/v1/boards/collections/:context` provides viewer-authorized Board summaries, broad contextual search,
+sorting, exact totals and twenty-item numbered pagination through the board-discovery feature. Source descriptors
+retain profile/saved/friend/category/Featured/map scopes; saved map reads retain owner/friend restrictions. Global
+Board search includes eligible owned published Boards and allows direct title matches past automatic location
+gating. No migration is needed. See `../contracts/board-collection-grid.md` for context parameters and permissions.
+
 ## Smart Create
 
 The `smart-create` feature resolves up to 30 caller-owned completed image IDs per request through

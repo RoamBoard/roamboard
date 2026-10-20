@@ -15,6 +15,8 @@ import {
     type DiscoveryState
 } from "@/lib/boards-discovery";
 import Pagination from "@/components/ui/Pagination";
+import ViewAllBoards from "./ViewAllBoards";
+import { collectionHref } from "@/lib/board-collections";
 import SpatialGallery from "./SpatialGallery";
 import { BoardSelectionGallery } from "./BoardSelectionGallery";
 import BoardLibrary from "./BoardLibrary";
@@ -408,7 +410,12 @@ function Featured({ period }: { period: "month" | "week" }) {
                 <h2 className="font-display text-30 mt-12 text-center font-bold">FEATURED BOARDS</h2>
             )}
             <Feedback state={state} retry={() => void store.load(path)} />
-            {state.data && <SpatialGallery boards={state.data.items.map(discoveryGallery)} />}
+            {state.data && (
+                <SpatialGallery
+                    boards={state.data.items.map(discoveryGallery)}
+                    viewAllHref={collectionHref("featured", { period })}
+                />
+            )}
         </div>
     );
 }
@@ -451,18 +458,22 @@ export function DiscoveryCollectionContent({
     return (
         <section aria-label={title} className="mt-24 min-w-0">
             {!personal && (
-                <h2
-                    id={`${id}-heading`}
-                    tabIndex={-1}
-                    className="font-display text-30 sm:text-40 px-5 text-center font-bold"
-                >
-                    {title}
-                </h2>
+                <div className="mx-auto flex max-w-[1320px] items-center justify-between gap-4 px-5">
+                    <h2
+                        id={`${id}-heading`}
+                        tabIndex={-1}
+                        className="font-display text-30 sm:text-40 px-5 text-center font-bold"
+                    >
+                        {title}
+                    </h2>
+                    <ViewAllBoards href={collectionHref("recent")} />
+                </div>
             )}
             {personal && (
                 <div ref={gallery}>
                     <BoardLibrary
                         id={id}
+                        viewAllHref={collectionHref(source === "owned" ? "mine" : "saved")}
                         title={title}
                         description={source === "owned" ? "Your drafts and published Boards" : "Your saved Boards"}
                         boards={(state.data?.items ?? []).map(discoveryGallery)}
@@ -543,10 +554,13 @@ function SearchResults({ query, page, location }: { query: string; page: number;
                     <div key={board.boardId} className="mx-auto w-full max-w-72">
                         <AccountPhotoBoardCard
                             board={discoveryPhoto(board)}
-                            ownership="other"
+                            ownership={board.permissions.canManageBoard ? "owner" : "other"}
                             initialSaved={board.savedByMe}
                             href={`/boards/${board.boardId}`}
-                            hoverActions={{ viewHref: `/boards/${board.boardId}` }}
+                            hoverActions={{
+                                viewHref: `/boards/${board.boardId}`,
+                                editHref: board.permissions.canEditContent ? `/boards/${board.boardId}/edit` : undefined
+                            }}
                             showVisibility
                             hideCoverCredit
                         />

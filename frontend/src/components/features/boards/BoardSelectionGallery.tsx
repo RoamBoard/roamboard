@@ -1,5 +1,6 @@
 "use client";
 
+import ViewAllBoards from "./ViewAllBoards";
 import { useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
@@ -368,12 +369,14 @@ export function BoardSelectionCollection({
     boards,
     onSelect,
     mode = "continue",
+    viewAllHref,
     id = "selection-collection-heading"
 }: {
     boards: SelectionBoard[];
     onSelect: (id: number) => void;
     mode?: "continue" | "remix" | "explore";
     id?: string;
+    viewAllHref?: string;
 }) {
     const reduced = useReducedMotion();
     if (!boards.length) return null;
@@ -386,6 +389,7 @@ export function BoardSelectionCollection({
                 <h2 id={id} className="font-display text-muted-foreground/65 text-30 sm:text-40 leading-none font-bold">
                     THE COLLECTION
                 </h2>
+                {viewAllHref && <ViewAllBoards href={viewAllHref} />}
                 <span className="text-muted-foreground text-[10px]">Bring a Board into focus ↗</span>
             </div>
             <motion.ul

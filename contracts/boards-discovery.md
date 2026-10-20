@@ -1,5 +1,9 @@
 # Boards discovery contract
 
+2026-10-20 amendment: [Board collection grid](board-collection-grid.md) supersedes the own-Board search exclusion
+and strict location gate below. Search and suggestions include eligible owned published Boards, and direct title
+matches remain eligible without matching location metadata. Existing discovery visibility rules still apply.
+
 Status: Implemented — user authorized implementation on 2026-10-20, representing both frontend and backend
 
 Approver: the user explicitly represents both frontend and backend (2026-10-20).

@@ -13,9 +13,11 @@ import {
 import type { GalleryBoard } from "@/lib/my-boards";
 import AccountPhotoBoardCard from "./cards/AccountPhotoBoardCard";
 import { BoardDragContext } from "./cards/PhotoBoardCard";
+import ViewAllBoards from "./ViewAllBoards";
 import { scrollBoardLibrary } from "@/lib/board-library-scroll";
 
 type Props = {
+    viewAllHref?: string;
     boards: readonly Pick<GalleryBoard, "compact" | "photo" | "ownership" | "href" | "editHref" | "savedByMe">[];
     id?: string;
     title?: string;
@@ -33,6 +35,7 @@ type Props = {
 
 export default function BoardLibrary({
     boards,
+    viewAllHref,
     hasMore = false,
     loadingMore = false,
     onLoadMore,
@@ -51,6 +54,7 @@ export default function BoardLibrary({
     return (
         <div ref={root}>
             <BoardLibraryCarousel
+                viewAllHref={viewAllHref}
                 count={boards.length}
                 id={id}
                 title={title}
@@ -151,6 +155,7 @@ type LibraryVariant = "default" | "profile" | "discover";
 // Shared browsing behavior; callers retain their real account-aware cards, links and tag navigation.
 export function BoardLibraryCarousel({
     children,
+    viewAllHref,
     count,
     id,
     title,
@@ -162,7 +167,10 @@ export function BoardLibraryCarousel({
     variant = "default",
     listLabel,
     emptyMessage
-}: Pick<Props, "id" | "title" | "description" | "hasMore" | "loadingMore" | "onLoadMore" | "embedded"> & {
+}: Pick<
+    Props,
+    "viewAllHref" | "id" | "title" | "description" | "hasMore" | "loadingMore" | "onLoadMore" | "embedded"
+> & {
     children: ReactNode;
     count: number;
     id: string;
@@ -295,6 +303,7 @@ export function BoardLibraryCarousel({
                             >
                                 {title}
                             </h2>
+                            {viewAllHref && <ViewAllBoards href={viewAllHref} />}
                         </div>
                     )}
                     {count === 0 && variant !== "default" && (

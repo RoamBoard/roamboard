@@ -136,8 +136,6 @@ export default function HandleProfileContent({
 }
 
 export function VisitorProfileContent({ view }: { view: PublicProfileView }) {
-    const [showAllSaved, setShowAllSaved] = useState(false);
-    const [showAllPublished, setShowAllPublished] = useState(false);
     return (
         <div className="mx-auto w-full max-w-6xl pb-20">
             <header className="mb-8">
@@ -162,18 +160,14 @@ export function VisitorProfileContent({ view }: { view: PublicProfileView }) {
                                 boards and destinations on my radar right now
                             </p>
                         </div>
-                        <button
-                            type="button"
-                            onClick={() => setShowAllSaved(true)}
-                            className="text-12 text-muted-foreground hover:text-foreground inline-flex min-h-11 shrink-0 items-center whitespace-nowrap hover:underline"
+                        <Link
+                            href={`/boards/collections/profile-saved?handle=${encodeURIComponent(view.profile.username)}`}
+                            className="text-muted-foreground hover:text-foreground inline-flex min-h-11 shrink-0 items-center text-sm whitespace-nowrap hover:underline"
                         >
                             view all →
-                        </button>
+                        </Link>
                     </div>
-                    <ProfileSavedBoardLibrary
-                        boards={showAllSaved ? (view.savedBoards ?? []) : (view.savedBoards ?? []).slice(0, 3)}
-                        ownCollection={false}
-                    />
+                    <ProfileSavedBoardLibrary boards={(view.savedBoards ?? []).slice(0, 3)} ownCollection={false} />
                     {!view.savedBoards?.length && (
                         <p className="text-muted-foreground mt-6 text-sm">No saved boards to show.</p>
                     )}
@@ -186,16 +180,15 @@ export function VisitorProfileContent({ view }: { view: PublicProfileView }) {
                                 turns out daydreams of new trips looks better as Roamboards
                             </p>
                         </div>
-                        <button
-                            type="button"
-                            onClick={() => setShowAllPublished(true)}
-                            className="text-12 text-muted-foreground hover:text-foreground inline-flex min-h-11 shrink-0 items-center whitespace-nowrap hover:underline"
+                        <Link
+                            href={`/boards/collections/profile?handle=${encodeURIComponent(view.profile.username)}`}
+                            className="text-muted-foreground hover:text-foreground inline-flex min-h-11 shrink-0 items-center text-sm whitespace-nowrap hover:underline"
                         >
                             view all →
-                        </button>
+                        </Link>
                     </div>
                     <LiveBoardLibrary
-                        boards={showAllPublished ? view.boards : view.boards.slice(0, 3)}
+                        boards={view.boards.slice(0, 3)}
                         author={view.profile.username}
                         ownership="other"
                         publicView

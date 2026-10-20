@@ -170,7 +170,12 @@ test("visitor profile shows the profile owner's saved and published collections 
     assert.match(markup, /my boards/);
     assert.match(markup, /731/);
     assert.match(markup, /732/);
-    assert.equal(nodes.filter((node) => node.type === "button" && node.props.children === "view all \u2192").length, 2);
+    assert.equal(
+        nodes.filter(
+            (node) => typeof node.props.href === "string" && node.props.href.startsWith("/boards/collections/")
+        ).length,
+        2
+    );
     const library = nodes.find((node) => node.type === ProfileSavedBoardLibrary);
     assert.ok(library);
     assert.equal(library.props.ownCollection, false, "another user's saves must not become the visitor's bookmarks");

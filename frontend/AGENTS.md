@@ -97,6 +97,14 @@ This is a living project guide. Agents may and should update `AGENTS.md` when th
 
 ## Current integrated surfaces
 
+`BoardCollectionGrid` is the fourth Board list: component 2 photographic cards in a wider responsive grid, twenty
+results with URL-backed contextual search, sorting and numbered pagination. `/boards/collections/[context]` hosts
+View all destinations; Social embeds the friends collection directly. Source scopes preserve profile ownership,
+saved membership, Featured period and map country/point plus published/saved toggles. Existing live list headings
+link to these collections. Discover's `samples` route remains explicitly editorial, without persisted Board actions.
+Search/suggestions on `/boards` now include eligible owned published Boards and keep direct title matches even
+without matching location metadata. See `../contracts/board-collection-grid.md`. Browser layout QA remains pending.
+
 `/boards` now renders `BoardsDiscovery`: four location-aware suggestions with compact previews, URL-backed numbered
 search results, monthly/weekly Featured, a Discover promotion, Recently Published, owner-only mixed Draft/Published
 Boards and Saved Boards. The two personal sections use the draggable horizontal `BoardLibrary` carousel, retaining

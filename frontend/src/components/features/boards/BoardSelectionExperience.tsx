@@ -1,5 +1,7 @@
 "use client";
 
+import ViewAllBoards from "./ViewAllBoards";
+import { collectionHref } from "@/lib/board-collections";
 import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { motion, useReducedMotion } from "motion/react";
@@ -126,6 +128,9 @@ export function BoardSelectionContent({
                           ? `${matches.length} saved ${matches.length === 1 ? "Board" : "Boards"}${incomplete ? " loaded" : ""}`
                           : `${matches.length} ${status === "draft" ? (matches.length === 1 ? "draft" : "drafts") : matches.length === 1 ? "published Board" : "published Boards"}${incomplete ? " loaded" : ""}`}
                 </p>
+                <div className="mx-auto flex max-w-[1320px] justify-end">
+                    <ViewAllBoards href={collectionHref(remix ? "saved" : "mine", remix ? {} : { status })} />
+                </div>
             </header>
             <div className={styles.content}>
                 {scopeErrors.length > 0 && (
@@ -177,7 +182,12 @@ export function BoardSelectionContent({
                                 onRetry={() => void actions.loadPreview(selected.summary.boardId)}
                             />
                         </div>
-                        <BoardSelectionCollection boards={collection} onSelect={selectFromCollection} mode={mode} />
+                        <BoardSelectionCollection
+                            viewAllHref={collectionHref(remix ? "saved" : "mine", remix ? {} : { status })}
+                            boards={collection}
+                            onSelect={selectFromCollection}
+                            mode={mode}
+                        />
                     </>
                 )}
                 {!state.loading && !selected && (

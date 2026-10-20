@@ -1,5 +1,6 @@
 "use client";
 
+import ViewAllBoards from "./ViewAllBoards";
 import { useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
@@ -9,10 +10,12 @@ import AccountPhotoBoardCard from "./cards/AccountPhotoBoardCard";
 
 export default function SpatialGallery({
     boards,
+    viewAllHref,
     saved = false
 }: {
     boards: readonly GalleryBoard[];
     saved?: boolean;
+    viewAllHref?: string;
 }) {
     const [selectedId, setSelectedId] = useState(boards[0]?.collage.id ?? "");
     const selectedIndex = Math.max(
@@ -44,24 +47,31 @@ export default function SpatialGallery({
             aria-labelledby={saved ? "recently-saved-heading" : "featured-boards-heading"}
             className={`mx-auto max-w-[1320px] ${saved ? "mt-32 md:mt-48" : "mt-20 md:mt-28"}`}
         >
-            {saved ? (
-                <h2
-                    id="recently-saved-heading"
-                    className="font-display text-foreground/60 text-30 md:text-36 text-center leading-[.95] font-medium"
-                >
-                    RECENTLY
-                    <br />
-                    SAVED
-                </h2>
-            ) : (
-                <h2
-                    id="featured-boards-heading"
-                    className="font-display text-foreground/60 text-24 md:text-36 flex justify-center gap-3 px-5 leading-none font-medium sm:px-12"
-                >
-                    <span>FEATURED</span>
-                    <span>BOARDS</span>
-                </h2>
-            )}
+            <div className="relative min-h-11 pr-24">
+                {viewAllHref && (
+                    <div className="absolute top-0 right-5 sm:right-12">
+                        <ViewAllBoards href={viewAllHref} />
+                    </div>
+                )}
+                {saved ? (
+                    <h2
+                        id="recently-saved-heading"
+                        className="font-display text-foreground/60 text-30 md:text-36 text-center leading-[.95] font-medium"
+                    >
+                        RECENTLY
+                        <br />
+                        SAVED
+                    </h2>
+                ) : (
+                    <h2
+                        id="featured-boards-heading"
+                        className="font-display text-foreground/60 text-24 md:text-36 flex justify-center gap-3 px-5 leading-none font-medium sm:px-12"
+                    >
+                        <span>FEATURED</span>
+                        <span>BOARDS</span>
+                    </h2>
+                )}
+            </div>
             <div className={`mx-3 mt-6 sm:mx-10 ${saved ? "grid md:grid-cols-2 md:pt-28" : ""}`}>
                 <div className="min-w-0">
                     <div
