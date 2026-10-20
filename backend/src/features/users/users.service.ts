@@ -1,4 +1,5 @@
 import { AppError } from "../../shared/app-error.js";
+import type { ImageCleanup } from "../images/images.cleanup.js";
 import type { UsersRepository, ProfileChanges } from "./users.types.js";
 import type { ImagesRepository } from "../images/images.types.js";
 import type { BoardRepository } from "../boards/boards.types.js";
@@ -29,7 +30,8 @@ function travelStats(boards: ProfileBoard[]) {
 export function createUsersService(
     repository: UsersRepository,
     images: Pick<ImagesRepository, "findImage">,
-    boards: Pick<BoardRepository, "listTags" | "getAccess">
+    boards: Pick<BoardRepository, "listTags" | "getAccess">,
+    cleanupImages?: ImageCleanup
 ) {
     const read = async (userId: string) => {
         const profile = await repository.read(userId);
@@ -148,12 +150,16 @@ export function createUsersService(
             return read(userId);
         },
         async setPicture(userId: string, imageId: number | null) {
+            const previousImageId = (await read(userId)).profilePicture?.imageId;
             if (imageId !== null) {
                 const image = await images.findImage(imageId);
                 if (!image || image.uploaderUserId !== userId)
                     throw new AppError(404, "Owned image not found", "NOT_FOUND");
             }
             await repository.setPicture(userId, imageId);
+            if (previousImageId !== undefined && previousImageId !== imageId) {
+                await cleanupImages?.([previousImageId]);
+            }
             return read(userId);
         },
         listBoards: (userId: string, recent = false) => repository.listBoards(userId, recent),

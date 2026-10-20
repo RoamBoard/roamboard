@@ -186,11 +186,14 @@ export function createCloudinaryProvider(quota?: QuotaService): ImageProvider {
         },
         async destroy(storageKey) {
             config();
-            const result = (await cloudinary.uploader.destroy(storageKey, {
-                resource_type: "image",
-                type: "authenticated",
+            // The SDK supports timeout at runtime, although destroy's declaration omits it.
+            const options = {
+                timeout: 15000,
+                resource_type: "image" as const,
+                type: "authenticated" as const,
                 invalidate: true
-            })) as { result?: string };
+            };
+            const result = (await cloudinary.uploader.destroy(storageKey, options)) as { result?: string };
             if (result.result !== "ok" && result.result !== "not found") {
                 throw new Error("Cloudinary deletion failed");
             }

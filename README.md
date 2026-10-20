@@ -146,8 +146,10 @@ The [Compose stack](backend/deploy/compose.yaml) runs PostgreSQL, the backend, t
 HTTPS and routes API requests to Express and page requests to Next.js. Database data uses a persistent volume;
 backups and migration procedures are covered by the [deployment runbook](backend/deploy/README.md).
 
-Maintenance commands include `npm run cleanup:images` for abandoned uploads and unlinked user images, and
-`npm run cleanup:discovery` for expired discovery tracking data. Production hosts must schedule these jobs explicitly.
+Saved image removals attempt Cloudinary/database cleanup immediately. The backend also sweeps for pending deletions
+and abandoned uploads on startup and every minute; `npm run cleanup:images` runs manual maintenance. See the
+[image deletion contract](contracts/image-deletion.md). Production hosts must schedule `npm run cleanup:discovery`
+for expired discovery tracking data separately.
 
 ## Local development
 

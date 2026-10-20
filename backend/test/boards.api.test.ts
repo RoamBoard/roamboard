@@ -15,10 +15,15 @@ const origin = "http://localhost:3000";
 const ownerCookie = "roamboard_session=owner-token";
 const otherCookie = "roamboard_session=other-token";
 
-function fakeAuth(): { repository: AuthRepository; googleVerifier: GoogleVerifier } {
+function fakeAuth(): {
+    repository: AuthRepository;
+    googleVerifier: GoogleVerifier;
+    cleanupImages: () => Promise<void>;
+} {
     const ownerHash = createHash("sha256").update("owner-token").digest("hex");
     const otherHash = createHash("sha256").update("other-token").digest("hex");
     return {
+        async cleanupImages() {},
         repository: {
             async listGuestAccounts() {
                 return [];

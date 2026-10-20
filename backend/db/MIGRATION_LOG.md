@@ -190,3 +190,16 @@ so existing Board and profile selections remain valid. This supersedes the pendi
 Backup: `backend/backups/pre-007-2026-10-18T161334007Z.dump` (Git-ignored). Restoration and off-machine retention
 were not tested. Board choices now use the same editorial catalog as profile choices, restricted to persisted names;
 retired database names are retained for existing selections but are not offered as new Board choices.
+
+## Uploaded image deletion - 2026-10-20
+
+Migration 020_image_deletion.sql adds durable deletion/retry tracking and transactional reference triggers.
+Isolated-schema PostgreSQL tests verify profile and Board HTTP removal, covers/activity-only photos, shared references,
+rollback safety and provider failure retry. No shared application tables or real Cloudinary assets were changed by tests.
+With explicit rollout approval, applied only `020_image_deletion.sql` to the configured shared development database
+in a transaction after creating and verifying a fresh custom-format backup. Read-only catalog checks confirmed all
+three new columns, all five enabled reference triggers and the valid deletion-request index. Earlier migrations were
+not replayed. The migration itself does not delete existing image files; cleanup runs through the API services/worker.
+
+Backup: `backend/backups/pre-020-2026-10-20T211321781Z.dump` (226,181 bytes, Git-ignored).
+`pg_restore --list` verified the archive; restoration and off-machine retention were not tested.

@@ -192,21 +192,27 @@ export function createImagesRepository(): ImagesRepository {
                 longitude: row.longitude === null ? null : Number(row.longitude)
             }));
         },
-        async listCleanupCandidates(before, limit) {
+        async listCleanupCandidates(before, limit, requestedOnly = false, imageIds) {
             const result = await getPool().query<{
                 image_id: number | null;
                 storage_key: string;
                 upload_id: string | null;
             }>(
-                `SELECT i.uploaded_image_id AS image_id, i.storage_key, NULL::uuid AS upload_id
+                `SELECT i.uploaded_image_id AS image_id, i.storage_key, NULL::uuid AS upload_id,
+                        i.cleanup_attempted_at AS last_attempt
                  FROM uploaded_image i
-                 WHERE i.orphaned_at < $1 AND ${unreferenced}
+                 WHERE (i.deletion_requested_at IS NOT NULL OR (NOT $3 AND i.orphaned_at < $1))
+                   AND ($4::int[] IS NULL OR i.uploaded_image_id = ANY($4::int[]))
+                   AND NOT starts_with(i.storage_key, 'roamboard/editorial/') AND ${unreferenced}
                  UNION ALL
-                 SELECT NULL::int AS image_id, ui.storage_key, ui.upload_id
+                 SELECT NULL::int AS image_id, ui.storage_key, ui.upload_id, ui.cleanup_attempted_at AS last_attempt
                  FROM image_upload_intent ui
-                 WHERE ui.uploaded_image_id IS NULL AND ui.expires_at < $1
+                 WHERE NOT $3 AND ui.uploaded_image_id IS NULL AND ui.expires_at < $1
+                   AND $4::int[] IS NULL
+                   AND NOT starts_with(ui.storage_key, 'roamboard/editorial/')
+                 ORDER BY last_attempt NULLS FIRST, image_id, upload_id
                  LIMIT $2`,
-                [before, limit]
+                [before, limit, requestedOnly, imageIds ?? null]
             );
             return result.rows.map((row) => ({
                 imageId: row.image_id,
@@ -220,7 +226,9 @@ export function createImagesRepository(): ImagesRepository {
                 await client.query("BEGIN");
                 const row = await client.query<{ storage_key: string }>(
                     `SELECT i.storage_key FROM uploaded_image i
-                     WHERE i.uploaded_image_id = $1 AND i.orphaned_at < NOW() - INTERVAL '24 hours'
+                     WHERE i.uploaded_image_id = $1
+                     AND (i.deletion_requested_at IS NOT NULL OR i.orphaned_at < NOW() - INTERVAL '24 hours')
+                     AND NOT starts_with(i.storage_key, 'roamboard/editorial/')
                      AND ${unreferenced} FOR UPDATE OF i SKIP LOCKED`,
                     [imageId]
                 );
@@ -229,11 +237,15 @@ export function createImagesRepository(): ImagesRepository {
                     return false;
                 }
                 await removeAsset();
+                await client.query("DELETE FROM image_upload_intent WHERE uploaded_image_id = $1", [imageId]);
                 await client.query("DELETE FROM uploaded_image WHERE uploaded_image_id = $1", [imageId]);
                 await client.query("COMMIT");
                 return true;
             } catch (error) {
                 await client.query("ROLLBACK");
+                await client.query("UPDATE uploaded_image SET cleanup_attempted_at=NOW() WHERE uploaded_image_id=$1", [
+                    imageId
+                ]);
                 throw error;
             } finally {
                 client.release();
@@ -247,6 +259,7 @@ export function createImagesRepository(): ImagesRepository {
                     `SELECT upload_id FROM image_upload_intent
                      WHERE upload_id = $1 AND uploaded_image_id IS NULL
                      AND expires_at < NOW() - INTERVAL '24 hours'
+                     AND NOT starts_with(storage_key, 'roamboard/editorial/')
                      FOR UPDATE SKIP LOCKED`,
                     [uploadId]
                 );
@@ -260,6 +273,9 @@ export function createImagesRepository(): ImagesRepository {
                 return true;
             } catch (error) {
                 await client.query("ROLLBACK");
+                await client.query("UPDATE image_upload_intent SET cleanup_attempted_at=NOW() WHERE upload_id=$1", [
+                    uploadId
+                ]);
                 throw error;
             } finally {
                 client.release();

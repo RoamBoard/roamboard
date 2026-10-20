@@ -1,5 +1,6 @@
 import { createSmartCreateModule } from "./features/smart-create/smart-create.module.js";
 import type { SmartCreateResolver } from "./features/smart-create/smart-create.service.js";
+import type { ImageCleanup } from "./features/images/images.cleanup.js";
 import express, { type Express } from "express";
 import { createDiscoveryModule } from "./features/board-discovery/discovery.module.js";
 import { createDiscoveryRepository } from "./features/board-discovery/discovery.repository.js";
@@ -36,6 +37,7 @@ import { createSavedPlacesModule } from "./features/saved-places/saved-places.mo
 import type { SavedPlacesRepository } from "./features/saved-places/saved-places.types.js";
 
 export interface AppOptions extends AuthModuleOptions {
+    cleanupImages?: ImageCleanup;
     discoveryRepository?: DiscoveryRepository;
     smartCreateResolver?: SmartCreateResolver;
     libraryRepository?: LibraryRepository;
@@ -101,8 +103,15 @@ export function createApp(options: AppOptions = {}): Express {
         options.imageProvider,
         quota
     );
-    const boards = createBoardsModule(attachUser, boardRepository, images.service.copyForBoard);
-    const users = createUsersModule(attachUser, images.repository, boards.repository, options.usersRepository);
+    const cleanupImages = options.cleanupImages ?? images.service.cleanupRequested;
+    const boards = createBoardsModule(attachUser, boardRepository, images.service.copyForBoard, cleanupImages);
+    const users = createUsersModule(
+        attachUser,
+        images.repository,
+        boards.repository,
+        options.usersRepository,
+        cleanupImages
+    );
     app.use("/api/v1/auth", auth.router);
     app.use(
         "/api/v1/image-library",

@@ -1,4 +1,5 @@
 import type { RequestHandler } from "express";
+import type { ImageCleanup } from "../images/images.cleanup.js";
 import type { UsersRepository } from "./users.types.js";
 import { createUsersRepository } from "./users.repository.js";
 import { createUsersService } from "./users.service.js";
@@ -11,9 +12,10 @@ export function createUsersModule(
     attachUser: RequestHandler,
     images: ImagesRepository,
     boards: BoardRepository,
-    repository: UsersRepository = createUsersRepository()
+    repository: UsersRepository = createUsersRepository(),
+    cleanupImages?: ImageCleanup
 ) {
-    const service = createUsersService(repository, images, boards);
+    const service = createUsersService(repository, images, boards, cleanupImages);
     const controller = createUsersController(service);
     return {
         router: createUsersRouter(controller, attachUser),

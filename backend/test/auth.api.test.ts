@@ -35,11 +35,13 @@ function fakeDependencies(
 ): {
     repository: AuthRepository;
     googleVerifier: GoogleVerifier;
+    cleanupImages: () => Promise<void>;
 } {
     const users = new Map<string, AppUser>(initialUsers.map((user) => [user.userId, user]));
     const sessions = new Map<string, { userId: string; expiresAt: Date }>();
 
     return {
+        async cleanupImages() {},
         repository: {
             async listGuestAccounts() {
                 return [...users.values()].filter((user) => user.userId.startsWith("guest:"));
@@ -138,6 +140,25 @@ test("Google sign-in creates a user and a revocable HTTP-only session cookie", a
     assert.equal(signOut.status, 204);
     const afterSignOut = await request(app).get("/api/v1/auth/me").set("Cookie", cookie);
     assert.equal(afterSignOut.status, 401);
+});
+
+test("Google sign-in sends its session cookie without waiting for queued image deletions", async () => {
+    let cleanups = 0;
+    const app = createApp({
+        ...fakeDependencies(),
+        cleanupImages: async () => {
+            cleanups += 1;
+            await new Promise<void>(() => {});
+        }
+    });
+    const result = await request(app)
+        .post("/api/v1/auth/google")
+        .set("Origin", origin)
+        .send({ credential: "valid-google-token" })
+        .timeout({ deadline: 1000 });
+    assert.equal(result.status, 200);
+    assert.ok(result.headers["set-cookie"]?.[0]);
+    assert.equal(cleanups, 0);
 });
 
 test("guest accounts are listed, created once, and can be signed into again", async () => {

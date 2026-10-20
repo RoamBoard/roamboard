@@ -202,7 +202,7 @@ Paths below are relative to `/api/v1/users/me` and return the types in
 | GET    | None                | Caller profile, biography as `description`, tag names, image reference and timestamps                             |
 | PATCH  | None                | Replace `{ displayName, description, location, interests }`; return saved profile                                 |
 | PUT    | `/profile-picture`  | Set `{ imageId }` only for an existing image uploaded by the caller; return saved profile                         |
-| DELETE | `/profile-picture`  | Unlink picture; return saved profile; unreferenced files enter normal orphan cleanup                              |
+| DELETE | `/profile-picture`  | Remove picture; return saved profile; immediately attempt cleanup of unreferenced Cloudinary/database images      |
 | GET    | `/stats`            | Visible published Board travel totals, published activities, owned Board count, accepted friends and saved totals |
 | GET    | `/boards`           | All owned Boards, newest updated first, primary destinations and confirmed activity locations                     |
 | GET    | `/recent-boards`    | Latest six owned Boards by update time; not browsing history                                                      |
