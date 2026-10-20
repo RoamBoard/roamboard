@@ -118,6 +118,92 @@ test("start page only shows THE WORLD AWAITS when not logged in and redirects lo
     assert.match(signedOutHtml, /<h1\b[^>]*>THE WORLD AWAITS<\/h1>/);
 });
 
+function pendingWelcome(t: TestContext) {
+    t.mock.timers.enable({ apis: ["setTimeout"] });
+    const state = { signedOut: false, updates: 0 };
+    const effects: React.EffectCallback[] = [];
+    const replaces: string[] = [];
+    t.mock.method(React, "useState", ((initial: unknown) =>
+        typeof initial === "boolean"
+            ? [
+                  state.signedOut,
+                  (next: boolean) => {
+                      state.signedOut = next;
+                      state.updates += 1;
+                  }
+              ]
+            : [initial, () => {}]) as typeof React.useState);
+    t.mock.method(React, "useEffect", (effect: React.EffectCallback) => {
+        effects.push(effect);
+    });
+    const pending: { resolve?: (value: Response) => void; reject?: (reason: Error) => void } = {};
+    t.mock.method(
+        globalThis,
+        "fetch",
+        () =>
+            new Promise<Response>((resolve, reject) => {
+                Object.assign(pending, { resolve, reject });
+            })
+    );
+    const render = () => markup(createElement(StartWelcome), router({ replace: (href) => replaces.push(href) }));
+    render();
+    const cleanups = effects
+        .splice(0)
+        .map((effect) => effect())
+        .filter((cleanup): cleanup is () => void => typeof cleanup === "function");
+    return {
+        state,
+        replaces,
+        render,
+        cleanup: () => cleanups.forEach((cleanup) => cleanup()),
+        finish: async (outcome: "resolve" | "reject") => {
+            if (outcome === "resolve")
+                pending.resolve!(
+                    Response.json({
+                        data: { userId: "u-1", username: "ada", displayName: "Ada", profilePictureUrl: null }
+                    })
+                );
+            else pending.reject!(new Error("Auth unavailable"));
+            await new Promise<void>((resolve) => setImmediate(resolve));
+        }
+    };
+}
+
+for (const outcome of ["resolve", "reject"] as const) {
+    test(`a stalled welcome opens publicly after three seconds and ignores a late auth ${outcome}`, async (t) => {
+        const view = pendingWelcome(t);
+        t.mock.timers.tick(2999);
+        assert.equal(view.state.signedOut, false);
+        t.mock.timers.tick(1);
+        assert.equal(view.state.signedOut, true);
+        assert.match(view.render(), /THE WORLD AWAITS/);
+        const updates = view.state.updates;
+        await view.finish(outcome);
+        assert.deepEqual(view.replaces, []);
+        assert.equal(view.state.updates, updates);
+        view.cleanup();
+    });
+}
+
+test("leaving a pending welcome cancels its deadline and ignores the auth result", async (t) => {
+    const view = pendingWelcome(t);
+    view.cleanup();
+    t.mock.timers.tick(3000);
+    await view.finish("resolve");
+    assert.equal(view.state.updates, 0);
+    assert.deepEqual(view.replaces, []);
+});
+
+test("an authenticated welcome response cancels the public fallback deadline", async (t) => {
+    const view = pendingWelcome(t);
+    await view.finish("resolve");
+    assert.deepEqual(view.replaces, ["/welcome"]);
+    t.mock.timers.tick(3000);
+    assert.equal(view.state.signedOut, false);
+    assert.equal(view.state.updates, 0);
+    view.cleanup();
+});
+
 test("returning welcome keeps its personalized greeting and ENTER link", () => {
     const html = markup(createElement(WelcomeScreen, { username: "Ada" }));
     assert.match(html, /<h1\b[^>]*>Welcome back, Ada<\/h1>/);

@@ -16,7 +16,7 @@ import { DestinationReady } from "@/components/features/destinations/Destination
 import { destinationSelectionMatches, type DestinationSelectionParams } from "@/lib/destination-search";
 
 type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<DestinationSelectionParams> };
-const searchCountry = cache((name: string) => searchDestinations(name));
+const searchCountry = cache((name: string) => searchDestinations(name).catch(() => []));
 
 async function resolveDestination({ params, searchParams }: Props) {
     const slug = (await params).slug;

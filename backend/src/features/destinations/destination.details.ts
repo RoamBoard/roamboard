@@ -76,7 +76,12 @@ function listingDescription(
               .replace(prefix, "")
               .replace(isCity ? /^[\s.,:\u2014\u2013-]+/ : /^[\s.,]+/, "")
         : isCity
-          ? plain(listing?.properties?.description)
+          ? plain(
+                listing?.properties?.description?.replace(
+                    /<a\b[^>]*\bhref=["']\/wiki\/File:[^"']*["'][^>]*>[\s\S]*?<\/a>/gi,
+                    ""
+                )
+            )
           : "";
     return guideExcerpt(isCity ? description : description.replace(/\s*\(updated [^)]*\)/g, ""), 2, 60) || null;
 }

@@ -531,6 +531,21 @@ test("a clean country URL resolves the provider country identity into the shared
     );
 });
 
+test("editorial country routes remain readable when provider lookup is rate limited or unavailable", async (t) => {
+    const state = { status: 429 };
+    replaceFetch(t, async () =>
+        Response.json({ error: { message: "Provider unavailable" } }, { status: state.status })
+    );
+    for (const status of [429, 503]) {
+        state.status = status;
+        const props = { params: Promise.resolve({ slug: "japan" }), searchParams: Promise.resolve({}) };
+        const page = await DestinationRoute(props);
+        assert.equal(routeInput(page), undefined);
+        assert.match(renderWithRouter(page), /<h1[^>]*>Japan<\/h1>/);
+        assert.match(String((await generateMetadata(props)).title), /Japan/);
+    }
+});
+
 test("guide reads use the real credentialed API with city identity, page, limit and cancellation", async (t) => {
     const calls: Array<{ url: URL; init?: RequestInit }> = [];
     replaceFetch(t, async (input, init) => {

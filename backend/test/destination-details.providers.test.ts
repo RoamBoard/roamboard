@@ -130,6 +130,94 @@ test("a country city without listing content follows its Wikivoyage article for 
     assert.equal(reserved.count, 2);
 });
 
+test("a Photo-only city marker still reads the linked city introduction after loading its photo", async (t) => {
+    const introductions = { count: 0 };
+    t.mock.method(globalThis, "fetch", async (input: string | URL) => {
+        const url = new URL(String(input));
+        if (url.hostname === "commons.wikimedia.org") return Response.json({ query: { pages: [commons()] } });
+        if (url.searchParams.get("titles") === "Munich") {
+            introductions.count += 1;
+            return Response.json({
+                query: {
+                    pages: [{ pageid: 77, title: "Munich", extract: "Munich has museums and parks beside the river." }]
+                }
+            });
+        }
+        return Response.json({
+            query: {
+                pages: [
+                    {
+                        pageid: 55,
+                        title: "Germany",
+                        extract: "== Cities ==\n",
+                        mapdata: [
+                            JSON.stringify({
+                                city: [
+                                    {
+                                        properties: {
+                                            title: '<a href="/wiki/Munich">Munich</a>',
+                                            description: '<a href="/wiki/File:Nakasu_river.jpg">Photo</a>'
+                                        }
+                                    }
+                                ]
+                            })
+                        ]
+                    }
+                ]
+            }
+        });
+    });
+    const result = await createWikivoyageDetails(async () => {}).placeDetails(
+        { ...sight, id: "wikivoyage:55:munich", name: "Munich" },
+        undefined,
+        "country"
+    );
+    assert.equal(result.description, "Munich has museums and parks beside the river.");
+    assert.equal(result.sourceUrl, "https://en.wikivoyage.org/?curid=77");
+    assert.equal(result.image?.author, "River & Street Photographer");
+    assert.equal(introductions.count, 1);
+});
+
+test("city marker prose keeps its wording while omitting the image link label", async (t) => {
+    t.mock.method(globalThis, "fetch", async (input: string | URL) => {
+        const url = new URL(String(input));
+        if (url.hostname === "commons.wikimedia.org") return Response.json({ query: { pages: [commons()] } });
+        assert.equal(url.searchParams.has("titles"), false, "Usable marker prose does not need an intro fallback");
+        return Response.json({
+            query: {
+                pages: [
+                    {
+                        pageid: 55,
+                        title: "Germany",
+                        extract: "== Cities ==\n",
+                        mapdata: [
+                            JSON.stringify({
+                                city: [
+                                    {
+                                        properties: {
+                                            title: '<a href="/wiki/Munich">Munich</a>',
+                                            description:
+                                                'Museums and public gardens beside the river. <a href="/wiki/File:Nakasu_river.jpg">Photo</a>'
+                                        }
+                                    }
+                                ]
+                            })
+                        ]
+                    }
+                ]
+            }
+        });
+    });
+    const result = await createWikivoyageDetails(async () => {}).placeDetails(
+        { ...sight, id: "wikivoyage:55:munich", name: "Munich" },
+        undefined,
+        "country"
+    );
+    assert.equal(result.description, "Museums and public gardens beside the river.");
+    assert.equal(result.sourceUrl, "https://en.wikivoyage.org/?curid=55#Cities");
+    assert.equal(result.image?.author, "River & Street Photographer");
+});
+
 test("unsafe country city links cannot trigger external reads and uncredited photos remain placeholders", async (t) => {
     const urls: URL[] = [];
     const state = { photo: commons({ extmetadata: {} }) };
