@@ -79,13 +79,22 @@ export type PhotoBoardCardProps = {
     save?: PhotoBoardSave;
     reduceMotion?: boolean;
     imageSizes?: string;
-    // Continue selects/edits; saved templates expose separate overview and remix links.
+    hideCoverCredit?: boolean;
+    suppressHover?: boolean;
+    tilt?: boolean;
+    showVisibility?: boolean;
+    hoverActions?: { editHref?: string; viewHref?: string };
+    // Carousels keep card navigation separate from editor and remix actions.
     selection?: {
         selected: boolean;
+        // Permitted editor link, or overview link when remixHref is supplied.
         href?: string;
+        // Background destination; drafts can use their existing editor.
+        viewHref?: string;
         remixHref?: string;
         label?: string;
         onSelect: (event: MouseEvent<HTMLButtonElement>) => void;
+        onNavigate?: (event: MouseEvent<HTMLAnchorElement>) => void;
         tabIndex?: number;
     };
 };

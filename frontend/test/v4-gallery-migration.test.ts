@@ -75,13 +75,10 @@ test("My Boards featured gallery renders canonical V4 metadata and owner visibil
     assert.match(markup, /href="\/boards\/51"/);
     assert.doesNotMatch(markup, /href="\/boards\/52"/);
     assert.doesNotMatch(markup, /aria-label="(?:Save|Unsave) |0 saves|Destination not added|globe\.svg/);
-    const selects = selectionButtons(markup);
-    assert.equal(selects.length, 2);
-    assert.match(selects[0], /aria-pressed="true"/);
-    assert.match(selects[0], /tabindex="0"/);
-    assert.match(selects[1], /aria-pressed="false"/);
-    assert.match(selects[1], /tabindex="-1"/);
-    assert.equal((markup.match(/aria-expanded=/g) ?? []).length, 1, "Only the selected card toggles metadata");
+    const opens = [...markup.matchAll(/<a\b[^>]*aria-label="Open [^"]*"[^>]*>/g)].map((match) => match[0]);
+    assert.equal(opens.length, 1);
+    assert.match(opens[0], /tabindex="0"/);
+    assert.equal(selectionButtons(markup).length, 1);
     assert.doesNotMatch(markup, />(?:Details|Close)(?:<|$)/);
     assert.match(markup, /aria-label="Previous Board"/);
     assert.match(markup, /aria-label="Next Board"/);
@@ -103,14 +100,28 @@ test("recently created library retains real Board links and carousel affordances
     assert.match(markup, /href="\/boards\/62"/);
     assert.match(markup, /Restricted access — you and invited Board members/);
     assert.equal((markup.match(/aria-label="Board details"/g) ?? []).length, 2);
-    assert.doesNotMatch(markup, /aria-expanded=|>(?:Details|Close)(?:<|$)/);
+    assert.equal((markup.match(/aria-label="Show details for /g) ?? []).length, 2);
+    assert.equal((markup.match(/aria-expanded="false"/g) ?? []).length, 2);
+    assert.doesNotMatch(markup, />(?:Details|Close)(?:<|$)/);
     assert.equal(selectionButtons(markup).length, 0, "Library cards navigate rather than select");
     assert.match(markup, /aria-roledescription="carousel"/);
     assert.match(markup, /Previous recently created Boards/);
     assert.match(markup, /Next recently created Boards/);
-    assert.match(markup, /role="progressbar"/);
+    assert.match(markup, /type="range"[^>]*aria-label="RECENTLY CREATED scroll position"/);
     assert.match(markup, /2 Boards · drag, swipe or scroll to explore/);
     assert.doesNotMatch(markup, /aria-label="(?:Save|Unsave) |0 saves/);
+});
+
+test("featured browsing retains ten canonical cards and their direct views without the old footer link", () => {
+    const boards = Array.from({ length: 10 }, (_, index) => ownedBoard(100 + index));
+    const markup = renderToStaticMarkup(createElement(SpatialGallery, { boards }));
+    requireV4(markup, 10);
+    assert.ok(markup.includes(`href="${boards[0].href}"`));
+    assert.equal(selectionButtons(markup).length, 9);
+    assert.match(markup, /01 \/ 10/);
+    assert.match(markup, /aria-label="View Owner journey 100"/);
+    assert.match(markup, /aria-label="Edit Owner journey 100"/);
+    assert.doesNotMatch(markup, />open Board|>Open Board/);
 });
 
 test("sample fallback and archive libraries never acquire owner controls, persistence claims, sample URLs or fixture save totals", () => {
@@ -153,7 +164,7 @@ function renderPublicBoards(boards: DestinationBoardSummary[], extra = {}) {
     );
 }
 
-test("public destination Boards render V4 metadata with spatial selection and a separate real open action", () => {
+test("public destination Boards render V4 metadata with real background view links", () => {
     const boards = [publicBoard(771), publicBoard(772)];
     const markup = renderPublicBoards(boards);
     const rendered = requireV4(markup, boards.length);
@@ -161,18 +172,14 @@ test("public destination Boards render V4 metadata with spatial selection and a 
     assert.match(markup, /aria-roledescription="carousel"/);
     assert.match(markup, /aria-label="Previous slide"/);
     assert.match(markup, /aria-label="Next slide"/);
-    const selects = selectionButtons(markup);
-    assert.equal(selects.length, 2);
-    assert.match(selects[0], /aria-pressed="true"/);
-    assert.match(selects[0], /tabindex="0"/);
-    assert.match(selects[1], /aria-pressed="false"/);
-    assert.match(selects[1], /tabindex="-1"/);
-    assert.equal((markup.match(/aria-expanded=/g) ?? []).length, 1);
+    assert.equal(selectionButtons(markup).length, 1);
     assert.match(markup, /href="\/boards\/771"/);
-    assert.match(markup, /Open Board/);
     assert.doesNotMatch(markup, /href="\/boards\/772"/);
+    assert.match(markup, /aria-label="Open Public journey 771"/);
+    assert.doesNotMatch(markup, />Open Board/);
     assert.doesNotMatch(markup, /Sample Boards|Illustrative content|>(?:Details|Close)(?:<|$)/);
-    assert.doesNotMatch(markup, /aria-label="(?:Save |Unsave |Public —|Friends —|Restricted access —)|[\d,]+ saves/);
+    assert.match(markup, /aria-label="Public — anyone can view this Board"/);
+    assert.doesNotMatch(markup, /aria-label="(?:Save |Unsave )|[\d,]+ saves/);
     assert.match(markup, /aria-live="polite"/);
     for (const [index, card] of rendered.entries()) {
         assert.match(card, new RegExp(boards[index].username));
@@ -196,7 +203,7 @@ test("public destination cards keep the chosen protected cover URL and never sub
     assert.doesNotMatch(markup, /unselected-activity|_next\/image/);
 });
 
-test("public destination cards preserve live provider attribution and omit absent metadata rather than inventing it", () => {
+test("public destination cards retain provider delivery without a layout-shifting credit or invented metadata", () => {
     const markup = renderPublicBoards([
         publicBoard(791, {
             description: null,
@@ -215,9 +222,7 @@ test("public destination cards preserve live provider attribution and omit absen
     ]);
     requireV4(markup, 1);
     assert.match(markup, /src="https:\/\/images\.unsplash\.com\/real-cover\.jpg\?ixid=original-tracking/);
-    assert.match(markup, /Actual Photographer/);
-    assert.match(markup, /href="https:\/\/unsplash\.com\/@actual-photographer(?:[?"])/);
-    assert.match(markup, /href="https:\/\/unsplash\.com\/photos\/real-cover(?:[?"])/);
+    assert.doesNotMatch(markup, /Actual Photographer|Photo by|href="https:\/\/unsplash\.com/);
     assert.doesNotMatch(markup, /0 saves|data-photo-board-field="(?:tags|duration)"|persisted trip notes/);
 });
 

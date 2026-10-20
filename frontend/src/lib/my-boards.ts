@@ -14,6 +14,8 @@ export type GalleryBoard = {
     photo?: PhotoBoardCardData;
     ownership?: PhotoBoardCardProps["ownership"];
     href?: string;
+    editHref?: string;
+    savedByMe?: boolean;
 };
 
 export function filterGalleryBoards(boards: readonly GalleryBoard[], query: string) {
@@ -100,7 +102,9 @@ export function toGalleryBoard(summary: PublishedSummary, document: BoardDocumen
             destinationLabel: collage.destinationLabel,
             image: photos[0] ?? { src: "/globe.svg", alt: "No Board cover added" }
         },
-        href: `/boards/${summary.boardId}`
+        href: `/boards/${summary.boardId}`,
+        editHref: document.permissions.canEditContent ? `/boards/${summary.boardId}/edit` : undefined,
+        savedByMe: document.savedByMe
     };
 }
 

@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useId, useRef, useState } from "react";
+import { createContext, useContext, useId, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
     Bookmark,
     Check,
     Eye,
     Globe2,
+    Info,
     LoaderCircle,
     LockKeyhole,
     Pencil,
@@ -18,9 +19,11 @@ import {
 } from "lucide-react";
 import type { PhotoBoardCardData, PhotoBoardCardProps } from "@/types/board-card";
 import { BoardCardFrame, BoardCardPhoto, BoardCardTitle } from "./BoardCardParts";
+import BoardCardTilt from "./BoardCardTilt";
 
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-white";
 const validCount = (value: number | undefined) => value !== undefined && Number.isSafeInteger(value) && value >= 0;
+export const BoardDragContext = createContext(false);
 
 export function BoardAuthorAvatar({ src }: { src?: string | null }) {
     const [failedSource, setFailedSource] = useState<string>();
@@ -90,6 +93,7 @@ function visibilityLabel(board: PhotoBoardCardData) {
 }
 
 export default function PhotoBoardCard(props: PhotoBoardCardProps) {
+    const listDragging = useContext(BoardDragContext);
     const [hovered, setHovered] = useState(false);
     const [focused, setFocused] = useState(false);
     const [pinned, setPinned] = useState(false);
@@ -97,9 +101,10 @@ export default function PhotoBoardCard(props: PhotoBoardCardProps) {
     const systemReducedMotion = useReducedMotion();
     const detailsId = useId();
     const pointerType = useRef("");
-    return (
+    const content = (
         <PhotoBoardCardContent
             {...props}
+            suppressHover={props.suppressHover || listDragging}
             detailsId={detailsId}
             pointerType={pointerType}
             reduceMotion={props.reduceMotion || Boolean(systemReducedMotion)}
@@ -118,6 +123,11 @@ export default function PhotoBoardCard(props: PhotoBoardCardProps) {
                 else setPinned(false);
             }}
         />
+    );
+    return props.tilt ? (
+        <BoardCardTilt active={!props.reduceMotion && !props.suppressHover && !listDragging}>{content}</BoardCardTilt>
+    ) : (
+        content
     );
 }
 
@@ -140,6 +150,10 @@ export function PhotoBoardCardContent({
     save,
     reduceMotion = false,
     imageSizes,
+    hideCoverCredit = false,
+    suppressHover = false,
+    showVisibility = false,
+    hoverActions,
     selection,
     expanded: requestedExpanded,
     onExpandedChange,
@@ -149,8 +163,22 @@ export function PhotoBoardCardContent({
     onFocusChange
 }: ContentProps) {
     const tags = [...new Set(board.tags?.map((tag) => tag.trim()).filter(Boolean))].slice(0, 3);
-    const remix = Boolean(selection?.selected && selection.remixHref);
+    const selectedProfile = Boolean((selection?.selected && (selection.href || selection.viewHref)) || hoverActions);
+    const editHref =
+        hoverActions?.editHref ?? (selection?.selected && !selection.remixHref ? selection.href : undefined);
+    const viewHref =
+        hoverActions?.viewHref ??
+        (selection?.selected && board.status !== "draft"
+            ? (selection.viewHref ?? (selection.remixHref ? selection.href : undefined))
+            : undefined);
+    const remixHref = selection?.selected ? selection.remixHref : undefined;
+    const actionLayout = Boolean(hoverActions || (selection?.selected && (selection.href || selection.viewHref)));
     const authorHandle = board.author.trim().replace(/^@/, "");
+    const suppressCoverCredit =
+        hideCoverCredit &&
+        [board.image?.src, board.image?.creditUrl, board.image?.sourceUrl].some((value) =>
+            /^https:\/\/(?:[a-z0-9-]+\.)?unsplash\.com(?:\/|$)/i.test(value ?? "")
+        );
     const hasCount = validCount(board.savedCount);
     const hasActivities = validCount(board.activityCount);
     const hasDays = validCount(board.durationDays) && board.durationDays! > 0;
@@ -167,12 +195,18 @@ export function PhotoBoardCardContent({
             ));
     const interactiveDetails = hasDetails && presentation === "interactive";
     const expanded =
-        hasDetails && (presentation === "details" || (presentation === "interactive" && requestedExpanded));
+        hasDetails &&
+        !suppressHover &&
+        (presentation === "details" || (presentation === "interactive" && requestedExpanded));
+    const actionVisibility = `${expanded ? "opacity-100 delay-100" : "pointer-events-none opacity-0"} ${suppressHover ? "" : "[@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100"}`;
     const ownerControl =
         ownership === "owner" &&
         (board.status === "draft" || (board.status === "published" && Boolean(board.visibility)));
+    const visibilityControl =
+        ownerControl ||
+        (showVisibility && (board.status === "draft" || (board.status === "published" && Boolean(board.visibility))));
     const saveControl = ownership === "other" && board.status !== "draft" && save;
-    const enhanced = hasDetails || ownerControl || Boolean(saveControl);
+    const enhanced = hasDetails || visibilityControl || Boolean(saveControl);
     const feedbackId = `${detailsId}-feedback`;
     const saved = save?.state === "saved";
     const unresolved = save?.state === "unknown";
@@ -187,11 +221,11 @@ export function PhotoBoardCardContent({
         <>
             <BoardCardTitle
                 board={board}
-                className={`font-body absolute top-[5.75cqw] left-[6.5cqw] line-clamp-2 max-w-[87cqw] text-[10cqw] leading-none font-bold [overflow-wrap:anywhere] ${remix ? "[@media(hover:none)]:top-[calc(6.5%+3.75rem)]" : ""} ${ownerControl || saveControl ? "pr-[max(44px,10cqw)]" : ""}`}
+                className={`font-body absolute top-[5.75cqw] left-[6.5cqw] line-clamp-2 max-w-[87cqw] text-[10cqw] leading-none font-bold [overflow-wrap:anywhere] ${selectedProfile ? "[@media(hover:none)]:top-[calc(6.5%+3.75rem)]" : ""} ${visibilityControl || saveControl ? "pr-[max(44px,10cqw)]" : ""}`}
             />
             {board.author && (
                 <p
-                    className={`font-body absolute top-[28.25cqw] left-[6.5cqw] line-clamp-2 max-w-[83cqw] [overflow-wrap:anywhere] ${remix ? "[@media(hover:none)]:hidden" : ""} ${enhanced ? "text-[max(12px,3.5cqw)] leading-tight" : "text-[3.5cqw] leading-none"}`}
+                    className={`font-body absolute top-[28.25cqw] left-[6.5cqw] line-clamp-2 max-w-[83cqw] [overflow-wrap:anywhere] ${selectedProfile ? "[@media(hover:none)]:hidden" : ""} ${enhanced ? "text-[max(12px,3.5cqw)] leading-tight" : "text-[3.5cqw] leading-none"}`}
                     title={`by ${board.author}`}
                 >
                     by {board.author}
@@ -220,8 +254,19 @@ export function PhotoBoardCardContent({
                       }
                     : undefined
             }
-            onHoverStart={interactiveDetails ? () => onHoverChange?.(true) : undefined}
+            onHoverStart={interactiveDetails && !suppressHover ? () => onHoverChange?.(true) : undefined}
             onHoverEnd={presentation === "interactive" ? () => onHoverChange?.(false) : undefined}
+            onPointerLeave={
+                presentation === "interactive"
+                    ? (event) => {
+                          onHoverChange?.(false);
+                          if (event.buttons) {
+                              onFocusChange?.(false);
+                              onExpandedChange(false);
+                          }
+                      }
+                    : undefined
+            }
             onFocusCapture={
                 presentation === "interactive"
                     ? (event) => {
@@ -252,6 +297,7 @@ export function PhotoBoardCardContent({
                       }
                     : undefined
             }
+            onDragStartCapture={(event) => event.preventDefault()}
             className="relative w-full"
         >
             <BoardCardFrame
@@ -260,7 +306,7 @@ export function PhotoBoardCardContent({
                 height={500}
                 href={selection ? undefined : href}
                 linkProps={
-                    interactiveDetails
+                    interactiveDetails && !hoverActions
                         ? {
                               "aria-describedby": expanded ? detailsId : undefined,
                               onClick: (event) => {
@@ -281,14 +327,14 @@ export function PhotoBoardCardContent({
                 className="group/card overflow-clip text-white [&>a]:focus-visible:outline-offset-[-4px] [&>a]:focus-visible:outline-white"
             >
                 <PhotoCover board={board} sizes={imageSizes} expanded={expanded} />
-                {remix && authorHandle && (
+                {selectedProfile && authorHandle && (
                     <Link
                         href={`/profile/${encodeURIComponent(authorHandle)}`}
                         data-board-selection=""
                         aria-label={`View @${authorHandle}'s profile`}
                         title={`@${authorHandle}`}
                         tabIndex={selection?.tabIndex}
-                        className={`absolute top-[6.5%] left-[6.5%] z-20 inline-flex min-h-11 max-w-[87%] items-center gap-3 text-white opacity-0 transition-opacity group-focus-within/card:opacity-100 group-hover/card:opacity-100 motion-reduce:transition-none [@media(hover:none)]:opacity-100 ${focus}`}
+                        className={`absolute top-[6.5%] left-[6.5%] z-20 inline-flex min-h-11 max-w-[87%] items-center gap-3 text-white ${actionVisibility} transition-[opacity,transform] duration-150 motion-safe:hover:scale-105 motion-safe:focus-visible:scale-105 motion-reduce:transition-none ${focus}`}
                     >
                         <span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-full border border-white/40 bg-black/45 backdrop-blur-sm">
                             <BoardAuthorAvatar src={board.authorPhotoUrl} />
@@ -296,38 +342,38 @@ export function PhotoBoardCardContent({
                         <span className="min-w-0 truncate text-xs tracking-[.22em] text-white/65">@{authorHandle}</span>
                     </Link>
                 )}
-                {/* Equal side insets center the pair without changing its previous responsive gap. */}
-                {selection?.selected && selection.remixHref && (
-                    <Link
-                        href={selection.remixHref}
-                        data-board-selection=""
-                        aria-label={`Remix ${board.title}`}
-                        title="Create a new Board from this template"
-                        tabIndex={selection.tabIndex}
-                        className={`absolute top-[60%] left-[calc(28.25%-0.875rem)] z-20 grid size-14 -translate-y-1/2 place-items-center rounded-full border border-white/40 bg-black/45 text-white opacity-0 backdrop-blur-sm transition-opacity group-focus-within/card:opacity-100 group-hover/card:opacity-100 motion-reduce:transition-none [@media(hover:none)]:opacity-100 ${focus}`}
+                {actionLayout && (
+                    <div
+                        className={`pointer-events-none absolute bottom-[calc(6.5%+5rem)] z-20 flex justify-center gap-[clamp(1.5rem,20cqw,6rem)] ${saveControl ? "right-[calc(28.25%-0.875rem)]" : "inset-x-[6.5%]"}`}
                     >
-                        <Plus aria-hidden="true" size={23} strokeWidth={1.5} />
-                    </Link>
+                        {[
+                            ...(editHref ? [{ href: editHref, label: `Edit ${board.title}`, Icon: Pencil }] : []),
+                            ...(remixHref ? [{ href: remixHref, label: `Remix ${board.title}`, Icon: Plus }] : []),
+                            ...(viewHref ? [{ href: viewHref, label: `View ${board.title}`, Icon: Eye }] : [])
+                        ].map(({ href: actionHref, label, Icon }) => (
+                            <Link
+                                key={label}
+                                href={actionHref}
+                                data-board-selection=""
+                                aria-label={label}
+                                tabIndex={selection?.tabIndex}
+                                className={`pointer-events-auto grid size-14 shrink-0 place-items-center rounded-full border border-white/40 bg-black/45 text-white backdrop-blur-sm ${actionVisibility} transition-[opacity,transform] duration-150 motion-safe:hover:scale-105 motion-safe:focus-visible:scale-105 motion-reduce:transition-none ${focus}`}
+                            >
+                                <Icon aria-hidden="true" size={23} strokeWidth={1.5} />
+                            </Link>
+                        ))}
+                    </div>
                 )}
-                {selection?.selected && selection.href ? (
+                {selection?.selected && (selection.viewHref || selection.href) ? (
                     <Link
-                        href={selection.href}
+                        href={selection.viewHref ?? selection.href!}
                         data-board-selection=""
-                        aria-label={`${selection.remixHref ? "View" : "Edit"} ${board.title}`}
+                        aria-label={`Open ${board.title}`}
                         tabIndex={selection.tabIndex}
+                        onClick={selection.onNavigate}
                         aria-describedby={hasDetails && expanded ? detailsId : undefined}
-                        className={`group/edit absolute inset-0 z-10 cursor-pointer ${focus}`}
-                    >
-                        <span
-                            className={`absolute ${selection.remixHref ? "top-[60%] right-[calc(28.25%-0.875rem)]" : "top-[60%] left-1/2 -translate-x-1/2"} grid size-14 -translate-y-1/2 place-items-center rounded-full border border-white/40 bg-black/45 text-white opacity-0 backdrop-blur-sm transition-opacity group-focus-within/card:opacity-100 group-hover/card:opacity-100 motion-reduce:transition-none [@media(hover:none)]:opacity-100`}
-                        >
-                            {selection.remixHref ? (
-                                <Eye aria-hidden="true" size={23} strokeWidth={1.5} />
-                            ) : (
-                                <Pencil aria-hidden="true" size={23} strokeWidth={1.5} />
-                            )}
-                        </span>
-                    </Link>
+                        className={`absolute inset-0 z-10 cursor-pointer ${focus}`}
+                    />
                 ) : (
                     selection && (
                         <button
@@ -407,95 +453,113 @@ export function PhotoBoardCardContent({
                             },
                             closed: { opacity: 0, transition: { duration: reduceMotion ? 0 : 0.1 } }
                         }}
-                        className="pointer-events-none absolute inset-x-[6.5%] top-[6.5%] bottom-[19%] flex flex-col"
+                        className={`pointer-events-none absolute inset-x-[6.5%] top-[6.5%] flex flex-col ${actionLayout ? "bottom-[6.5%]" : "bottom-[19%]"}`}
                     >
-                        {remix && authorHandle ? (
-                            <div aria-hidden="true" className="mb-3 h-12 shrink-0" />
-                        ) : (
-                            <p className="mb-[8cqw] truncate pr-10 text-[10px] tracking-[.22em] text-white/65">
-                                THE JOURNEY
-                            </p>
-                        )}
-                        <motion.div
-                            variants={{ open: { y: 0, opacity: 1 }, closed: { y: reduceMotion ? 0 : 10, opacity: 0 } }}
-                            transition={transition}
+                        <div
+                            className={
+                                actionLayout ? "absolute inset-x-0 top-0 bottom-[9.5rem] overflow-hidden" : "contents"
+                            }
                         >
-                            <p
-                                data-photo-board-field="destination"
-                                className="line-clamp-2 pb-[.12em] text-[clamp(24px,8cqw,44px)] leading-[1.12] font-medium tracking-[-.04em] [overflow-wrap:anywhere]"
-                            >
-                                {board.destination.trim() || board.title}
-                            </p>
-                            {board.description?.trim() && (
-                                <p
-                                    className={`${remix ? "mt-[3cqw]" : "mt-[4cqw]"} hidden text-[clamp(12px,3.25cqw,15px)] leading-relaxed [overflow-wrap:anywhere] text-white/75 @min-[360px]:line-clamp-3`}
-                                >
-                                    {board.description}
+                            {selectedProfile && authorHandle ? (
+                                <div aria-hidden="true" className="mb-3 h-12 shrink-0" />
+                            ) : (
+                                <p className="mb-[8cqw] truncate pr-10 text-[10px] tracking-[.22em] text-white/65">
+                                    THE JOURNEY
                                 </p>
                             )}
-                        </motion.div>
-                        {tags.length > 0 && (
-                            <motion.ul
-                                aria-label="Board tags"
-                                data-photo-board-field="tags"
+                            <motion.div
                                 variants={{
                                     open: { y: 0, opacity: 1 },
                                     closed: { y: reduceMotion ? 0 : 10, opacity: 0 }
                                 }}
                                 transition={transition}
-                                className="mt-[5cqw] flex flex-wrap gap-x-3 gap-y-2 text-[clamp(12px,3cqw,14px)] leading-snug text-white/90"
                             >
-                                {tags.map((tag) => (
-                                    <li
-                                        key={tag}
-                                        className="max-w-full truncate border-l border-white/35 pl-2.5"
-                                        title={tag}
+                                <p
+                                    data-photo-board-field="destination"
+                                    className="line-clamp-2 pb-[.12em] text-[clamp(24px,8cqw,44px)] leading-[1.12] font-medium tracking-[-.04em] [overflow-wrap:anywhere]"
+                                >
+                                    {board.destination.trim() || board.title}
+                                </p>
+                                {board.description?.trim() && (
+                                    <p
+                                        className={`${selectedProfile ? "mt-[3cqw] line-clamp-2" : "mt-[4cqw] hidden @min-[360px]:line-clamp-3"} text-[clamp(12px,3.25cqw,15px)] leading-relaxed [overflow-wrap:anywhere] text-white/75`}
                                     >
-                                        {tag}
-                                    </li>
-                                ))}
-                            </motion.ul>
-                        )}
-                        <motion.div
-                            variants={{ open: { scaleX: 1 }, closed: { scaleX: reduceMotion ? 1 : 0 } }}
-                            transition={
-                                reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 110, damping: 24 }
-                            }
-                            aria-hidden="true"
-                            className="mt-auto mb-[3cqw] h-px origin-left bg-white/35"
-                        />
-                        <motion.p
-                            variants={{ open: { y: 0, opacity: 1 }, closed: { y: reduceMotion ? 0 : 6, opacity: 0 } }}
-                            transition={transition}
-                            className="flex flex-col items-start gap-2 text-[clamp(12px,3cqw,14px)] text-white/80 tabular-nums"
-                        >
-                            {(hasDays || hasActivities) && (
-                                <span data-photo-board-field="itinerary">
-                                    {hasDays && (
-                                        <span data-photo-board-field="duration">
-                                            {board.durationDays} {board.durationDays === 1 ? "day" : "days"}
-                                        </span>
-                                    )}
-                                    {hasDays && hasActivities && " · "}
-                                    {hasActivities && (
-                                        <span data-photo-board-field="activities">
-                                            {board.activityCount}{" "}
-                                            {board.activityCount === 1 ? "activity" : "activities"}
-                                        </span>
-                                    )}
-                                </span>
+                                        {board.description}
+                                    </p>
+                                )}
+                            </motion.div>
+                            {tags.length > 0 && (
+                                <motion.ul
+                                    aria-label="Board tags"
+                                    data-photo-board-field="tags"
+                                    variants={{
+                                        open: { y: 0, opacity: 1 },
+                                        closed: { y: reduceMotion ? 0 : 10, opacity: 0 }
+                                    }}
+                                    transition={transition}
+                                    className={`flex gap-x-3 gap-y-2 text-[clamp(12px,3cqw,14px)] leading-snug text-white/90 ${actionLayout ? "mt-[3cqw] flex-nowrap @min-[360px]:flex-wrap" : "mt-[5cqw] flex-wrap"}`}
+                                >
+                                    {tags.map((tag) => (
+                                        <li
+                                            key={tag}
+                                            className="max-w-full truncate border-l border-white/35 pl-2.5"
+                                            title={tag}
+                                        >
+                                            {tag}
+                                        </li>
+                                    ))}
+                                </motion.ul>
                             )}
-                            {hasCount && (
-                                <span className="inline-flex items-center gap-2">
-                                    <Bookmark aria-hidden="true" size={13} />
-                                    {new Intl.NumberFormat("en-US").format(board.savedCount!)}{" "}
-                                    {board.savedCount === 1 ? "save" : "saves"}
-                                </span>
-                            )}
-                        </motion.p>
+                        </div>
+                        <div className={actionLayout ? "absolute inset-x-0 bottom-0 h-14" : "contents"}>
+                            <motion.div
+                                variants={{ open: { scaleX: 1 }, closed: { scaleX: reduceMotion ? 1 : 0 } }}
+                                transition={
+                                    reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 110, damping: 24 }
+                                }
+                                aria-hidden="true"
+                                className={
+                                    actionLayout
+                                        ? "mb-2 h-px origin-left bg-white/35"
+                                        : "mt-auto mb-[3cqw] h-px origin-left bg-white/35"
+                                }
+                            />
+                            <motion.p
+                                variants={{
+                                    open: { y: 0, opacity: 1 },
+                                    closed: { y: reduceMotion ? 0 : 6, opacity: 0 }
+                                }}
+                                transition={transition}
+                                className="flex flex-col items-start gap-2 text-[clamp(12px,3cqw,14px)] text-white/80 tabular-nums"
+                            >
+                                {(hasDays || hasActivities) && (
+                                    <span data-photo-board-field="itinerary">
+                                        {hasDays && (
+                                            <span data-photo-board-field="duration">
+                                                {board.durationDays} {board.durationDays === 1 ? "day" : "days"}
+                                            </span>
+                                        )}
+                                        {hasDays && hasActivities && " · "}
+                                        {hasActivities && (
+                                            <span data-photo-board-field="activities">
+                                                {board.activityCount}{" "}
+                                                {board.activityCount === 1 ? "activity" : "activities"}
+                                            </span>
+                                        )}
+                                    </span>
+                                )}
+                                {hasCount && (
+                                    <span className="inline-flex items-center gap-2">
+                                        <Bookmark aria-hidden="true" size={13} />
+                                        {new Intl.NumberFormat("en-US").format(board.savedCount!)}{" "}
+                                        {board.savedCount === 1 ? "save" : "saves"}
+                                    </span>
+                                )}
+                            </motion.p>
+                        </div>
                     </motion.div>
                 )}
-                {ownerControl && (
+                {visibilityControl && (
                     <span
                         role="img"
                         aria-label={visibilityLabel(board)}
@@ -531,7 +595,7 @@ export function PhotoBoardCardContent({
                             event.stopPropagation();
                             if (!save.pending && !unresolved) save.onToggle?.();
                         }}
-                        className={`absolute top-[3%] right-[3%] z-20 grid size-11 cursor-pointer place-items-center rounded-full bg-black/20 backdrop-blur-sm disabled:cursor-default disabled:opacity-60 ${focus}`}
+                        className={`absolute z-20 grid cursor-pointer place-items-center rounded-full backdrop-blur-sm disabled:cursor-default ${hoverActions ? `bottom-[calc(6.5%+5rem)] left-[calc(28.25%-0.875rem)] size-14 border border-white/40 bg-black/45 ${actionVisibility} transition-[opacity,transform] duration-150 motion-safe:hover:scale-105 motion-safe:focus-visible:scale-105 motion-reduce:transition-none` : "top-[3%] right-[3%] size-11 bg-black/20 disabled:opacity-60"} ${focus}`}
                     >
                         <AnimatePresence initial={false} mode="wait">
                             <motion.span
@@ -542,11 +606,15 @@ export function PhotoBoardCardContent({
                                 transition={{ duration: reduceMotion ? 0 : 0.12 }}
                             >
                                 {save.pending ? (
-                                    <LoaderCircle aria-hidden="true" size={17} className="motion-safe:animate-spin" />
+                                    <LoaderCircle
+                                        aria-hidden="true"
+                                        size={hoverActions ? 23 : 17}
+                                        className="motion-safe:animate-spin"
+                                    />
                                 ) : (
                                     <Bookmark
                                         aria-hidden="true"
-                                        size={17}
+                                        size={hoverActions ? 23 : 17}
                                         strokeWidth={1.5}
                                         fill={saved ? "currentColor" : "none"}
                                     />
@@ -574,9 +642,30 @@ export function PhotoBoardCardContent({
                         className={`absolute inset-0 z-10 cursor-pointer ${focus}`}
                     />
                 )}
+                {interactiveDetails &&
+                    ((href && hoverActions) || (selection?.selected && (selection.href || selection.viewHref))) && (
+                        <button
+                            type="button"
+                            data-board-disclosure=""
+                            data-board-selection=""
+                            aria-label={`${expanded ? "Hide" : "Show"} details for ${board.title}`}
+                            aria-expanded={expanded}
+                            aria-controls={detailsId}
+                            tabIndex={selection?.tabIndex}
+                            disabled={suppressHover}
+                            onPointerDownCapture={(event) => event.stopPropagation()}
+                            onClick={(event) => {
+                                event.stopPropagation();
+                                onExpandedChange(!expanded);
+                            }}
+                            className={`absolute right-[3%] bottom-[3%] z-20 hidden size-11 cursor-pointer place-items-center rounded-full bg-black/45 backdrop-blur-sm disabled:pointer-events-none [@media(hover:none)]:grid ${focus}`}
+                        >
+                            <Info aria-hidden="true" size={20} strokeWidth={1.5} />
+                        </button>
+                    )}
                 <span aria-hidden="true" className="pointer-events-none absolute inset-0 border border-[#565656]" />
             </BoardCardFrame>
-            {board.image?.credit && (
+            {board.image?.credit && !suppressCoverCredit && (
                 <p className="text-muted-foreground mt-2 text-[10px] leading-relaxed">
                     Photo by{" "}
                     {board.image.creditUrl ? (
@@ -609,7 +698,7 @@ export function PhotoBoardCardContent({
                     )}
                 </p>
             )}
-            {enhanced && saveControl && (
+            {enhanced && saveControl && (save.message || save.error) && (
                 <p
                     id={feedbackId}
                     role={save.error ? "alert" : "status"}
