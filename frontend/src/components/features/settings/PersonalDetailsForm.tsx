@@ -1,3 +1,5 @@
+import { Info } from "lucide-react";
+
 import type { ProfileSettingsErrors } from "@/lib/profile-settings";
 
 const inputClassName =
@@ -69,15 +71,37 @@ export default function PersonalDetailsForm({
                 </div>
 
                 <div>
-                    <label
-                        htmlFor="handle-input"
-                        className="text-10 tracking-label text-muted-foreground block font-bold uppercase"
-                    >
-                        Handle / Username
-                    </label>
+                    <div className="flex items-center justify-between">
+                        <label
+                            htmlFor="handle-input"
+                            className="text-10 tracking-label text-muted-foreground block font-bold uppercase"
+                        >
+                            Handle / Username *
+                        </label>
+                        {!errors.username && (
+                            <div className="group relative">
+                                <span
+                                    tabIndex={0}
+                                    aria-label="Username format requirements"
+                                    className="text-muted-foreground hover:text-foreground focus:text-foreground inline-flex cursor-help items-center transition-colors focus-visible:outline-none"
+                                >
+                                    <Info size={12} strokeWidth={2} aria-hidden="true" />
+                                </span>
+                                <p
+                                    id="handle-input-hint"
+                                    role="tooltip"
+                                    className="border-line bg-faint text-foreground text-11 shadow-card pointer-events-none invisible absolute right-0 bottom-full z-10 mb-1.5 w-60 rounded-[2px] border p-2 leading-normal font-normal opacity-0 transition-opacity group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100"
+                                >
+                                    Use 1-64 letters a-z, numbers, periods or underscores. Start and end with a letter
+                                    or number.
+                                </p>
+                            </div>
+                        )}
+                    </div>
                     <input
                         id="handle-input"
                         type="text"
+                        required
                         value={handle}
                         aria-invalid={Boolean(errors.username)}
                         aria-describedby={errors.username ? "handle-input-error" : "handle-input-hint"}
@@ -86,14 +110,9 @@ export default function PersonalDetailsForm({
                         placeholder="@rowan.mercer"
                         className={inputClassName}
                     />
-                    {errors.username ? (
+                    {errors.username && (
                         <p id="handle-input-error" className={errorClassName}>
                             {errors.username}
-                        </p>
-                    ) : (
-                        <p id="handle-input-hint" className="text-muted-foreground text-12 mt-2">
-                            Use 1-64 letters a-z, numbers, periods or underscores. Start and end with a letter or
-                            number.
                         </p>
                     )}
                 </div>

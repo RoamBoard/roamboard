@@ -436,7 +436,7 @@ test("invalid edits remain visible with feedback and never send a save request",
     assert.match(result.markup, /(?:enter|required).*name/i);
 });
 
-test("a pending save blocks duplicates and redirects using the confirmed server username", async (context) => {
+test("a pending save blocks duplicates, shows the undo toast, and stays in settings for continued editing", async (context) => {
     const requests: RequestInit[] = [];
     const response: { resolve?: (value: Response) => void } = {};
     settingsFetch(context, (init) => {
@@ -465,7 +465,56 @@ test("a pending save blocks duplicates and redirects using the confirmed server 
         Response.json({ data: { ...initialProfile, displayName: "New name", username: "canonical_name", revision: 5 } })
     );
     await flushRequests();
-    assert.deepEqual(page.destinations, ["/profile/canonical_name?updated=1"]);
+    const completed = page.render();
+    const completedBar = completed.nodes.find((node) => node.type === SettingsSaveBar);
+    assert.equal(completedBar?.props.showToast, true);
+    assert.equal(completedBar?.props.canUndo, true);
+    assert.match(completed.markup, /Changes saved/);
+    assert.match(completed.markup, /Undo/);
+    (completedBar?.props.onDismissToast as () => void)();
+    const dismissed = page.render();
+    const dismissedBar = dismissed.nodes.find((node) => node.type === SettingsSaveBar);
+    assert.equal(dismissedBar?.props.showToast, false);
+    assert.deepEqual(page.destinations, []);
+    assert.ok(dismissed.nodes.some((node) => node.type === "fieldset" && node.props.disabled === false));
+});
+
+test("clicking undo performs a version-checked restore without redirecting", async (context) => {
+    const requests: RequestInit[] = [];
+    settingsFetch(context, (init) => {
+        requests.push(init);
+        if (requests.length === 1) {
+            return Promise.resolve(
+                Response.json({
+                    data: { ...initialProfile, displayName: "New name", username: "canonical_name", revision: 5 }
+                })
+            );
+        }
+        return Promise.resolve(
+            Response.json({
+                data: { ...initialProfile, displayName: "Traveler", username: "canonical_name", revision: 6 }
+            })
+        );
+    });
+    const page = mountPage(context, SettingsContent);
+    await flushRequests();
+    changeName(page, "New name");
+    submit(page);
+    await flushRequests();
+    const rendered = page.render();
+    const saveBar = rendered.nodes.find((node) => node.type === SettingsSaveBar);
+    assert.equal(saveBar?.props.showToast, true);
+    assert.equal(saveBar?.props.canUndo, true);
+    (saveBar?.props.onUndo as () => void)();
+    await flushRequests();
+    assert.equal(requests.length, 2);
+    const undoPayload = JSON.parse(String(requests[1].body));
+    assert.equal(undoPayload.displayName, "Traveler");
+    assert.equal(undoPayload.revision, 5);
+    const restored = page.render();
+    const details = restored.nodes.find((node) => node.type === PersonalDetailsForm);
+    assert.equal(details?.props.name, "Traveler");
+    assert.deepEqual(page.destinations, []);
 });
 
 test("a save that finishes after leaving settings does not redirect the user", async (context) => {
