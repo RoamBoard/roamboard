@@ -72,7 +72,7 @@ export function DiscoverJourney({ mobilePanel }: { mobilePanel?: number } = {}) 
     return (
         <section
             aria-label="A world of travel inspiration"
-            className={`relative min-h-[38rem] shrink-0 overflow-hidden bg-black ${mobilePanel === undefined ? "h-[min(100dvh,56rem)] w-[max(100vw,221dvh)]" : "w-full flex-1"}`}
+            className={`relative min-h-[38rem] shrink-0 overflow-hidden bg-black ${mobilePanel === undefined ? "h-dvh w-[max(100vw,221dvh)]" : "w-full flex-1"}`}
         >
             <div
                 className={`grid h-full gap-2 px-2 ${mobilePanel === undefined ? "grid-cols-6" : "absolute inset-0 grid-cols-2"}`}

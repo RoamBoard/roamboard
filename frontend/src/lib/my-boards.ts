@@ -18,32 +18,6 @@ export type GalleryBoard = {
     savedByMe?: boolean;
 };
 
-export function filterGalleryBoards(boards: readonly GalleryBoard[], query: string) {
-    const normalize = (value: string) =>
-        value
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .toLowerCase();
-    const words = normalize(query).trim().split(/\s+/).filter(Boolean);
-    return boards.filter(({ collage: board, photo }) => {
-        const text = normalize(
-            [
-                board.title,
-                board.destination,
-                board.destinationLabel,
-                board.author,
-                ...board.themes,
-                photo?.title,
-                photo?.destination,
-                photo?.destinationLabel,
-                photo?.author,
-                ...(photo?.tags ?? [])
-            ].join(" ")
-        );
-        return words.every((word) => text.includes(word));
-    });
-}
-
 export function boardTitleLines(title: string, width: number) {
     const lines = title.split(/\s+/).reduce<string[]>((result, word) => {
         const last = result.at(-1);
@@ -106,20 +80,4 @@ export function toGalleryBoard(summary: PublishedSummary, document: BoardDocumen
         editHref: document.permissions.canEditContent ? `/boards/${summary.boardId}/edit` : undefined,
         savedByMe: document.savedByMe
     };
-}
-
-export function filterLibraryBoards<T extends { compact: CompactBoardCardData }>(
-    boards: readonly T[],
-    query: string
-): T[] {
-    const normalize = (value: string) =>
-        value
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .toLowerCase();
-    const words = normalize(query).trim().split(/\s+/).filter(Boolean);
-    return boards.filter(({ compact: board }) => {
-        const text = normalize([board.title, board.author, board.destination, board.destinationLabel].join(" "));
-        return words.every((word) => text.includes(word));
-    });
 }

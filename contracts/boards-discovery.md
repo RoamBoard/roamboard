@@ -153,7 +153,8 @@ Do not implement an updated-content feed instead.
 
 ## Evidence: implemented versus required
 
-Inspected sources on the source branch:
+Historical evidence inspected on the source branch before implementation (the superseded owner-list presenter and
+store have since been removed; these bullets do not describe the current route):
 
 - `frontend/src/app/boards/page.tsx` renders `MyBoardsExperience`.
 - `frontend/src/components/features/boards/MyBoardsExperience.tsx` combines owner collections with public search;
