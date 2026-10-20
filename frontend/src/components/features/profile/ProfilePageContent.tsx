@@ -51,12 +51,14 @@ export function LiveBoardLibrary({
     boards,
     author,
     ownership,
-    publicView = false
+    publicView = false,
+    totalCount = boards.length
 }: {
     boards: PublishedBoardSummary[];
     author: string;
     ownership: PhotoBoardCardProps["ownership"];
     publicView?: boolean;
+    totalCount?: number;
 }) {
     const libraryBoards = useMemo(
         () =>
@@ -79,6 +81,7 @@ export function LiveBoardLibrary({
             title={publicView ? "Profile Boards" : "My Boards"}
             variant="profile"
             boards={libraryBoards}
+            totalCount={totalCount}
         />
     );
 }
@@ -86,11 +89,13 @@ export function LiveBoardLibrary({
 export function ProfileSavedBoardLibrary({
     boards,
     onSavedChange,
-    ownCollection = true
+    ownCollection = true,
+    totalCount = boards.length
 }: {
     boards: SavedBoardSummary[];
     onSavedChange?: (boardId: string, saved: boolean) => void;
     ownCollection?: boolean;
+    totalCount?: number;
 }) {
     const libraryBoards = useMemo(
         () =>
@@ -112,6 +117,7 @@ export function ProfileSavedBoardLibrary({
             title="Currently Inspired By"
             variant="profile"
             boards={libraryBoards}
+            totalCount={totalCount}
             onSavedChange={onSavedChange}
             removeOnUnsave={ownCollection && Boolean(onSavedChange)}
         />
@@ -389,6 +395,7 @@ export default function ProfilePageContent({
                         )}
                         <ProfileSavedBoardLibrary
                             boards={saved.items}
+                            totalCount={stats?.boardsSaved}
                             onSavedChange={(boardId, isSaved) => {
                                 if (isSaved) return;
                                 savedStore.removeConfirmed(Number(boardId));
@@ -413,7 +420,12 @@ export default function ProfilePageContent({
                             </div>
                             <ViewAllBoards href="/boards/collections/mine?status=published" />
                         </div>
-                        <LiveBoardLibrary boards={published} author={profile.username} ownership="owner" />
+                        <LiveBoardLibrary
+                            boards={published}
+                            totalCount={stats?.boardsCreated}
+                            author={profile.username}
+                            ownership="owner"
+                        />
                         {published.length === 0 && !sectionErrors.some((message) => message.startsWith("My")) && (
                             <p className="text-muted-foreground mt-6 text-sm">No published boards yet.</p>
                         )}

@@ -169,7 +169,7 @@ export function VisitorProfileContent({ view }: { view: PublicProfileView }) {
                             href={`/boards/collections/profile-saved?handle=${encodeURIComponent(view.profile.username)}`}
                         />
                     </div>
-                    <ProfileSavedBoardLibrary boards={(view.savedBoards ?? []).slice(0, 10)} ownCollection={false} />
+                    <ProfileSavedBoardLibrary boards={view.savedBoards ?? []} ownCollection={false} />
                     {!view.savedBoards?.length && (
                         <p className="text-muted-foreground mt-6 text-sm">No saved boards to show.</p>
                     )}
@@ -187,7 +187,7 @@ export function VisitorProfileContent({ view }: { view: PublicProfileView }) {
                         />
                     </div>
                     <LiveBoardLibrary
-                        boards={view.boards.slice(0, 10)}
+                        boards={view.boards}
                         author={view.profile.username}
                         ownership="other"
                         publicView

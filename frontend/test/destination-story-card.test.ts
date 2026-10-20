@@ -7,12 +7,13 @@ import DestinationStoryCard from "../src/components/features/destinations/Destin
 import AccountPhotoBoardCard from "../src/components/features/boards/cards/AccountPhotoBoardCard";
 import type { BoardDocument } from "../src/lib/board-creator-api";
 
-function harness(t: TestContext) {
+function harness(t: TestContext, visible = true) {
     const state: unknown[] = [];
     const current: { index: number; effect?: React.EffectCallback } = { index: 0 };
+    t.mock.method(React, "useRef", () => ({ current: null }));
     t.mock.method(React, "useState", ((initial: unknown) => {
         const index = current.index++;
-        if (!(index in state)) state[index] = initial;
+        if (!(index in state)) state[index] = index === 0 ? visible : initial;
         return [
             state[index],
             (value: unknown) => {
@@ -204,4 +205,36 @@ test("a direct collection card resolves owner permissions before offering Edit i
     const html = renderToStaticMarkup(React.createElement(AccountPhotoBoardCard, props));
     assert.match(html, /aria-label="Edit Real title"/);
     assert.doesNotMatch(html, /aria-label="(?:Save |Unsave )/);
+});
+
+test("offscreen direct cards do not request Board documents", (t) => {
+    const requests: string[] = [];
+    t.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+        requests.push(String(input));
+        return Response.json({ data: document });
+    });
+    const card = harness(t, false);
+    card.render(true, { selection: undefined, href: "/boards/91" });
+    card.load();
+    assert.deepEqual(requests, []);
+});
+
+test("concurrent visible cards share the same Board read", async (t) => {
+    const pending: { resolve?: (response: Response) => void } = {};
+    const requests: string[] = [];
+    t.mock.method(globalThis, "fetch", (input: string | URL | Request) => {
+        requests.push(String(input));
+        return new Promise<Response>((resolve) => {
+            pending.resolve = resolve;
+        });
+    });
+    const card = harness(t);
+    card.render();
+    card.load();
+    card.render();
+    card.load();
+    assert.equal(requests.length, 1);
+    pending.resolve?.(Response.json({ data: document }));
+    await setImmediate();
+    assert.equal(accountProps(card.render()).board.title, "Real title");
 });

@@ -126,7 +126,7 @@ export function DestinationStories({
                           : `No public Boards ${kind === "country" ? "across" : "in and around"} ${name} yet.`}
                 </p>
             ) : (
-                <div className="mt-7 min-w-0 flex-1 self-center md:mt-0">
+                <div className="mt-7 w-full min-w-0 flex-1 self-center md:mt-0 md:w-auto">
                     <SpatialGallery boards={preview} ariaLabel={`${name} public Boards`} embedded resolveDetails />
                 </div>
             )}
