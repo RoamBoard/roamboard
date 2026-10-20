@@ -8,6 +8,11 @@ test("extracts unique handles without treating email addresses or overlong names
     assert.deepEqual(mentionHandles("@a @b.c @not..valid"), ["a", "b.c", "not..valid"]);
 });
 
+test("accepts sentence-ending periods without shortening dotted handles", () => {
+    assert.deepEqual(mentionHandles("Thanks @avery. Ask @traveler.name_2..."), ["avery", "traveler.name_2"]);
+    assert.deepEqual(mentionHandles("Thanks @avery.smith and @avery.smith."), ["avery.smith"]);
+});
+
 test("the mention limit counts distinct handles case-insensitively", () => {
     const ten = Array.from({ length: maxCommentMentions }, (_, index) => `@person${index}`).join(" ");
     assert.equal(mentionHandles(ten).length, maxCommentMentions);

@@ -6,6 +6,8 @@
 
 `016_board_comment_mentions.sql` adds resolved mentions and a comment/mention notification kind. The requester applied it to the shared development database on 2026-10-20. A read-only schema check confirmed `board_comment_mention` and `board_comment_notification.kind` are present; an existing resolved mention row was also observed. Do not rerun 016. Migration 015 is the separately applied friendship acceptance timestamp and must not be rerun.
 
+`017_board_comment_multiple_handles.sql` is pending on the shared development database. It drops only the unique constraint on `(comment_id, user_id)`, preserving the primary key on `(comment_id, handle)` and existing rows. Apply it after 016; do not reapply 016 or attempt to reconstruct previously discarded handle mappings.
+
 ## Pending friendship acceptance timestamp migration
 
 ## Friendship acceptance timestamp — 2026-10-19

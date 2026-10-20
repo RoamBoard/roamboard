@@ -1,6 +1,7 @@
-import type { BoardComment } from "./board-comments";
+import { boardCommentLimit, commentLength, type BoardComment } from "./board-comments";
 
-const mentionPattern = /(^|[^A-Za-z0-9._])@([A-Za-z0-9](?:[A-Za-z0-9._]{0,62}[A-Za-z0-9])?)(?![A-Za-z0-9._])/g;
+const mentionPattern =
+    /(^|[^A-Za-z0-9._])@([A-Za-z0-9](?:[A-Za-z0-9._]{0,62}[A-Za-z0-9])?)(?![A-Za-z0-9_]|\.+[A-Za-z0-9_])/g;
 export const commentMentionLimit = 10;
 
 export function commentMentionCount(body: string): number {
@@ -23,6 +24,7 @@ export function insertCommentMention(
     const suffix = body.slice(mention.end);
     const spacer = suffix.length === 0 || !/^\s/.test(suffix) ? " " : "";
     const value = `${body.slice(0, mention.start)}@${username}${spacer}${suffix}`;
+    if (commentLength(value) > boardCommentLimit) return null;
     return { value, cursor: mention.start + username.length + 1 + (spacer ? spacer.length : 1) };
 }
 

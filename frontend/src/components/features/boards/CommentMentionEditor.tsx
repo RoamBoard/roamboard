@@ -26,6 +26,7 @@ export default function CommentMentionEditor({
     viewer?: AuthUser;
 }) {
     const textarea = useRef<HTMLTextAreaElement>(null);
+    const suggestionsList = useRef<HTMLUListElement>(null);
     const [cursor, setCursor] = useState(0);
     const [focused, setFocused] = useState(false);
     const [dismissed, setDismissed] = useState(false);
@@ -35,9 +36,16 @@ export default function CommentMentionEditor({
     }>({ query: "", users: [] });
     const [selected, setSelected] = useState(0);
     const [failedQuery, setFailedQuery] = useState<string | null>(null);
+    const [insertionError, setInsertionError] = useState(false);
     const active = focused && !dismissed ? activeCommentMention(value, cursor) : null;
     const query = active?.query ?? null;
     const suggestions = query !== null && result.query === query ? result.users : [];
+    const showSuggestions = active !== null && suggestions.length > 0;
+
+    useEffect(() => {
+        if (!showSuggestions) return;
+        suggestionsList.current?.children.item(selected)?.scrollIntoView({ block: "nearest" });
+    }, [showSuggestions, selected, result]);
 
     useEffect(() => {
         if (query === null || disabled) return;
@@ -75,14 +83,17 @@ export default function CommentMentionEditor({
     function choose(username: string) {
         if (!active) return;
         const inserted = insertCommentMention(value, active, username);
-        const nextValue = limitCommentLength(inserted.value);
-        onChange(nextValue);
+        if (!inserted) {
+            setInsertionError(true);
+            return;
+        }
+        onChange(inserted.value);
+        setInsertionError(false);
         setDismissed(true);
         setResult({ query: "", users: [] });
         window.requestAnimationFrame(() => {
             textarea.current?.focus();
-            const nextCursor = Math.min(inserted.cursor, nextValue.length);
-            textarea.current?.setSelectionRange(nextCursor, nextCursor);
+            textarea.current?.setSelectionRange(inserted.cursor, inserted.cursor);
         });
     }
 
@@ -112,10 +123,12 @@ export default function CommentMentionEditor({
                     onChange(limitCommentLength(event.target.value));
                     setCursor(event.target.selectionStart);
                     setDismissed(false);
+                    setInsertionError(false);
                 }}
                 onClick={(event) => {
                     setCursor(event.currentTarget.selectionStart);
                     setDismissed(false);
+                    setInsertionError(false);
                 }}
                 onKeyUp={(event) => setCursor(event.currentTarget.selectionStart)}
                 onFocus={() => setFocused(true)}
@@ -123,17 +136,18 @@ export default function CommentMentionEditor({
                 onKeyDown={onKeyDown}
                 placeholder={placeholder}
                 role="combobox"
-                aria-describedby={describedBy}
+                aria-describedby={`${describedBy}${insertionError ? ` ${id}-mention-error` : ""}`}
                 aria-autocomplete="list"
-                aria-expanded={active !== null && suggestions.length > 0}
+                aria-expanded={showSuggestions}
                 aria-haspopup="listbox"
                 aria-controls={`${id}-mentions`}
-                aria-activedescendant={active && suggestions.length > 0 ? `${id}-mention-${selected}` : undefined}
+                aria-activedescendant={showSuggestions ? `${id}-mention-${selected}` : undefined}
                 className={className}
                 disabled={disabled}
             />
-            {active && suggestions.length > 0 ? (
+            {showSuggestions ? (
                 <ul
+                    ref={suggestionsList}
                     id={`${id}-mentions`}
                     role="listbox"
                     aria-label="Mention a traveler"
@@ -160,6 +174,11 @@ export default function CommentMentionEditor({
             ) : active && failedQuery === query ? (
                 <p role="alert" className="text-muted-foreground text-12 mt-1">
                     Could not load username suggestions. You can still type the exact handle.
+                </p>
+            ) : null}
+            {insertionError ? (
+                <p id={`${id}-mention-error`} role="alert" className="text-12 mt-1">
+                    This @handle does not fit. Shorten the comment before adding it.
                 </p>
             ) : null}
         </div>

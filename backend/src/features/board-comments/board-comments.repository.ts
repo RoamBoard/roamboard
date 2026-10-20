@@ -73,8 +73,7 @@ async function saveMentions(
         await client.query(
             `INSERT INTO board_comment_mention (comment_id, handle, user_id)
              SELECT $1, entry.handle, entry.user_id
-             FROM unnest($2::text[], $3::varchar[]) AS entry(handle, user_id)
-             ON CONFLICT (comment_id, user_id) DO NOTHING`,
+             FROM unnest($2::text[], $3::varchar[]) AS entry(handle, user_id)`,
             [commentId, selected.map((entry) => entry.handle), selected.map((entry) => entry.userId)]
         );
     }

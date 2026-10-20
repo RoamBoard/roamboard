@@ -39,7 +39,8 @@ test(
                     "015_friendship_accepted_at.sql",
                     "013_board_comments.sql",
                     "014_board_comment_notifications.sql",
-                    "016_board_comment_mentions.sql"
+                    "016_board_comment_mentions.sql",
+                    "017_board_comment_multiple_handles.sql"
                 ])
                     await client.query(await readFile(new URL(`../db/migrations/${name}`, import.meta.url), "utf8"));
 
@@ -160,9 +161,44 @@ test(
                     "Hi @mentioned"
                 );
                 assert.equal(editedTag?.mentions[0]?.username, "renamed");
-                await repository.update(mentionsBoardId, tagged.commentId, "third", 2, "No mention now");
+                const bothHandles = await repository.update(
+                    mentionsBoardId,
+                    tagged.commentId,
+                    "third",
+                    2,
+                    "Hi @renamed and @mentioned"
+                );
+                assert.deepEqual(bothHandles?.mentions.map((mention) => mention.handle).sort(), [
+                    "mentioned",
+                    "renamed"
+                ]);
+                assert.deepEqual(
+                    (await repository.get(mentionsBoardId, tagged.commentId))?.mentions.map(
+                        (mention) => mention.username
+                    ),
+                    ["renamed", "renamed"]
+                );
+                assert.equal((await notifications.list("mentioned", null, 10)).length, 1);
+                await client.query(
+                    "INSERT INTO app_user (user_id, username, display_name) VALUES ('newholder', 'mentioned', 'New holder')"
+                );
+                const retainedHandles = await repository.update(
+                    mentionsBoardId,
+                    tagged.commentId,
+                    "third",
+                    3,
+                    "Still @renamed and @mentioned"
+                );
+                assert.deepEqual(
+                    retainedHandles?.mentions.map((mention) => mention.username),
+                    ["renamed", "renamed"]
+                );
+                assert.equal((await notifications.list("newholder", null, 10)).length, 0);
+                await repository.update(mentionsBoardId, tagged.commentId, "third", 4, "Only @renamed remains");
+                assert.equal((await notifications.list("mentioned", null, 10))[0]?.kind, "mention");
+                await repository.update(mentionsBoardId, tagged.commentId, "third", 5, "No mention now");
                 assert.equal((await notifications.list("mentioned", null, 10)).length, 0);
-                await repository.update(mentionsBoardId, tagged.commentId, "third", 3, "Again @renamed");
+                await repository.update(mentionsBoardId, tagged.commentId, "third", 6, "Again @renamed");
                 const repeatedMentionNotification = (await notifications.list("mentioned", null, 10))[0]!;
                 assert.notEqual(repeatedMentionNotification.notificationId, firstMentionNotification.notificationId);
                 assert.equal(repeatedMentionNotification.kind, "mention");
