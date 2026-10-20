@@ -373,6 +373,7 @@ export default function VisitedWorldMap({
                 {destinationOptions.length > 0 && (
                     <label className="text-foreground ml-auto flex flex-wrap items-center gap-2 text-sm">
                         <select
+                            aria-label="Select a country"
                             className="border-line bg-background max-w-full rounded border px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2"
                             value={
                                 destinationOptions.find((option) =>
