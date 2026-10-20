@@ -151,6 +151,7 @@ export function PhotoBoardCardContent({
     reduceMotion = false,
     imageSizes,
     hideCoverCredit = false,
+    galleryCover = false,
     suppressHover = false,
     showVisibility = false,
     hoverActions,
@@ -217,7 +218,24 @@ export function PhotoBoardCardContent({
               ? UsersRound
               : Globe2;
     const transition = { duration: reduceMotion ? 0 : 0.28, ease: [0.22, 1, 0.36, 1] as const };
-    const coverTitle = (
+    const coverTitle = galleryCover ? (
+        <div
+            className={`font-body absolute top-[5.75cqw] left-[6.5cqw] flex w-[87cqw] flex-col gap-[2cqw] ${selectedProfile ? "[@media(hover:none)]:top-[calc(6.5%+3.75rem)]" : ""}`}
+        >
+            <BoardCardTitle
+                board={board}
+                className={`line-clamp-2 text-[10cqw] leading-[1.12] font-bold [overflow-wrap:anywhere] ${visibilityControl || saveControl ? "pr-[max(44px,10cqw)]" : ""}`}
+            />
+            {board.author && (
+                <p
+                    className={`max-w-[83cqw] truncate text-[max(12px,3.5cqw)] leading-tight ${selectedProfile ? "[@media(hover:none)]:hidden" : ""}`}
+                    title={`by ${board.author}`}
+                >
+                    by {board.author}
+                </p>
+            )}
+        </div>
+    ) : (
         <>
             <BoardCardTitle
                 board={board}

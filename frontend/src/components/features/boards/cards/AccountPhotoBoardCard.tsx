@@ -10,6 +10,7 @@ type Props = Pick<
     | "selection"
     | "hoverActions"
     | "hideCoverCredit"
+    | "galleryCover"
     | "imageSizes"
     | "details"
     | "suppressHover"

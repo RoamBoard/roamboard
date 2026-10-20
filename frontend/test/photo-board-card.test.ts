@@ -803,3 +803,72 @@ test("fixed presentations retain ordinary touch navigation without the interacti
         assert.deepEqual(mutations, []);
     }
 });
+
+test("destination cover typography retains real in-card titles and authors without changing standard selected V4 or photo fallback", () => {
+    const standard = html({ details: false });
+    assert.equal(html({ details: false, galleryCover: false }), standard);
+    const background = html({ galleryCover: true, details: false, selection: { selected: false, onSelect() {} } });
+    assert.match(background, /<h3\b/);
+    assert.ok(background.includes(`aria-label="${board.title}"`));
+    assert.ok(background.includes(`title="by ${board.author}"`));
+    assert.ok(background.includes(`by ${board.author}`));
+    assert.match(background, /\/api\/v1\/images\/42\/content\?variant=display/);
+    assert.match(background, />OSLO<\/span>/);
+    assert.ok(background.includes(`aria-label="Select ${board.title}"`));
+    assert.match(background, /aspect-ratio:400 \/ 500/);
+    assert.match(html({ galleryCover: true, details: false, board: { ...board, image: undefined } }), /No cover photo/);
+    assert.match(standard, /left:40\.75%/);
+    assert.match(
+        html({ galleryCover: true, details: false }),
+        /left:40\.75%/,
+        "The destination opt-in must not globally shift watermarks"
+    );
+    assert.match(html({ board: { ...board, labelOffset: 33 }, galleryCover: true }), /left:33%/);
+});
+
+test("destination cover keeps one flowing title-author composition across selection states and title lengths", () => {
+    for (const title of ["Stockholm", "Stockholm islands and coffee", "gypq gypq gypq gypq gypq gypq"]) {
+        const covers = [false, true].map((selected) => {
+            const markup = html({
+                board: { ...board, title, author: "traveller" },
+                galleryCover: true,
+                details: false,
+                selection: { selected, onSelect() {} }
+            });
+            const group = markup.match(
+                /<div class="font-body absolute[^\"]*flex-col[^\"]*">\s*<h3[^>]*>[^<]*<\/h3>\s*<p[^>]*>by traveller<\/p><\/div>/
+            );
+            assert.ok(group, "The author must follow the title inside the same flowing cover group");
+            assert.match(markup, new RegExp(`aria-label="${title}"`));
+            return group[0];
+        });
+        assert.equal(covers[0], covers[1], "Promoting a cover must not rearrange its typography");
+    }
+});
+
+test("destination cover typography remains independent of account actions, metadata, author identity and confirmed bookmark feedback", () => {
+    const calls = { saves: 0 };
+    const view = PhotoBoardCardContent(
+        props({
+            galleryCover: true,
+            ownership: "other",
+            expanded: true,
+            hoverActions: { viewHref: "/boards/71" },
+            save: {
+                state: "saved",
+                onToggle: () => {
+                    calls.saves++;
+                }
+            }
+        })
+    );
+    const bookmark = control(view, (candidate) => candidate["aria-label"] === `Unsave ${board.title}`);
+    bookmark.onClick?.({ stopPropagation() {} });
+    assert.equal(calls.saves, 1);
+    const markup = renderToStaticMarkup(view);
+    assert.match(markup, /aria-pressed="true"/);
+    assert.match(markup, /href="\/boards\/71"/);
+    assert.match(markup, /href="\/profile\/a_long_and_complete_author_handle"/);
+    assert.match(markup, /aria-label="Board details" aria-hidden="false"/);
+    assert.match(markup, /A quiet route along the waterfront\./);
+});
