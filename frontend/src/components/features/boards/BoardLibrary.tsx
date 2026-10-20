@@ -26,6 +26,7 @@ type Props = {
     onBoardHighlight?: (boardId: string | null) => void;
     embedded?: boolean;
     showStatus?: boolean;
+    variant?: LibraryVariant;
     onSavedChange?: (boardId: string, saved: boolean) => void;
 };
 
@@ -40,6 +41,7 @@ export default function BoardLibrary({
     onBoardHighlight,
     embedded = false,
     showStatus = false,
+    variant = "default",
     onSavedChange
 }: Props) {
     const interaction = useRef<{ hovered: string | null; focused: string | null }>({ hovered: null, focused: null });
@@ -53,6 +55,8 @@ export default function BoardLibrary({
             loadingMore={loadingMore}
             onLoadMore={onLoadMore}
             embedded={embedded}
+            variant={variant}
+            emptyMessage={variant === "profile" ? "" : undefined}
         >
             {boards.map((board, index) => (
                 <CarouselItem
@@ -60,7 +64,7 @@ export default function BoardLibrary({
                     aria-label={`${index + 1} of ${boards.length}: ${board.compact.title}`}
                     className={
                         "relative flex basis-[90%] justify-center px-3 sm:basis-[376px] sm:px-6 " +
-                        (embedded ? "py-2" : "py-5 sm:py-8")
+                        (embedded || variant === "profile" ? "py-2" : "py-5 sm:py-8")
                     }
                     onMouseEnter={() => {
                         interaction.current.hovered = board.compact.id;
@@ -97,7 +101,7 @@ export default function BoardLibrary({
                             ownership={board.ownership}
                             initialSaved={board.savedByMe}
                             onSavedChange={(saved) => onSavedChange?.(board.compact.id, saved)}
-                            showVisibility={showStatus}
+                            showVisibility
                             hideCoverCredit
                             hoverActions={
                                 board.href
@@ -222,7 +226,7 @@ export function BoardLibraryCarousel({
             aria-labelledby={`${id}-heading`}
             className={
                 variant !== "default"
-                    ? "mt-6 min-w-0"
+                    ? "mt-3 min-w-0"
                     : embedded
                       ? "mt-3 min-w-0"
                       : "mx-auto mt-20 max-w-[1320px] md:mt-24"
@@ -254,7 +258,7 @@ export function BoardLibraryCarousel({
                         <div
                             className={
                                 variant !== "default"
-                                    ? "mb-3 flex items-center justify-between gap-4"
+                                    ? "flex items-center justify-between gap-4"
                                     : embedded
                                       ? "mb-2 flex items-center justify-between gap-4"
                                       : "mx-5 mb-6 flex items-center justify-between gap-4 sm:mx-12"
@@ -290,7 +294,7 @@ export function BoardLibraryCarousel({
                         <div
                             className={
                                 variant !== "default"
-                                    ? "border-line/50 border-t"
+                                    ? ""
                                     : embedded
                                       ? "border-line/50 border-x"
                                       : "border-line/50 mx-3 border-x sm:mx-10"
@@ -302,7 +306,7 @@ export function BoardLibraryCarousel({
                                 tabIndex={listLabel ? -1 : undefined}
                                 className={
                                     variant !== "default"
-                                        ? "cursor-grab items-start py-5 select-none active:cursor-grabbing"
+                                        ? "cursor-grab items-start py-2 select-none active:cursor-grabbing"
                                         : embedded
                                           ? "cursor-grab py-2 select-none active:cursor-grabbing"
                                           : "cursor-grab py-5 select-none active:cursor-grabbing md:py-8"
@@ -314,7 +318,7 @@ export function BoardLibraryCarousel({
                                 <div
                                     role="group"
                                     aria-label={`${title} navigation`}
-                                    className="mx-auto grid w-fit grid-cols-2 place-items-center gap-3 pt-4"
+                                    className={`mx-auto grid w-fit grid-cols-2 place-items-center gap-3 ${variant === "profile" ? "pt-1" : "pt-4"}`}
                                 >
                                     <CarouselPrevious
                                         aria-label={`Previous ${collectionName} Boards`}
@@ -338,7 +342,7 @@ export function BoardLibraryCarousel({
                                         if (api) scrollBoardLibrary(api, Number(event.target.value) / 1000);
                                     }}
                                     style={{ "--thumb-size": `max(24px, ${position.visible * 100}%)` } as CSSProperties}
-                                    className={`board-library-scrollbar focus-visible:outline-foreground block focus-visible:outline-2 focus-visible:outline-offset-4 disabled:cursor-default ${variant !== "default" ? "mt-3 mb-5 w-full" : "mx-auto mt-8 mb-10 w-2/3 max-w-[800px]"}`}
+                                    className={`board-library-scrollbar focus-visible:outline-foreground block focus-visible:outline-2 focus-visible:outline-offset-4 disabled:cursor-default ${variant !== "default" ? "mt-2 mb-2 w-full" : "mx-auto mt-8 mb-10 w-2/3 max-w-[800px]"}`}
                                 />
                             )}
                         </div>

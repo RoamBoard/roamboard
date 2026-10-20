@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { loadProfile, loadPublicProfile, ProfileApiError, type PublicProfileView } from "@/lib/profile";
 import ProfileHero from "./ProfileHero";
-import ProfilePageContent, { LiveBoardLibrary } from "./ProfilePageContent";
+import ProfilePageContent, { LiveBoardLibrary, ProfileSavedBoardLibrary } from "./ProfilePageContent";
 import TravelMapSection from "./TravelMapSection";
 import VisitedWorldMap from "./VisitedWorldMap";
 
@@ -132,6 +132,12 @@ export default function HandleProfileContent({
             </>
         );
 
+    return <VisitorProfileContent key={handle} view={view} />;
+}
+
+export function VisitorProfileContent({ view }: { view: PublicProfileView }) {
+    const [showAllSaved, setShowAllSaved] = useState(false);
+    const [showAllPublished, setShowAllPublished] = useState(false);
     return (
         <div className="mx-auto w-full max-w-6xl pb-20">
             <header className="mb-8">
@@ -146,13 +152,50 @@ export default function HandleProfileContent({
                     isOwner={false}
                     friendshipStatus={view.friendshipStatus}
                 />
-                <section aria-label="Public boards" className="border-line mt-12 border-t pt-8">
-                    <h2 className="font-display text-20 sm:text-22 text-foreground font-bold">boards</h2>
-                    <p className="text-12 text-muted-foreground mt-0.5 font-medium">
-                        boards shared by {view.profile.displayName}
-                    </p>
+                <section aria-label="Currently inspired by" className="border-line mt-12 border-t pt-8">
+                    <div className="flex items-start justify-between gap-4">
+                        <div>
+                            <h3 className="font-display text-20 sm:text-22 text-foreground font-bold">
+                                currently inspired by
+                            </h3>
+                            <p className="text-12 text-muted-foreground mt-0.5 font-medium">
+                                boards and destinations on my radar right now
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setShowAllSaved(true)}
+                            className="text-12 text-muted-foreground hover:text-foreground inline-flex min-h-11 shrink-0 items-center whitespace-nowrap hover:underline"
+                        >
+                            view all →
+                        </button>
+                    </div>
+                    <ProfileSavedBoardLibrary
+                        boards={showAllSaved ? (view.savedBoards ?? []) : (view.savedBoards ?? []).slice(0, 3)}
+                        ownCollection={false}
+                    />
+                    {!view.savedBoards?.length && (
+                        <p className="text-muted-foreground mt-6 text-sm">No saved boards to show.</p>
+                    )}
+                </section>
+                <section aria-label="My boards" className="border-line mt-12 border-t pt-8">
+                    <div className="flex items-start justify-between gap-4">
+                        <div>
+                            <h3 className="font-display text-20 sm:text-22 text-foreground font-bold">my boards</h3>
+                            <p className="text-12 text-muted-foreground mt-0.5 font-medium">
+                                turns out daydreams of new trips looks better as Roamboards
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setShowAllPublished(true)}
+                            className="text-12 text-muted-foreground hover:text-foreground inline-flex min-h-11 shrink-0 items-center whitespace-nowrap hover:underline"
+                        >
+                            view all →
+                        </button>
+                    </div>
                     <LiveBoardLibrary
-                        boards={view.boards}
+                        boards={showAllPublished ? view.boards : view.boards.slice(0, 3)}
                         author={view.profile.username}
                         ownership="other"
                         publicView

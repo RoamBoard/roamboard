@@ -24,11 +24,7 @@ export function toSavedPhotoBoardCard(board: SavedBoardSummary): PhotoBoardCardD
     };
 }
 
-export function toProfilePhotoBoardCard(
-    board: PublishedBoardSummary,
-    author: string,
-    publicView = false
-): PhotoBoardCardData {
+export function toProfilePhotoBoardCard(board: PublishedBoardSummary, author: string): PhotoBoardCardData {
     return {
         id: String(board.boardId),
         title: board.title.trim() || "Untitled Board",
@@ -36,7 +32,7 @@ export function toProfilePhotoBoardCard(
         destination: "",
         destinationLabel: "",
         status: "published",
-        visibility: publicView ? "public" : board.visibility,
+        visibility: board.visibility,
         image: board.coverImageUrl
             ? {
                   src: new URL(

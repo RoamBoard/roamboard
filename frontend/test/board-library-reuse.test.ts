@@ -58,8 +58,7 @@ test("owner profile's published preview uses the horizontal library without losi
     });
     const html = render(createElement(ProfileContent, { initialProfile: profile, initialPublished: published }));
     const inspired = html.slice(0, html.indexOf('aria-label="My boards"'));
-    assert.match(inspired, /aria-roledescription="carousel"/);
-    assert.match(inspired, /aria-label="Saved Boards"/);
+    assert.doesNotMatch(inspired, /href="\/boards\/70[123]"/);
     assert.doesNotMatch(inspired, /No saved boards yet/);
     const own = html.slice(html.indexOf('aria-label="My boards"'));
     assert.match(own, /aria-roledescription="carousel"/);
@@ -209,6 +208,7 @@ test("visitor profile library renders only supplied authorized results and keeps
     assert.match(html, /by a_public_profile/);
     assert.doesNotMatch(html, /Persisted trip 701|Persisted trip 703|href="[^\"]*\/edit|aria-pressed=/);
     assert.match(html, /disabled=""[^>]*aria-label="Save status unavailable for Persisted trip 702"/);
-    assert.doesNotMatch(html, /aria-label="(?:Public —|Friends —|Restricted access —|Unsave )/);
+    assert.match(html, /aria-label="Friends —/);
+    assert.doesNotMatch(html, /aria-label="(?:Public —|Restricted access —|Unsave )/);
     assert.equal(fetch.mock.callCount(), 0);
 });

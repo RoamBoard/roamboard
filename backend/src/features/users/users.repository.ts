@@ -308,8 +308,8 @@ export function createUsersRepository(pool?: RepositoryQueryClient): UsersReposi
                 boardsSaved: countRow?.boardsSaved ?? 0
             };
         },
-        async listSavedBoards(userId, page, limit) {
-            const result = await getPool().query<{
+        async listSavedBoards(userId, page, limit, viewerId = userId) {
+            const result = await getDb().query<{
                 board_id: number;
                 title: string;
                 description: string | null;
@@ -328,11 +328,16 @@ export function createUsersRepository(pool?: RepositoryQueryClient): UsersReposi
                        ((f.requester_user_id=b.owner_user_id AND f.recipient_user_id=$1) OR
                         (f.recipient_user_id=b.owner_user_id AND f.requester_user_id=$1)))) OR
                     EXISTS (SELECT 1 FROM board_member bm WHERE bm.board_id=b.board_id AND bm.user_id=$1))
+                 AND ($4::text=$1::text OR b.visibility='public' OR
+                    (b.visibility='friends' AND (b.owner_user_id=$4 OR EXISTS (
+                       SELECT 1 FROM friendship f WHERE f.status='accepted' AND
+                       ((f.requester_user_id=b.owner_user_id AND f.recipient_user_id=$4) OR
+                        (f.recipient_user_id=b.owner_user_id AND f.requester_user_id=$4))))))
                  ORDER BY sb.saved_at DESC, b.board_id DESC LIMIT $2 OFFSET $3`,
-                [userId, limit + 1, (page - 1) * limit]
+                [userId, limit === null ? null : limit + 1, limit === null ? 0 : (page - 1) * limit, viewerId]
             );
             return {
-                items: result.rows.slice(0, limit).map((row) => ({
+                items: (limit === null ? result.rows : result.rows.slice(0, limit)).map((row) => ({
                     boardId: row.board_id,
                     title: row.title,
                     description: row.description ?? "",
@@ -343,7 +348,7 @@ export function createUsersRepository(pool?: RepositoryQueryClient): UsersReposi
                             : `/api/v1/images/${row.cover_image_id}/content?variant=thumbnail`,
                     savedAt: row.saved_at.toISOString()
                 })),
-                hasMore: result.rows.length > limit
+                hasMore: limit !== null && result.rows.length > limit
             };
         },
         async saveBoard(userId, boardId) {

@@ -223,6 +223,11 @@ alphanumeric plus dots and underscores). It returns `{ data: PublicProfileView }
 - `friendshipStatus`: `"none" | "pending_sent" | "pending_received" | "accepted"` (`"none"` for anonymous callers or viewing own profile; otherwise reflects relation between caller and user)
 - `stats`: `{ countriesVisited, citiesExplored, continentsCovered, photosUploaded, activitiesDone, boardsCreated, friends, activitiesSaved, boardsSaved }`
 - `boards`: public published boards, plus friends-only published boards when the viewer is the owner or an accepted friend
+- `savedBoards`: the profile owner's saved published Board summaries, newest save first. Visitors see public Boards and
+  friends-only Boards they can access through friendship with the Board author (or author ownership). The saver must
+  also retain Board access. Viewing a profile never grants Board access. Collaborator-only saves remain owner-only.
+  These are the profile owner's bookmarks, not the visitor's bookmark state. The frontend previews three and expands
+  the person's full visible collection through View all; no mutation of the profile owner's bookmarks is exposed.
 - `destinations`: primary destinations and confirmed activity locations on those same visible published boards, with coordinates, city, country code, board ID/title, cover URL, completion flag and `collection: "published"`
 
 Profile maps exclude drafts and collaborator-only boards, including for owners. Countries, cities and continents count

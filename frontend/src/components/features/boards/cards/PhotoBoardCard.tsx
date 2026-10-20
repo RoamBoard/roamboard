@@ -183,6 +183,7 @@ export function PhotoBoardCardContent({
     const hasActivities = validCount(board.activityCount);
     const hasDays = validCount(board.durationDays) && board.durationDays! > 0;
     const hasDetails =
+        actionLayout ||
         presentation === "details" ||
         (details &&
             Boolean(
@@ -205,7 +206,7 @@ export function PhotoBoardCardContent({
     const visibilityControl =
         ownerControl ||
         (showVisibility && (board.status === "draft" || (board.status === "published" && Boolean(board.visibility))));
-    const saveControl = ownership === "other" && board.status !== "draft" && save;
+    const saveControl = ownership === "other" && board.status !== "draft" && !remixHref && save;
     const enhanced = hasDetails || visibilityControl || Boolean(saveControl);
     const feedbackId = `${detailsId}-feedback`;
     const saved = save?.state === "saved";
@@ -595,7 +596,7 @@ export function PhotoBoardCardContent({
                             event.stopPropagation();
                             if (!save.pending && !unresolved) save.onToggle?.();
                         }}
-                        className={`absolute z-20 grid cursor-pointer place-items-center rounded-full backdrop-blur-sm disabled:cursor-default ${hoverActions ? `bottom-[calc(6.5%+5rem)] left-[calc(28.25%-0.875rem)] size-14 border border-white/40 bg-black/45 ${actionVisibility} transition-[opacity,transform] duration-150 motion-safe:hover:scale-105 motion-safe:focus-visible:scale-105 motion-reduce:transition-none` : "top-[3%] right-[3%] size-11 bg-black/20 disabled:opacity-60"} ${focus}`}
+                        className={`absolute z-20 grid cursor-pointer place-items-center rounded-full backdrop-blur-sm disabled:cursor-default ${actionLayout ? `bottom-[calc(6.5%+5rem)] left-[calc(28.25%-0.875rem)] size-14 border border-white/40 bg-black/45 ${actionVisibility} transition-[opacity,transform] duration-150 motion-safe:hover:scale-105 motion-safe:focus-visible:scale-105 motion-reduce:transition-none` : "top-[3%] right-[3%] size-11 bg-black/20 disabled:opacity-60"} ${focus}`}
                     >
                         <AnimatePresence initial={false} mode="wait">
                             <motion.span
@@ -608,13 +609,13 @@ export function PhotoBoardCardContent({
                                 {save.pending ? (
                                     <LoaderCircle
                                         aria-hidden="true"
-                                        size={hoverActions ? 23 : 17}
+                                        size={actionLayout ? 23 : 17}
                                         className="motion-safe:animate-spin"
                                     />
                                 ) : (
                                     <Bookmark
                                         aria-hidden="true"
-                                        size={hoverActions ? 23 : 17}
+                                        size={actionLayout ? 23 : 17}
                                         strokeWidth={1.5}
                                         fill={saved ? "currentColor" : "none"}
                                     />

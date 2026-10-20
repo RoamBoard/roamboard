@@ -15,6 +15,7 @@ import {
     type MapDestination,
     type ProfileStats,
     type PublishedBoardSummary,
+    type SavedBoardSummary,
     type UserProfile
 } from "@/lib/profile";
 import ProfileHero from "./ProfileHero";
@@ -22,17 +23,15 @@ import TravelMapSection from "./TravelMapSection";
 import VisitedWorldMap from "./VisitedWorldMap";
 import FindFriendsDialog from "@/components/features/social/FindFriendsDialog";
 
-import { BoardLibraryCarousel, BoardLibrarySlide } from "@/components/features/boards/BoardLibrary";
+import ProfileBoardLibrary from "./ProfileBoardLibrary";
 import AccountPhotoBoardCard from "@/components/features/boards/cards/AccountPhotoBoardCard";
-import SavedBoardGrid from "@/components/features/boards/SavedBoardGrid";
 import { createSavedBoardsStore } from "@/lib/saved-boards-store";
-import { toProfilePhotoBoardCard } from "@/lib/photo-board-card";
+import { toProfilePhotoBoardCard, toSavedPhotoBoardCard } from "@/lib/photo-board-card";
 import type { PhotoBoardCardProps } from "@/types/board-card";
 
 export function LiveBoardCard({
     board,
-    ownership = "unknown",
-    publicView = false
+    ownership = "unknown"
 }: {
     board: PublishedBoardSummary & { author?: string };
     ownership?: PhotoBoardCardProps["ownership"];
@@ -40,7 +39,7 @@ export function LiveBoardCard({
 }) {
     return (
         <AccountPhotoBoardCard
-            board={toProfilePhotoBoardCard(board, board.author ?? "", publicView)}
+            board={toProfilePhotoBoardCard(board, board.author ?? "")}
             ownership={ownership}
             href={`/boards/${board.boardId}`}
         />
@@ -60,18 +59,51 @@ export function LiveBoardLibrary({
 }) {
     if (!boards.length) return null;
     return (
-        <BoardLibraryCarousel
+        <ProfileBoardLibrary
             id="profile-published-library"
             title={publicView ? "Profile Boards" : "My Boards"}
-            count={boards.length}
             variant="profile"
-        >
-            {boards.map((board, index) => (
-                <BoardLibrarySlide key={board.boardId} title={board.title} index={index} count={boards.length}>
-                    <LiveBoardCard board={{ ...board, author }} ownership={ownership} publicView={publicView} />
-                </BoardLibrarySlide>
-            ))}
-        </BoardLibraryCarousel>
+            boards={boards.map((board) => {
+                const photo = toProfilePhotoBoardCard(board, author);
+                return {
+                    compact: { ...photo, image: photo.image ?? { src: "", alt: "" } },
+                    photo,
+                    ownership,
+                    href: `/boards/${board.boardId}`,
+                    editHref: ownership === "owner" ? `/boards/${board.boardId}/edit` : undefined
+                };
+            })}
+        />
+    );
+}
+
+export function ProfileSavedBoardLibrary({
+    boards,
+    onSavedChange,
+    ownCollection = true
+}: {
+    boards: SavedBoardSummary[];
+    onSavedChange?: (boardId: string, saved: boolean) => void;
+    ownCollection?: boolean;
+}) {
+    if (!boards.length) return null;
+    return (
+        <ProfileBoardLibrary
+            id="profile-saved-library"
+            title="Currently Inspired By"
+            variant="profile"
+            boards={boards.map((board) => {
+                const photo = toSavedPhotoBoardCard(board);
+                return {
+                    compact: { ...photo, image: photo.image ?? { src: "", alt: "" } },
+                    photo,
+                    ownership: "other" as const,
+                    savedByMe: ownCollection ? true : undefined,
+                    href: `/boards/${board.boardId}`
+                };
+            })}
+            onSavedChange={onSavedChange}
+        />
     );
 }
 
@@ -347,11 +379,11 @@ export default function ProfilePageContent({
                                 Updating saved Boards…
                             </p>
                         )}
-                        <SavedBoardGrid
-                            presentation="library"
+                        <ProfileSavedBoardLibrary
                             boards={saved.items}
-                            onUnsave={(boardId) => {
-                                savedStore.removeConfirmed(boardId);
+                            onSavedChange={(boardId, isSaved) => {
+                                if (isSaved) return;
+                                savedStore.removeConfirmed(Number(boardId));
                                 setStats((current) =>
                                     current
                                         ? { ...current, boardsSaved: Math.max(0, current.boardsSaved - 1) }

@@ -6,6 +6,53 @@ import BoardLibrary from "../src/components/features/boards/BoardLibrary";
 import { loadMapBoardGallery, mapBoardGallery, selectedMapBoards } from "../src/lib/profile-map";
 import type { MapDestination } from "../src/lib/profile";
 import type { BoardDocument } from "../src/lib/board-creator-api";
+import { loadProfileLibraryBoards } from "../src/lib/profile-board-library";
+
+test("profile libraries resolve real author metadata, bookmark state and owner edit permissions", async (context) => {
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {
+        assert.equal(init?.credentials, "include");
+        assert.equal(init?.cache, "no-store");
+        const id = Number(String(input).split("/").at(-1));
+        const document = fullBoard(id);
+        document.permissions = { canManageBoard: id === 41, canEditContent: id === 41 };
+        document.savedByMe = id === 52;
+        document.savedCount = 7;
+        return Response.json({ data: document });
+    });
+    const summaries = mapBoardGallery([destination(41, "VNM", 106), destination(52, "VNM", 106)]);
+    const result = await loadProfileLibraryBoards(summaries, new AbortController().signal);
+    assert.equal(result.failed, false);
+    assert.equal(result.boards[0].ownership, "owner");
+    assert.equal(result.boards[0].editHref, "/boards/41/edit");
+    assert.equal(result.boards[1].ownership, "other");
+    assert.equal(result.boards[1].editHref, undefined);
+    assert.equal(result.boards[1].savedByMe, true);
+    assert.equal(result.boards[1].photo?.author, "linh_travels");
+    assert.equal(result.boards[1].photo?.savedCount, 7);
+    assert.equal(result.boards[1].photo?.durationDays, 2);
+});
+
+test("profile metadata failures retain summaries for retry and remove inaccessible Boards", async (context) => {
+    const summaries = mapBoardGallery([destination(41, "VNM", 106), destination(52, "VNM", 106)]);
+    const failures = { active: true };
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+        const id = Number(String(input).split("/").at(-1));
+        if (id === 41) return Response.json({ error: { message: "Forbidden" } }, { status: 403 });
+        if (failures.active) throw new Error("Connection failed");
+        return Response.json({ data: fullBoard(id) });
+    });
+    const first = await loadProfileLibraryBoards(summaries, new AbortController().signal);
+    assert.equal(first.failed, true);
+    assert.deepEqual(
+        first.boards.map((board) => board.compact.id),
+        ["52"]
+    );
+    assert.equal(first.boards[0].photo?.title, summaries[1].photo?.title);
+    failures.active = false;
+    const retry = await loadProfileLibraryBoards(summaries, new AbortController().signal);
+    assert.equal(retry.failed, false);
+    assert.equal(retry.boards[0].photo?.title, "Saigon after the rain");
+});
 
 function destination(
     boardId: number,

@@ -50,7 +50,14 @@ export interface PublicProfileView {
     isOwner: boolean;
     friendshipStatus?: FriendshipStatus;
     stats: ProfileStats;
-    boards: Array<{ boardId: number; title: string; coverImageUrl: string | null; updatedAt: string }>;
+    boards: Array<{
+        boardId: number;
+        title: string;
+        coverImageUrl: string | null;
+        updatedAt: string;
+        visibility: ProfileBoard["visibility"];
+    }>;
+    savedBoards: SavedBoard[];
     destinations: MapDestination[];
 }
 
@@ -175,7 +182,12 @@ export interface UsersRepository {
     ): Promise<ProfileBoard[]>;
     countPublicPhotos(userId: string, viewerId?: string | null): Promise<number>;
     stats(userId: string, viewerId?: string | null): Promise<Record<string, number>>;
-    listSavedBoards(userId: string, page: number, limit: number): Promise<{ items: SavedBoard[]; hasMore: boolean }>;
+    listSavedBoards(
+        userId: string,
+        page: number,
+        limit: number | null,
+        viewerId?: string | null
+    ): Promise<{ items: SavedBoard[]; hasMore: boolean }>;
     saveBoard(userId: string, boardId: number): Promise<boolean>;
     unsaveBoard(userId: string, boardId: number): Promise<void>;
     getFriendship(userId1: string, userId2: string): Promise<FriendshipRecord | null>;

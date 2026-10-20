@@ -23,6 +23,49 @@ const board: PhotoBoardCardData = {
     image: { src: "/api/v1/images/42/content?variant=display", alt: "Oslo waterfront" }
 };
 
+test("summary-only profile cards expose hover actions without itinerary metadata", () => {
+    const summary: PhotoBoardCardData = {
+        id: "71",
+        title: "Published trip",
+        author: "traveler",
+        destination: "",
+        destinationLabel: "",
+        status: "published",
+        visibility: "friends"
+    };
+    const view = PhotoBoardCardContent(
+        props({
+            board: summary,
+            expanded: true,
+            ownership: "owner",
+            hoverActions: { viewHref: "/boards/71", editHref: "/boards/71/edit" }
+        })
+    );
+    assert.equal(typeof view.props.onHoverStart, "function");
+    const markup = renderToStaticMarkup(view);
+    assert.match(markup, /data-photo-board-expanded="true"/);
+    assert.match(markup, /aria-label="View Published trip"/);
+    assert.match(markup, /aria-label="Edit Published trip"/);
+    assert.match(markup, /Friends/);
+    assert.doesNotMatch(markup, /0 days|0 saves|0 activities/);
+});
+
+test("selected deck cards place bookmarks beside View and reserve the cover corner for visibility", () => {
+    const markup = html({
+        expanded: true,
+        ownership: "other",
+        showVisibility: true,
+        selection: { selected: true, viewHref: "/boards/71", onSelect() {} },
+        save: { state: "unsaved", onToggle() {} }
+    });
+    const bookmark = markup.match(/<button[^>]*aria-label="Save [^"]*"[^>]*>/)?.[0];
+    assert.ok(bookmark);
+    assert.match(bookmark, /bottom-\[/);
+    assert.doesNotMatch(bookmark, /top-\[/);
+    assert.match(markup, /aria-label="Public/);
+    assert.match(markup, /lucide-eye/);
+});
+
 test("owner hover actions retain the profile identity and link the pen to the permitted editor", () => {
     const markup = html({
         expanded: true,
