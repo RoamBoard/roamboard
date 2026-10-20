@@ -1,5 +1,22 @@
 # Boards discovery contract
 
+Visual follow-up approved on 2026-10-20: Featured's description is “Roamboard's monthly most popular boards”. All
+Board-list descriptions use a consistent 8px gap below their titles. Back and View all use the same shared bright
+navigation style throughout the application; component 4 adopts the main Boards search's single underline treatment.
+
+UX amendment approved on 2026-10-20: Featured on `/boards` always uses the existing rolling-month ranking, with a
+Monthly picks caption and no month/week toggle. Double the existing spacing between search and Featured (latest user amendment on 2026-10-20). Move the Discover
+promotion below all Board collections. Recently Published now uses component 2's draggable/scrollable BoardLibrary,
+matching My Boards and Saved Boards. Collection headings use the same primary text color as BOARDS; larger View all
+links align vertically with them. Deleting a submitted search restores discovery automatically. Draft covers use a
+draft document/pen icon in the visibility badge; remove separate Draft/Published cover captions. These decisions
+supersede the earlier section-order, deck-gallery and status-label presentation rules below. API access, monthly
+ranking and publication semantics remain unchanged; the backend week option is retained for compatibility.
+
+2026-10-20 amendment: [Board collection grid](board-collection-grid.md) supersedes the own-Board search exclusion
+and strict location gate below. Search and suggestions include eligible owned published Boards, and direct title
+matches remain eligible without matching location metadata. Existing discovery visibility rules still apply.
+
 Status: Implemented — user authorized implementation on 2026-10-20, representing both frontend and backend
 
 Approver: the user explicitly represents both frontend and backend (2026-10-20).

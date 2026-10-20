@@ -13,6 +13,20 @@ const locationJson = (alias: string) => `jsonb_build_object('name',${alias}.name
 
 export function createDiscoveryRepository(): DiscoveryRepository {
     return {
+        async canReadSavedMap(viewerId, handle) {
+            const result = await getPool().query(
+                `SELECT 1 FROM app_user target WHERE lower(target.username)=lower($2) AND
+                  (target.user_id=$1 OR EXISTS (SELECT 1 FROM friendship f WHERE f.status='accepted' AND
+                    ((f.requester_user_id=$1 AND f.recipient_user_id=target.user_id) OR
+                     (f.recipient_user_id=$1 AND f.requester_user_id=target.user_id))))`,
+                [viewerId, handle]
+            );
+            return Boolean(result.rowCount);
+        },
+        async profileExists(handle) {
+            const result = await getPool().query("SELECT 1 FROM app_user WHERE lower(username)=lower($1)", [handle]);
+            return Boolean(result.rowCount);
+        },
         async placeCatalog() {
             const result = await getPool()
                 .query<Place>(`SELECT DISTINCT l.city AS name,l.city,l.country,NULL::text AS address
@@ -21,7 +35,7 @@ export function createDiscoveryRepository(): DiscoveryRepository {
                 JOIN location l ON l.location_id=b.primary_location_id WHERE b.primary_location_kind IN ('city','region','country')`);
             return result.rows;
         },
-        async candidates(userId, scope, days) {
+        async candidates(userId, scope, days, context) {
             const result = await getPool().query<{
                 board_id: number;
                 title: string;
@@ -68,7 +82,7 @@ export function createDiscoveryRepository(): DiscoveryRepository {
                     ORDER BY day_number,position LIMIT 1) AS external_cover,
                   (SELECT COUNT(*)::int FROM saved_boards s WHERE s.board_id=b.board_id AND s.user_id<>b.owner_user_id) AS saved_count,
                   EXISTS(SELECT 1 FROM saved_boards s WHERE s.board_id=b.board_id AND s.user_id=$1) AS saved_by_me,
-                  (SELECT s.saved_at FROM saved_boards s WHERE s.board_id=b.board_id AND s.user_id=$1) AS saved_at,
+                  (SELECT s.saved_at FROM saved_boards s WHERE s.board_id=b.board_id AND s.user_id=CASE WHEN $4::text IS NULL THEN $1 ELSE (SELECT user_id FROM app_user WHERE lower(username)=lower($4)) END) AS saved_at,
                   CASE WHEN $3::int IS NULL THEN 0 ELSE (SELECT COUNT(*)::int FROM board_view v
                     WHERE v.board_id=b.board_id AND v.user_id IS NOT NULL AND v.user_id<>b.owner_user_id
                       AND v.viewed_at>NOW()-make_interval(days=>$3)) END AS viewers,
@@ -84,11 +98,49 @@ export function createDiscoveryRepository(): DiscoveryRepository {
                       AND c.created_at>NOW()-make_interval(days=>$3)) END AS commenters
                  FROM board b JOIN app_user u ON u.user_id=b.owner_user_id
                  LEFT JOIN location d ON d.location_id=b.primary_location_id
-                 WHERE CASE WHEN $2='mine' THEN b.owner_user_id=$1 ELSE ${eligible} END
+                 WHERE CASE WHEN $2='mine' THEN b.owner_user_id=$1 ELSE (${eligible} OR
+                   ($5='profile-saved' AND b.status='published' AND EXISTS (SELECT 1 FROM app_user saver WHERE saver.user_id=$1 AND lower(saver.username)=lower($4))
+                     AND EXISTS (SELECT 1 FROM board_member bm WHERE bm.board_id=b.board_id AND bm.user_id=$1))) END
                    AND ($2<>'saved' OR (b.owner_user_id<>$1 AND EXISTS (
                      SELECT 1 FROM saved_boards s WHERE s.board_id=b.board_id AND s.user_id=$1)))
+                   AND ($5::text IS NULL OR
+                     ($5='friends' AND EXISTS (SELECT 1 FROM friendship f WHERE f.status='accepted' AND
+                       ((f.requester_user_id=$1 AND f.recipient_user_id=b.owner_user_id) OR
+                        (f.recipient_user_id=$1 AND f.requester_user_id=b.owner_user_id)))) OR
+                     ($5='profile' AND lower(u.username)=lower($4)) OR
+                     ($5='profile-saved' AND EXISTS (SELECT 1 FROM saved_boards sb JOIN app_user saver ON saver.user_id=sb.user_id
+                       WHERE sb.board_id=b.board_id AND lower(saver.username)=lower($4) AND b.owner_user_id<>saver.user_id
+                       AND (b.visibility='public' OR (b.visibility='friends' AND EXISTS (SELECT 1 FROM friendship f WHERE f.status='accepted' AND
+                         ((f.requester_user_id=saver.user_id AND f.recipient_user_id=b.owner_user_id) OR
+                          (f.recipient_user_id=saver.user_id AND f.requester_user_id=b.owner_user_id)))) OR
+                         EXISTS (SELECT 1 FROM board_member bm WHERE bm.board_id=b.board_id AND bm.user_id=saver.user_id)))) OR
+                     ($5='map' AND (
+                       ($6 IN ('published','both') AND (lower(u.username)=lower($4) OR ($4 IS NULL AND b.owner_user_id=$1))) OR
+                       ($6 IN ('saved','both') AND EXISTS (SELECT 1 FROM saved_boards sb WHERE sb.board_id=b.board_id
+                         AND sb.user_id=COALESCE((SELECT user_id FROM app_user WHERE lower(username)=lower($4)),$1)
+                         AND b.owner_user_id<>sb.user_id))
+                     )) OR $5 IN ('mine','saved','category','recent','featured'))
+                   AND ($7::text IS NULL OR EXISTS (SELECT 1 FROM board_tag bt JOIN tag t ON t.tag_id=bt.tag_id WHERE bt.board_id=b.board_id AND lower(t.tag_name)=lower($7)))
+                   AND ($8::text IS NULL AND $9::numeric IS NULL OR EXISTS (
+                     SELECT 1 FROM location ml WHERE (ml.location_id=b.primary_location_id OR EXISTS (
+                       SELECT 1 FROM activity ma WHERE ma.board_id=b.board_id AND ma.location_confirmed AND ma.location_id=ml.location_id))
+                       AND ($8::text IS NULL OR ml.country=$8) AND ($9::numeric IS NULL OR (ml.longitude=$9 AND ml.latitude=$10))
+                   ))
+                   AND ($11::text IS NULL OR b.status=$11)
                  ORDER BY b.board_id`,
-                [userId, scope, days ?? null]
+                [
+                    userId,
+                    scope,
+                    days ?? null,
+                    context?.handle ?? null,
+                    context?.context ?? null,
+                    context?.collection ?? "published",
+                    context?.tag ?? null,
+                    context?.country ?? null,
+                    context?.longitude ?? null,
+                    context?.latitude ?? null,
+                    context?.status ?? null
+                ]
             );
             return result.rows.map((row) => ({
                 boardId: row.board_id,

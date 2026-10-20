@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
+import ViewAllBoards from "@/components/features/boards/ViewAllBoards";
 import Image from "next/image";
 import { Plus, UserRound } from "lucide-react";
 import {
@@ -255,7 +256,7 @@ export default function ProfilePageContent({
                                 <h3 className="font-display text-20 sm:text-22 text-foreground font-bold">
                                     my friends ({friends.length})
                                 </h3>
-                                <p className="text-12 text-muted-foreground mt-0.5 font-medium">
+                                <p className="text-12 text-muted-foreground mt-2 font-medium">
                                     fellow travelers you&apos;re connected with
                                 </p>
                             </div>
@@ -348,21 +349,18 @@ export default function ProfilePageContent({
                         )}
                     </section>
                     <section aria-label="Currently inspired by" className="border-line mt-12 border-t pt-8">
-                        <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-center justify-between gap-4">
                             <div className="min-w-0">
                                 <h3 className="font-display text-20 sm:text-22 text-foreground font-bold">
                                     currently inspired by
                                 </h3>
-                                <p className="text-12 text-muted-foreground mt-0.5 font-medium">
+                                <p className="text-12 text-muted-foreground mt-2 font-medium">
                                     boards and destinations on my radar right now
                                 </p>
                             </div>
-                            <Link
-                                href="/boards"
-                                className="text-12 text-muted-foreground hover:text-foreground inline-flex min-h-11 shrink-0 items-center whitespace-nowrap hover:underline"
-                            >
-                                view all →
-                            </Link>
+                            <ViewAllBoards
+                                href={`/boards/collections/profile-saved?handle=${encodeURIComponent(profile.username)}`}
+                            />
                         </div>
                         {saved.error && (
                             <p role="alert" className="mt-6 text-sm">
@@ -406,19 +404,14 @@ export default function ProfilePageContent({
                         )}
                     </section>
                     <section aria-label="My boards" className="border-line mt-12 border-t pt-8">
-                        <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-center justify-between gap-4">
                             <div className="min-w-0">
                                 <h3 className="font-display text-20 sm:text-22 text-foreground font-bold">my boards</h3>
-                                <p className="text-12 text-muted-foreground mt-0.5 font-medium">
+                                <p className="text-12 text-muted-foreground mt-2 font-medium">
                                     turns out daydreams of new trips looks better as Roamboards
                                 </p>
                             </div>
-                            <Link
-                                href="/boards/mine"
-                                className="text-12 text-muted-foreground hover:text-foreground inline-flex min-h-11 shrink-0 items-center whitespace-nowrap hover:underline"
-                            >
-                                view all →
-                            </Link>
+                            <ViewAllBoards href="/boards/collections/mine?status=published" />
                         </div>
                         <LiveBoardLibrary boards={published} author={profile.username} ownership="owner" />
                         {published.length === 0 && !sectionErrors.some((message) => message.startsWith("My")) && (

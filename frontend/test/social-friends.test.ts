@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { Children, createElement, isValidElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
+import { SearchParamsContext, PathnameContext } from "next/dist/shared/lib/hooks-client-context.shared-runtime";
+import BoardCollectionGrid from "@/components/features/boards/BoardCollectionGrid";
 import SocialFriendsContent from "@/components/features/social/SocialFriendsContent";
 import UnderlineTabs from "@/components/ui/UnderlineTabs";
 import FindFriendsDialog from "@/components/features/social/FindFriendsDialog";
@@ -32,7 +34,11 @@ function RouterWrapper({ children }: { children: ReactNode }) {
     return createElement(
         AppRouterContext.Provider,
         { value: mockRouter as unknown as Parameters<typeof AppRouterContext.Provider>[0]["value"] },
-        children
+        createElement(
+            SearchParamsContext.Provider,
+            { value: new URLSearchParams() },
+            createElement(PathnameContext.Provider, { value: "/social" }, children)
+        )
     );
 }
 
@@ -1320,7 +1326,7 @@ test("SocialFriendsContent retry handlers track loading state and keep empty sta
     await reloadPromise;
 });
 
-test("SocialFriendsContent boards and activity retries track loading and handle errors", async (context) => {
+test("Social uses the independent collection grid while activity retries remain scoped", async (context) => {
     const counts = { boardFetchCount: 0, activityFetchCount: 0 };
     context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
         const url = String(input);
@@ -1346,10 +1352,11 @@ test("SocialFriendsContent boards and activity retries track loading and handle 
     );
 
     const retryBtns = nodes.filter((n) => n.type === "button" && n.props.children === "Retry");
-    assert.ok(retryBtns.length >= 2, "Expected Retry buttons for boards and activities errors");
+    assert.ok(nodes.some((node) => node.type === BoardCollectionGrid && node.props.context === "friends"));
+    assert.equal(retryBtns.length, 1, "Only activity errors belong to this parent");
 
     await Promise.all(retryBtns.map((btn) => btn.props.onClick?.()));
-    assert.ok(counts.boardFetchCount >= 1, "Expected reloadBoards to fetch");
+    assert.equal(counts.boardFetchCount, 0, "The grid owns its collection requests");
     assert.ok(counts.activityFetchCount >= 1, "Expected reloadActivities to fetch");
 });
 
@@ -1419,7 +1426,7 @@ test("FindFriendsDialog separates search error from empty state and offers retry
     assert.ok(retryBtn, "Expected retry search button");
 });
 
-test("SocialFriendsContent refreshData queries loadFriends, loadFriendsBoards, and loadFriendsActivity", async (context) => {
+test("SocialFriendsContent refreshData queries friends and activity while the grid owns Boards", async (context) => {
     const calls: Array<{ url: string; method?: string }> = [];
     context.mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {
         calls.push({ url: String(input), method: init?.method });
@@ -1440,9 +1447,9 @@ test("SocialFriendsContent refreshData queries loadFriends, loadFriendsBoards, a
 
     await retryAllBtn.props.onClick?.();
 
-    assert.equal(calls.length, 3);
+    assert.equal(calls.length, 2);
     assert.ok(calls.some((c) => c.url.endsWith("/api/v1/users/me/friends")));
-    assert.ok(calls.some((c) => c.url.endsWith("/api/v1/users/me/friends/boards?limit=12")));
+    assert.ok(!calls.some((c) => c.url.includes("/friends/boards")));
     assert.ok(calls.some((c) => c.url.endsWith("/api/v1/users/me/friends/activity?limit=10")));
 });
 

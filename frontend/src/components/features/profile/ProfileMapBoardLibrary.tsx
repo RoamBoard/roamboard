@@ -8,10 +8,12 @@ import type { MapDestination } from "@/lib/profile";
 export default function ProfileMapBoardLibrary({
     places,
     title,
+    viewAllHref,
     onBoardHighlight
 }: {
     places: MapDestination[];
     title: string;
+    viewAllHref: string;
     onBoardHighlight: (boardId: string | null) => void;
 }) {
     const [result, setResult] = useState<Awaited<ReturnType<typeof loadMapBoardGallery>> | null>(null);
@@ -39,6 +41,7 @@ export default function ProfileMapBoardLibrary({
             <BoardLibrary
                 id="profile-country-boards"
                 title={title}
+                viewAllHref={viewAllHref}
                 boards={result?.boards ?? mapBoardGallery(places)}
                 onBoardHighlight={onBoardHighlight}
                 embedded

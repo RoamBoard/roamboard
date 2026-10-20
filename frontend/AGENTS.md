@@ -97,11 +97,18 @@ This is a living project guide. Agents may and should update `AGENTS.md` when th
 
 ## Current integrated surfaces
 
+`BoardCollectionGrid` is the fourth Board list: component 2 photographic cards in a wider responsive grid, twenty
+results with URL-backed contextual search, sorting and numbered pagination. `/boards/collections/[context]` hosts
+View all destinations; Social embeds the friends collection directly. Source scopes preserve profile ownership,
+saved membership, Featured period and map country/point plus published/saved toggles. Existing live list headings
+link to these collections. Discover's `samples` route remains explicitly editorial, without persisted Board actions.
+Search/suggestions on `/boards` now include eligible owned published Boards and keep direct title matches even
+without matching location metadata. See `../contracts/board-collection-grid.md`. Browser layout QA remains pending.
+
 `/boards` now renders `BoardsDiscovery`: four location-aware suggestions with compact previews, URL-backed numbered
-search results, monthly/weekly Featured, a Discover promotion, Recently Published, owner-only mixed Draft/Published
+search results, monthly Featured, a Discover promotion, Recently Published, owner-only mixed Draft/Published
 Boards and Saved Boards. The two personal sections use the draggable horizontal `BoardLibrary` carousel, retaining
-draft editor links, published View/Edit actions, status labels and confirmed unsaving. Recently Published retains
-the deck gallery, with every loaded Board reachable through its controls and at most five stacked cards mounted.
+draft editor links, published View/Edit actions and confirmed unsaving. Recently Published also uses BoardLibrary. Draft covers use an accessible document/pen badge instead of separate Draft/Published status captions. Featured is monthly only, with the caption "Roamboard's monthly most popular boards", and the Discover promotion follows the personal sections.
 There is no separate The Collection grid on `/boards`. Presenters use batch summaries rather than full-document
 requests. Guests see public discovery and one sign-in prompt; accessible friends-only Boards remain viewer-specific.
 The old Archive UI and archive-only fixtures are removed. `DatabasePublishedBoard` qualifies views only after three
@@ -123,13 +130,12 @@ ready, with retry on failure. Days/order/times and cover selections remain; cale
 completion, memberships and visibility are not copied. Normal new-Board visibility preferences apply. Only Save
 or Publish creates a Board. See [the remix contract](../contracts/saved-board-remix.md).
 
-Secondary screens use the shared `BackLink`: profile/settings, notifications, Board selection/editing/viewing and Discover details. It uses the published Board's small arrow-and-text style and scrolls away with the page content; it has no separate header bar. Keep it inside each screen's actual scroll container. Main navigation destinations omit it. `BackNavigationTracker` records the previous internal URL on browser history entries while preserving router state, so Back uses browser history after refresh or forward/back; direct entries use a route-specific parent fallback. Authentication/welcome screens are excluded as return destinations. Board editor leave confirmation preserves Back or fallback replacement after discarding unsaved changes.
+Secondary screens use the shared `BackLink`: profile/settings, notifications, Board selection/editing/viewing and Discover details. It shares the primary-color 16px medium-weight navigation style and 16px arrows with ViewAllBoards through `navigation-link-style.ts` and scrolls away with the page content; it has no separate header bar. Keep it inside each screen's actual scroll container. Main navigation destinations omit it. `BackNavigationTracker` records the previous internal URL on browser history entries while preserving router state, so Back uses browser history after refresh or forward/back; direct entries use a route-specific parent fallback. Authentication/welcome screens are excluded as return destinations. Board editor leave confirmation preserves Back or fallback replacement after discarding unsaved changes.
 
 `Sidebar` is shared by `AppShell` and `PublishedBoardShell`. It uses a sticky 64px mobile / 80px desktop rail in the page grid; desktop expansion grows to 176px and resizes the page beside it. Hovering a navigation or account control for 150ms temporarily reveals labels; leaving the rail collapses it after 100ms, and returning cancels that collapse. The logo and navigation positions stay fixed during expansion. Keyboard focus reveals labels immediately. The explicit keep-open choice is saved in `roamboard-sidebar-expanded` local storage. Navigation uses icons with lowercase labels on expansion and an underlined active destination, ordered Roam, Create, Discover, Boards, Social. Mobile expansion opens a native modal drawer. The sidebar account control expands its sign-in/profile, Settings, and Light/Dark choices inline above the trigger. Navigation scrolls at every height; the account panel has a viewport-based height bound and its own scrolling. Active destinations are derived from the pathname, including nested creation, Board, Discover, profile, and developer routes. Discover keeps its own scroll-driven intro behavior independently of navigation expansion; Discover panels and destination chapters use their available container width.
 
 The `/dev` index links to implemented routes and explains how to open `/boards/[boardId]` with a saved Board ID.
-The creation landing page is `/create`; `/boards` now uses the discovery flow described above. Featured retains the
-Motion spatial gallery; Recently Published uses the deck, while My Boards and Saved Boards use BoardLibrary.
+The creation landing page is `/create`; `/boards` now uses the discovery flow described above. Featured retains the Motion spatial gallery; Recently Published, My Boards and Saved Boards use BoardLibrary.
 The older `MyBoardsExperience`/`my-boards-store.ts` presenters remain as historical tested owner-list code; they are
 not the `/boards` route and do not define its search or fallback behavior. The Board creator remains `/boards/new`.
 Creation and editing routes highlight Create; published Board viewing and `/boards/mine` highlight Boards.

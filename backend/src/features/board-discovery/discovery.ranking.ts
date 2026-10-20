@@ -95,19 +95,31 @@ export function rankSearch(boards: DiscoveryCandidate[], input: DiscoveryQuery, 
           }
         : null;
     const ranked = boards
-        .filter((board) => !board.owned)
         .flatMap((board) => {
             const primary = board.destination ? matchesPlace(board.destination, true) : false;
             const activity = board.locations.some((place) => matchesPlace(place, false));
-            if (term && !primary && !activity) return [];
-            const text = words([board.title, board.description, ...board.tags, board.activityText].join(" "));
+            const titleMatch = phrase(board.title, input.q);
+            if (term && !primary && !activity && !titleMatch) return [];
+            const text = words(
+                [
+                    board.title,
+                    board.description,
+                    board.owner.username,
+                    board.owner.displayName,
+                    ...board.tags,
+                    board.activityText,
+                    ...[board.destination, ...board.locations]
+                        .filter((place): place is Place => place !== null)
+                        .map(placeText)
+                ].join(" ")
+            );
             const topicScore = topics.reduce((score, word) => {
                 const alternatives = new Set([word, ...synonyms.filter((group) => group.includes(word)).flat()]);
                 const direct = text.some((token) => token === word || (word.length >= 3 && token.startsWith(word)));
                 const related = text.some((token) => alternatives.has(token));
                 return score + (direct ? 10 : related ? 7 : 0) * (descriptors.has(word) ? 0.25 : 1);
             }, 0);
-            if (!term && topicScore === 0) return [];
+            if (!term && topicScore === 0 && !titleMatch) return [];
             const parisFrance =
                 term &&
                 normalize(term) === "paris" &&

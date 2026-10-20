@@ -247,8 +247,13 @@ test("creator comparison leaves visibility editing and access explanations in th
             const markup = renderToStaticMarkup(
                 createElement(BoardCreationPreview, { board: board({ status, visibility }) })
             );
-            for (const card of pairedCards(markup))
-                assert.doesNotMatch(card, /aria-label="(?:Public|Friends|Restricted access|Draft) —/);
+            for (const card of pairedCards(markup)) {
+                assert.doesNotMatch(card, /aria-label="(?:Public|Friends|Restricted access) —/);
+                if (status === "draft") {
+                    assert.match(card, /aria-label="Draft —/);
+                    assert.match(card, /lucide-file-pen-line/);
+                } else assert.doesNotMatch(card, /aria-label="Draft —/);
+            }
             assert.doesNotMatch(
                 markup,
                 /aria-label="Edit visibility"|>Visibility<|when published|Drafts are visible only to you/

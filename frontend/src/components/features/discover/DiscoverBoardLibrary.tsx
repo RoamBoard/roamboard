@@ -1,3 +1,4 @@
+import { collectionHref } from "@/lib/board-collections";
 import { BoardLibraryCarousel, BoardLibrarySlide } from "@/components/features/boards/BoardLibrary";
 import type { DiscoverBoard } from "@/data/discover-boards";
 import type { BoardTagId } from "@/data/board-tags";
@@ -20,6 +21,7 @@ export default function DiscoverBoardLibrary({
             title={title}
             count={boards.length}
             variant="discover"
+            viewAllHref={collectionHref("samples", activeTagId ? { tag: activeTagId } : {})}
         >
             {boards.map((board, index) => (
                 <BoardLibrarySlide

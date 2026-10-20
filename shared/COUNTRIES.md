@@ -13,3 +13,14 @@ Convert to alpha-2 only for Geoapify country filters and `Intl.DisplayNames`
 region lookup. Provider responses are normalized to validated alpha-3 codes.
 Mapbox boundary filters use the tileset's native `iso_3166_1_alpha_3` property.
 Include the shared JSON file alongside the backend when deploying its build.
+
+## Seven continents
+
+Country-based classification in country-continents.json is shared by filters and profile/map totals.
+The Americas split follows [UN M49](https://unstats.un.org/unsd/methodology/m49/):
+Northern America, Central America and Caribbean form North America; South America stays separate.
+Antarctica (ATA) is its own continent. Other existing assignments are preserved, including
+Russia in Europe; Turkey, Kazakhstan, Armenia, Azerbaijan, Georgia and Cyprus in Asia;
+Egypt in Africa and Indonesia in Asia. Territories retain their catalog assignment,
+including Bouvet and South Georgia in South America. This is a product country classification,
+not coordinate geofencing or a political claim.

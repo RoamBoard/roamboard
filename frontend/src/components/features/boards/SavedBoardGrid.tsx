@@ -38,6 +38,7 @@ export default function SavedBoardGrid({
             title="Currently Inspired By"
             count={boards.length}
             variant="profile"
+            viewAllHref="/boards/collections/saved"
             listLabel="Saved Boards"
             emptyMessage=""
         >

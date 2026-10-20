@@ -28,7 +28,8 @@ export type DiscoveryCandidate = DiscoveryCard & {
     savers: number;
     commenters: number;
 };
-export type DiscoveryQuery = {
+export type GeographicSelections = { countries?: string[]; continents?: string[] };
+export type DiscoveryQuery = GeographicSelections & {
     q: string;
     page: number;
     limit: number;
@@ -40,11 +41,38 @@ export interface DiscoveryRepository {
     candidates(
         userId: string | null,
         scope: "discovery" | "mine" | "saved",
-        days?: number
+        days?: number,
+        context?: CollectionQuery & { context: CollectionContext }
     ): Promise<DiscoveryCandidate[]>;
+    canReadSavedMap?(viewerId: string | null, handle: string): Promise<boolean>;
+    profileExists?(handle: string): Promise<boolean>;
     placeCatalog?(): Promise<Place[]>;
     browser(browserId: string | null, userId: string | null): Promise<string>;
     mergeBrowser(browserId: string, userId: string): Promise<void>;
     startView(boardId: number, viewerKey: string): Promise<string>;
     finishView(boardId: number, viewerKey: string, token: string, userId: string | null): Promise<boolean>;
 }
+
+export type CollectionContext =
+    "mine" | "saved" | "friends" | "profile" | "profile-saved" | "map" | "category" | "recent" | "featured";
+export type CollectionQuery = GeographicSelections & {
+    q?: string;
+    sort?:
+        | "relevance"
+        | "title-asc"
+        | "title-desc"
+        | "published-desc"
+        | "updated-desc"
+        | "saved-count-desc"
+        | "saved-at-desc";
+    page: number;
+    limit: number;
+    handle?: string;
+    tag?: string;
+    period?: "week" | "month";
+    country?: string;
+    longitude?: number;
+    latitude?: number;
+    collection?: "published" | "saved" | "both";
+    status?: "draft" | "published";
+};

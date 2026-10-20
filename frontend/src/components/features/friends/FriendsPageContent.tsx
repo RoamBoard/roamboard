@@ -268,7 +268,7 @@ export default function FriendsPageContent({
                     </div>
 
                     {/* Filter and Search Bar */}
-                    <div className="border-line bg-background mb-8 flex flex-col gap-4 rounded-[2px] border p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         {/* Search Input */}
                         <div className="relative flex-1">
                             <label htmlFor={searchInputId} className="sr-only">

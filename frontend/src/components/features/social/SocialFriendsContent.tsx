@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import BoardCollectionGrid from "@/components/features/boards/BoardCollectionGrid";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -9,7 +10,6 @@ import UnderlineTabs from "@/components/ui/UnderlineTabs";
 import FindFriendsDialog from "./FindFriendsDialog";
 import {
     loadFriends,
-    loadFriendsBoards,
     loadFriendsActivity,
     type FriendUser,
     type FriendBoardSummary,
@@ -84,27 +84,6 @@ function FeedCoverImage({ url }: { url: string }) {
     return <Image src={url} alt="" fill unoptimized className="object-cover" onError={() => setFailed(true)} />;
 }
 
-function BoardCardCover({ url }: { url: string | null }) {
-    const [failed, setFailed] = useState(false);
-    if (url && !failed) {
-        return (
-            <Image
-                src={url}
-                alt=""
-                fill
-                unoptimized
-                className="object-cover transition-transform duration-200 group-hover:scale-102"
-                onError={() => setFailed(true)}
-            />
-        );
-    }
-    return (
-        <div className="text-muted-foreground text-12 flex h-full items-center justify-center font-medium">
-            No cover photo
-        </div>
-    );
-}
-
 export type SocialFriendsContentProps = {
     initialFriends?: FriendUser[];
     initialBoards?: FriendBoardSummary[];
@@ -116,26 +95,21 @@ export type SocialFriendsContentProps = {
 
 export default function SocialFriendsContent({
     initialFriends,
-    initialBoards,
     initialActivities,
     initialFriendsError = null,
-    initialBoardsError = null,
     initialActivitiesError = null
 }: SocialFriendsContentProps) {
     const router = useRouter();
     const [friends, setFriends] = useState<FriendUser[]>(initialFriends ?? []);
-    const [boards, setBoards] = useState<FriendBoardSummary[]>(initialBoards ?? []);
     const [activities, setActivities] = useState<FriendActivityItem[]>(initialActivities ?? []);
     const [friendsLoading, setFriendsLoading] = useState(!initialFriends && !initialFriendsError);
-    const [boardsLoading, setBoardsLoading] = useState(!initialBoards && !initialBoardsError);
     const [activitiesLoading, setActivitiesLoading] = useState(!initialActivities && !initialActivitiesError);
     const [friendsError, setFriendsError] = useState<string | null>(initialFriendsError);
-    const [boardsError, setBoardsError] = useState<string | null>(initialBoardsError);
     const [activitiesError, setActivitiesError] = useState<string | null>(initialActivitiesError);
     const [loginRequired, setLoginRequired] = useState(false);
     const [searchOpen, setSearchOpen] = useState(false);
     // Initial loads, full refreshes, and section retries all compete for the same section data.
-    const readVersions = useRef({ friends: 0, boards: 0, activities: 0 });
+    const readVersions = useRef({ friends: 0, activities: 0 });
 
     const reloadFriends = async () => {
         const readId = ++readVersions.current.friends;
@@ -151,23 +125,6 @@ export default function SocialFriendsContent({
             }
         } finally {
             if (readId === readVersions.current.friends) setFriendsLoading(false);
-        }
-    };
-
-    const reloadBoards = async () => {
-        const readId = ++readVersions.current.boards;
-        setBoardsLoading(true);
-        setBoardsError(null);
-        try {
-            const data = await loadFriendsBoards(12);
-            if (readId === readVersions.current.boards) setBoards(data);
-        } catch (error) {
-            if (readId === readVersions.current.boards) {
-                if (requiresLogin(error)) setLoginRequired(true);
-                else setBoardsError("Failed to load friends' boards.");
-            }
-        } finally {
-            if (readId === readVersions.current.boards) setBoardsLoading(false);
         }
     };
 
@@ -191,17 +148,14 @@ export default function SocialFriendsContent({
     const refreshData = () => {
         const readIds = {
             friends: ++readVersions.current.friends,
-            boards: ++readVersions.current.boards,
             activities: ++readVersions.current.activities
         };
         setFriendsLoading(true);
-        setBoardsLoading(true);
         setActivitiesLoading(true);
         setFriendsError(null);
-        setBoardsError(null);
         setActivitiesError(null);
-        void Promise.allSettled([loadFriends(), loadFriendsBoards(12), loadFriendsActivity(10)])
-            .then(([friendsRes, boardsRes, activitiesRes]) => {
+        void Promise.allSettled([loadFriends(), loadFriendsActivity(10)])
+            .then(([friendsRes, activitiesRes]) => {
                 if (readIds.friends === readVersions.current.friends) {
                     if (friendsRes.status === "fulfilled") {
                         setFriends(friendsRes.value);
@@ -209,15 +163,6 @@ export default function SocialFriendsContent({
                         setLoginRequired(true);
                     } else {
                         setFriendsError("Failed to load your travel pals.");
-                    }
-                }
-                if (readIds.boards === readVersions.current.boards) {
-                    if (boardsRes.status === "fulfilled") {
-                        setBoards(boardsRes.value);
-                    } else if (requiresLogin(boardsRes.reason)) {
-                        setLoginRequired(true);
-                    } else {
-                        setBoardsError("Failed to load friends' boards.");
                     }
                 }
                 if (readIds.activities === readVersions.current.activities) {
@@ -232,21 +177,19 @@ export default function SocialFriendsContent({
             })
             .finally(() => {
                 if (readIds.friends === readVersions.current.friends) setFriendsLoading(false);
-                if (readIds.boards === readVersions.current.boards) setBoardsLoading(false);
                 if (readIds.activities === readVersions.current.activities) setActivitiesLoading(false);
             });
     };
 
     useEffect(() => {
-        if (initialFriends || initialFriendsError || initialBoards || initialActivities) return;
+        if (initialFriends || initialFriendsError || initialActivities) return;
         const tracker = { active: true };
         const readIds = {
             friends: ++readVersions.current.friends,
-            boards: ++readVersions.current.boards,
             activities: ++readVersions.current.activities
         };
-        void Promise.allSettled([loadFriends(), loadFriendsBoards(12), loadFriendsActivity(10)])
-            .then(([friendsRes, boardsRes, activitiesRes]) => {
+        void Promise.allSettled([loadFriends(), loadFriendsActivity(10)])
+            .then(([friendsRes, activitiesRes]) => {
                 if (!tracker.active) return;
                 if (readIds.friends === readVersions.current.friends) {
                     if (friendsRes.status === "fulfilled") {
@@ -255,15 +198,6 @@ export default function SocialFriendsContent({
                         setLoginRequired(true);
                     } else {
                         setFriendsError("Failed to load your travel pals.");
-                    }
-                }
-                if (readIds.boards === readVersions.current.boards) {
-                    if (boardsRes.status === "fulfilled") {
-                        setBoards(boardsRes.value);
-                    } else if (requiresLogin(boardsRes.reason)) {
-                        setLoginRequired(true);
-                    } else {
-                        setBoardsError("Failed to load friends' boards.");
                     }
                 }
                 if (readIds.activities === readVersions.current.activities) {
@@ -279,14 +213,13 @@ export default function SocialFriendsContent({
             .finally(() => {
                 if (tracker.active) {
                     if (readIds.friends === readVersions.current.friends) setFriendsLoading(false);
-                    if (readIds.boards === readVersions.current.boards) setBoardsLoading(false);
                     if (readIds.activities === readVersions.current.activities) setActivitiesLoading(false);
                 }
             });
         return () => {
             tracker.active = false;
         };
-    }, [initialFriends, initialFriendsError, initialBoards, initialActivities]);
+    }, [initialFriends, initialFriendsError, initialActivities]);
 
     const handleTabChange = (tab: "ME" | "FRIENDS") => {
         if (tab === "ME") {
@@ -297,7 +230,7 @@ export default function SocialFriendsContent({
     if (loginRequired) {
         return (
             <div className="relative h-full w-full overflow-y-auto px-4 pt-6 pb-20 sm:px-8 sm:pt-8 md:px-12 md:pt-10 lg:px-16">
-                <div className="mx-auto w-full max-w-5xl">
+                <div className="mx-auto w-full max-w-[1480px]">
                     <h1 className="font-display text-48 sm:text-60 text-foreground mt-1 mb-10 font-bold tracking-tight uppercase">
                         SOCIAL
                     </h1>
@@ -320,7 +253,7 @@ export default function SocialFriendsContent({
     return (
         <div className="relative h-full w-full overflow-hidden">
             <div className="h-full w-full overflow-y-auto px-4 pt-6 pb-20 sm:px-8 sm:pt-8 md:px-12 md:pt-10 lg:px-16">
-                <div className="mx-auto w-full max-w-5xl pb-20">
+                <div className="mx-auto w-full max-w-[1480px] pb-20">
                     <header className="mb-10">
                         <h1 className="font-display text-48 sm:text-60 text-foreground mt-1 font-bold tracking-tight uppercase">
                             SOCIAL
@@ -333,19 +266,19 @@ export default function SocialFriendsContent({
                         />
                     </header>
 
-                    {(friendsError || boardsError || activitiesError) && (
+                    {(friendsError || activitiesError) && (
                         <div
                             role="alert"
                             className="border-line bg-background text-12 text-muted-foreground mb-8 flex items-center justify-between rounded-[2px] border p-4 font-medium"
                         >
-                            <span>{[friendsError, boardsError, activitiesError].filter(Boolean).join(" ")}</span>
+                            <span>{[friendsError, activitiesError].filter(Boolean).join(" ")}</span>
                             <button
                                 type="button"
                                 onClick={refreshData}
-                                disabled={friendsLoading || boardsLoading || activitiesLoading}
+                                disabled={friendsLoading || activitiesLoading}
                                 className="text-foreground cursor-pointer font-medium underline underline-offset-4 hover:opacity-80 disabled:opacity-50"
                             >
-                                {friendsLoading || boardsLoading || activitiesLoading ? "Retrying…" : "Retry all"}
+                                {friendsLoading || activitiesLoading ? "Retrying…" : "Retry all"}
                             </button>
                         </div>
                     )}
@@ -604,68 +537,13 @@ export default function SocialFriendsContent({
                     </div>
 
                     {/* Section 3: Friends' Boards */}
-                    <section aria-label="Friends' boards" className="border-line border-t pt-8">
-                        <div className="mb-6 flex items-end justify-between">
-                            <div>
-                                <h2 className="font-display text-20 sm:text-22 text-foreground font-bold">
-                                    friends&apos; boards
-                                </h2>
-                                <p className="text-12 text-muted-foreground mt-0.5 font-medium">
-                                    boards created by your friends
-                                </p>
-                            </div>
-                        </div>
-
-                        {boardsLoading && boards.length === 0 ? (
-                            <div className="border-line bg-background rounded-[2px] border p-8 text-center">
-                                <p className="text-12 text-muted-foreground font-body">Loading friends&apos; boards…</p>
-                            </div>
-                        ) : boardsError ? (
-                            <div
-                                role="alert"
-                                className="border-line bg-background text-12 text-muted-foreground rounded-[2px] border p-8 text-center font-medium"
-                            >
-                                <p className="mb-2 text-red-500">{boardsError}</p>
-                                <button
-                                    type="button"
-                                    onClick={() => reloadBoards()}
-                                    disabled={boardsLoading}
-                                    className="text-foreground cursor-pointer font-medium underline underline-offset-4 hover:opacity-80 disabled:opacity-50"
-                                >
-                                    {boardsLoading ? "Retrying…" : "Retry"}
-                                </button>
-                            </div>
-                        ) : boards.length === 0 ? (
-                            <div className="border-line bg-background rounded-[2px] border p-8 text-center">
-                                <p className="text-12 text-muted-foreground font-body">
-                                    No friends&apos; boards yet. When your friends publish boards, they will appear
-                                    here.
-                                </p>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                                {boards.map((board) => (
-                                    <Link
-                                        key={board.boardId}
-                                        href={`/boards/${board.boardId}`}
-                                        className="border-line bg-background hover:border-foreground group block overflow-hidden rounded-[2px] border transition-colors"
-                                    >
-                                        <div className="bg-faint relative aspect-[4/3] w-full">
-                                            <BoardCardCover url={board.coverImageUrl} />
-                                        </div>
-                                        <div className="p-4">
-                                            <h3 className="font-display text-16 text-foreground truncate font-bold">
-                                                {board.title}
-                                            </h3>
-                                            <p className="text-12 text-muted-foreground mt-1 truncate">
-                                                by {board.owner.displayName}
-                                            </p>
-                                        </div>
-                                    </Link>
-                                ))}
-                            </div>
-                        )}
-                    </section>
+                    <Suspense fallback={<p role="status">Loading friends boards...</p>}>
+                        <BoardCollectionGrid
+                            key={friends.map((friend) => friend.userId).join(",")}
+                            context="friends"
+                            embedded
+                        />
+                    </Suspense>
                 </div>
             </div>
 

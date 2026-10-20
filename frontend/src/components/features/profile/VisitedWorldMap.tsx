@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import { collectionHref } from "@/lib/board-collections";
 import mapboxgl, { type GeoJSONSource, type GeoJSONSourceSpecification, type Map as MapboxMap } from "mapbox-gl";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useMotionValue, useReducedMotion } from "motion/react";
@@ -487,6 +488,18 @@ export default function VisitedWorldMap({
                                 ":" +
                                 selectedBoards.map((board) => board.boardId).join(",")
                             }
+                            viewAllHref={collectionHref("map", {
+                                ...(profileHandle ? { handle: profileHandle } : {}),
+                                collection:
+                                    showPublished && allowSaved && showSaved
+                                        ? "both"
+                                        : showPublished
+                                          ? "published"
+                                          : "saved",
+                                ...(selection.kind === "country"
+                                    ? { country: selection.key }
+                                    : { longitude: selection.key.split(":")[0], latitude: selection.key.split(":")[1] })
+                            })}
                             places={selectedBoards}
                             title={selectionTitle ?? "Board locations"}
                             onBoardHighlight={setHighlightedBoard}

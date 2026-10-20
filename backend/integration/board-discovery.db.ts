@@ -110,6 +110,112 @@ test(
                 const expired = await repository.startView(id, `g:${fresh}`);
                 await client.query("UPDATE board_view_challenge SET started_at=clock_timestamp()-INTERVAL '3 minutes'");
                 assert.equal(await repository.finishView(id, `g:${fresh}`, expired, null), false);
+                const collection = { page: 1, limit: 20 };
+                assert.equal(
+                    (
+                        await repository.candidates("reader", "discovery", undefined, {
+                            ...collection,
+                            context: "friends"
+                        })
+                    ).length,
+                    0
+                );
+                await client.query(
+                    "INSERT INTO friendship(requester_user_id,recipient_user_id,status) VALUES('owner','reader','accepted')"
+                );
+                assert.equal(
+                    (
+                        await repository.candidates("reader", "discovery", undefined, {
+                            ...collection,
+                            context: "friends"
+                        })
+                    ).length,
+                    1
+                );
+                assert.equal(
+                    (
+                        await repository.candidates(null, "discovery", undefined, {
+                            ...collection,
+                            context: "profile",
+                            handle: "owner"
+                        })
+                    ).length,
+                    1
+                );
+                const savedCollection = await repository.candidates(null, "discovery", undefined, {
+                    ...collection,
+                    context: "profile-saved",
+                    handle: "reader"
+                });
+                assert.equal(savedCollection.length, 1);
+                assert.ok(savedCollection[0]!.savedAt, "use the collection owner's save timestamp, even for guests");
+                assert.equal(await repository.canReadSavedMap!(null, "reader"), false);
+                assert.equal(await repository.canReadSavedMap!("owner", "reader"), true);
+                await client.query(
+                    "INSERT INTO location(name,city,country,latitude,longitude) VALUES('Bali',NULL,'IDN',-8.4,115.1)"
+                );
+                await client.query(
+                    "UPDATE board SET primary_location_kind='region',primary_location_id=(SELECT location_id FROM location LIMIT 1) WHERE board_id=$1",
+                    [id]
+                );
+                assert.equal(
+                    (
+                        await repository.candidates("owner", "discovery", undefined, {
+                            ...collection,
+                            context: "map",
+                            handle: "reader",
+                            collection: "saved",
+                            country: "IDN"
+                        })
+                    ).length,
+                    1
+                );
+                assert.equal(
+                    (
+                        await repository.candidates("owner", "discovery", undefined, {
+                            ...collection,
+                            context: "map",
+                            handle: "reader",
+                            collection: "saved",
+                            country: "SWE"
+                        })
+                    ).length,
+                    0
+                );
+                assert.equal(
+                    (
+                        await repository.candidates("owner", "discovery", undefined, {
+                            ...collection,
+                            context: "map",
+                            handle: "reader",
+                            collection: "saved",
+                            longitude: 115.1,
+                            latitude: -8.4
+                        })
+                    ).length,
+                    1
+                );
+                await client.query("UPDATE board SET visibility='collaborators' WHERE board_id=$1", [id]);
+                assert.equal(
+                    (
+                        await repository.candidates(null, "discovery", undefined, {
+                            ...collection,
+                            context: "profile-saved",
+                            handle: "reader"
+                        })
+                    ).length,
+                    0
+                );
+                assert.equal(
+                    (
+                        await repository.candidates("owner", "mine", undefined, {
+                            ...collection,
+                            context: "mine",
+                            status: "published"
+                        })
+                    ).length,
+                    1
+                );
             } finally {
                 await client.end();
             }
