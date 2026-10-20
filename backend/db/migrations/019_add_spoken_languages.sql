@@ -1,0 +1,26 @@
+-- Seed expanded spoken languages matching shared/spoken-languages.json
+INSERT INTO language (language_name) VALUES
+  ('Afrikaans'), ('Albanian'), ('Amharic'), ('Arabic'), ('Armenian'),
+  ('Azerbaijani'), ('Basque'), ('Belarusian'), ('Bengali'), ('Bosnian'),
+  ('Bulgarian'), ('Burmese'), ('Cantonese'), ('Catalan'), ('Cebuano'),
+  ('Croatian'), ('Czech'), ('Danish'), ('Dutch'), ('English'),
+  ('Esperanto'), ('Estonian'), ('Filipino'), ('Finnish'), ('French'),
+  ('Galician'), ('Georgian'), ('German'), ('Greek'), ('Gujarati'),
+  ('Haitian Creole'), ('Hausa'), ('Hawaiian'), ('Hebrew'), ('Hindi'),
+  ('Hmong'), ('Hungarian'), ('Icelandic'), ('Igbo'), ('Indonesian'),
+  ('Irish'), ('Italian'), ('Japanese'), ('Javanese'), ('Kannada'),
+  ('Kazakh'), ('Khmer'), ('Kinyarwanda'), ('Korean'), ('Kurdish'),
+  ('Kyrgyz'), ('Lao'), ('Latin'), ('Latvian'), ('Lithuanian'),
+  ('Luxembourgish'), ('Macedonian'), ('Malagasy'), ('Malay'), ('Malayalam'),
+  ('Maltese'), ('Mandarin Chinese'), ('Maori'), ('Marathi'), ('Mongolian'),
+  ('Nepali'), ('Norwegian'), ('Pashto'), ('Persian'), ('Polish'),
+  ('Portuguese'), ('Punjabi'), ('Romanian'), ('Russian'), ('Samoan'),
+  ('Scottish Gaelic'), ('Serbian'), ('Shona'), ('Sindhi'), ('Sinhala'),
+  ('Slovak'), ('Slovenian'), ('Somali'), ('Spanish'), ('Sundanese'),
+  ('Swahili'), ('Swedish'), ('Tagalog'), ('Tajik'), ('Tamil'),
+  ('Tatar'), ('Telugu'), ('Thai'), ('Tibetan'), ('Turkish'),
+  ('Turkmen'), ('Ukrainian'), ('Urdu'), ('Uyghur'), ('Uzbek'),
+  ('Vietnamese'), ('Welsh'), ('Xhosa'), ('Yiddish'), ('Yoruba'),
+  ('Zulu')
+ON CONFLICT (language_name) DO NOTHING;
+
