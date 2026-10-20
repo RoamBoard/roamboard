@@ -99,6 +99,9 @@ test("Wikivoyage guide rejects unrelated, distant and disambiguation pages and c
     assert.equal(urls[0]?.searchParams.get("gsrsearch"), "Paris United States");
     assert.match(urls[0]?.searchParams.get("prop") ?? "", /coordinates/);
     assert.match(urls[0]?.searchParams.get("prop") ?? "", /pageprops/);
+    const searchLimit = Number(urls[0]?.searchParams.get("gsrlimit"));
+    assert.ok(Number(urls[0]?.searchParams.get("colimit")) >= searchLimit);
+    assert.ok(Number(urls[0]?.searchParams.get("exlimit")) >= searchLimit);
     assert.deepEqual(observed, [200]);
 });
 

@@ -98,7 +98,7 @@ export function DestinationPage({ destination: guide, onLoadMore, onRetry, loadi
                                 <p className="text-muted-foreground mt-3 text-sm leading-7">
                                     {guide.unavailable.includes("description")
                                         ? "The introduction could not be loaded right now."
-                                        : `No matching Wikivoyage introduction is available for ${destination.name}.`}
+                                        : `No introduction is available for ${destination.name}.`}
                                 </p>
                             )}
                             {guide.cityTip ? (

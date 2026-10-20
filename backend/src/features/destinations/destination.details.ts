@@ -210,7 +210,8 @@ export function createWikivoyageDetails(reserveAdditional: () => Promise<void>) 
                             ? destination.name
                             : `${destination.name} ${destination.country}`,
                     gsrnamespace: "0",
-                    gsrlimit: "5",
+                    gsrlimit: "10",
+                    colimit: "10",
                     prop: "coordinates|pageprops",
                     ppprop: "disambiguation"
                 },

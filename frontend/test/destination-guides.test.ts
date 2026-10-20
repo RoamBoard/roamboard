@@ -874,7 +874,8 @@ test("a public photo card retains its chosen external cover without a standalone
 test("missing article and photos retain a guide while a successful empty Board read has an empty state", () => {
     const markup = renderGuide(guide({ article: null, images: [], boards: [] }));
     assert.match(markup, /No public Boards in and around Tokyo yet/);
-    assert.match(markup, /(?:introduction|article)[^<]*(?:available|found)|No (?:Wikivoyage )?introduction/i);
+    assert.match(markup, /No introduction is available for Tokyo\./);
+    assert.doesNotMatch(markup, /Wikivoyage/i);
     const placeholders = markup.match(/<[^>]+role="img"[^>]*>/g) ?? [];
     assert.ok(placeholders.some((tag) => /Tokyo/.test(tag)));
     assert.match(markup, /href="\/boards\/new"/);
