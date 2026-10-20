@@ -123,6 +123,19 @@ test("identity wrapping prefers existing word and handle separators without inse
     assert.deepEqual(rendered.split(/<wbr\s*\/>/), ["Élodie ", "García_", "rowan.", "mercer-", "traveler"]);
 });
 
+test("separator accents stay attached to their complete grapheme at wrap boundaries", () => {
+    const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+    for (const separator of [".", "_", "-", " "]) {
+        const identity = `Alex${separator}\u0301Rowan`;
+        const rendered = renderToStaticMarkup(createElement(ProfileIdentityText, { text: identity }));
+        const chunks = rendered.split(/<wbr\s*\/>/);
+        assert.deepEqual(chunks, [`Alex${separator}\u0301`, "Rowan"]);
+        const graphemes = (value: string) => Array.from(segmenter.segment(value), ({ segment }) => segment);
+        assert.deepEqual(chunks.flatMap(graphemes), graphemes(identity));
+        assert.equal(chunks.join(""), identity);
+    }
+});
+
 test("public handle heading retains the complete identifier without restoring removed profile labels", () => {
     for (const username of ["ada", "rowan.mercer", "a_long_handle_with_underscores_123", "W".repeat(64)]) {
         const view: PublicProfileView = {

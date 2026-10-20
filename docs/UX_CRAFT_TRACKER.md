@@ -88,6 +88,10 @@ No new screenshot collection or implementation report was added.
 - **Automated:** independently authored tests cover generated font CSS, complete Unicode identities,
   grapheme-safe breaks and unchanged collection/destination links. All 822 frontend tests, TypeScript,
   root formatting/lint and the production build pass. Automated tests do not establish visual fit.
+- PR review follow-up: segment complete Unicode graphemes before selecting separator breaks. Added
+  separator-plus-accent regressions and real Chromium layout checks at eight content widths for tile
+  widths, typography, copy measure and asymmetry. Existing link checks remain; `CHROME_BIN` can select
+  an installed Chromium executable. Removing queries, spans or tile-relative type makes the checks fail.
 - Approved destination/gallery work is untouched. No new app route, dependency or permanent evidence added.
 
 ## Continuation priorities
