@@ -1,7 +1,7 @@
 # Website and user image workflow
 
 This is the supported image workflow for all coding agents. Follow the root, frontend and backend `AGENTS.md` files.
-`layered-backend-demo1/` is abandoned; its historical media documentation does not define this workflow.
+Image registration and delivery tooling live in `backend/`; historical demo documentation does not define this workflow.
 
 ## Editorial pages, collections and sample photography
 
