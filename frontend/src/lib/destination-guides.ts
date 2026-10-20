@@ -79,6 +79,17 @@ export const featuredDestinationGuides = [
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
+// Accept a logical slug, never an encoded URL segment. Decode framework route params once at the route boundary.
+// Reuse the same path/query serialization for search navigation and the resolved page's readiness identity.
+export function destinationRouteHref(slug: string, params: SearchParams = {}): string {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+        if (Array.isArray(value)) value.forEach((entry) => query.append(key, entry));
+        else if (value !== undefined) query.set(key, value);
+    });
+    return `/discover/destinations/${encodeURIComponent(slug)}${query.size ? `?${query}` : ""}`;
+}
+
 // Resize the returned Unsplash hotlink for its display slot, retaining its tracking parameters.
 export function destinationPhotoUrl(value: string, width = 3200): string {
     if (!value.startsWith("https://images.unsplash.com/")) return value;
@@ -131,13 +142,13 @@ export function destinationGuideHref(destination: Destination): string | undefin
         longitude: String(destination.longitude)
     });
     if (!input) return undefined;
-    const slug = encodeURIComponent(input.name.toLowerCase().replace(/\s+/g, "-"));
-    return `/discover/destinations/${slug}?${new URLSearchParams({
+    const slug = input.name.toLowerCase().replace(/\s+/g, "-");
+    return destinationRouteHref(slug, {
         name: input.name,
         country: input.country,
         latitude: String(input.latitude),
         longitude: String(input.longitude)
-    })}`;
+    });
 }
 
 export async function loadDestinationGuide(input: DestinationGuideInput, page = 1, signal?: AbortSignal) {

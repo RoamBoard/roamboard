@@ -7,7 +7,7 @@ import DiscoverPhoto from "@/components/features/discover/DiscoverPhoto";
 import DiscoverBoardCard from "@/components/features/discover/DiscoverBoardCard";
 import { getDiscoverDestination } from "@/data/discover-destinations";
 import { getDiscoverBoardsByDestination } from "@/data/discover-boards";
-import { getDestinationGuideInput } from "@/lib/destination-guides";
+import { destinationRouteHref, getDestinationGuideInput } from "@/lib/destination-guides";
 import DestinationGuide from "@/components/features/destinations/DestinationGuide";
 import { DestinationReady } from "@/components/features/destinations/DestinationTransitionProvider";
 import { destinationSelectionMatches, type DestinationSelectionParams } from "@/lib/destination-search";
@@ -15,18 +15,15 @@ import { destinationSelectionMatches, type DestinationSelectionParams } from "@/
 type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<DestinationSelectionParams> };
 
 async function resolveDestination({ params, searchParams }: Props) {
-    const slug = (await params).slug;
+    // Next supplies an encoded path segment. Decode once; the shared serializer encodes the logical slug once.
+    // Malformed escapes remain an actual route failure, rather than acknowledging an ambiguous identity.
+    const slug = decodeURIComponent((await params).slug);
     const selection = (await searchParams) ?? {};
     const guide = getDestinationGuideInput(slug, selection);
     const destination = getDiscoverDestination(slug);
     // Cities carry their full identity. Country pages keep main's namesake checks.
     if (!guide && (!destination || !destinationSelectionMatches(destination, "country", selection))) notFound();
-    const query = new URLSearchParams();
-    Object.entries(selection).forEach(([key, value]) => {
-        if (Array.isArray(value)) value.forEach((entry) => query.append(key, entry));
-        else if (value !== undefined) query.set(key, value);
-    });
-    const href = `/discover/destinations/${encodeURIComponent(slug)}${query.size ? `?${query}` : ""}`;
+    const href = destinationRouteHref(slug, selection);
     return { guide, destination, href };
 }
 
