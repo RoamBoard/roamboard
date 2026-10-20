@@ -112,7 +112,7 @@ export async function fetchWikivoyageSights(
         generator: "search",
         gsrsearch: destination.kind === "country" ? destination.name : `${destination.name} ${destination.country}`,
         gsrnamespace: "0",
-        gsrlimit: "5"
+        gsrlimit: "10"
     });
     const eligible = pages.filter((page) => {
         const title = plain(page.title);
