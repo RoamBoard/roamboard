@@ -50,7 +50,7 @@ export const discoverCollections: readonly DiscoverCollection[] = [
         description: "Rooftops, hidden bars, and places worth staying out for.",
         coverImage: discoverPhotos.nightlife,
         tagIds: ["nightlife"],
-        layout: "md:col-span-6 md:row-span-2",
+        layout: "@min-[68rem]/bento:col-span-6 @min-[68rem]/bento:row-span-2",
         large: true
     },
     {
@@ -62,7 +62,7 @@ export const discoverCollections: readonly DiscoverCollection[] = [
         coverImage: discoverPhotos.mornings,
         coverPosition: "center 65%",
         tagIds: ["slow-mornings", "cafe-hopping"],
-        layout: "md:col-span-4"
+        layout: "@min-[68rem]/bento:col-span-4"
     },
     {
         id: "by-the-water",
@@ -72,7 +72,7 @@ export const discoverCollections: readonly DiscoverCollection[] = [
         description: "Sea air, slow walks, and places to sit for a while.",
         coverImage: discoverPhotos.water,
         tagIds: ["by-the-water", "beach-days", "island-hopping"],
-        layout: "md:col-span-2"
+        layout: "@min-[68rem]/bento:col-span-2"
     },
     {
         id: "food-and-more-food",
@@ -82,7 +82,7 @@ export const discoverCollections: readonly DiscoverCollection[] = [
         description: "Local favorites, late dinners, and always room for dessert.",
         coverImage: discoverPhotos.food,
         tagIds: ["foodie", "street-food", "wine-and-dine"],
-        layout: "md:col-span-3"
+        layout: "@min-[68rem]/bento:col-span-3"
     },
     {
         id: "somewhere-quiet",
@@ -92,7 +92,7 @@ export const discoverCollections: readonly DiscoverCollection[] = [
         description: "Hidden corners, empty paths, and somewhere the noise doesn’t follow.",
         coverImage: discoverPhotos.quiet,
         tagIds: ["hidden-gems", "off-the-grid", "relax"],
-        layout: "md:col-span-3"
+        layout: "@min-[68rem]/bento:col-span-3"
     },
     moodCollection(
         "take-the-long-way",

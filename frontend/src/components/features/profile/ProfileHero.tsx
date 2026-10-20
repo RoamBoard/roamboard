@@ -17,6 +17,7 @@ import {
 import { boardTags, boardTagHref } from "@/data/board-tags";
 import TagIcon from "@/components/ui/TagIcon";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import ProfileIdentityText from "./ProfileIdentityText";
 
 type Props = {
     profile: PublicProfile;
@@ -31,15 +32,15 @@ type Props = {
 function getNameStyle(nameStr: string): string {
     const len = nameStr.trim().length;
     if (len > 24) {
-        return "text-28 sm:text-34 leading-[0.92] -mt-5 sm:-mt-7";
+        return "text-[clamp(1.75rem,12cqw,2.125rem)]";
     }
     if (len > 16) {
-        return "text-32 sm:text-40 leading-[0.9] -mt-6 sm:-mt-8";
+        return "text-[clamp(2rem,14cqw,2.5rem)]";
     }
     if (len > 10) {
-        return "text-38 sm:text-48 leading-[0.88] -mt-7 sm:-mt-10";
+        return "text-[clamp(2.375rem,16cqw,3rem)]";
     }
-    return "text-48 sm:text-60 leading-[0.85] -mt-8 sm:-mt-12";
+    return "text-[clamp(3rem,20cqw,3.75rem)]";
 }
 
 function useOptionalRouter() {
@@ -119,7 +120,7 @@ export default function ProfileHero({
     return (
         <section aria-label="Profile overview" className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:gap-12">
             {/* Left column: Hero photo + Name */}
-            <div className="flex flex-col lg:col-span-5">
+            <div className="@container flex min-w-0 flex-col lg:col-span-5">
                 <div className="bg-faint border-line relative aspect-square w-full overflow-hidden rounded-[2px] border">
                     {portraitUrl && !portraitFailed ? (
                         <Image
@@ -144,34 +145,35 @@ export default function ProfileHero({
 
                 {/* Display Name slightly overlapping the picture with responsive font sizing */}
                 <h2
-                    className={`font-display text-foreground relative z-10 px-1 font-black tracking-tight break-words uppercase select-none ${getNameStyle(
+                    aria-label={profile.displayName}
+                    className={`font-display text-foreground relative z-10 -mt-[0.55em] px-1 leading-[1.04] font-black tracking-tight text-balance [overflow-wrap:anywhere] uppercase select-none ${getNameStyle(
                         profile.displayName
                     )}`}
                 >
-                    {profile.displayName}
+                    <ProfileIdentityText text={profile.displayName} />
                 </h2>
             </div>
 
             {/* Right column: Location, Buttons, Headline, Bio, Stats with vertical lines, Platinum Tier */}
-            <div className="flex flex-col justify-between lg:col-span-7">
+            <div className="flex min-w-0 flex-col justify-between lg:col-span-7">
                 <div>
                     {/* Top sub-bar: Handle, Location & Action buttons */}
                     <div className="flex flex-wrap items-start justify-between gap-4">
-                        <div className="flex flex-wrap items-center gap-6 sm:gap-8">
+                        <div className="flex max-w-full min-w-0 flex-wrap items-center gap-6 sm:gap-8">
                             {/* Handle (only needed on own profile since visitor profiles display handle as page title) */}
                             {isOwner && (
-                                <div className="flex items-center gap-2.5">
+                                <div className="flex max-w-full min-w-0 items-center gap-2.5">
                                     <AtSign
                                         size={18}
                                         strokeWidth={1.75}
                                         className="text-foreground shrink-0"
                                         aria-hidden="true"
                                     />
-                                    <div>
+                                    <div className="min-w-0">
                                         <span className="text-10 text-muted-foreground block leading-none font-medium">
                                             handle
                                         </span>
-                                        <span className="text-14 text-foreground block leading-tight font-bold">
+                                        <span className="text-14 text-foreground block leading-tight font-bold [overflow-wrap:anywhere]">
                                             @{profile.username}
                                         </span>
                                     </div>
@@ -258,7 +260,7 @@ export default function ProfileHero({
 
                     {/* Biography */}
                     <div className="mt-8">
-                        <p className="text-13 text-muted-foreground mt-3 max-w-xl leading-relaxed">
+                        <p className="text-muted-foreground mt-3 max-w-xl text-base leading-relaxed">
                             {profile.description.split(/\r\n?|\n/).map((line, index) => (
                                 <Fragment key={index}>
                                     {index > 0 && <br />}
