@@ -11,11 +11,13 @@ import AccountPhotoBoardCard from "./cards/AccountPhotoBoardCard";
 export default function SpatialGallery({
     boards,
     viewAllHref,
+    description,
     saved = false
 }: {
     boards: readonly GalleryBoard[];
     saved?: boolean;
     viewAllHref?: string;
+    description?: string;
 }) {
     const [selectedId, setSelectedId] = useState(boards[0]?.collage.id ?? "");
     const selectedIndex = Math.max(
@@ -45,18 +47,18 @@ export default function SpatialGallery({
     return (
         <section
             aria-labelledby={saved ? "recently-saved-heading" : "featured-boards-heading"}
-            className={`mx-auto max-w-[1320px] ${saved ? "mt-32 md:mt-48" : "mt-20 md:mt-28"}`}
+            className={`mx-auto max-w-[1320px] ${saved ? "mt-32 md:mt-48" : "mt-10 md:mt-12"}`}
         >
-            <div className="relative min-h-11 pr-24">
+            <div className="mx-5 flex min-h-11 items-center justify-between gap-4 sm:mx-12">
                 {viewAllHref && (
-                    <div className="absolute top-0 right-5 sm:right-12">
+                    <div className="order-last shrink-0">
                         <ViewAllBoards href={viewAllHref} />
                     </div>
                 )}
                 {saved ? (
                     <h2
                         id="recently-saved-heading"
-                        className="font-display text-foreground/60 text-30 md:text-36 text-center leading-[.95] font-medium"
+                        className="font-display text-foreground text-30 md:text-36 text-center leading-[.95] font-medium"
                     >
                         RECENTLY
                         <br />
@@ -65,13 +67,14 @@ export default function SpatialGallery({
                 ) : (
                     <h2
                         id="featured-boards-heading"
-                        className="font-display text-foreground/60 text-24 md:text-36 flex justify-center gap-3 px-5 leading-none font-medium sm:px-12"
+                        className="font-display text-foreground text-24 md:text-36 flex min-w-0 flex-wrap gap-x-3 gap-y-1 leading-none font-medium"
                     >
                         <span>FEATURED</span>
                         <span>BOARDS</span>
                     </h2>
                 )}
             </div>
+            {description && <p className="text-muted-foreground mx-5 mt-2 text-sm sm:mx-12">{description}</p>}
             <div className={`mx-3 mt-6 sm:mx-10 ${saved ? "grid md:grid-cols-2 md:pt-28" : ""}`}>
                 <div className="min-w-0">
                     <div

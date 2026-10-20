@@ -544,7 +544,7 @@ test("an owner opened through a shared-link lookup keeps owner annotations rathe
     const board = toSelectionBoard({ ...summary(82, "published"), source: "shared" }, document(82, "published"));
     const markup = selectionMarkup([board]);
     assert.match(markup, />Your Board<\/dt>/);
-    assert.match(markup, /Published · Friends/);
+    assert.match(markup, /Friends/);
     assert.doesNotMatch(markup, /Shared with you|Published · editing access/);
     assert.match(markup, /href="\/boards\/82\/edit"/);
 });
@@ -631,7 +631,7 @@ test("Continue annotations use canonical publication visibility and keep travele
         const groups = annotationGroups(selectionMarkup([selected]));
         assert.ok(groups.length > 0, "The selected Board has a readable description list");
         for (const group of groups) {
-            assert.ok(group.includes(`Your Board Published · ${label}`));
+            assert.ok(group.includes(`Your Board ${label}`));
             assert.match(group, /In this Board 1 day · 1 activity/);
             assert.match(group, /Saves received 128 saves/);
             assert.doesNotMatch(group, /1 activity[^a-zA-Z]*128 saves|[Pp]rivate|[Cc]ollaborat/);
@@ -639,7 +639,7 @@ test("Continue annotations use canonical publication visibility and keep travele
     }
     const draft = toSelectionBoard(summary(84), { ...document(84), visibility: "public" });
     for (const group of annotationGroups(selectionMarkup([draft]))) {
-        assert.match(group, /Your Board Unpublished draft · Only you/);
+        assert.match(group, /Your Board Only you/);
         assert.doesNotMatch(group, /Saves received|\bPublic\b/);
     }
 });
@@ -677,12 +677,12 @@ test("Continue annotates zero saves honestly and omits invalid or unavailable sa
 test("Continue summaries show only known visibility and never invent missing itinerary or saves", () => {
     const unknown = toSelectionBoard(summary(86, "published"));
     for (const group of annotationGroups(selectionMarkup([unknown]))) {
-        assert.match(group, /Your Board Published/);
+        assert.match(group, /Your Board/);
         assert.doesNotMatch(group, /Public|Friends|Restricted access|In this Board|Saves received/);
     }
     const known = toSelectionBoard({ ...summary(87, "published"), visibility: "collaborators" });
     for (const group of annotationGroups(selectionMarkup([known]))) {
-        assert.match(group, /Your Board Published · Restricted access/);
+        assert.match(group, /Your Board Restricted access/);
         assert.doesNotMatch(group, /[Pp]rivate|In this Board|Saves received/);
     }
 });

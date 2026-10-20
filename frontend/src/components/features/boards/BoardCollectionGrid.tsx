@@ -1,6 +1,10 @@
 "use client";
 
+import GeographicFilters from "./GeographicFilters";
+import { toCountryCode } from "@/lib/countries";
+import continentMapping from "../../../../../shared/country-continents.json";
 import Link from "next/link";
+import { Search } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { observeCurrentUser, type AuthUser } from "@/lib/auth";
@@ -24,6 +28,23 @@ const sampleText = (board: DiscoverBoard) =>
     ]
         .join(" ")
         .toLowerCase();
+function matchesSampleGeography(board: DiscoverBoard, params: { getAll(key: string): string[] }) {
+    const codes = (board.destinations ?? []).flatMap((place) => {
+        const code = toCountryCode(place.countryCode);
+        return code ? [code] : [];
+    });
+    const selectedCountries = params.getAll("countries"),
+        selectedContinents = params.getAll("continents");
+    return (
+        (!selectedCountries.length || codes.some((code) => selectedCountries.includes(code))) &&
+        (!selectedContinents.length ||
+            codes.some((code) =>
+                selectedContinents.includes(
+                    ((continentMapping as Record<string, string>)[code] ?? "").toLowerCase().replaceAll(" ", "-")
+                )
+            ))
+    );
+}
 const sampleScore = (board: DiscoverBoard, q: string) =>
     q
         .toLowerCase()
@@ -96,6 +117,7 @@ export function BoardCollectionGridContent({
         const value = params.get(key);
         if (value !== null) query.set(key, value);
     }
+    for (const key of ["countries", "continents"]) for (const value of params.getAll(key)) query.append(key, value);
     if (q) query.set("q", q);
     query.set("sort", sort);
     const path = `/boards/collections/${context}?${query}`;
@@ -126,7 +148,8 @@ export function BoardCollectionGridContent({
                   .filter(
                       (board) =>
                           (!params.get("tag") || board.tags.some((tag) => tag === params.get("tag"))) &&
-                          (!q || sampleScore(board, q) > 0)
+                          (!q || sampleScore(board, q) > 0) &&
+                          matchesSampleGeography(board, params)
                   )
                   .sort((a, b) =>
                       sort === "relevance"
@@ -159,15 +182,15 @@ export function BoardCollectionGridContent({
                 <p className="text-muted-foreground mt-2 text-sm">boards created by your friends</p>
             )}
             {context === "samples" && (
-                <p className="text-muted-foreground mt-3 text-sm">
+                <p className="text-muted-foreground mt-2 text-sm">
                     Editorial examples, without saved Board identities or account actions. Publication dates and save
                     counts are unavailable.
                 </p>
             )}
-            <div className="border-line my-8 flex flex-col gap-4 border p-4 sm:flex-row sm:items-end">
+            <div className="my-8 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center">
                 <form
                     key={q}
-                    className="flex min-w-0 flex-1 gap-2"
+                    className="border-line focus-within:border-foreground flex min-w-0 flex-1 items-center border-b"
                     onSubmit={(event) => {
                         event.preventDefault();
                         const value = String(new FormData(event.currentTarget).get("q") ?? "").trim();
@@ -180,16 +203,21 @@ export function BoardCollectionGridContent({
                         );
                     }}
                 >
+                    <Search size={18} aria-hidden="true" className="shrink-0" />
                     <label className="min-w-0 flex-1">
                         <span className="sr-only">Search this collection</span>
                         <input
                             name="q"
                             type="search"
                             defaultValue={q}
+                            onChange={(event) => {
+                                if (!event.target.value.trim() && q)
+                                    router.replace(href({ q: null, sort: null, page: null }), { scroll: false });
+                            }}
                             maxLength={100}
                             minLength={2}
                             placeholder="Search boards in this collection…"
-                            className="border-line bg-background min-h-11 w-full border px-3 text-sm"
+                            className="min-h-16 w-full bg-transparent px-4 text-sm outline-none sm:text-base"
                         />
                     </label>
                     <button className="min-h-11 px-3 text-sm underline" type="submit">
@@ -204,6 +232,7 @@ export function BoardCollectionGridContent({
                         </Link>
                     )}
                 </form>
+                <GeographicFilters />
                 <label className="flex items-center gap-3 text-sm">
                     Sort by
                     <select
@@ -285,11 +314,6 @@ export function BoardCollectionGridContent({
                                           void store.load(path);
                                       }}
                                   />
-                                  {context === "mine" && (
-                                      <p className="text-muted-foreground mt-3 text-center text-xs">
-                                          {board.status === "draft" ? "Draft" : "Published"}
-                                      </p>
-                                  )}
                               </div>
                           );
                       })}

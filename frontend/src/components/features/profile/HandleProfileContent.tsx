@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import ViewAllBoards from "@/components/features/boards/ViewAllBoards";
 import { loadProfile, loadPublicProfile, ProfileApiError, type PublicProfileView } from "@/lib/profile";
 import ProfileHero from "./ProfileHero";
 import ProfilePageContent, { LiveBoardLibrary, ProfileSavedBoardLibrary } from "./ProfilePageContent";
@@ -151,21 +152,18 @@ export function VisitorProfileContent({ view }: { view: PublicProfileView }) {
                     friendshipStatus={view.friendshipStatus}
                 />
                 <section aria-label="Currently inspired by" className="border-line mt-12 border-t pt-8">
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center justify-between gap-4">
                         <div>
                             <h3 className="font-display text-20 sm:text-22 text-foreground font-bold">
                                 currently inspired by
                             </h3>
-                            <p className="text-12 text-muted-foreground mt-0.5 font-medium">
+                            <p className="text-12 text-muted-foreground mt-2 font-medium">
                                 boards and destinations on my radar right now
                             </p>
                         </div>
-                        <Link
+                        <ViewAllBoards
                             href={`/boards/collections/profile-saved?handle=${encodeURIComponent(view.profile.username)}`}
-                            className="text-muted-foreground hover:text-foreground inline-flex min-h-11 shrink-0 items-center text-sm whitespace-nowrap hover:underline"
-                        >
-                            view all →
-                        </Link>
+                        />
                     </div>
                     <ProfileSavedBoardLibrary boards={(view.savedBoards ?? []).slice(0, 3)} ownCollection={false} />
                     {!view.savedBoards?.length && (
@@ -173,19 +171,16 @@ export function VisitorProfileContent({ view }: { view: PublicProfileView }) {
                     )}
                 </section>
                 <section aria-label="My boards" className="border-line mt-12 border-t pt-8">
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center justify-between gap-4">
                         <div>
                             <h3 className="font-display text-20 sm:text-22 text-foreground font-bold">my boards</h3>
-                            <p className="text-12 text-muted-foreground mt-0.5 font-medium">
+                            <p className="text-12 text-muted-foreground mt-2 font-medium">
                                 turns out daydreams of new trips looks better as Roamboards
                             </p>
                         </div>
-                        <Link
+                        <ViewAllBoards
                             href={`/boards/collections/profile?handle=${encodeURIComponent(view.profile.username)}`}
-                            className="text-muted-foreground hover:text-foreground inline-flex min-h-11 shrink-0 items-center text-sm whitespace-nowrap hover:underline"
-                        >
-                            view all →
-                        </Link>
+                        />
                     </div>
                     <LiveBoardLibrary
                         boards={view.boards.slice(0, 3)}

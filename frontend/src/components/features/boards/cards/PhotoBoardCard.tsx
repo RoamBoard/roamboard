@@ -8,6 +8,7 @@ import {
     Bookmark,
     Check,
     Eye,
+    FilePenLine,
     Globe2,
     Info,
     LoaderCircle,
@@ -205,19 +206,22 @@ export function PhotoBoardCardContent({
         ownership === "owner" &&
         (board.status === "draft" || (board.status === "published" && Boolean(board.visibility)));
     const visibilityControl =
+        board.status === "draft" ||
         ownerControl ||
-        (showVisibility && (board.status === "draft" || (board.status === "published" && Boolean(board.visibility))));
+        (showVisibility && board.status === "published" && Boolean(board.visibility));
     const saveControl = ownership === "other" && board.status !== "draft" && !remixHref && save;
     const enhanced = hasDetails || visibilityControl || Boolean(saveControl);
     const feedbackId = `${detailsId}-feedback`;
     const saved = save?.state === "saved";
     const unresolved = save?.state === "unknown";
     const VisibilityIcon =
-        board.status === "draft" || board.visibility === "collaborators"
-            ? LockKeyhole
-            : board.visibility === "friends"
-              ? UsersRound
-              : Globe2;
+        board.status === "draft"
+            ? FilePenLine
+            : board.visibility === "collaborators"
+              ? LockKeyhole
+              : board.visibility === "friends"
+                ? UsersRound
+                : Globe2;
     const transition = { duration: reduceMotion ? 0 : 0.28, ease: [0.22, 1, 0.36, 1] as const };
     const coverTitle = galleryCover ? (
         <div

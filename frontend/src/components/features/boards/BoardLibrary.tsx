@@ -27,7 +27,6 @@ type Props = {
     onLoadMore?: () => Promise<void>;
     onBoardHighlight?: (boardId: string | null) => void;
     embedded?: boolean;
-    showStatus?: boolean;
     variant?: LibraryVariant;
     onSavedChange?: (boardId: string, saved: boolean) => void;
     removeOnUnsave?: boolean;
@@ -44,7 +43,6 @@ export default function BoardLibrary({
     description,
     onBoardHighlight,
     embedded = false,
-    showStatus = false,
     variant = "default",
     onSavedChange,
     removeOnUnsave = false
@@ -137,11 +135,6 @@ export default function BoardLibrary({
                                 details
                                 imageSizes="(max-width: 640px) 75vw, 328px"
                             />
-                            {showStatus && board.photo?.status && (
-                                <p className="text-muted-foreground mt-3 text-center text-xs">
-                                    {board.photo.status === "draft" ? "Draft" : "Published"}
-                                </p>
-                            )}
                         </div>
                     </CarouselItem>
                 ))}
@@ -289,7 +282,7 @@ export function BoardLibraryCarousel({
                                     ? "flex items-center justify-between gap-4"
                                     : embedded
                                       ? "mb-2 flex items-center justify-between gap-4"
-                                      : "mx-5 mb-6 flex items-center justify-between gap-4 sm:mx-12"
+                                      : `mx-5 ${description ? "mb-2" : "mb-6"} flex items-center justify-between gap-4 sm:mx-12`
                             }
                         >
                             <h2
@@ -298,7 +291,7 @@ export function BoardLibraryCarousel({
                                 className={
                                     variant === "profile"
                                         ? "sr-only"
-                                        : "font-display text-foreground/60 text-24 md:text-36 font-medium"
+                                        : "font-display text-foreground text-24 md:text-36 leading-none font-medium"
                                 }
                             >
                                 {title}
@@ -312,7 +305,7 @@ export function BoardLibraryCarousel({
                         </h2>
                     )}
                     {description && (
-                        <p className="text-12 text-foreground/65 mx-5 mb-8 max-w-xl sm:mx-12">{description}</p>
+                        <p className="text-muted-foreground mx-5 mb-8 max-w-xl text-sm sm:mx-12">{description}</p>
                     )}
                     {count === 0 && emptyMessage !== "" && (
                         <p role="status" className="text-14 text-foreground/65 mx-5 py-16 text-center">

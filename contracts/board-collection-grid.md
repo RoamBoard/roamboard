@@ -2,10 +2,182 @@
 
 Status: Agreed — implementation authorized by the user representing frontend and backend on 2026-10-20.
 
+Geographic filter extension: Agreed and implementation authorized by the user on 2026-10-20.
+
 Reviewer: the user confirmed on 2026-10-20 that they represent both frontend and backend.
 Source branch: `main`, inspected on 2026-10-20. The user delegated URL/API finalization and requested implementation.
 
 ## Goal and confirmed scope
+
+### Geographic filter extension - approved
+
+The user requested this extension on branch `126-make-a-4th-boars-list-component-view-all-boards`.
+Status: Approved for implementation by the user representing both teams on 2026-10-20. This extension supersedes the original no-additional-filter-controls scope.
+
+Confirmed decisions:
+
+- Shorten component 4's search field to accommodate geographic filter controls.
+- Offer a searchable, scrollable country dropdown showing all country names and flags, with multiple selections.
+- Allow multiple continent selections as well.
+- Use seven continents everywhere: Africa, Antarctica, Asia, Europe, North America, Oceania and South America.
+  Update the shared mapping and existing profile/map continent counts as well as the new filters. Current counts
+  derive from country locations at read time; this change does not imply rewriting saved Boards.
+- Match the Board's main destination and confirmed activity locations using the same location eligibility as map
+  country coverage. Do not infer filter eligibility from titles, descriptions or unconfirmed locations.
+- Countries use OR within their selected group; continents use OR within their selected group. The two groups use
+  AND at Board level, and may match different locations on the same Board. A Bangladesh-and-France Board qualifies
+  for Bangladesh plus Europe; a Bangladesh-only Board does not.
+- Apply selection changes immediately, reset to page 1 and preserve the submitted text query and selected sort.
+- Emptying the Board text search preserves geographic selections. A separate Clear filters action removes only
+  country/continent selections; the source collection remains fixed.
+- Expose the same geographic controls in `/boards` search, including its suggestions and full results. Explicit
+  geographic selections constrain results even when the existing title-match exception would otherwise qualify a
+  Board. No text match may bypass these selected filters or viewer access rules.
+- On `/boards`, selecting geography without text opens the filtered results grid automatically. Geography can be
+  used on its own; users do not need to type an artificial search term.
+- Retain the existing source context and viewer access rules; filters only narrow the eligible collection.
+
+Proposed technical boundary: extend the existing collection, global Board search and suggestion reads with optional
+repeated `countries` ISO alpha-3 codes and repeated `continents` identifiers, independently of the existing singular
+map-scope `country` parameter. Proposed continent identifiers are `africa`, `antarctica`, `asia`, `europe`,
+`north-america`, `oceania`, `south-america`. Country-to-continent assignments come from one shared catalog, also used
+by profile/map counts. Classification is country-based rather than a new coordinate-geofencing system.
+Validate known values and deduplicate selections. An omitted/empty selection group adds no restriction. Valid
+combinations with no matches return 200 with zero items and total zero, not a validation error. Apply geographic
+matching before pagination and totals, preserving Featured's fixed source membership before narrowing it. Persist
+selections in the URL for refresh, Back and shared links. Country flags/names and dropdown search use the existing
+country catalog on the frontend; no new provider or flag-upload endpoint is required. No schema migration appears
+necessary; schema/query/index requirements will be checked during implementation.
+
+Evidence: `backend/src/features/board-discovery/discovery.{schemas,types,service,repository}.ts`,
+`backend/src/features/users/users.repository.ts`, `backend/src/shared/continents.ts`,
+`frontend/src/lib/countries.ts`, `shared/country-codes.json` and `shared/country-continents.json`.
+The current continent mapping groups countries into Africa, Americas, Asia, Europe and Oceania.
+
+The seven-continent choice supersedes that five-region mapping throughout the app.
+No open product questions remain. The user approved this technical boundary and requested implementation on 2026-10-20.
+
+#### Approved API extension and defaults
+
+Extend these existing reads without changing their authentication, success/error envelopes or Board summary shape:
+
+- `GET /api/v1/boards/collections/:context`
+- `GET /api/v1/boards/search`
+- `GET /api/v1/boards/search/suggestions`
+
+Use repeated query parameters, for example:
+
+```text
+GET /api/v1/boards/collections/friends?countries=FRA&countries=ITA&continents=europe&page=1&limit=20
+GET /api/v1/boards/search?countries=BGD&continents=europe&page=1&limit=20
+GET /api/v1/boards/search/suggestions?q=food&countries=BGD&continents=europe
+```
+
+Countries must be recognized uppercase ISO alpha-3 codes from the shared catalog. Continents must be one of the
+seven lowercase identifiers listed above. A single occurrence and repeated occurrences have identical semantics;
+deduplicate valid selections and limit unique values to the catalog size/seven continents. Omit parameters when
+their selection is empty; an empty parameter value is malformed, not a request to select an unknown country.
+Unknown codes/identifiers and malformed query shapes return 400 using the existing validation error envelope.
+Valid but contradictory criteria return 200 with zero matches.
+
+Global search accepts omitted/blank `q` only when at least one geographic selection exists. A nonempty `q` retains
+the existing 2–100 character validation. Global suggestions still require a 2–100 character query; when there is
+no text, show the full filtered grid rather than empty-query suggestions. Text searches retain current relevance
+ranking and removable automatic location interpretation. Explicit geography remains a mandatory independent
+constraint and survives disabling that interpretation.
+
+Filter-only global results default to Newest published, with Board ID as the deterministic secondary order.
+Collections retain their existing sort defaults; typing/submitting a query retains their Relevance default.
+Filtering always precedes page slicing and total counts. Keep twenty Boards per results page and four suggestions.
+For Featured, preserve its already-selected monthly source set, then narrow it; filtering must not fill its places
+with otherwise non-Featured Boards. Do not calculate hidden or unauthorized matching counts.
+
+Example empty filter-only search response:
+
+```json
+{
+    "data": {
+        "items": [],
+        "page": 1,
+        "limit": 20,
+        "total": 0,
+        "hasMore": false,
+        "location": null
+    }
+}
+```
+
+#### Selection state and frontend behavior
+
+Use the same filter controls in every component 4 context and the `/boards` search area. Make the search field
+shorter on wide layouts to leave space for filters and sorting; stack controls at small widths without clipping.
+Country options remain the complete catalog even when a selected continent makes some combinations yield no
+results. Keep selections when searching within the dropdown, and show selected countries/continents clearly with
+individual removal and a separate Clear filters action. Flags accompany readable country names; labels must not
+depend on recognizing a flag. Use accessible multi-selection controls with keyboard operation and a scrollable
+country list. Searching this option list changes only the displayed options, not the Board text query.
+
+Changing selections applies immediately and resets page 1, preserving the submitted Board query and existing
+sort. Country selections use OR; continent selections use OR; the two predicates use AND over the Board as a
+whole, so each may match a different eligible location. Boards without known eligible countries remain visible
+when geography is unset and do not qualify when geography is selected. Never derive filter eligibility from text.
+
+Persist geography in all result, suggestion-submission and pagination URLs, including refresh and Back. Emptying
+Board search preserves geography; Clear filters preserves text and sort. With neither text nor geography,
+`/boards` returns to discovery. Collection pages always retain their source collection even when all controls are
+cleared. Preserve existing search-clearing sort defaults where applicable. Loading/failure feedback must retain
+selected controls; late responses must not replace results for a newer selection or account.
+
+The frontend-only editorial `samples` context applies filters to its explicitly supplied destination countries,
+normalizing through the same country catalog. It has no confirmed activity data; do not invent any or claim API
+persistence. Samples with no known destination do not match selected geography. Retain the existing disclosure.
+
+#### Backend and data changes required
+
+Extend query schemas/types and pass geography through global search, suggestions and contextual reads. Build one
+shared geographic predicate over the main destination and confirmed activity countries. Apply it after source
+and viewer authorization, before pagination/counts; keep it independent of text ranking and automatic location
+interpretation. A Board visiting Bangladesh and France must pass Bangladesh plus Europe even though no single
+location satisfies both selected groups.
+
+Update `shared/country-continents.json` to the seven-continent taxonomy, including Antarctica, and reuse it on both
+sides. Preserve existing country assignments where compatible, split the Americas using a documented geographic
+catalog, and document assignments for transcontinental countries rather than adding GPS polygon classification.
+The existing computed profile/map statistics must use this same mapping, so continent counts may change without
+any Board write. Continue delivering the shared catalog with the backend deployment. No schema migration or new
+provider request is currently expected; add an index migration only if actual query validation demonstrates a need.
+
+#### Acceptance cases and review record
+
+- France + Italy matches either country's eligible location; no duplicate Board results.
+- Europe + Asia matches either continent; Europe + Bangladesh needs both Board-level predicates.
+- Bangladesh-only Board fails Europe + Bangladesh; Bangladesh-and-France Board passes it.
+- A confirmed activity can supply a match; an unconfirmed activity or title mention cannot.
+- Source constraints, saved-map restrictions, draft visibility, protected images and private counts remain enforced.
+- No-text geography opens `/boards` results, sorts newest first, and paginates with correct totals.
+- Suggestions and full text results obey the same explicit selections.
+- Clearing text preserves geography; clearing geography preserves text; clearing both restores discovery.
+- Shared URLs, Back, request cancellation, errors, empty results and individual option removal preserve state.
+- North/South America and Antarctica filter independently; existing profile/map totals use seven continents.
+
+Product decisions were confirmed by the user representing both frontend and backend during the interview.
+The user approved these API examples, defaults and change lists and requested implementation on 2026-10-20.
+The active backend and frontend now implement the geographic extension without a migration; check results are reported at handoff.
+
+### Existing approved scope
+
+Visual follow-up approved on 2026-10-20: component 4 uses the main Boards search treatment (search icon, transparent
+input, one underline and a text Search action). Board-list titles and descriptions use a consistent 8px gap. Back
+and View all share one primary-color, 16px medium-weight navigation style, 16px arrows and a 44px minimum target;
+the shared Back style applies throughout the application. Profile Board lists reuse ViewAllBoards.
+
+UX amendment approved by the user on 2026-10-20: remove the outer search-toolbar border in component 4 and `/friends`,
+retaining individual input/select borders and accessible focus indicators. Emptying a submitted search automatically
+restores its full collection, resets pagination and restores the default sort without requiring Clear. Search/Enter
+still submits a nonempty query. View all uses larger primary-color text, vertically centered with its heading.
+Across Board covers, replace separate Draft/Published status captions with an accessible draft document/pen SVG
+in the existing top-right visibility badge. Published covers retain their visibility badge without a status caption.
+These decisions supersede the persistent status-label wording below; permissions and backend data are unchanged.
 
 Add a reusable fourth Board list: a wider grid using component 2's photographic covers, four columns on desktop,
 fewer columns at smaller widths, and up to twenty Boards per page on every screen size. Five full desktop rows
@@ -156,3 +328,5 @@ options and defaults; context-only filtering; twenty results and responsive numb
 
 Technical decisions finalized under delegation: routes and context parameters above, search validation, null-last publication ordering for drafts and live pagination. No open product decisions remain.
 The user delegated these technical choices and authorized implementation on 2026-10-20; no further approval is required within this scope.
+
+Geographic control refinement approved on 2026-10-20: country rows show local MIT-licensed flag-icons SVGs, country names and right-aligned ISO alpha-3 country codes. Continent selections use title-case names. Only one menu opens at a time; outside pointer/focus and Escape dismiss it. Both menu panels share the same height and align directly below their trigger. Arrow navigation moves focus and scrolls only within the option list. No raster assets or image-library entries are introduced.

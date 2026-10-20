@@ -77,12 +77,17 @@ async function harness(t: TestContext, search = "") {
     };
     const originals = {
         useMemo: React.useMemo,
+        useId: React.useId,
         useState: React.useState,
         useRef: React.useRef,
         useEffect: React.useEffect,
         useSyncExternalStore: React.useSyncExternalStore
     };
     function intercept() {
+        React.useId = () => {
+            const cell = slot();
+            return (cell.value ??= "filter-id") as string;
+        };
         React.useMemo = ((factory: () => unknown, deps: readonly unknown[]) => {
             const cell = slot();
             if (!cell.deps || deps.some((dep, index) => !Object.is(dep, cell.deps![index]))) {
@@ -125,13 +130,13 @@ async function harness(t: TestContext, search = "") {
         forward() {},
         refresh() {},
         push: (href: string) => navigations.push(href),
-        replace() {},
+        replace: (href: string) => navigations.push(href),
         prefetch() {}
     };
     const params = { value: new URLSearchParams(search) };
     // Only local discovery components run. Gallery, card, icon and Link children remain
     // elements. This verifies state/effect lifetimes, not React DOM focus or gestures.
-    const local = /^(BoardsDiscovery|BoardSearch|SearchResults|Featured|Discovery|Viewer)/;
+    const local = /^(BoardsDiscovery|BoardSearch|SearchResults|Featured|Discovery|Viewer|GeographicFilters)/;
     function render() {
         const used = new Set<string>();
         current.effects = [];
@@ -222,6 +227,48 @@ async function harness(t: TestContext, search = "") {
 function viewer(userId: string): AuthUser {
     return { userId, username: userId, displayName: userId };
 }
+
+test("emptying a submitted Boards search restores discovery without pressing Clear", async (t) => {
+    const page = await harness(t, "q=Bali&page=3");
+    page.invoke(page.input().node, "onChange", { target: { value: "" } });
+    assert.equal(page.navigations.at(-1), "/boards");
+    page.params.value = new URLSearchParams();
+    await page.advance();
+    assert.ok(page.requests.some((request) => request.url.pathname.endsWith("/boards/featured")));
+    assert.equal(page.input().node.props.value, "");
+});
+
+test("selecting countries keeps the dropdown open and preserves its search and the main draft", async (t) => {
+    const previousDocument = Object.getOwnPropertyDescriptor(globalThis, "document");
+    Object.defineProperty(globalThis, "document", {
+        configurable: true,
+        value: { addEventListener() {}, removeEventListener() {} }
+    });
+    const page = await harness(t);
+    t.after(() => {
+        if (previousDocument) Object.defineProperty(globalThis, "document", previousDocument);
+        else Reflect.deleteProperty(globalThis, "document");
+    });
+    page.invoke(page.input().node, "onChange", { target: { value: "Summer plans" } });
+    const countryMenu = () =>
+        page.render().find(({ node }) => node.type === "details" && node.props["data-filter"] === "countries")!;
+    const countrySearch = () => page.render().find(({ node }) => node.props["aria-label"] === "Find countries")!;
+    const summary = page.render().find(({ node }) => node.type === "summary")!;
+    page.invoke(summary.node, "onClick", { preventDefault() {} });
+    page.invoke(countrySearch().node, "onChange", { target: { value: "Sweden" } });
+    const before = countryMenu();
+    const checkbox = page.render().find(({ node }) => node.type === "input" && node.props.type === "checkbox")!;
+    page.invoke(checkbox.node, "onChange");
+    assert.equal(new URL(page.navigations.at(-1)!, "http://localhost").searchParams.get("countries"), "SWE");
+    page.params.value = new URL(page.navigations.at(-1)!, "http://localhost").searchParams;
+    const after = countryMenu();
+    assert.equal(after.token, before.token, "Country selection must retain the mounted dropdown");
+    assert.equal(after.node.props.open, true);
+    assert.equal(countrySearch().node.props.value, "Sweden");
+    assert.equal(page.input().node.props.value, "Summer plans");
+    const selected = page.render().find(({ node }) => node.type === "input" && node.props.type === "checkbox")!;
+    assert.equal(selected.node.props.checked, true);
+});
 
 function visibleBoardIds(nodes: Array<{ node: Node }>) {
     return nodes

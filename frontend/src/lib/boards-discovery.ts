@@ -124,8 +124,10 @@ export function discoveryGallery(board: DiscoveryCard): GalleryBoard {
         compact: { ...selected.photo, image: selected.photo.image ?? { src: "", alt: "" } }
     };
 }
-export function boardsSearchHref(query: string, page = 1, location: "auto" | "off" = "auto") {
-    const params = new URLSearchParams({ q: query.trim(), page: String(page) });
+export function boardsSearchHref(query: string, page = 1, location: "auto" | "off" = "auto", geography = "") {
+    const params = new URLSearchParams(geography);
+    params.set("q", query.trim());
+    params.set("page", String(page));
     if (location === "off") params.set("location", "off");
     return `/boards?${params}`;
 }

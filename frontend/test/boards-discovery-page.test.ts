@@ -56,28 +56,28 @@ async function renderPage(query = "", signedIn = true) {
 test("production Boards discovery orders sections, defaults to month and contains no Archive", async () => {
     const html = await renderPage();
     assert.match(html, /<h1[^>]*>BOARDS<\/h1>/);
-    const labels = ["Featured period", "boards-discover-heading", "recent-heading", "mine-heading", "saved-heading"];
+    const labels = ["FEATURED BOARDS", "recent-heading", "mine-heading", "saved-heading", "boards-discover-heading"];
     const positions = labels.map((label) => html.indexOf(label));
     assert.ok(positions.every((position) => position >= 0));
     assert.deepEqual(
         positions,
         [...positions].sort((a, b) => a - b)
     );
-    assert.match(html, /aria-pressed="true"[^>]*>This month/);
+    assert.match(html, /monthly most popular boards/);
+    assert.doesNotMatch(html, /This month|This week|Featured period/);
     assert.match(html, /role="search"/);
     assert.match(html, /role="combobox"/);
     assert.doesNotMatch(html, /archiv/i);
     assert.doesNotMatch(html, /THE COLLECTION/);
 });
 
-test("personal BoardLibrary carousel preserves draft editor and published viewing routes with persistent status labels", () => {
+test("personal BoardLibrary carousel preserves draft editor and published viewing routes with a draft badge instead of status captions", () => {
     const draft = { ...card(true), boardId: 89, title: "Draft journey", status: "draft" as const };
     const html = renderToStaticMarkup(
         createElement(BoardLibrary, {
             title: "MY BOARDS",
             id: "mine",
-            boards: [discoveryGallery(card(true)), discoveryGallery(draft)],
-            showStatus: true
+            boards: [discoveryGallery(card(true)), discoveryGallery(draft)]
         })
     );
     assert.match(html, /aria-roledescription="carousel"/);
@@ -85,8 +85,9 @@ test("personal BoardLibrary carousel preserves draft editor and published viewin
     assert.match(html, /href="\/boards\/88\/edit"/);
     assert.match(html, /href="\/boards\/drafts\/89"/);
     assert.doesNotMatch(html, /href="\/boards\/89"/);
-    assert.match(html, />Draft<\//);
-    assert.match(html, />Published<\//);
+    assert.match(html, /aria-label="Draft/);
+    assert.match(html, /lucide-file-pen-line/);
+    assert.doesNotMatch(html, />Draft<|>Published</);
     assert.doesNotMatch(html, /THE COLLECTION/);
 });
 
@@ -100,7 +101,7 @@ test("loaded personal sections use BoardLibrary and preserve confirmed removal w
         return Response.json({ data: { items: [card()], page: 1, hasMore: true } });
     });
     await store.load("/boards/saved?page=1&limit=10");
-    const capture = (source: "owned" | "saved") => {
+    const capture = (source: "owned" | "saved" | "shared") => {
         const captured: { tree: ReactNode } = { tree: null };
         function Probe() {
             captured.tree = DiscoveryCollectionContent({
@@ -124,16 +125,13 @@ test("loaded personal sections use BoardLibrary and preserve confirmed removal w
                 return child.type === BoardLibrary ? [child] : [library(child.props.children)];
             })
             .find(Boolean);
-    for (const source of ["owned", "saved"] as const) {
+    for (const source of ["owned", "saved", "shared"] as const) {
         const tree = capture(source);
         const html = renderToStaticMarkup(tree);
         assert.match(html, /aria-roledescription="carousel"/);
         assert.doesNotMatch(html, /THE COLLECTION/);
         const element = library(tree);
-        assert.ok(
-            isValidElement<{ showStatus: boolean; onSavedChange?: (id: string, saved: boolean) => void }>(element)
-        );
-        assert.equal(element.props.showStatus, true);
+        assert.ok(isValidElement<{ onSavedChange?: (id: string, saved: boolean) => void }>(element));
         if (source === "saved") {
             assert.equal(typeof element.props.onSavedChange, "function");
             element.props.onSavedChange!("88", true);

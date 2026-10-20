@@ -307,10 +307,7 @@ function SelectionAnnotations({ board }: { board: SelectionBoard }) {
                                 ? "Community Board"
                                 : "Shared with you"}
                     </dt>
-                    <dd className="mt-1">
-                        {status === "draft" ? "Unpublished draft" : "Published"}
-                        {(status === "draft" || visibility) && ` · ${visibilityText}`}
-                    </dd>
+                    <dd className="mt-1">{visibilityText}</dd>
                 </div>
                 <div>
                     <dt className="text-foreground text-xs tracking-[.08em] uppercase">
@@ -385,7 +382,7 @@ export function BoardSelectionCollection({
             aria-labelledby={id}
             className="border-line mx-auto mt-16 max-w-[1272px] border-t px-4 pt-12 sm:mt-24 sm:px-10 sm:pt-16"
         >
-            <div className="flex items-end justify-between gap-5">
+            <div className="flex items-center justify-between gap-5">
                 <h2 id={id} className="font-display text-muted-foreground/65 text-30 sm:text-40 leading-none font-bold">
                     THE COLLECTION
                 </h2>

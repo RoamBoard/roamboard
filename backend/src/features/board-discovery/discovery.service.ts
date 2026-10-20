@@ -1,3 +1,4 @@
+import { continentForCountry } from "../../shared/continents.js";
 import { AppError } from "../../shared/app-error.js";
 import type { BoardRepository } from "../boards/boards.types.js";
 import { canReadBoard } from "../boards/boards.types.js";
@@ -40,6 +41,16 @@ const pageOf = (items: DiscoveryCandidate[], page: number, limit: number) => ({
     hasMore: page * limit < items.length
 });
 
+function matchesGeography(board: DiscoveryCandidate, input: { countries?: string[]; continents?: string[] }) {
+    const codes = [board.destination, ...board.locations].flatMap((place) => (place?.country ? [place.country] : []));
+    return (
+        (!input.countries?.length || codes.some((code) => input.countries!.includes(code))) &&
+        (!input.continents?.length ||
+            codes.some((code) =>
+                input.continents!.includes((continentForCountry(code) ?? "").toLowerCase().replaceAll(" ", "-"))
+            ))
+    );
+}
 export function createDiscoveryService(repository: DiscoveryRepository, boards: BoardRepository) {
     return {
         async collection(userId: string | null, context: CollectionContext, input: CollectionQuery) {
@@ -96,7 +107,9 @@ export function createDiscoveryService(repository: DiscoveryRepository, boards: 
                 context === "featured" ? (input.period === "week" ? 7 : 30) : undefined,
                 { ...input, context }
             );
-            const source = context === "featured" ? featuredBoards(candidates) : candidates;
+            const source = (context === "featured" ? featuredBoards(candidates) : candidates).filter((board) =>
+                matchesGeography(board, input)
+            );
             const items = input.q
                 ? rankSearch(source, { q: input.q, location: "off", page: 1, limit: 20 }).boards
                 : source;
@@ -128,7 +141,17 @@ export function createDiscoveryService(repository: DiscoveryRepository, boards: 
                 repository.candidates(userId, "discovery"),
                 repository.placeCatalog?.() ?? Promise.resolve([])
             ]);
-            const result = rankSearch(candidates, input, catalog);
+            const eligible = candidates.filter((board) => matchesGeography(board, input));
+            const result = input.q
+                ? rankSearch(eligible, input, catalog)
+                : {
+                      boards: eligible.sort(
+                          (a, b) =>
+                              (b.firstPublishedAt ?? "").localeCompare(a.firstPublishedAt ?? "") ||
+                              b.boardId - a.boardId
+                      ),
+                      location: null
+                  };
             return { ...pageOf(result.boards, input.page, input.limit), location: result.location };
         },
         async list(userId: string | null, scope: "discovery" | "mine" | "saved", page: number, limit: number) {

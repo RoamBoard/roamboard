@@ -1,5 +1,6 @@
 "use client";
 
+import GeographicFilters, { geographicQuery } from "./GeographicFilters";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Fragment, useEffect, useMemo, useRef, useState, useSyncExternalStore, type SetStateAction } from "react";
@@ -10,15 +11,12 @@ import {
     createDiscoveryStore,
     discoveryGallery,
     discoveryPhoto,
-    discoverySelection,
     type DiscoveryCard,
     type DiscoveryState
 } from "@/lib/boards-discovery";
 import Pagination from "@/components/ui/Pagination";
-import ViewAllBoards from "./ViewAllBoards";
 import { collectionHref } from "@/lib/board-collections";
 import SpatialGallery from "./SpatialGallery";
-import { BoardSelectionGallery } from "./BoardSelectionGallery";
 import BoardLibrary from "./BoardLibrary";
 import PhotoBoardCard from "./cards/PhotoBoardCard";
 import AccountPhotoBoardCard from "./cards/AccountPhotoBoardCard";
@@ -60,10 +58,10 @@ export default function BoardsDiscovery() {
     useEffect(() => observeCurrentUser((user) => setAccount({ ready: true, user })), []);
     return (
         <BoardsDiscoveryContent
-            key={params.toString()}
             query={params.get("q")?.trim().slice(0, 100) ?? ""}
             page={Math.max(1, Math.min(10000, Math.floor(Number(params.get("page"))) || 1))}
             location={params.get("location") === "off" ? "off" : "auto"}
+            geography={geographicQuery(params)}
             account={account}
         />
     );
@@ -73,20 +71,21 @@ export function BoardsDiscoveryContent({
     query,
     page,
     location,
-    account
+    account,
+    geography = ""
 }: {
+    geography?: string;
     query: string;
     page: number;
     location: "auto" | "off";
     account: { ready: boolean; user: AuthUser | null };
 }) {
-    const fullSearch = query.length >= 2;
+    const fullSearch = query.length >= 2 || Boolean(geography);
     // Pending identification is not a signed-out viewer: its cookie-bearing reads may still contain private results.
     const viewerKey = account.ready ? (account.user?.userId ?? "visitor") : "pending";
-    const [period, setPeriod] = useState<"month" | "week">("month");
     return (
         <article className="font-body min-w-0 overflow-x-clip pb-24">
-            <header className="mx-auto max-w-5xl px-5 pt-16 text-center md:pt-24">
+            <header className="mx-auto max-w-5xl px-5 pt-16 pb-10 text-center md:pt-24 md:pb-12">
                 <h1 className="font-display text-[clamp(3rem,7vw,7rem)] leading-none font-bold tracking-[-.045em]">
                     BOARDS
                 </h1>
@@ -95,49 +94,18 @@ export function BoardsDiscoveryContent({
                 </p>
                 <BoardSearch
                     key={`${query}:${location}`}
+                    geography={geography}
                     initialQuery={query}
                     location={location}
                     viewerKey={viewerKey}
                 />
             </header>
             {fullSearch ? (
-                <SearchResults key={viewerKey} query={query} page={page} location={location} />
+                <SearchResults key={viewerKey} query={query} page={page} location={location} geography={geography} />
             ) : (
                 <Fragment key={viewerKey}>
-                    <section aria-label="Featured period" className="mx-auto mt-16 flex justify-center gap-3">
-                        {(
-                            [
-                                ["month", "This month"],
-                                ["week", "This week"]
-                            ] as const
-                        ).map(([value, label]) => (
-                            <button
-                                key={value}
-                                type="button"
-                                aria-pressed={period === value}
-                                onClick={() => setPeriod(value)}
-                                className={`${action} ${period === value ? "font-bold" : "text-muted-foreground"}`}
-                            >
-                                {label}
-                            </button>
-                        ))}
-                    </section>
-                    <Featured key={period} period={period} />
-                    <section
-                        aria-labelledby="boards-discover-heading"
-                        className="mx-auto my-24 flex max-w-5xl flex-col items-center px-5 text-center sm:my-40"
-                    >
-                        <span aria-hidden="true" className="bg-line h-20 w-px" />
-                        <p className="text-muted-foreground mt-8 text-lg">need more inspiration?</p>
-                        <h2
-                            id="boards-discover-heading"
-                            className="font-display mt-4 text-[clamp(2.75rem,7vw,6rem)] leading-none font-bold"
-                        >
-                            <Link href="/discover" className="inline-flex items-start gap-2">
-                                DISCOVER <ArrowUpRight className="mt-2 size-6" aria-hidden="true" />
-                            </Link>
-                        </h2>
-                    </section>
+                    <Featured period="month" />
+
                     <DiscoveryCollection title="RECENTLY PUBLISHED" id="recent" path="/boards/recent" limit={20} />
                     {account.ready && account.user ? (
                         <>
@@ -171,6 +139,21 @@ export function BoardsDiscoveryContent({
                             Loading your account…
                         </p>
                     )}
+                    <section
+                        aria-labelledby="boards-discover-heading"
+                        className="mx-auto my-24 flex max-w-5xl flex-col items-center px-5 text-center sm:my-40"
+                    >
+                        <span aria-hidden="true" className="bg-line h-20 w-px" />
+                        <p className="text-muted-foreground mt-8 text-lg">need more inspiration?</p>
+                        <h2
+                            id="boards-discover-heading"
+                            className="font-display mt-4 text-[clamp(2.75rem,7vw,6rem)] leading-none font-bold"
+                        >
+                            <Link href="/discover" className="inline-flex items-start gap-2">
+                                DISCOVER <ArrowUpRight className="mt-2 size-6" aria-hidden="true" />
+                            </Link>
+                        </h2>
+                    </section>
                 </Fragment>
             )}
         </article>
@@ -180,8 +163,10 @@ export function BoardsDiscoveryContent({
 function BoardSearch({
     initialQuery,
     location,
-    viewerKey
+    viewerKey,
+    geography
 }: {
+    geography: string;
     initialQuery: string;
     location: "auto" | "off";
     viewerKey: string;
@@ -192,7 +177,7 @@ function BoardSearch({
     const [locationMode, setLocationMode] = useState(location);
     const path =
         query.trim().length >= 2
-            ? `/boards/search/suggestions?${new URLSearchParams({ q: query.trim(), location: locationMode })}`
+            ? `/boards/search/suggestions?${new URLSearchParams({ q: query.trim(), location: locationMode })}&${geography}`
             : null;
     const { state, store } = useDiscovery(path, 220, viewerKey);
     // A new viewer's results require a new explicit selection, even after switching back to a previous account.
@@ -210,7 +195,7 @@ function BoardSearch({
     const submit = () => {
         if (query.trim().length >= 2) {
             setOpen(false);
-            router.push(boardsSearchHref(query, 1, locationMode));
+            router.push(boardsSearchHref(query, 1, locationMode, geography));
         }
     };
     return (
@@ -250,6 +235,8 @@ function BoardSearch({
                         onFocus={() => setOpen(true)}
                         onChange={(event) => {
                             setQuery(event.target.value);
+                            if (!event.target.value.trim() && initialQuery)
+                                router.replace(geography ? `/boards?${geography}` : "/boards", { scroll: false });
                             setActive(-1);
                             setOpen(true);
                             setLocationMode("auto");
@@ -288,7 +275,7 @@ function BoardSearch({
                                 setQuery("");
                                 setOpen(false);
                                 setActive(-1);
-                                if (initialQuery) router.push("/boards");
+                                if (initialQuery) router.push(geography ? `/boards?${geography}` : "/boards");
                             }}
                         >
                             <X size={16} />
@@ -372,6 +359,9 @@ function BoardSearch({
                     </div>
                 )}
             </form>
+            <div className="mt-4">
+                <GeographicFilters />
+            </div>
         </div>
     );
 }
@@ -407,11 +397,15 @@ function Featured({ period }: { period: "month" | "week" }) {
     return (
         <div>
             {!state.data?.items.length && (
-                <h2 className="font-display text-30 mt-12 text-center font-bold">FEATURED BOARDS</h2>
+                <div className="mt-10 text-center">
+                    <h2 className="font-display text-foreground text-30 font-bold">FEATURED BOARDS</h2>
+                    <p className="text-muted-foreground mt-2 text-sm">{"Roamboard's monthly most popular boards"}</p>
+                </div>
             )}
             <Feedback state={state} retry={() => void store.load(path)} />
             {state.data && (
                 <SpatialGallery
+                    description="Roamboard's monthly most popular boards"
                     boards={state.data.items.map(discoveryGallery)}
                     viewAllHref={collectionHref("featured", { period })}
                 />
@@ -445,11 +439,7 @@ export function DiscoveryCollectionContent({
     state: DiscoveryState;
     store: ReturnType<typeof createDiscoveryStore>;
 }) {
-    const [selectedId, setSelectedId] = useState<number | null>(null);
     const gallery = useRef<HTMLDivElement>(null);
-    const boards = (state.data?.items ?? []).map((board) => discoverySelection(board, source));
-    const selected = boards.find((board) => board.summary.boardId === selectedId) ?? boards[0];
-    const personal = source !== "shared";
     const retry = () => {
         const retryPath = state.key || `${path}?page=1&limit=${limit}`;
         const append = Number(new URL(retryPath, "http://roamboard.local").searchParams.get("page")) > 1;
@@ -457,65 +447,40 @@ export function DiscoveryCollectionContent({
     };
     return (
         <section aria-label={title} className="mt-24 min-w-0">
-            {!personal && (
-                <div className="mx-auto flex max-w-[1320px] items-center justify-between gap-4 px-5">
-                    <h2
-                        id={`${id}-heading`}
-                        tabIndex={-1}
-                        className="font-display text-30 sm:text-40 px-5 text-center font-bold"
-                    >
-                        {title}
-                    </h2>
-                    <ViewAllBoards href={collectionHref("recent")} />
-                </div>
-            )}
-            {personal && (
-                <div ref={gallery}>
-                    <BoardLibrary
-                        id={id}
-                        viewAllHref={collectionHref(source === "owned" ? "mine" : "saved")}
-                        title={title}
-                        description={source === "owned" ? "Your drafts and published Boards" : "Your saved Boards"}
-                        boards={(state.data?.items ?? []).map(discoveryGallery)}
-                        showStatus
-                        removeOnUnsave={source === "saved"}
-                        hasMore={Boolean(state.data?.hasMore && !state.error)}
-                        loadingMore={state.loading}
-                        onLoadMore={() =>
-                            store.load(`${path}?page=${(state.data?.page ?? 1) + 1}&limit=${limit}`, true)
-                        }
-                        onSavedChange={
-                            source === "saved"
-                                ? (boardId, saved) => {
-                                      if (saved) return;
-                                      store.removeConfirmed(Number(boardId));
-                                      if (store.getSnapshot().data?.items.length)
-                                          gallery.current
-                                              ?.querySelector<HTMLElement>('[role="region"]')
-                                              ?.focus({ preventScroll: true });
-                                      else document.getElementById(`${id}-heading`)?.focus({ preventScroll: true });
-                                      void store.load(`${path}?page=1&limit=${limit}`, false, true);
-                                  }
-                                : undefined
-                        }
-                    />
-                </div>
-            )}
+            <div ref={gallery}>
+                <BoardLibrary
+                    id={id}
+                    viewAllHref={collectionHref(source === "owned" ? "mine" : source === "saved" ? "saved" : "recent")}
+                    title={title}
+                    description={
+                        source === "owned"
+                            ? "Your drafts and published Boards"
+                            : source === "saved"
+                              ? "Your saved Boards"
+                              : undefined
+                    }
+                    boards={(state.data?.items ?? []).map(discoveryGallery)}
+                    removeOnUnsave={source === "saved"}
+                    hasMore={Boolean(state.data?.hasMore && !state.error)}
+                    loadingMore={state.loading}
+                    onLoadMore={() => store.load(`${path}?page=${(state.data?.page ?? 1) + 1}&limit=${limit}`, true)}
+                    onSavedChange={
+                        source === "saved"
+                            ? (boardId, saved) => {
+                                  if (saved) return;
+                                  store.removeConfirmed(Number(boardId));
+                                  if (store.getSnapshot().data?.items.length)
+                                      gallery.current
+                                          ?.querySelector<HTMLElement>('[role="region"]')
+                                          ?.focus({ preventScroll: true });
+                                  else document.getElementById(`${id}-heading`)?.focus({ preventScroll: true });
+                                  void store.load(`${path}?page=1&limit=${limit}`, false, true);
+                              }
+                            : undefined
+                    }
+                />
+            </div>
             <Feedback state={state} retry={retry} />
-            {!personal && selected && (
-                <>
-                    <div ref={gallery} className="scroll-mt-6">
-                        <BoardSelectionGallery
-                            compact
-                            boards={boards}
-                            selected={selected}
-                            mode="explore"
-                            onSelect={setSelectedId}
-                            onRetry={retry}
-                        />
-                    </div>
-                </>
-            )}
             {state.data?.hasMore && (
                 <div className="mt-8 text-center">
                     <button
@@ -534,14 +499,24 @@ export function DiscoveryCollectionContent({
     );
 }
 
-function SearchResults({ query, page, location }: { query: string; page: number; location: "auto" | "off" }) {
-    const path = `/boards/search?${new URLSearchParams({ q: query, page: String(page), limit: "20", location })}`;
+function SearchResults({
+    query,
+    page,
+    location,
+    geography
+}: {
+    query: string;
+    page: number;
+    location: "auto" | "off";
+    geography: string;
+}) {
+    const path = `/boards/search?${new URLSearchParams({ q: query, page: String(page), limit: "20", location })}&${geography}`;
     const { state, store } = useDiscovery(path);
     const total = state.data?.total ?? 0;
     return (
         <section aria-labelledby="search-results-heading" className="mx-auto mt-16 max-w-[1320px] px-5">
             <h2 id="search-results-heading" className="font-display text-30 text-center font-bold">
-                Results for “{query}”
+                {query ? `Results for "${query}"` : "Filtered Boards"}
             </h2>
             {state.data && (
                 <p role="status" className="text-muted-foreground mt-3 text-center text-sm">
@@ -574,7 +549,7 @@ function SearchResults({ query, page, location }: { query: string; page: number;
                 <Pagination
                     page={page}
                     totalPages={Math.ceil(total / 20)}
-                    href={(next) => boardsSearchHref(query, next, location)}
+                    href={(next) => boardsSearchHref(query, next, location, geography)}
                 />
             )}
             <div className="mt-10 text-center">

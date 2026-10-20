@@ -28,7 +28,8 @@ export type DiscoveryCandidate = DiscoveryCard & {
     savers: number;
     commenters: number;
 };
-export type DiscoveryQuery = {
+export type GeographicSelections = { countries?: string[]; continents?: string[] };
+export type DiscoveryQuery = GeographicSelections & {
     q: string;
     page: number;
     limit: number;
@@ -54,7 +55,7 @@ export interface DiscoveryRepository {
 
 export type CollectionContext =
     "mine" | "saved" | "friends" | "profile" | "profile-saved" | "map" | "category" | "recent" | "featured";
-export type CollectionQuery = {
+export type CollectionQuery = GeographicSelections & {
     q?: string;
     sort?:
         | "relevance"

@@ -9,6 +9,7 @@ import {
     collectionQuerySchema,
     discoveryPageSchema,
     discoverySearchSchema,
+    discoverySuggestionsSchema,
     featuredSchema,
     viewSchema
 } from "./discovery.schemas.js";
@@ -30,7 +31,12 @@ export function createDiscoveryRouter(
         validateQuery(collectionQuerySchema),
         controller.collection
     );
-    router.get("/boards/search/suggestions", ...read, validateQuery(discoverySearchSchema), controller.suggestions);
+    router.get(
+        "/boards/search/suggestions",
+        ...read,
+        validateQuery(discoverySuggestionsSchema),
+        controller.suggestions
+    );
     router.get("/boards/search", ...read, validateQuery(discoverySearchSchema), controller.search);
     router.get("/boards/featured", ...read, validateQuery(featuredSchema), controller.featured);
     router.get("/boards/recent", ...read, validateQuery(discoveryPageSchema), controller.recent);

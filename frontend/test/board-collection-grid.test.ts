@@ -40,7 +40,7 @@ function render(context: CollectionContext, search: string, store = createDiscov
         back() {},
         forward() {},
         refresh() {},
-        replace() {},
+        replace: (href: string) => navigations.push(href),
         prefetch() {},
         push: (href: string) => navigations.push(href)
     };
@@ -86,6 +86,19 @@ test("changing sorting and page preserves the map context and submitted query", 
     const page = new URL((pagination.props.href as (page: number) => string)(4), "http://localhost");
     assert.equal(page.searchParams.get("page"), "4");
     assert.equal(page.searchParams.get("country"), "IDN");
+});
+
+test("emptying the search immediately restores its collection and default order without Clear", () => {
+    const { nodes, navigations } = render("profile-saved", "handle=friend&q=Bali&sort=relevance&page=3");
+    const input = nodes.find((node) => node.type === "input" && node.props.name === "q")!;
+    const change = input.props.onChange as (event: unknown) => void;
+    change({ target: { value: "Indonesia" } });
+    assert.equal(navigations.length, 0, "nonempty text retains Search/Enter submission");
+    change({ target: { value: "" } });
+    const restored = new URL(navigations[0], "http://localhost");
+    assert.equal(restored.pathname, "/boards/collections/profile-saved");
+    assert.equal(restored.searchParams.get("handle"), "friend");
+    for (const key of ["q", "sort", "page"]) assert.equal(restored.searchParams.has(key), false);
 });
 
 test("search submission stays in the saved profile collection, selects relevance and resets page", (t) => {

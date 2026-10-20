@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { navigationLinkClassName } from "@/lib/navigation-link-style";
 import { getBrowserBackHref, getServerBackHref, subscribeBackNavigation } from "@/lib/back-navigation";
 
 export default function BackLink({ fallbackHref, className = "" }: { fallbackHref: string; className?: string }) {
@@ -12,7 +13,7 @@ export default function BackLink({ fallbackHref, className = "" }: { fallbackHre
         <a
             href={backHref ?? fallbackHref}
             data-back-navigation={backHref ? "back" : "replace"}
-            className={`text-muted-foreground hover:text-foreground text-12 inline-flex min-h-11 min-w-11 items-center gap-2 py-2 lowercase focus-visible:rounded-[2px] focus-visible:outline-2 focus-visible:outline-offset-4 ${className}`}
+            className={`${navigationLinkClassName} ${className}`}
             onClick={(event) => {
                 if (
                     event.defaultPrevented ||
@@ -28,7 +29,7 @@ export default function BackLink({ fallbackHref, className = "" }: { fallbackHre
                 else router.replace(fallbackHref);
             }}
         >
-            <ArrowLeft size={12} strokeWidth={1.3} aria-hidden="true" />
+            <ArrowLeft size={16} strokeWidth={1.5} aria-hidden="true" />
             Back
         </a>
     );
