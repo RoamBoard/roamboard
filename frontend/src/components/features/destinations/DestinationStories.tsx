@@ -139,10 +139,18 @@ export function DestinationStories({
                         style={{ containerType: "size", touchAction: "pan-y" }}
                         onPointerDown={() => {
                             dragged.current = false;
-                            dragStep.current =
-                                (gallery.current
+                            const cardWidth =
+                                gallery.current
                                     ?.querySelector('[data-destination-card="active"]')
-                                    ?.getBoundingClientRect().width ?? 420) * 0.76;
+                                    ?.getBoundingClientRect().width ?? 420;
+                            const stageWidth = gallery.current?.firstElementChild?.getBoundingClientRect().width;
+                            dragStep.current = Math.max(
+                                1,
+                                Math.min(
+                                    cardWidth * 0.76,
+                                    stageWidth ? (stageWidth - cardWidth * 0.76) / 2 - 1 : Infinity
+                                )
+                            );
                         }}
                         onPan={(_, info) => {
                             if (Math.abs(info.offset.x) > 8) {
@@ -189,7 +197,9 @@ export function DestinationStories({
                                     aria-label={`${index + 1} of ${boards.length}: ${item.title}`}
                                     initial={false}
                                     animate={{
-                                        x: `${relative * 76}%`,
+                                        // Keep the immediate neighbours' complete outer edges inside the stage.
+                                        // Their contents still use the full cover, naturally obscured by the front card.
+                                        x: `calc(${relative} * min(76%, max(0px, calc(50cqw - 38% - 1px))))`,
                                         y: Math.min(56, distance * 28),
                                         scale: Math.max(0.52, 1 - distance * 0.24),
                                         rotate: 0,

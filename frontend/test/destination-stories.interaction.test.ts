@@ -189,6 +189,28 @@ test("gallery pans select at distance or velocity thresholds and suppress the re
     assert.equal(selected(gallery.render()), 101);
 });
 
+test("drag progress follows the visible neighbour spacing when the stage constrains full covers", (t) => {
+    const gallery = galleryHarness(t);
+    const region = find(gallery.render(), (node) => node.props["aria-roledescription"] === "carousel");
+    const stage = { width: 500 };
+    (region.props.ref as { current: unknown }).current = {
+        querySelector: () => ({ getBoundingClientRect: () => ({ width: 420 }) }),
+        firstElementChild: { getBoundingClientRect: () => stage }
+    };
+    const progress = () => {
+        const surface = find(gallery.render(), (node) => typeof node.props.onPanEnd === "function");
+        invoke(surface, "onPointerDown");
+        invoke(surface, "onPan", {}, { offset: { x: -44.7, y: 0 } });
+        const active = find(gallery.render(), (node) => node.props["data-destination-card"] === "active");
+        const x = (active.props.animate as { x: string }).x;
+        return Number(x.match(/^calc\(([-\d.]+)/)?.[1]);
+    };
+    assert.ok(Math.abs(progress() + 0.5) < 0.001, "A half-gap drag should move covers halfway in a constrained stage");
+    stage.width = 1200;
+    assert.ok(Math.abs(progress() + 44.7 / 319.2) < 0.001, "Roomy stages should retain the original drag spacing");
+    assert.equal(selected(gallery.render()), 101, "A partial drag must not prematurely change selection");
+});
+
 test("pagination and retry controls call the parent handlers while retaining loaded cards and disabling pending controls", (t) => {
     const calls = { load: 0, retry: 0 };
     const gallery = galleryHarness(t, { hasMore: true, onLoadMore: () => calls.load++, onRetry: () => calls.retry++ });

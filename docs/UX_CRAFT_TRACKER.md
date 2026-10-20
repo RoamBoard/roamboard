@@ -3,14 +3,16 @@
 Living implementation status. Research: [original audit](UX_CRAFT_AUDIT.md) and
 [reassessment](UX_CRAFT_AUDIT_REFRESH.md). Historical reports and evidence remain unchanged.
 
-| Issue                                        | Status    | Implementation reference         |
-| -------------------------------------------- | --------- | -------------------------------- |
-| CRAFT-01 — Accented destination navigation   | Completed | [01](CRAFT_IMPLEMENTATION_01.md) |
-| REFRESH-01 — Board search state preservation | Completed | [01](CRAFT_IMPLEMENTATION_01.md) |
-| CRAFT-04 — Short-mobile introduction         | Completed | [02](CRAFT_IMPLEMENTATION_02.md) |
-| CRAFT-05 — Destination scroll ownership      | Completed | [02](CRAFT_IMPLEMENTATION_02.md) |
-| CRAFT-02 — Destination typography            | Completed | [03](CRAFT_IMPLEMENTATION_03.md) |
-| CRAFT-03 — Gallery composition               | Completed | Implementation 04 below          |
+| Issue                                        | Status                 | Implementation reference         |
+| -------------------------------------------- | ---------------------- | -------------------------------- |
+| CRAFT-01 — Accented destination navigation   | Completed              | [01](CRAFT_IMPLEMENTATION_01.md) |
+| REFRESH-01 — Board search state preservation | Completed              | [01](CRAFT_IMPLEMENTATION_01.md) |
+| CRAFT-04 — Short-mobile introduction         | Completed              | [02](CRAFT_IMPLEMENTATION_02.md) |
+| CRAFT-05 — Destination scroll ownership      | Completed              | [02](CRAFT_IMPLEMENTATION_02.md) |
+| CRAFT-02 — Destination typography            | Completed              | [03](CRAFT_IMPLEMENTATION_03.md) |
+| CRAFT-03 — Gallery composition               | Completed              | Implementation 04 below          |
+| CRAFT-06/07 — Profile typography             | Awaiting visual review | Implementation 05 below          |
+| CRAFT-08 — Discover tablet bento             | Awaiting visual review | Implementation 05 below          |
 
 ## Implementation 04 — Approved destination fan composition
 
@@ -56,11 +58,47 @@ the information panel to scroll. An unusable measurement retains the readable CS
 applying `font-size: 0`. A lifecycle regression covers fallback/recovery; Chrome checks at 667×375 and
 568×320 verify the correction. Portrait/tablet/desktop composition and the approved gallery remain unchanged.
 
+### Reference composition refinements — awaiting visual approval
+
+Reviewed against current `main` (`1d13a84`), preserving its newer Board and profile functionality.
+The gallery retains complete-cover typography, flowing authors, visibility controls and the approved
+country-code crop. Follow-up review found taller stages cropped the outer edges of neighbouring covers;
+the horizontal spread now contracts only when necessary to keep those complete edges inside the stage.
+Font sizes and internal positions are unchanged; foreground overlap still naturally obscures content.
+Drag progress uses the same constrained spacing, with focused regression coverage.
+The closing chapter now uses a horizontal desktop heading and an oversized photograph sweeping
+in from the right, with matching light-theme paper layering. Longer headings can wrap and scroll;
+mobile attribution flows beneath the supporting copy instead of overlapping it.
+Chrome verification covered 1280×600, 1440×900, 1920×1080, tablet and mobile in both themes,
+plus a long destination name and keyboard access. Native touch gestures were not directly exercised.
+No new screenshot collection or implementation report was added.
+
+## Implementation 05 — Profile typography and Discover bento
+
+- **Awaiting visual review:** complete handles wrap at separators; long unbroken runs receive grapheme-safe
+  soft breaks to avoid isolated final letters. Accessible identities remain complete.
+- Display names use real, container-relative font sizes with 28–60px display-scale bounds, balanced lines
+  and proportional portrait overlap. Account actions, absent-location rules and stored data are unchanged.
+- Discover uses available container width: an intermediate asymmetric composition gives tablet tiles room;
+  the original twelve-column spans resume at 68rem. Tile-relative typography protects Indonesia and
+  By the Water; Nightlife, tall Spain and wide Thailand preserve the hierarchy at narrower widths.
+- **Chrome:** live profile and Discover checked at 320, 390, 768, 1024, 1440 and 1920px, including short
+  heights, both themes and sidebar resizing. Temporary production-component samples additionally check
+  10/11, 16/17 and 24/25-character names, accents, underscores and wide glyphs without editing accounts.
+- **Automated:** independently authored tests cover generated font CSS, complete Unicode identities,
+  grapheme-safe breaks and unchanged collection/destination links. All 822 frontend tests, TypeScript,
+  root formatting/lint and the production build pass. Automated tests do not establish visual fit.
+- PR review follow-up: segment complete Unicode graphemes before selecting separator breaks. Added
+  separator-plus-accent regressions and real Chromium layout checks at eight content widths for tile
+  widths, typography, copy measure and asymmetry. Existing link checks remain; `CHROME_BIN` can select
+  an installed Chromium executable. Removing queries, spans or tile-relative type makes the checks fail.
+- Approved destination/gallery work is untouched. No new app route, dependency or permanent evidence added.
+
 ## Continuation priorities
 
 Follow the refresh audit's remaining order, reassessing each item against current `main` before implementation:
 
-1. **P0:** CRAFT-06/07 profile identity hierarchy; CRAFT-08 tablet editorial layout; CRAFT-09/R-06 functional contrast.
+1. **P0:** CRAFT-09/R-06 functional contrast, after visual approval of Implementation 05.
 2. **P1:** REFRESH-02 applied filter state; REFRESH-03/R-08 empty states; CRAFT-10/13 truthful controls;
    REFRESH-04 gallery names; R-01 suggestion preview anchoring; CRAFT-11 informational tag styling.
 3. **P1, separate review:** CRAFT-12 upstream tag-data provenance/correction; then R-02/03 ordinary control feedback
@@ -68,5 +106,5 @@ Follow the refresh audit's remaining order, reassessing each item against curren
 4. **P2:** R-04 period underline; ready-destination waiting reduction (original I-09).
 5. **P3:** reproduce image recentering before proposing changes; optional photo motion only after separate review.
 
-No subsequent improvement has started. Historical audit recommendations about exposed background titles are
+Implementation 05 awaits visual approval; no subsequent improvement has started. Historical audit recommendations about exposed background titles are
 superseded by the approved full-cover composition recorded above.

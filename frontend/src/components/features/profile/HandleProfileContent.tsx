@@ -6,6 +6,7 @@ import Link from "next/link";
 import ViewAllBoards from "@/components/features/boards/ViewAllBoards";
 import { loadProfile, loadPublicProfile, ProfileApiError, type PublicProfileView } from "@/lib/profile";
 import ProfileHero from "./ProfileHero";
+import ProfileIdentityText from "./ProfileIdentityText";
 import ProfilePageContent, { LiveBoardLibrary, ProfileSavedBoardLibrary } from "./ProfilePageContent";
 import TravelMapSection from "./TravelMapSection";
 import VisitedWorldMap from "./VisitedWorldMap";
@@ -139,9 +140,12 @@ export default function HandleProfileContent({
 export function VisitorProfileContent({ view }: { view: PublicProfileView }) {
     return (
         <div className="mx-auto w-full max-w-6xl pb-20">
-            <header className="mb-8">
-                <h1 className="font-display text-48 sm:text-60 text-foreground font-bold tracking-tight uppercase">
-                    @{view.profile.username}
+            <header className="@container mb-8">
+                <h1
+                    aria-label={`@${view.profile.username}`}
+                    className="font-display text-foreground text-[clamp(2.5rem,8cqw,3.75rem)] leading-[1.08] font-bold tracking-tight text-balance [overflow-wrap:anywhere] uppercase"
+                >
+                    @<ProfileIdentityText text={view.profile.username} />
                 </h1>
             </header>
             <main className="flex flex-col">

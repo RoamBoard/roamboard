@@ -188,17 +188,17 @@ export function DestinationPage({ destination: guide, onLoadMore, onRetry, loadi
                     data-destination-chapter
                     tabIndex={-1}
                     aria-labelledby="destination-create-heading"
-                    className="bg-background border-line relative isolate h-full w-[var(--destination-width)] shrink-0 snap-start snap-always overflow-hidden border-l outline-none lg:[--create-photo-width:max(640px,48vw)]"
+                    className="bg-background border-line relative isolate h-full w-[var(--destination-width)] shrink-0 snap-start snap-always overflow-y-auto overscroll-y-contain border-l outline-none lg:[--create-photo-width:max(640px,48vw,100dvh)]"
                 >
                     <span
                         aria-hidden="true"
-                        className="after:bg-background pointer-events-none absolute inset-y-0 left-0 hidden w-[clamp(6rem,14vw,14rem)] overflow-hidden bg-[var(--atlas-background)] after:absolute after:top-1/2 after:left-5 after:aspect-[1077/1254] after:w-[var(--create-photo-width)] after:-translate-y-1/2 after:rounded-[50%] lg:block"
+                        className="after:bg-background pointer-events-none absolute inset-y-0 left-0 hidden w-[min(28%,32dvh)] overflow-hidden bg-[var(--atlas-background)] after:absolute after:top-1/2 after:left-5 after:aspect-[1077/1254] after:w-[var(--create-photo-width)] after:-translate-y-1/2 after:rounded-[50%] lg:block"
                     />
                     {/* Equal space above and below keeps the creator button in the middle of the closing panel. */}
-                    <div className="relative z-10 grid h-full grid-rows-[1fr_auto_1fr] px-6 py-[5dvh] lg:w-[66%] lg:pr-0 lg:pl-[clamp(7rem,12vw,12rem)]">
+                    <div className="relative z-10 grid min-h-full grid-rows-[1fr_auto_1fr] px-6 py-[5dvh] max-md:pb-12 lg:w-[63%] lg:pr-0 lg:pl-[clamp(7rem,12vw,12rem)]">
                         <h2
                             id="destination-create-heading"
-                            className="font-display self-end pb-8 text-[clamp(2.5rem,min(7vw,11dvh),7rem)] leading-[1.02] font-bold tracking-[-0.055em]"
+                            className="font-display max-w-[calc(100%_-_1.5rem)] self-end pb-8 text-[clamp(2.5rem,min(7vw,11dvh),7rem)] leading-[1.02] font-bold tracking-[-0.055em] [overflow-wrap:anywhere] lg:max-w-none lg:text-[clamp(2.5rem,4.8vw,7rem)]"
                         >
                             Start a {destination.name} board
                         </h2>
@@ -213,21 +213,26 @@ export function DestinationPage({ destination: guide, onLoadMore, onRetry, loadi
                                 className="shrink-0 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1 motion-reduce:transform-none motion-reduce:transition-none"
                             />
                         </Link>
-                        <div className="self-end pt-6">
+                        <div className="self-end pt-6 lg:pb-4">
                             <p className="text-muted-foreground mt-2 max-w-[30ch] text-sm leading-[1.3]">
                                 Build your own itinerary, starting with the places you want to visit.
                             </p>
+                            <div className="bg-background/90 mt-4 w-fit px-2 md:hidden">
+                                <DestinationPhotoCredit {...guide.images[1]} />
+                            </div>
                         </div>
                     </div>
-                    <div className="pointer-events-none absolute top-1/2 left-[78%] aspect-[1077/1254] w-[100%] -translate-y-1/2 overflow-hidden rounded-[50%] lg:absolute lg:top-1/2 lg:left-[62%] lg:z-20 lg:mt-0 lg:ml-0 lg:w-[var(--create-photo-width)] lg:-translate-y-1/2">
-                        <BoardPhoto
-                            image={photos[1]}
-                            placeholderLabel={destination.name}
-                            className="absolute! inset-[-8%]"
-                            sizes="(max-width: 1023px) 125vw, 100vw"
-                        />
+                    <div className="pointer-events-none absolute inset-0 overflow-hidden lg:z-20">
+                        <div className="absolute top-1/2 left-[78%] aspect-[1077/1254] w-full -translate-y-1/2 overflow-hidden rounded-[50%] lg:left-[63%] lg:w-[var(--create-photo-width)]">
+                            <BoardPhoto
+                                image={photos[1]}
+                                placeholderLabel={destination.name}
+                                className="absolute! inset-[-8%]"
+                                sizes="(max-width: 1023px) 125vw, 100vw"
+                            />
+                        </div>
                     </div>
-                    <div className="bg-background/90 absolute right-4 bottom-4 z-30 ml-6 w-fit px-2">
+                    <div className="bg-background/90 absolute right-4 bottom-4 z-30 ml-6 hidden w-fit px-2 md:block">
                         <DestinationPhotoCredit {...guide.images[1]} />
                     </div>
                 </section>

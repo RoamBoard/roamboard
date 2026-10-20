@@ -112,7 +112,7 @@ export function DiscoverFeed() {
     return (
         <div className="bg-background w-[var(--panel-width)] shrink-0">
             <div className="px-5 pt-14 md:px-10 md:pt-10">
-                <section aria-labelledby="discover-feed">
+                <section aria-labelledby="discover-feed" className="@container/bento">
                     <h2
                         id="discover-feed"
                         tabIndex={-1}
@@ -120,13 +120,13 @@ export function DiscoverFeed() {
                     >
                         CURATED COLLECTIONS
                     </h2>
-                    <div className="mt-5 grid gap-2 md:grid-cols-12 md:grid-rows-[repeat(2,minmax(14rem,1fr))]">
+                    <div className="mt-5 grid gap-2 @min-[26rem]/bento:auto-rows-[minmax(14rem,auto)] @min-[26rem]/bento:grid-cols-2 @min-[68rem]/bento:grid-cols-12 @min-[68rem]/bento:grid-rows-[repeat(2,minmax(14rem,1fr))]">
                         {discoverBentoCollections.map((collection) => (
                             <Link
                                 key={collection.id}
                                 href={discoverCollectionHref(collection)}
                                 aria-label={`Explore ${collection.title}`}
-                                className={`group focus-visible:outline-foreground relative flex min-h-56 cursor-pointer items-center overflow-hidden text-white focus-visible:outline-2 focus-visible:outline-offset-4 ${collection.layout}`}
+                                className={`group focus-visible:outline-foreground @container/tile relative flex min-h-56 cursor-pointer items-center overflow-hidden text-white focus-visible:outline-2 focus-visible:outline-offset-4 ${collection.large ? "@min-[26rem]/bento:row-span-2" : ""} ${collection.layout}`}
                             >
                                 <div className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-[1.03] group-focus-visible:scale-[1.03] motion-reduce:transform-none motion-reduce:transition-none">
                                     <DiscoverPhoto
@@ -139,10 +139,10 @@ export function DiscoverFeed() {
                                     aria-hidden="true"
                                     className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/35 to-transparent"
                                 />
-                                <div className="relative w-full p-5 lg:p-6">
+                                <div className="relative w-full p-5 @min-[68rem]/bento:p-6">
                                     <h3
                                         aria-label={collection.title}
-                                        className={`font-body leading-none font-bold ${collection.large ? "text-48 lg:text-60" : "text-[clamp(1.1rem,2.1vw,2.25rem)]"}`}
+                                        className={`font-body leading-none font-bold ${collection.large ? "text-[clamp(2.25rem,16cqw,3.75rem)]" : "text-[clamp(1.25rem,10cqw,2.25rem)]"}`}
                                     >
                                         {(collection.lines ?? [collection.title]).map((line) => (
                                             <span key={line} className="block">
@@ -159,17 +159,17 @@ export function DiscoverFeed() {
                     </div>
                 </section>
                 <DiscoverSearch />
-                <section aria-labelledby="trending-title" className="mt-20 md:mt-24">
+                <section aria-labelledby="trending-title" className="@container/bento mt-20 md:mt-24">
                     <h2 id="trending-title" className={heading}>
                         TRENDING DESTINATIONS
                     </h2>
-                    <div className="mt-5 grid grid-cols-2 gap-2 md:grid-cols-12 md:grid-rows-[repeat(6,5.2rem)]">
+                    <div className="mt-5 grid gap-2 @min-[17rem]/bento:grid-cols-2 @min-[68rem]/bento:grid-cols-12 @min-[68rem]/bento:grid-rows-[repeat(6,5.2rem)]">
                         {discoverDestinations.map((destination) => (
                             <Link
                                 key={destination.countryCode}
                                 href={discoverDestinationHref(destination)}
                                 aria-label={`Explore ${destination.name}`}
-                                className={`group focus-visible:outline-foreground relative min-h-56 cursor-pointer overflow-hidden text-white focus-visible:outline-2 focus-visible:outline-offset-4 md:min-h-0 ${destination.layout}`}
+                                className={`group focus-visible:outline-foreground @container/tile relative min-h-56 cursor-pointer overflow-hidden text-white focus-visible:outline-2 focus-visible:outline-offset-4 @min-[68rem]/bento:min-h-0 ${destination.layout}`}
                             >
                                 <div className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-[1.03] group-focus-visible:scale-[1.03] motion-reduce:transform-none motion-reduce:transition-none">
                                     <DiscoverPhoto photo={destination.coverImage} width={900} />
@@ -178,7 +178,7 @@ export function DiscoverFeed() {
                                     aria-hidden="true"
                                     className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/65"
                                 />
-                                <h3 className="relative p-3 text-[clamp(1rem,2.3vw,2.5rem)] leading-none font-bold uppercase lg:p-5">
+                                <h3 className="relative p-3 text-[clamp(1rem,12cqw,2.5rem)] leading-[1.05] font-bold uppercase @min-[68rem]/bento:p-5">
                                     {destination.name}
                                 </h3>
                                 <p className="text-10 absolute right-3 bottom-3">

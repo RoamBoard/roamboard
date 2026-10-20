@@ -21,7 +21,7 @@ export const discoverDestinations: readonly DiscoverDestination[] = [
         description: "Neighborhood cafés, coastal escapes, and cities worth exploring slowly.",
         coverImage: discoverPhotos.france,
         previewBoardCount: 217,
-        layout: "md:col-start-1 md:col-span-2 md:row-start-1 md:row-span-3"
+        layout: "@min-[68rem]/bento:col-start-1 @min-[68rem]/bento:col-span-2 @min-[68rem]/bento:row-start-1 @min-[68rem]/bento:row-span-3"
     },
     {
         countryCode: "ESP",
@@ -30,7 +30,7 @@ export const discoverDestinations: readonly DiscoverDestination[] = [
         description: "Long lunches, sunlit streets, and evenings that stretch a little longer.",
         coverImage: discoverPhotos.spain,
         previewBoardCount: 126,
-        layout: "md:col-start-3 md:col-span-5 md:row-start-1 md:row-span-2"
+        layout: "@min-[17rem]/bento:row-span-2 @min-[68rem]/bento:col-start-3 @min-[68rem]/bento:col-span-5 @min-[68rem]/bento:row-start-1 @min-[68rem]/bento:row-span-2"
     },
     {
         countryCode: "IDN",
@@ -39,7 +39,7 @@ export const discoverDestinations: readonly DiscoverDestination[] = [
         description: "Island journeys, lush landscapes, and time beside the sea.",
         coverImage: discoverPhotos.indonesia,
         previewBoardCount: 68,
-        layout: "md:col-start-8 md:col-span-2 md:row-start-1 md:row-span-3"
+        layout: "@min-[68rem]/bento:col-start-8 @min-[68rem]/bento:col-span-2 @min-[68rem]/bento:row-start-1 @min-[68rem]/bento:row-span-3"
     },
     {
         countryCode: "KOR",
@@ -48,7 +48,7 @@ export const discoverDestinations: readonly DiscoverDestination[] = [
         description: "Palace courtyards, lively neighborhoods, and flavors worth traveling for.",
         coverImage: discoverPhotos.korea,
         previewBoardCount: 89,
-        layout: "md:col-start-10 md:col-span-3 md:row-start-1 md:row-span-3"
+        layout: "@min-[68rem]/bento:col-start-10 @min-[68rem]/bento:col-span-3 @min-[68rem]/bento:row-start-1 @min-[68rem]/bento:row-span-3"
     },
     {
         countryCode: "BRA",
@@ -57,7 +57,7 @@ export const discoverDestinations: readonly DiscoverDestination[] = [
         description: "Coastal cities, open-air adventures, and a rhythm all its own.",
         coverImage: discoverPhotos.brazil,
         previewBoardCount: 75,
-        layout: "md:col-start-1 md:col-span-2 md:row-start-4 md:row-span-3"
+        layout: "@min-[68rem]/bento:col-start-1 @min-[68rem]/bento:col-span-2 @min-[68rem]/bento:row-start-4 @min-[68rem]/bento:row-span-3"
     },
     {
         countryCode: "JPN",
@@ -66,7 +66,7 @@ export const discoverDestinations: readonly DiscoverDestination[] = [
         description: "Quiet temple paths, vibrant cities, and small discoveries around every corner.",
         coverImage: discoverPhotos.japan,
         previewBoardCount: 104,
-        layout: "md:col-start-3 md:col-span-2 md:row-start-3 md:row-span-3"
+        layout: "@min-[68rem]/bento:col-start-3 @min-[68rem]/bento:col-span-2 @min-[68rem]/bento:row-start-3 @min-[68rem]/bento:row-span-3"
     },
     {
         countryCode: "MAR",
@@ -75,7 +75,7 @@ export const discoverDestinations: readonly DiscoverDestination[] = [
         description: "Winding medina streets, mountain journeys, and warm rooftop evenings.",
         coverImage: discoverPhotos.morocco,
         previewBoardCount: 45,
-        layout: "md:col-start-5 md:col-span-3 md:row-start-3 md:row-span-3"
+        layout: "@min-[68rem]/bento:col-start-5 @min-[68rem]/bento:col-span-3 @min-[68rem]/bento:row-start-3 @min-[68rem]/bento:row-span-3"
     },
     {
         countryCode: "THA",
@@ -84,7 +84,7 @@ export const discoverDestinations: readonly DiscoverDestination[] = [
         description: "Temple visits, street-food stops, and island days with nowhere to rush.",
         coverImage: discoverPhotos.thailand,
         previewBoardCount: 153,
-        layout: "md:col-start-8 md:col-span-5 md:row-start-4 md:row-span-2"
+        layout: "@min-[17rem]/bento:col-span-2 @min-[68rem]/bento:col-start-8 @min-[68rem]/bento:col-span-5 @min-[68rem]/bento:row-start-4 @min-[68rem]/bento:row-span-2"
     }
 ];
 
