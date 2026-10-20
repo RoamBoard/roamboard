@@ -215,7 +215,7 @@ The error code above uses the existing validation middleware.
 
 ## Storage and frontend behavior
 
-Migration 016 is implemented and applied to shared development after a verified backup; see `backend/db/MIGRATION_LOG.md`.
+Migration 018 is implemented and applied to shared development after a verified backup; see `backend/db/MIGRATION_LOG.md`.
 Persist timestamped viewer activity and a server-issued anonymous identity with account merge support. Preserve enough
 history to compute rolling unique counts without repeated-event inflation. Persist/save event history if the current
 saved relationship cannot prevent unsave/re-save gaming. Reuse comment timestamps and deletion state.

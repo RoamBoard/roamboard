@@ -3,9 +3,9 @@
 ## Boards discovery
 
 `contracts/boards-discovery.md` describes the `/boards` feeds, search and three-second view protocol. The dedicated
-discovery endpoints preserve the existing generic `/search` API. Apply migration 016 once on other environments with
+discovery endpoints preserve the existing generic `/search` API. Apply migration 018 once on other environments with
 `npm run db:discovery -- --apply`; the job first verifies a custom-format PostgreSQL backup using local `pg_dump` and
-`pg_restore` (PostgreSQL 18 on Windows, or PATH elsewhere). Shared development already has 016; do not reapply it.
+`pg_restore` (PostgreSQL 18 on Windows, or PATH elsewhere). Shared development already has 018; do not reapply it.
 
 Run `npm run cleanup:discovery` daily through the deployment's scheduler to remove expired view challenges and browser
 identities, views older than 31 days and save events older than 60 days. This does not remove Boards or active saves.

@@ -36,7 +36,7 @@ test(
                     "011_board_published_at.sql",
                     "013_board_comments.sql",
                     "015_friendship_accepted_at.sql",
-                    "016_board_discovery.sql"
+                    "018_board_discovery.sql"
                 ])
                     await client.query(await readFile(new URL(`../db/migrations/${name}`, import.meta.url), "utf8"));
                 await client.query(`INSERT INTO app_user(user_id,username,display_name) VALUES

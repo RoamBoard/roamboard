@@ -7,7 +7,7 @@ These instructions apply to `backend/`. Use `../layered-backend-demo1/` as the r
 - `/boards` discovery uses dedicated search/suggestions, Featured, Recently Published, owned and saved summary feeds
   in `board-discovery/`; generic `/search` remains compatible. Search enforces recognized destination/activity-location
   eligibility, excludes own Boards, and uses curated weighted text matches. Featured defaults to rolling 30 days,
-  with a 7-day option and public-first publication fallbacks. Migration 016 is applied to shared development after
+  with a 7-day option and public-first publication fallbacks. Migration 018 is applied to shared development after
   a verified backup; do not rerun it. View qualification uses a server challenge plus three visible client seconds,
   per-account/browser deduplication and same-browser sign-in merging. Run `cleanup:discovery` daily in deployment;
   no host schedule is installed by this feature. See `../contracts/boards-discovery.md` and the migration log.
