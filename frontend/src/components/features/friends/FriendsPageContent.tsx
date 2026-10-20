@@ -215,10 +215,7 @@ export default function FriendsPageContent({
                     {/* Page Header */}
                     <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                         <div>
-                            <span className="text-10 tracking-label text-muted-foreground font-bold uppercase">
-                                ALL FRIENDS
-                            </span>
-                            <h1 className="font-display text-36 sm:text-48 text-foreground mt-1 font-bold tracking-tight">
+                            <h1 className="font-display text-36 sm:text-48 text-foreground font-bold tracking-tight">
                                 my friends {!loading && `(${friends.length})`}
                             </h1>
                             <p className="text-14 text-muted-foreground mt-1 font-medium">

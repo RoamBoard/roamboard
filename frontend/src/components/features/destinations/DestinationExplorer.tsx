@@ -120,7 +120,7 @@ export function DestinationExplorerContent({
             className="font-body relative isolate grid min-h-dvh min-w-0 place-items-center overflow-hidden px-5 md:px-10"
             aria-label="Roamboard"
         >
-            <RoamWorld focused={open} typing={Boolean(query.trim())} leaving={leaving} reduced={reduced} />
+            <RoamWorld typing={Boolean(query.trim())} leaving={leaving} reduced={reduced} />
             <motion.div
                 animate={controls}
                 className="relative z-10 w-full max-w-[550px]"

@@ -177,8 +177,7 @@ export default function ProfilePageContent({
     return (
         <div className="mx-auto w-full max-w-6xl pb-20">
             <header className="mb-8">
-                <span className="text-10 tracking-label text-muted-foreground font-bold uppercase">ACCOUNT</span>
-                <h1 className="font-display text-48 sm:text-60 text-foreground mt-1 font-bold tracking-tight uppercase">
+                <h1 className="font-display text-48 sm:text-60 text-foreground font-bold tracking-tight uppercase">
                     PROFILE
                 </h1>
             </header>
