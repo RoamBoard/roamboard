@@ -77,7 +77,9 @@ export interface ImagesRepository {
     ): Promise<boolean>;
     listCleanupCandidates(
         before: Date,
-        limit: number
+        limit: number,
+        requestedOnly?: boolean,
+        imageIds?: readonly number[]
     ): Promise<Array<{ imageId: number | null; storageKey: string; uploadId: string | null }>>;
     cleanupImage(imageId: number, removeAsset: () => Promise<void>): Promise<boolean>;
     cleanupIntent(uploadId: string, removeAsset: () => Promise<void>): Promise<boolean>;
@@ -124,5 +126,6 @@ export interface ImagesService {
         boardId?: number,
         profileHandle?: string
     ): Promise<{ stream: Readable; contentType: string }>;
-    cleanupUnused(): Promise<{ removed: number }>;
+    cleanupUnused(): Promise<{ removed: number; failed: number }>;
+    cleanupRequested(imageIds: readonly number[]): Promise<void>;
 }

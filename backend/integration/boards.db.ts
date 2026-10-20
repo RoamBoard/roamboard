@@ -47,7 +47,8 @@ test(
                     "008_board_destination.sql",
                     "009_image_presentation.sql",
                     "010_guest_accounts.sql",
-                    "011_board_published_at.sql"
+                    "011_board_published_at.sql",
+                    "020_image_deletion.sql"
                 ]) {
                     const sql = await readFile(new URL(`../db/migrations/${name}`, import.meta.url), "utf8");
                     await migrationClient.query(sql);
@@ -476,11 +477,6 @@ test(
                 [created.boardId]
             );
             assert.equal(children.rows[0]?.count, "0");
-            assert.equal((await imageService.cleanupUnused()).removed, 0);
-            await pool.query(
-                "UPDATE uploaded_image SET orphaned_at = NOW() - INTERVAL '25 hours' WHERE uploaded_image_id = ANY($1::int[])",
-                [[imageA, imageB]]
-            );
             assert.equal((await imageService.cleanupUnused()).removed, 2);
             assert.deepEqual(destroyedAssets.sort(), ["roamboard/test-1", "roamboard/test-2"].sort());
             assert.equal(await createImagesRepository().findImage(imageA), null);

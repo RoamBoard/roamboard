@@ -11,8 +11,9 @@ const service = createImagesService(createImagesRepository(), createCloudinaryPr
 try {
     let total = 0;
     for (;;) {
-        const { removed } = await service.cleanupUnused();
+        const { removed, failed } = await service.cleanupUnused();
         total += removed;
+        if (failed > 0) process.exitCode = 1;
         if (removed < 100) break;
     }
     process.stdout.write(`Removed ${total} unused image assets\n`);

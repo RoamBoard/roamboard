@@ -3,6 +3,39 @@ import test from "node:test";
 import { v2 as cloudinary } from "cloudinary";
 import { createCloudinaryProvider } from "../src/features/images/images.cloudinary.js";
 
+test("Cloudinary deletion invalidates authenticated originals and accepts an already missing asset", async (context) => {
+    const keys = ["CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET"] as const;
+    const previous = keys.map((key) => process.env[key]);
+    keys.forEach((key) => {
+        process.env[key] = "test-value";
+    });
+    let outcome = "ok";
+    context.mock.method(
+        cloudinary.uploader,
+        "destroy",
+        async (key: string, options?: { type?: string; resource_type?: string; invalidate?: boolean }) => {
+            assert.equal(key, "roamboard/removed-photo");
+            assert.equal(options?.type, "authenticated");
+            assert.equal(options?.resource_type, "image");
+            assert.equal(options?.invalidate, true);
+            return { result: outcome };
+        }
+    );
+    try {
+        const provider = createCloudinaryProvider();
+        await provider.destroy("roamboard/removed-photo");
+        outcome = "not found";
+        await provider.destroy("roamboard/removed-photo");
+        outcome = "failed";
+        await assert.rejects(provider.destroy("roamboard/removed-photo"), /Cloudinary deletion failed/);
+    } finally {
+        keys.forEach((key, index) => {
+            if (previous[index] === undefined) delete process.env[key];
+            else process.env[key] = previous[index];
+        });
+    }
+});
+
 test("deleted Cloudinary files report a missing asset, while saved IDs and permissions remain untouched", async () => {
     const previousFetch = globalThis.fetch;
     const previousResource = cloudinary.api.resource;
