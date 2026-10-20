@@ -6,7 +6,6 @@ import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared
 import ProfileControl from "../src/components/ui/ProfileControl";
 import NotificationControl from "../src/components/ui/NotificationControl";
 import Sidebar from "../src/components/layout/Sidebar";
-import { getMockAuthState, getMockAuthStateServerSnapshot, setMockAuthState } from "../src/data/mock-social";
 import { subscribeToFriendRequestUpdates, type FriendRequest } from "../src/lib/profile";
 import { publishAccountUpdate, signInWithGoogle, type AuthUser } from "../src/lib/auth";
 
@@ -85,19 +84,6 @@ function mount(render: () => ReactNode) {
     }
 }
 
-test("mock auth defaults to signed out and updates via setMockAuthState", () => {
-    setMockAuthState(false);
-    assert.equal(getMockAuthState(), false);
-    assert.equal(getMockAuthStateServerSnapshot(), false);
-
-    setMockAuthState(true);
-    assert.equal(getMockAuthState(), true);
-    assert.equal(getMockAuthStateServerSnapshot(), false);
-
-    // Reset back
-    setMockAuthState(false);
-});
-
 test("ProfileControl renders an account trigger when a user is provided", () => {
     const html = renderToStaticMarkup(
         createElement(
@@ -114,7 +100,6 @@ test("ProfileControl renders an account trigger when a user is provided", () => 
 });
 
 test("ProfileControl keeps the account menu closed when signed out", () => {
-    setMockAuthState(false);
     const html = renderToStaticMarkup(
         createElement(
             RouterWrapper,
@@ -163,6 +148,24 @@ test("ProfileControl renders settings link pointing to /settings when sidebar me
     );
     assert.ok(html.includes('href="/settings"'));
     assert.ok(html.includes("settings"));
+});
+
+test("ProfileControl does not display Rowan or mock profile data when signed out", () => {
+    const html = renderToStaticMarkup(
+        createElement(
+            RouterWrapper,
+            null,
+            createElement(ProfileControl, {
+                user: null,
+                sidebar: true,
+                sidebarAccountOpen: true
+            })
+        )
+    );
+    assert.ok(html.includes("sign in"));
+    assert.ok(!html.includes("Rowan"));
+    assert.ok(!html.includes("ROWAN"));
+    assert.ok(!html.includes("rowan.mercer"));
 });
 
 test("Sidebar renders navigation links and does not render theme select", () => {
