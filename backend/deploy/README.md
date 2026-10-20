@@ -87,14 +87,17 @@ not use `:latest`. Newly created GHCR packages default to private visibility: ei
    `GOOGLE_CLIENT_ID` as repository secrets for the image build.
 
 The deploy job uses Azure Run Command; it needs no inbound SSH rule for GitHub runners and no self-hosted runner on the
-public repository. It checks that the SHA belongs to `main`, that VM Compose files match the release, and that no SQL
-migration changed since the deployed SHA. It pulls both images before changing `IMAGE_TAG`, starts them without building
-locally, checks the API/database and frontend through Caddy, and restores the prior tag if a health check fails.
+public repository. It checks that the SHA belongs to `main` and that neither VM infrastructure nor SQL migrations have
+changed since the deployed SHA. It pulls both images before changing `IMAGE_TAG`, starts them without building locally,
+checks the API/database and frontend through Caddy, and restores the prior tag if a health check fails.
 
 SQL migrations remain manual. If the job stops for migration changes, take and verify a backup, apply and record the
 migrations as described below, set `MIGRATION_READY_TAG=<commit SHA>` in the VM's `backend/.env`, then rerun that
-workflow's failed deploy job. Changes to VM Compose, Caddy or database initialization files also stop deployment until
-a maintainer updates the VM checkout. The image workflow does not modify the checkout or apply SQL migrations.
+workflow's failed deploy job. Changes to VM Compose, Caddy, or database initialization files also stop deployment.
+For those releases, update the VM checkout, set `IMAGE_TAG` to the new SHA, pull both images, and run
+`sudo docker compose --env-file ../.env up -d --no-build --pull never` from `backend/deploy/` to recreate the full
+stack as needed. Verify `/health/db`, the frontend, and Caddy's configuration before rerunning the failed deploy job.
+The image workflow does not modify the checkout, apply SQL migrations, or roll back infrastructure changes.
 Use the existing `backend/.env.example` as the only configuration template. If
 `backend/.env` already exists, edit it rather than copying over it. Both Docker Compose
 and the backend use `backend/.env`; there is no deployment-specific `.env` file.

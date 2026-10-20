@@ -62,10 +62,10 @@ if [[ -n "$changed_migrations" && "$ready_tag" != "$image_tag" ]]; then
     exit 1
 fi
 
-changed_infrastructure="$(repo_git diff --name-only HEAD "$image_tag" -- backend/deploy/compose.yaml backend/deploy/Caddyfile backend/deploy/init-db.sh)"
+changed_infrastructure="$(repo_git diff --name-only "$previous_tag" "$image_tag" -- backend/deploy/compose.yaml backend/deploy/Caddyfile backend/deploy/init-db.sh)"
 if [[ -n "$changed_infrastructure" ]]; then
-    echo "Deployment stopped: VM Compose or Caddy files differ from this commit." >&2
-    echo "Review and update the VM checkout before rerunning this job." >&2
+    echo "Deployment stopped: VM Compose, Caddy, or database initialization files changed since the deployed commit." >&2
+    echo "Update the VM checkout, set IMAGE_TAG=$image_tag, pull both images, deploy the full Compose stack, verify it, then rerun this job." >&2
     exit 1
 fi
 
