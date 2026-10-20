@@ -97,11 +97,42 @@ This is a living project guide. Agents may and should update `AGENTS.md` when th
 
 ## Current integrated surfaces
 
+`/boards` now renders `BoardsDiscovery`: four location-aware suggestions with compact previews, URL-backed numbered
+search results, monthly/weekly Featured, a Discover promotion, Recently Published, owner-only mixed Draft/Published
+Boards and Saved Boards. The two personal sections use the draggable horizontal `BoardLibrary` carousel, retaining
+draft editor links, published View/Edit actions, status labels and confirmed unsaving. Recently Published retains
+the deck gallery, with every loaded Board reachable through its controls and at most five stacked cards mounted.
+There is no separate The Collection grid on `/boards`. Presenters use batch summaries rather than full-document
+requests. Guests see public discovery and one sign-in prompt; accessible friends-only Boards remain viewer-specific.
+The old Archive UI and archive-only fixtures are removed. `DatabasePublishedBoard` qualifies views only after three
+visible seconds through the challenge API; gallery previews never count. NLP/semantic search remains next-iteration
+work. See `../contracts/boards-discovery.md`. Independent automated tests cover the new page/API/storage; actual
+browser interaction/layout verification remains pending because no browser provider was connected.
+
+`/create/remix` uses the Continue gallery for the signed-in user's saved Boards, without search or filters.
+Focused published card backgrounds open `/boards/<boardId>`; secondary deck and collection cards select first. Arrows and swipe
+change the primary card. Its plus opens `/boards/new?remix=<boardId>` and its eye opens the Board view.
+Continue published cards expose pen + View; their backgrounds open View. Drafts retain their existing editor
+and require resolved edit permission. Actions appear on hover/focus and remain visible on touch devices.
+The primary card shares a 48px profile photo and linked `@handle` in both modes, retaining protected photo queries
+and the account-icon fallback. The hover layout reserves separate text, action and metadata areas so controls stay
+above the divider. Gallery arrows sit beneath the secondary deck, above the bottom divider (beneath the main card on mobile).
+The creator prepares independent photos and content through
+`POST /api/v1/boards/:boardId/remix-content`, deduplicates preparation within the mount and disables editing until
+ready, with retry on failure. Days/order/times and cover selections remain; calendar dates, original ownership,
+completion, memberships and visibility are not copied. Normal new-Board visibility preferences apply. Only Save
+or Publish creates a Board. See [the remix contract](../contracts/saved-board-remix.md).
+
 Secondary screens use the shared `BackLink`: profile/settings, notifications, Board selection/editing/viewing and Discover details. It uses the published Board's small arrow-and-text style and scrolls away with the page content; it has no separate header bar. Keep it inside each screen's actual scroll container. Main navigation destinations omit it. `BackNavigationTracker` records the previous internal URL on browser history entries while preserving router state, so Back uses browser history after refresh or forward/back; direct entries use a route-specific parent fallback. Authentication/welcome screens are excluded as return destinations. Board editor leave confirmation preserves Back or fallback replacement after discarding unsaved changes.
 
 `Sidebar` is shared by `AppShell` and `PublishedBoardShell`. It uses a sticky 64px mobile / 80px desktop rail in the page grid; desktop expansion grows to 176px and resizes the page beside it. Hovering a navigation or account control for 150ms temporarily reveals labels; leaving the rail collapses it after 100ms, and returning cancels that collapse. The logo and navigation positions stay fixed during expansion. Keyboard focus reveals labels immediately. The explicit keep-open choice is saved in `roamboard-sidebar-expanded` local storage. Navigation uses icons with lowercase labels on expansion and an underlined active destination, ordered Roam, Create, Discover, Boards, Social. Mobile expansion opens a native modal drawer. The sidebar account control expands its sign-in/profile, Settings, and Light/Dark choices inline above the trigger. Navigation scrolls at every height; the account panel has a viewport-based height bound and its own scrolling. Active destinations are derived from the pathname, including nested creation, Board, Discover, profile, and developer routes. Discover keeps its own scroll-driven intro behavior independently of navigation expansion; Discover panels and destination chapters use their available container width.
 
-The `/dev` index links to the implemented frontend routes and explains how to open `/boards/[boardId]` with a saved Board ID. The creation landing page is `/create`; `/boards` uses shared V4 photographic cards in its featured Motion spatial gallery and independent shadcn/Embla Recently Created and Archive libraries. The featured fan retains spring positioning, pan selection, keyboard navigation and animated captions; libraries retain momentum dragging, snapping, keyboard/wheel navigation, a scroll indicator and progressive loading near the end. It loads owner-published summaries and documents through the existing API, with paginated loading and local search over loaded Boards. V4 reuses these documents for full author/metadata, selected covers and owner visibility; no extra card requests are made. A summary-list failure displays clearly labelled visual sample fixtures; samples have no detail links, account controls, fictional save totals or persistence. The page request store (`src/lib/my-boards-store.ts`) keeps successful document reads when individual Boards are unavailable and retries only failed documents without discarding the current collection. Page/API regression tests render the production content and invoke its search, pagination, and retry handlers through the real request helpers. Saved Boards uses the shared V4 grid with real saved-list membership, confirmed unsaving and page-one refresh after removal to avoid offset skips. Archive remains explicitly labelled sample data; it never persists fake archive changes. Search filters created, saved, and archived collections independently. The Board creator remains `/boards/new`. Creation and editing routes highlight Create; published Board viewing and `/boards/mine` highlight Boards.
+The `/dev` index links to implemented routes and explains how to open `/boards/[boardId]` with a saved Board ID.
+The creation landing page is `/create`; `/boards` now uses the discovery flow described above. Featured retains the
+Motion spatial gallery; Recently Published uses the deck, while My Boards and Saved Boards use BoardLibrary.
+The older `MyBoardsExperience`/`my-boards-store.ts` presenters remain as historical tested owner-list code; they are
+not the `/boards` route and do not define its search or fallback behavior. The Board creator remains `/boards/new`.
+Creation and editing routes highlight Create; published Board viewing and `/boards/mine` highlight Boards.
 
 The Board creator now uses the versioned Board and image upload-intent endpoints with the session cookie. Existing drafts are listed at `/boards/drafts` and reopen at `/boards/drafts/[boardId]`; saving again sends the Board revision to the backend. `/create` contains the creation landing page and links to `/boards/mine`, which lists the signed-in owner's published Boards. Published Boards open for editing at `/boards/[boardId]/edit`; owners can edit content and visibility, while members with the editor role can edit content but not visibility. The creator has one selected Board cover and lets users attach several uploaded images to an activity, order them, and choose its activity cover. Unattached uploads can be assigned while editing an activity. The creator offers the same shared editorial tags as the profile, filtered to backend-persisted names. Retired database tags remain visible/removable on existing Boards but are not offered as new choices. Geoapify location search/reverse geocoding and Unsplash search are implemented in the current backend, with missing-key, quota and provider-failure states. Manual coordinates remain available. Vibe and Highlights controls are absent by agreement. The developer provider lab remains separate from persisted Board media.
 
@@ -274,13 +305,14 @@ The standard top-left BackLink returns to Create; Saved inspiration is removed, 
 at `/create`. On desktop viewports at least 1024px wide and 800px tall, the composition is vertically centered below
 the BackLink, fits the viewport and its Board area handles overflow; smaller/zoomed layouts retain page scrolling.
 The gallery has no Recently Updated heading, decorative footer text or separate Continue link. A selected card
-opens its existing editor only after edit permission resolves; its central pen appears on hover/focus and stays
-visible on touch devices. Unselected cards still select, and carousel arrows sit at the left below the cards.
+opens its published Board view, with independent pen and View controls on hover/focus and touch. Drafts keep
+opening their existing editor after edit permission resolves. Secondary published cards select first;
+carousel arrows beneath the deck and swipe change the selected Board.
 `board-selection-store.ts` clears cached documents on refresh, rejects stale responses,
 and checks fresh document identity and `canEditContent` before showing an editor link. Drafts reopen at
 `/boards/drafts/[boardId]`; published Boards reopen at `/boards/[boardId]/edit`, preserving ID, revision, and status.
 Production APIs cannot enumerate shared editable Boards. Shared-link lookup is deferred in the Continue UI;
-the existing store helper is not exposed by the page. No developer listing endpoint is used. The shared presentation uses a Motion V4 photographic focus gallery and a smaller V4 collection that promotes selected Boards into the same gallery, without duplicates. It retains spring rearrangement, mouse-only 3D tilt, keyboard selection, animated annotations and fresh-document editor gates. V4 selection controls share the card surface; inactive featured cards leave the tab order. Ownership comes from the owner-list scope or canonical management permission; shared edit access does not imply ownership.
+the existing store helper is not exposed by the page. No developer listing endpoint is used. The shared presentation uses a Motion V4 photographic focus gallery and a smaller V4 collection with direct published Board links and draft-preview selection, without duplicates. It retains spring rearrangement, mouse-only 3D tilt, keyboard selection, animated annotations and fresh-document editor gates. V4 selection controls share the card surface; inactive featured cards leave the tab order. Ownership comes from the owner-list scope or canonical management permission; shared edit access does not imply ownership.
 V1=`collage`, V2=`compact`, V3=`landscape`, and V4=`photo` retain their existing names and identifiers.
 V4 is the primary card throughout the migrated product. Continue, Drafts, creator preview, saved/owned lists, profile collections and Discover results are migrated; Featured Boards intentionally retain V3. Legacy variants remain available in the development gallery.
 The Remix page remains an unavailable state. The production account-saved Board list now exists, but this page
@@ -524,6 +556,12 @@ photos use the Board-scoped image authorization described in
 browser so protected requests carry its session cookie. The presentation model retains optional dates/times and
 explicit saved day numbers, including empty days and gaps.
 
+`BoardComments` renders the approved Editorial layout after the published Board, including on the owner's view. It calls
+the Board comment API proposed in `contracts/board-comments.md`, shows independent loading/error states, uses
+server-provided comment permissions for edit/delete, and validates a Board return path through Google and guest login.
+The backend endpoints and migration file are implemented. Comments persist after migration 013 is applied to the shared
+database; applying it is a separate deployment step.
+
 Published Board routes use the database viewer exclusively. The former hardcoded Tokyo document and sample
 lookup were removed after importing Tokyo into the user's account through the canonical Board/image services.
 The retired sample slug has no database alias and shows the missing-Board state. The old `PublishedBoardView`
@@ -617,3 +655,15 @@ The Board editor offers owners a Delete Board text action below View saved Board
 Boards, including saved remix copies. It uses the existing owner-only DELETE endpoint and shared confirmation dialog,
 locks editing during confirmation, retains failures for retry, and returns to `/boards` after deletion. The endpoint
 removes Board children through database cascades and marks uploads for the existing unused-image cleanup.
+
+### Shared Board list hover controls
+
+Featured spatial galleries, the destination Board gallery and BoardLibrary reuse the photographic hover header with the author photo and `@handle`. Owners receive View, plus a pen when edit permission is available; other authors receive View and an independent saved-state bookmark. The bookmark uses the existing account save store and fills after a confirmed save; Remix keeps its template plus action. Secondary spatial/deck cards select first without navigating or exposing primary-only hover controls. Equal-card BoardLibrary items remain direct navigation. Owner galleries reuse their loaded documents; destination galleries load the selected Board through the existing document endpoint, retain summaries on failure and offer retry. Library arrows are centered below the cards and above the scroll indicator; spatial arrows are centered above the bottom divider. These list placements suppress standalone Unsplash cover credits so they cannot alter gallery geometry; other photo placements retain their credits.
+
+The featured My Boards gallery takes up to ten loaded Boards, keeps its 400px maximum card size, centers the Featured Boards heading and places navigation immediately below the shorter stage. Its former visible destination/day caption and Open Board footer link are removed. BoardLibrary cards have a 328px maximum width in 376px desktop slides. Focused published spatial/deck card backgrounds open the Board view, while inactive cards select first. Equal-card library cards open directly. View, Edit, Save and Remix controls remain independent.
+
+Board hover actions and the profile header share the same disclosure state as metadata; they no longer use independent group-hover opacity. Dragging suppresses hover content and native image/link dragging, while profile and action controls scale subtly on hover/focus with reduced-motion support. Spatial galleries interpolate card positions, scale and opacity while dragging. Continue/Remix deck cards follow the pointer and promote on release, suppressing drag-release navigation. Featured frames have no gray boundary; BoardLibrary preserves its boundary without per-card separators. Its 8px native range scrollbar supports pointer and keyboard input and continuous between-snap scrolling through the isolated Embla 8.6 adapter in `board-library-scroll.ts`; check this adapter when upgrading Embla. Active library arrows use foreground color. Interaction tests were authored alongside implementation; browser drag/hover verification and independent test review remain pending.
+
+The three Board browsing components opt into the shared `BoardCardTilt` presenter for the same subtle spring-based pointer tilt. It follows mouse position only, resets on pointer leave/press/cancel or drag suppression, and honors reduced motion. The former Continue-only tilt wrapper was removed to prevent nested transforms. Featured and destination galleries opt into visibility indicators for any known published visibility, regardless of ownership; unknown publication/access data remains unlabelled. Indicators reuse existing public/friends/restricted-access labels and icons and never grant edit permission.
+
+Continue/Remix galleries and their secondary/collection cards also opt into known visibility indicators, independent of Board ownership. BoardLibrary navigation uses a centered two-column group; arrows keep the foreground color even when disabled, while native disabled behavior remains.

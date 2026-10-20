@@ -213,6 +213,26 @@ test("ProfileHero renders handle and based in metadata styled in top sub-bar for
     assert.match(visitorHtml, />Stockholm, Sweden<\/span>/);
 });
 
+test("ProfileHero renders dash for location on own profile and hides location on visitor profile when not set", () => {
+    const profile: PublicProfile = {
+        username: "rowan",
+        displayName: "Rowan Kavanagh",
+        description: "",
+        location: null,
+        occupation: null,
+        languages: [],
+        interests: [],
+        profilePicture: null
+    };
+    const ownerHtml = renderToStaticMarkup(createElement(ProfileHero, { profile, stats: null, isOwner: true }));
+    assert.match(ownerHtml, />based in<\/span>/);
+    assert.match(ownerHtml, />—<\/span>/);
+
+    const visitorHtml = renderToStaticMarkup(createElement(ProfileHero, { profile, stats: null, isOwner: false }));
+    assert.doesNotMatch(visitorHtml, />based in<\/span>/);
+    assert.doesNotMatch(visitorHtml, />—<\/span>/);
+});
+
 test("ProfileHero sends friend request through real API wiring and transitions state", async (context) => {
     const calls: Array<{ url: string; method?: string }> = [];
     context.mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {

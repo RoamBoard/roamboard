@@ -21,6 +21,14 @@ export function createBoardsRouter(
         controller.listAccessible
     );
     router.get("/tags", controller.listTags);
+    router.post(
+        "/boards/:boardId/remix-content",
+        attachUser,
+        requireSessionUser,
+        requireFrontendOrigin,
+        validateParams(boardIdParamsSchema),
+        controller.prepareRemix
+    );
     router.get("/activity-categories", controller.listCategories);
     router.get("/boards", attachUser, requireSessionUser, validateQuery(boardListQuerySchema), controller.listOwned);
     router.post(

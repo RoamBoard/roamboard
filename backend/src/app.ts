@@ -1,12 +1,21 @@
 import { createSmartCreateModule } from "./features/smart-create/smart-create.module.js";
 import type { SmartCreateResolver } from "./features/smart-create/smart-create.service.js";
 import express, { type Express } from "express";
+import { createDiscoveryModule } from "./features/board-discovery/discovery.module.js";
+import { createDiscoveryRepository } from "./features/board-discovery/discovery.repository.js";
+import { readBrowserCookie } from "./features/board-discovery/discovery.controller.js";
+import type { DiscoveryRepository } from "./features/board-discovery/discovery.types.js";
 import cors from "cors";
 import helmet from "helmet";
 
 import { checkDatabase } from "./db.js";
 import { createAuthModule, type AuthModuleOptions } from "./features/auth/auth.module.js";
 import { createBoardsModule } from "./features/boards/boards.module.js";
+import { createBoardsRepository } from "./features/boards/boards.repository.js";
+import { createCommentsModule } from "./features/board-comments/board-comments.module.js";
+import type { CommentsRepository } from "./features/board-comments/board-comments.types.js";
+import { createNotificationsModule } from "./features/board-comment-notifications/notifications.module.js";
+import type { NotificationsRepository } from "./features/board-comment-notifications/notifications.types.js";
 import type { BoardRepository } from "./features/boards/boards.types.js";
 import { createImagesModule } from "./features/images/images.module.js";
 import type { ImageProvider, ImagesRepository } from "./features/images/images.types.js";
@@ -27,10 +36,13 @@ import { createSavedPlacesModule } from "./features/saved-places/saved-places.mo
 import type { SavedPlacesRepository } from "./features/saved-places/saved-places.types.js";
 
 export interface AppOptions extends AuthModuleOptions {
+    discoveryRepository?: DiscoveryRepository;
     smartCreateResolver?: SmartCreateResolver;
     libraryRepository?: LibraryRepository;
     libraryProvider?: LibraryProvider;
     boardRepository?: BoardRepository;
+    commentsRepository?: CommentsRepository;
+    notificationsRepository?: NotificationsRepository;
     imagesRepository?: ImagesRepository;
     imageProvider?: ImageProvider;
     quotaService?: QuotaService;
@@ -68,19 +80,28 @@ export function createApp(options: AppOptions = {}): Express {
     });
 
     const quota = options.quotaService ?? createQuotaService(createPostgresQuotaRepository(), createQuotaPolicies());
-    const auth = createAuthModule({ ...options, quotaService: quota });
+    const discoveryRepository = options.discoveryRepository ?? createDiscoveryRepository();
+    const auth = createAuthModule({
+        ...options,
+        quotaService: quota,
+        onSignedIn: async (cookie, userId) => {
+            const browserId = readBrowserCookie(cookie);
+            if (browserId) await discoveryRepository.mergeBrowser(browserId, userId);
+        }
+    });
     const attachUser = attachSessionUser(auth.service);
     const providers = createProviderModule(quota, attachUser);
     const destinations = createDestinationModule(quota);
     const search = createSearchModule(options.searchRepository, options.searchProvider);
-    const boards = createBoardsModule(attachUser, options.boardRepository);
+    const boardRepository = options.boardRepository ?? createBoardsRepository();
     const images = createImagesModule(
         attachUser,
-        boards.repository,
+        boardRepository,
         options.imagesRepository,
         options.imageProvider,
         quota
     );
+    const boards = createBoardsModule(attachUser, boardRepository, images.service.copyForBoard);
     const users = createUsersModule(attachUser, images.repository, boards.repository, options.usersRepository);
     app.use("/api/v1/auth", auth.router);
     app.use(
@@ -93,7 +114,13 @@ export function createApp(options: AppOptions = {}): Express {
     app.use("/api/v1", users.publicRouter);
     app.use("/api/v1/search", search.router);
     app.use("/api/v1/saved-places", createSavedPlacesModule(attachUser, options.savedPlacesRepository).router);
+    app.use("/api/v1", createDiscoveryModule(attachUser, boardRepository, discoveryRepository).router);
     app.use("/api/v1", boards.router);
+    app.use("/api/v1", createCommentsModule(attachUser, boards.repository, options.commentsRepository).router);
+    app.use(
+        "/api/v1",
+        createNotificationsModule(attachUser, boards.repository, options.notificationsRepository).router
+    );
     app.use("/api/v1", images.router);
     app.use(
         "/api/v1",

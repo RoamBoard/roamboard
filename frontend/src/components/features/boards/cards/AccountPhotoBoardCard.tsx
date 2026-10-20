@@ -5,7 +5,17 @@ import { createBoardSaveStore, toggleBoardSave } from "@/lib/board-save-store";
 import type { PhotoBoardCardData, PhotoBoardCardProps } from "@/types/board-card";
 import PhotoBoardCard from "./PhotoBoardCard";
 
-type Props = {
+type Props = Pick<
+    PhotoBoardCardProps,
+    | "selection"
+    | "hoverActions"
+    | "hideCoverCredit"
+    | "imageSizes"
+    | "details"
+    | "suppressHover"
+    | "tilt"
+    | "showVisibility"
+> & {
     board: PhotoBoardCardData;
     ownership: PhotoBoardCardProps["ownership"];
     href?: string;
@@ -18,19 +28,20 @@ export default function AccountPhotoBoardCard(props: Props) {
     return <AccountCard key={`${props.board.id}:${props.ownership}:${props.initialSaved}`} {...props} />;
 }
 
-function AccountCard({ board, ownership, href, initialSaved, onSavedChange }: Props) {
+function AccountCard({ board, ownership, href, initialSaved, onSavedChange, details = true, ...presentation }: Props) {
     const boardId = Number(board.id);
     const validId = /^\d+$/.test(board.id) && Number.isSafeInteger(boardId) && boardId > 0;
     const [store] = useState(() => createBoardSaveStore(boardId, initialSaved));
     const state = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
     return (
         <PhotoBoardCard
+            {...presentation}
             board={board}
             href={href}
-            details
+            details={details}
             ownership={validId ? ownership : "unknown"}
             save={
-                ownership === "other" && validId
+                ownership === "other" && validId && (!presentation.selection || presentation.selection.selected)
                     ? {
                           state: state.saved === undefined ? "unknown" : state.saved ? "saved" : "unsaved",
                           pending: state.pending,

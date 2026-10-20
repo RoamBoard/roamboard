@@ -3,9 +3,18 @@
 import { useState, useEffect, useId, useRef, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Bell, UserRound } from "lucide-react";
 import { observeCurrentUser, type AuthUser } from "@/lib/auth";
+import CommentNotificationList from "@/components/features/notifications/CommentNotificationList";
+import {
+    commentNotificationHref,
+    listCommentNotifications,
+    markCommentNotificationRead,
+    subscribeToCommentNotificationUpdates,
+    type CommentNotification
+} from "@/lib/comment-notifications";
 import {
     loadFriendRequests,
     acceptFriendRequest,
@@ -42,6 +51,7 @@ export default function NotificationControl({
     const panelId = useId();
     const triggerRef = useRef<HTMLButtonElement>(null);
     const reducedMotion = useReducedMotion();
+    const router = useRouter();
 
     const [requests, setRequests] = useState<FriendRequest[]>(initialRequests ?? []);
     const [loading, setLoading] = useState(false);
@@ -54,6 +64,12 @@ export default function NotificationControl({
             ? ({ userId: initialUserId ?? "initial-session", username: "", displayName: "" } as AuthUser)
             : null
     );
+    const [commentItems, setCommentItems] = useState<CommentNotification[]>([]);
+    const [commentUnreadCount, setCommentUnreadCount] = useState(0);
+    const [commentAccountId, setCommentAccountId] = useState<string | null>(null);
+    const [commentLoading, setCommentLoading] = useState(false);
+    const [commentLoadError, setCommentLoadError] = useState("");
+    const [openingCommentId, setOpeningCommentId] = useState<number | null>(null);
 
     const apiOrigin = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
     const resolveAvatarUrl = (url: string | null) => {
@@ -79,6 +95,70 @@ export default function NotificationControl({
     const readVersionRef = useRef(0);
     const requestVersionRef = useRef(0);
     const requestsRef = useRef<FriendRequest[]>(initialRequests ?? []);
+    const commentReadVersionRef = useRef(0);
+    const commentUserRef = useRef<string | null>(null);
+
+    const fetchCommentNotifications = useCallback((expectedUserId: string) => {
+        const version = ++commentReadVersionRef.current;
+        setCommentLoading(true);
+        setCommentLoadError("");
+        void listCommentNotifications()
+            .then((page) => {
+                if (commentUserRef.current !== expectedUserId || version !== commentReadVersionRef.current) return;
+                setCommentItems(page.data.slice(0, 5));
+                setCommentUnreadCount(page.meta.unreadCount);
+            })
+            .catch(() => {
+                if (commentUserRef.current === expectedUserId && version === commentReadVersionRef.current)
+                    setCommentLoadError("Failed to load comment notifications.");
+            })
+            .finally(() => {
+                if (commentUserRef.current === expectedUserId && version === commentReadVersionRef.current)
+                    setCommentLoading(false);
+            });
+    }, []);
+
+    useEffect(() => {
+        const userId = sessionUser?.userId ?? null;
+        const changed = userId !== commentUserRef.current;
+        if (changed) {
+            commentReadVersionRef.current += 1;
+            commentUserRef.current = userId;
+            setCommentAccountId(userId);
+            setCommentItems([]);
+            setCommentUnreadCount(0);
+            setCommentLoadError("");
+            setOpeningCommentId(null);
+            setCommentLoading(false);
+        }
+        if (userId && (changed || isOpen)) fetchCommentNotifications(userId);
+    }, [sessionUser?.userId, isOpen, fetchCommentNotifications]);
+
+    useEffect(
+        () =>
+            subscribeToCommentNotificationUpdates(() => {
+                if (commentUserRef.current) fetchCommentNotifications(commentUserRef.current);
+            }),
+        [fetchCommentNotifications]
+    );
+
+    async function openCommentNotification(notification: CommentNotification) {
+        const expectedUserId = commentUserRef.current;
+        if (!expectedUserId || openingCommentId !== null) return;
+        setOpeningCommentId(notification.notificationId);
+        setActionError(null);
+        try {
+            if (!notification.readAt) await markCommentNotificationRead(notification.notificationId);
+            if (commentUserRef.current !== expectedUserId) return;
+            toggleOpen(false);
+            router.push(commentNotificationHref(notification));
+        } catch {
+            if (commentUserRef.current === expectedUserId)
+                setActionError("Could not open that notification. Try again.");
+        } finally {
+            if (commentUserRef.current === expectedUserId) setOpeningCommentId(null);
+        }
+    }
 
     useEffect(() => {
         requestsRef.current = requests;
@@ -298,6 +378,8 @@ export default function NotificationControl({
     const containerRef = useRef<HTMLDivElement>(null);
 
     const flyoutPlacement = sidebar ? "bottom-0 left-[calc(100%+1.75rem)]" : "top-[calc(100%+0.5rem)] right-0";
+    const visibleCommentItems = commentAccountId === sessionUser?.userId ? commentItems : [];
+    const pendingCount = requests.length + (commentAccountId === sessionUser?.userId ? commentUnreadCount : 0);
 
     useEffect(() => {
         if (!isOpen || typeof document === "undefined") return;
@@ -335,19 +417,19 @@ export default function NotificationControl({
             >
                 <div className="relative flex shrink-0 items-center justify-center">
                     <Bell aria-hidden="true" size={20} strokeWidth={1.5} className="shrink-0" />
-                    {sessionUser && requests.length > 0 && (
+                    {sessionUser && pendingCount > 0 && (
                         <span
-                            aria-label={`${requests.length} pending requests`}
+                            aria-label={`${pendingCount} pending notifications`}
                             className="bg-foreground text-background absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] leading-none font-bold"
                         >
-                            {requests.length > 9 ? "9+" : requests.length}
+                            {pendingCount > 9 ? "9+" : pendingCount}
                         </span>
                     )}
                 </div>
                 {!iconOnly && <span>notifications</span>}
-                {!iconOnly && sessionUser && requests.length > 0 && (
+                {!iconOnly && sessionUser && pendingCount > 0 && (
                     <span className="text-10 bg-faint border-line text-muted-foreground ml-auto rounded-[2px] border px-1.5 py-0.5 font-medium">
-                        {requests.length}
+                        {pendingCount}
                     </span>
                 )}
             </button>
@@ -426,11 +508,14 @@ export default function NotificationControl({
                                                 Retry
                                             </button>
                                         </div>
-                                    ) : requests.length === 0 ? (
+                                    ) : requests.length === 0 &&
+                                      visibleCommentItems.length === 0 &&
+                                      !commentLoading &&
+                                      !commentLoadError ? (
                                         <p className="text-12 text-muted-foreground font-body px-4 py-6 text-center">
                                             No pending notifications
                                         </p>
-                                    ) : (
+                                    ) : requests.length > 0 ? (
                                         <ul className="flex flex-col gap-2 p-3">
                                             {requests.map((req) => (
                                                 <li
@@ -499,6 +584,43 @@ export default function NotificationControl({
                                                 </li>
                                             ))}
                                         </ul>
+                                    ) : null}
+                                    {commentLoadError && (
+                                        <div
+                                            role="alert"
+                                            className="text-12 flex items-center justify-between px-4 py-3 text-red-500"
+                                        >
+                                            <span>{commentLoadError}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    commentUserRef.current &&
+                                                    fetchCommentNotifications(commentUserRef.current)
+                                                }
+                                                className="cursor-pointer underline"
+                                            >
+                                                Retry
+                                            </button>
+                                        </div>
+                                    )}
+                                    {commentLoading && visibleCommentItems.length === 0 && (
+                                        <p className="text-12 text-muted-foreground px-4 py-3">Loading comments…</p>
+                                    )}
+                                    {visibleCommentItems.length > 0 && (
+                                        <section
+                                            aria-label="Board comment notifications"
+                                            className="border-line border-t"
+                                        >
+                                            <h3 className="text-10 tracking-label text-muted-foreground px-4 pt-3 font-bold uppercase">
+                                                Board comments
+                                            </h3>
+                                            <CommentNotificationList
+                                                items={visibleCommentItems}
+                                                compact
+                                                pendingId={openingCommentId}
+                                                onOpen={openCommentNotification}
+                                            />
+                                        </section>
                                     )}
                                 </>
                             )}

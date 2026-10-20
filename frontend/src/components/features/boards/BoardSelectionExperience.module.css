@@ -21,7 +21,7 @@
     }
 
     .header > p,
-    .header [role="group"] {
+    .header .filterRow {
         margin-top: 0.75rem;
     }
 

@@ -35,7 +35,7 @@ const routes = [
     {
         href: "/boards",
         title: "Boards",
-        description: "Search and browse your published Boards, with sample saved and archive collections."
+        description: "Search and explore community Boards, featured journeys and your own collections."
     },
     {
         href: "/boards/new",

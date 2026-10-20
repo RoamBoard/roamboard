@@ -8,7 +8,7 @@
 
 A signed-in user creates a Board at `/boards/new`, uploads up to 30 photos per batch (repeat batches allowed), arranges days and activities, chooses up to three predefined tags, then saves an incomplete draft or publishes a valid Board. The owner can find and reopen drafts from `/boards`. A save after the first one updates the same Board. Each save submits the complete current Board document; the backend persists its relational changes in one transaction.
 
-This version excludes the separate Vibe and Highlights controls. Vibes are simply choices in the shared tag pool, stored through `board_tag`. It also excludes remixing, invitations/member management UI, saved Boards, discovery/search, and map-provider API design. Existing members and friends still affect read permissions. The Board represents an itinerary or journal without a Board type field.
+This version excludes the separate Vibe and Highlights controls. Vibes are simply choices in the shared tag pool, stored through `board_tag`. It also excludes invitations/member management UI, saved Board membership, discovery/search, and map-provider API design. Saved Board remix preparation is documented in [the remix contract](../contracts/saved-board-remix.md); membership is documented in [the profile contract](../contracts/profile.md). Existing members and friends still affect read permissions. The Board represents an itinerary or journal without a Board type field.
 
 ## Access and lifecycle
 
@@ -322,3 +322,13 @@ and public Board destination data. Public Board search includes the explicit pla
 Publishing additionally requires a non-null main destination. Draft saves can remain incomplete. Existing published
 replacements omitting destination validate the currently stored value; null cannot clear it while published.
 The creator may suggest an editable destination from at least three located activities; manual choices are preserved.
+
+## Published Board comments
+
+The approved [Board comments contract](../contracts/board-comments.md) defines the comment API and permissions.
+`GET /api/v1/boards/:boardId/comments` returns 20 newest comments and an opaque Board-scoped cursor; authorized
+anonymous viewers can read public Board comments. Session and exact frontend Origin are required for POST, PATCH,
+and DELETE. Authors edit their own text with a revision check and may delete it; Board owners may delete any comment.
+Drafts and inaccessible Boards return 404. Current author display names, handles, and profile photos are read from
+`app_user`. Migration `013_board_comments.sql` adds storage after the existing `012_friendship_accepted_at.sql`;
+applying it to the shared database remains a separate step.

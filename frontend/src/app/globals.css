@@ -348,3 +348,32 @@ select optgroup {
     background-color: var(--background);
     color: var(--foreground);
 }
+
+.board-library-scrollbar {
+    appearance: none;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--line);
+    cursor: grab;
+    touch-action: none;
+}
+
+.board-library-scrollbar:active {
+    cursor: grabbing;
+}
+
+.board-library-scrollbar::-webkit-slider-thumb {
+    appearance: none;
+    width: var(--thumb-size);
+    height: 8px;
+    border-radius: 999px;
+    background: var(--foreground);
+}
+
+.board-library-scrollbar::-moz-range-thumb {
+    width: var(--thumb-size);
+    height: 8px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--foreground);
+}

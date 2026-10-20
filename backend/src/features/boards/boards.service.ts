@@ -1,6 +1,6 @@
 import { AppError } from "../../shared/app-error.js";
 import type { BoardWrite } from "./boards.schemas.js";
-import type { BoardRepository, BoardsService } from "./boards.types.js";
+import type { BoardRepository, BoardsService, CopyBoardImage } from "./boards.types.js";
 
 export { canReadBoard } from "./boards.types.js";
 
@@ -79,8 +79,51 @@ async function validateDocument(repository: BoardRepository, input: BoardWrite):
     return normalized;
 }
 
-export function createBoardsService(repository: BoardRepository): BoardsService {
+export function createBoardsService(repository: BoardRepository, copyImage?: CopyBoardImage): BoardsService {
     return {
+        async prepareRemix(userId, boardId) {
+            const source = await repository.getBoard(boardId, userId);
+            if (!source || source.status !== "published" || !source.savedByMe)
+                throw new AppError(404, "Saved Board not found", "NOT_FOUND");
+            const ids = new Map<number, number>();
+            for (const image of source.images) {
+                if (!copyImage) throw new AppError(503, "Photo copying is unavailable", "PROVIDER_UNAVAILABLE");
+                ids.set(image.imageId, await copyImage(userId, boardId, image.imageId, source));
+            }
+            const remap = (id: number | null | undefined) =>
+                id === null || id === undefined ? null : (ids.get(id) ?? null);
+            return {
+                title: source.title,
+                description: source.description,
+                destination: source.destination,
+                tags: source.tags,
+                coverImageId: remap(source.coverImageId),
+                images: source.images.map((image) => ({
+                    ...image,
+                    capturedAt: null,
+                    imageId: ids.get(image.imageId)!,
+                    url: `/api/v1/images/${ids.get(image.imageId)!}/content?variant=display`,
+                    thumbnailUrl: `/api/v1/images/${ids.get(image.imageId)!}/content?variant=thumbnail`
+                })),
+                days: source.days.map((day) => ({
+                    dayNumber: day.dayNumber,
+                    date: null,
+                    activities: day.activities.map((activity) => ({
+                        position: activity.position,
+                        title: activity.title,
+                        activityTime: activity.activityTime,
+                        category: activity.category,
+                        note: activity.note,
+                        source: activity.source,
+                        location: activity.location,
+                        locationConfirmed: activity.locationConfirmed,
+                        externalImage: activity.externalImage,
+                        uploadedImageIds: activity.uploadedImageIds.map((id) => ids.get(id)!),
+                        coverImageId: remap(activity.coverImageId)
+                    }))
+                }))
+            };
+        },
         listTags: () => repository.listTags(),
         listCategories: () => repository.listCategories(),
         async create(userId, input) {

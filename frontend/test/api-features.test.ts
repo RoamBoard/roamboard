@@ -80,6 +80,10 @@ test("API-backed feature boundaries use the configured backend and signed-in ses
             assert.equal(calls.at(-1)?.url.searchParams.get("country"), "Sweden");
             assert.equal(calls.at(-1)?.url.searchParams.get("category"), "museum");
             const controller = new AbortController();
+            response.data = { data: result };
+            await search.searchIndex("Tokyo", { country: "", category: "" }, { page: 2, signal: controller.signal });
+            assert.equal(calls.at(-1)?.url.searchParams.get("page"), "2");
+            assert.equal(calls.at(-1)?.init?.signal, controller.signal);
             response.data = { data: ["Stockholm"] };
             assert.deepEqual(await search.suggestIndex("Sto", controller.signal), ["Stockholm"]);
             assert.equal(calls.at(-1)?.init?.signal, controller.signal);

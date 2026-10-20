@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test, { type TestContext } from "node:test";
 import React, { Children, isValidElement, type ComponentProps, type ReactElement, type ReactNode } from "react";
-import BoardCard from "../src/components/features/boards/cards/BoardCard";
+import DestinationStoryCard from "../src/components/features/destinations/DestinationStoryCard";
 import { BoardCardPhoto } from "../src/components/features/boards/cards/BoardCardParts";
 import { DestinationStories } from "../src/components/features/destinations/DestinationStories";
 import type { DestinationBoardSummary } from "../src/lib/destination-guides";
@@ -79,7 +79,8 @@ function invoke(node: Node, name: string, ...args: unknown[]) {
 function selected(root: ReactNode): number {
     const card = find(
         root,
-        (node) => node.type === BoardCard && Boolean((node.props.selection as { selected: boolean }).selected)
+        (node) =>
+            node.type === DestinationStoryCard && Boolean((node.props.selection as { selected: boolean }).selected)
     );
     return Number((card.props.board as { id: string }).id);
 }
@@ -112,8 +113,11 @@ test("destination spatial gallery arrows, Home and End select real Boards withou
     keyboard(gallery.render(), "Home");
     assert.equal(selected(gallery.render()), 101);
     assert.deepEqual(keyboard(gallery.render(), "PageDown"), { focus: 0, prevented: 0, stopped: 0 });
-    const link = find(gallery.render(), (node) => node.props.href === "/boards/101");
-    assert.equal(link.props.onClick, undefined, "Open Board uses normal real navigation, separate from selection");
+    const link = find(
+        gallery.render(),
+        (node) => (node.props.selection as { viewHref?: string } | undefined)?.viewHref === "/boards/101"
+    );
+    assert.ok(link, "The card background keeps the canonical Board view URL");
     invoke(
         find(gallery.render(), (node) => node.props["aria-label"] === "Next slide"),
         "onClick"
@@ -133,11 +137,15 @@ test("selected public Board identity survives appended pages and reordered data,
     assert.equal(selected(gallery.render()), 102);
     gallery.props.boards = [summary(104), summary(103), summary(102), summary(101)];
     assert.equal(selected(gallery.render()), 102);
-    assert.ok(nodes(gallery.render()).some((node) => node.props.href === "/boards/102"));
+    assert.ok(
+        nodes(gallery.render()).some(
+            (node) => (node.props.selection as { viewHref?: string } | undefined)?.viewHref === "/boards/102"
+        )
+    );
     gallery.props.boards = [summary(104)];
     assert.equal(selected(gallery.render()), 104);
     gallery.props.boards = [];
-    assert.equal(nodes(gallery.render()).filter((node) => node.type === BoardCard).length, 0);
+    assert.equal(nodes(gallery.render()).filter((node) => node.type === DestinationStoryCard).length, 0);
 });
 
 test("gallery pans select at distance or velocity thresholds and suppress the resulting pointer click while preserving keyboard activation", (t) => {
@@ -155,7 +163,7 @@ test("gallery pans select at distance or velocity thresholds and suppress the re
     assert.equal(selected(gallery.render()), 102);
     const card = find(
         gallery.render(),
-        (node) => node.type === BoardCard && (node.props.board as { id: string }).id === "103"
+        (node) => node.type === DestinationStoryCard && (node.props.board as { id: string }).id === "103"
     );
     const selection = card.props.selection as { onSelect: (event: unknown) => void };
     const click = { prevented: false };
@@ -175,7 +183,7 @@ test("gallery pans select at distance or velocity thresholds and suppress the re
     invoke(surface, "onPointerDown");
     const target = find(
         gallery.render(),
-        (node) => node.type === BoardCard && (node.props.board as { id: string }).id === "101"
+        (node) => node.type === DestinationStoryCard && (node.props.board as { id: string }).id === "101"
     );
     (target.props.selection as { onSelect: (event: unknown) => void }).onSelect({ detail: 1 });
     assert.equal(selected(gallery.render()), 101);

@@ -48,6 +48,7 @@ export type LandscapeBoardCardData = BoardCardSummary & {
 };
 
 export type PhotoBoardCardData = BoardCardSummary & {
+    authorPhotoUrl?: string | null;
     image?: BoardCardImage;
     tags?: readonly string[];
     description?: string;
@@ -78,12 +79,22 @@ export type PhotoBoardCardProps = {
     save?: PhotoBoardSave;
     reduceMotion?: boolean;
     imageSizes?: string;
-    // Galleries own selection; a selected card can navigate once its edit access has resolved.
+    hideCoverCredit?: boolean;
+    suppressHover?: boolean;
+    tilt?: boolean;
+    showVisibility?: boolean;
+    hoverActions?: { editHref?: string; viewHref?: string };
+    // Carousels keep card navigation separate from editor and remix actions.
     selection?: {
         selected: boolean;
+        // Permitted editor link, or overview link when remixHref is supplied.
         href?: string;
+        // Background destination; drafts can use their existing editor.
+        viewHref?: string;
+        remixHref?: string;
         label?: string;
         onSelect: (event: MouseEvent<HTMLButtonElement>) => void;
+        onNavigate?: (event: MouseEvent<HTMLAnchorElement>) => void;
         tabIndex?: number;
     };
 };

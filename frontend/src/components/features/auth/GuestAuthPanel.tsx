@@ -3,7 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createGuestAccount, listGuestAccounts, signInAsGuest, type GuestAccount } from "@/lib/auth";
-import { setMockAuthState } from "@/data/mock-social";
+import { loginDestinationAfterBoardComment } from "@/lib/board-comment-return";
 
 export default function GuestAuthPanel() {
     const router = useRouter();
@@ -38,8 +38,7 @@ export default function GuestAuthPanel() {
         setError("");
         try {
             await createGuestAccount(username.trim().toLowerCase());
-            setMockAuthState(true);
-            router.replace("/home");
+            router.replace(loginDestinationAfterBoardComment("/home"));
         } catch (cause) {
             setError(cause instanceof Error ? cause.message : "Could not create the guest account.");
             setBusy(false);
@@ -52,8 +51,7 @@ export default function GuestAuthPanel() {
         setError("");
         try {
             await signInAsGuest(userId);
-            setMockAuthState(true);
-            router.replace("/welcome");
+            router.replace(loginDestinationAfterBoardComment("/welcome"));
         } catch (cause) {
             setError(cause instanceof Error ? cause.message : "Could not sign in to the guest account.");
             setBusy(false);

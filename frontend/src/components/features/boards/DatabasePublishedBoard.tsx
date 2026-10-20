@@ -7,6 +7,7 @@ import PublishedBoard from "@/components/features/boards/PublishedBoard";
 import PublishedBoardShell from "@/components/features/boards/PublishedBoardShell";
 import usePublishedBoard from "@/components/features/boards/usePublishedBoard";
 import type { PublishedBoardState } from "@/types/published-board";
+import { trackBoardView } from "@/lib/board-view-tracking";
 
 // Failed or restricted reads show a message instead of substituting a sample Board.
 export function DatabasePublishedBoardContent({ state, onRetry }: { state: PublishedBoardState; onRetry: () => void }) {
@@ -60,6 +61,10 @@ export function DatabasePublishedBoardContent({ state, onRetry }: { state: Publi
 
 export default function DatabasePublishedBoard({ boardId }: { boardId: string }) {
     const { state, retry } = usePublishedBoard(boardId);
+    const ready = state.status === "ready";
+    useEffect(() => {
+        if (ready) return trackBoardView(Number(boardId));
+    }, [ready, boardId]);
     useEffect(() => {
         if (state.status === "ready" && state.data) document.title = `${state.data.board.title} | Roamboard`;
     }, [state]);

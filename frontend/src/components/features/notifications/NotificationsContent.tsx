@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import BackLink from "@/components/ui/BackLink";
+import CommentNotificationsSection from "./CommentNotificationsSection";
 import Image from "next/image";
 import { Bell, UserRound } from "lucide-react";
 import { observeCurrentUser, type AuthUser } from "@/lib/auth";
@@ -225,10 +226,7 @@ export default function NotificationsContent({
                 <div className="px-4 pt-6 pb-20 sm:px-8 md:px-12 lg:px-16">
                     <div className="mx-auto w-full max-w-3xl pb-20">
                         <header className="mb-8">
-                            <span className="text-10 tracking-label text-muted-foreground font-bold uppercase">
-                                COMMUNITY
-                            </span>
-                            <div className="mt-1 flex items-baseline justify-between gap-4">
+                            <div className="flex items-baseline justify-between gap-4">
                                 <h1 className="font-display text-48 sm:text-60 text-foreground font-bold tracking-tight uppercase">
                                     NOTIFICATIONS
                                 </h1>
@@ -296,9 +294,11 @@ export default function NotificationsContent({
                                 <div className="bg-muted text-muted-foreground mx-auto mb-4 flex size-12 items-center justify-center rounded-full">
                                     <Bell size={24} strokeWidth={1.5} />
                                 </div>
-                                <h2 className="font-display text-24 text-foreground font-bold">All caught up!</h2>
+                                <h2 className="font-display text-24 text-foreground font-bold">
+                                    No pending friend requests
+                                </h2>
                                 <p className="text-14 text-muted-foreground mx-auto mt-2 max-w-sm font-medium">
-                                    You don&apos;t have any pending friend requests or new notifications right now.
+                                    New Board comments will appear below.
                                 </p>
                                 <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
                                     <Link
@@ -392,6 +392,9 @@ export default function NotificationsContent({
                                     ))}
                                 </ul>
                             </section>
+                        )}
+                        {sessionUser && (
+                            <CommentNotificationsSection key={sessionUser.userId} userId={sessionUser.userId} />
                         )}
                     </div>
                 </div>

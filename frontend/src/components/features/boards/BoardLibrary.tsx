@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from "react";
 import { useReducedMotion } from "motion/react";
 import {
     Carousel,
@@ -11,19 +11,22 @@ import {
     type CarouselApi
 } from "@/components/ui/carousel";
 import type { GalleryBoard } from "@/lib/my-boards";
-import BoardCard from "./cards/BoardCard";
+import AccountPhotoBoardCard from "./cards/AccountPhotoBoardCard";
+import { BoardDragContext } from "./cards/PhotoBoardCard";
+import { scrollBoardLibrary } from "@/lib/board-library-scroll";
 
 type Props = {
-    boards: readonly Pick<GalleryBoard, "compact" | "photo" | "ownership" | "href">[];
+    boards: readonly Pick<GalleryBoard, "compact" | "photo" | "ownership" | "href" | "editHref" | "savedByMe">[];
     id?: string;
     title?: string;
     description?: string;
-    archived?: boolean;
     hasMore?: boolean;
     loadingMore?: boolean;
     onLoadMore?: () => Promise<void>;
     onBoardHighlight?: (boardId: string | null) => void;
     embedded?: boolean;
+    showStatus?: boolean;
+    onSavedChange?: (boardId: string, saved: boolean) => void;
 };
 
 export default function BoardLibrary({
@@ -34,9 +37,10 @@ export default function BoardLibrary({
     id = "board-library",
     title = "YOUR COLLECTION",
     description,
-    archived = false,
     onBoardHighlight,
-    embedded = false
+    embedded = false,
+    showStatus = false,
+    onSavedChange
 }: Props) {
     const interaction = useRef<{ hovered: string | null; focused: string | null }>({ hovered: null, focused: null });
     return (
@@ -55,7 +59,7 @@ export default function BoardLibrary({
                     key={board.compact.id}
                     aria-label={`${index + 1} of ${boards.length}: ${board.compact.title}`}
                     className={
-                        "border-line/60 relative flex basis-[90%] justify-center border-r px-3 last:border-r sm:basis-[340px] sm:px-6 " +
+                        "relative flex basis-[90%] justify-center px-3 sm:basis-[376px] sm:px-6 " +
                         (embedded ? "py-2" : "py-5 sm:py-8")
                     }
                     onMouseEnter={() => {
@@ -76,9 +80,9 @@ export default function BoardLibrary({
                         onBoardHighlight?.(interaction.current.hovered);
                     }}
                 >
-                    <div className="w-full max-w-[292px] shrink-0 transition-transform duration-200 motion-safe:hover:-translate-y-1 motion-reduce:transition-none">
-                        <BoardCard
-                            variant="photo"
+                    <div className="w-full max-w-[328px] shrink-0 transition-transform duration-200 motion-safe:hover:-translate-y-1 motion-reduce:transition-none">
+                        <AccountPhotoBoardCard
+                            tilt
                             board={
                                 board.photo ?? {
                                     id: board.compact.id,
@@ -91,12 +95,24 @@ export default function BoardLibrary({
                             }
                             href={board.href}
                             ownership={board.ownership}
+                            initialSaved={board.savedByMe}
+                            onSavedChange={(saved) => onSavedChange?.(board.compact.id, saved)}
+                            showVisibility={showStatus}
+                            hideCoverCredit
+                            hoverActions={
+                                board.href
+                                    ? {
+                                          editHref: board.ownership === "owner" ? board.editHref : undefined,
+                                          viewHref: board.photo?.status === "draft" ? undefined : board.href
+                                      }
+                                    : undefined
+                            }
                             details
-                            imageSizes="(max-width: 640px) 75vw, 292px"
+                            imageSizes="(max-width: 640px) 75vw, 328px"
                         />
-                        {archived && (
-                            <p className="text-10 text-foreground/65 mt-4 text-center tracking-[.12em] uppercase">
-                                Archived
+                        {showStatus && board.photo?.status && (
+                            <p className="text-muted-foreground mt-3 text-center text-xs">
+                                {board.photo.status === "draft" ? "Draft" : "Published"}
                             </p>
                         )}
                     </div>
@@ -136,6 +152,20 @@ export function BoardLibraryCarousel({
     const [position, setPosition] = useState({ progress: 0, visible: 1 });
     const reducedMotion = useReducedMotion();
     const requestedLength = useRef(-1);
+    const [dragging, setDragging] = useState(false);
+    const pointer = useRef<{ x: number; y: number } | null>(null);
+    useEffect(() => {
+        const end = () => {
+            pointer.current = null;
+            setDragging(false);
+        };
+        window.addEventListener("pointerup", end);
+        window.addEventListener("pointercancel", end);
+        return () => {
+            window.removeEventListener("pointerup", end);
+            window.removeEventListener("pointercancel", end);
+        };
+    }, []);
 
     useEffect(() => {
         if (!api) return;
@@ -198,120 +228,130 @@ export function BoardLibraryCarousel({
                       : "mx-auto mt-20 max-w-[1320px] md:mt-24"
             }
         >
-            <Carousel
-                setApi={setApi}
-                opts={{
-                    align: "start",
-                    containScroll: "trimSnaps",
-                    skipSnaps: true,
-                    loop: false,
-                    duration: reducedMotion ? 0 : 25
-                }}
-                aria-label={`${title} collection`}
-                tabIndex={0}
-                className="outline-offset-[-2px] focus-visible:outline-1"
-            >
-                {(count > 0 || variant === "default") && (
-                    <div
-                        className={
-                            variant !== "default"
-                                ? "mb-3 flex items-center justify-between gap-4"
-                                : embedded
-                                  ? "mb-2 flex items-center justify-between gap-4"
-                                  : "mx-5 mb-6 flex items-center justify-between gap-4 sm:mx-12"
-                        }
-                    >
-                        <h2
-                            id={`${id}-heading`}
-                            className={
-                                variant === "profile"
-                                    ? "sr-only"
-                                    : "font-display text-foreground/60 text-24 md:text-36 font-medium"
-                            }
-                        >
-                            {title}
-                        </h2>
+            <BoardDragContext.Provider value={dragging}>
+                <Carousel
+                    onPointerDownCapture={(event) => {
+                        pointer.current = { x: event.clientX, y: event.clientY };
+                    }}
+                    onPointerMoveCapture={(event) => {
+                        const start = pointer.current;
+                        if (start && Math.hypot(event.clientX - start.x, event.clientY - start.y) > 8)
+                            setDragging(true);
+                    }}
+                    setApi={setApi}
+                    opts={{
+                        align: "start",
+                        containScroll: "trimSnaps",
+                        skipSnaps: true,
+                        loop: false,
+                        duration: reducedMotion ? 0 : 25
+                    }}
+                    aria-label={`${title} collection`}
+                    tabIndex={0}
+                    className="outline-offset-[-2px] focus-visible:outline-1"
+                >
+                    {(count > 0 || variant === "default") && (
                         <div
-                            className={`flex shrink-0 items-center justify-center gap-2 ${variant === "profile" ? "ml-auto" : ""}`}
-                        >
-                            <CarouselPrevious
-                                aria-label={`Previous ${collectionName} Boards`}
-                                className="rounded-none border-0 [&>svg]:size-6"
-                            />
-                            <CarouselNext
-                                aria-label={`Next ${collectionName} Boards`}
-                                className="rounded-none border-0 [&>svg]:size-6"
-                            />
-                        </div>
-                    </div>
-                )}
-                {count === 0 && variant !== "default" && (
-                    <h2 id={`${id}-heading`} className="sr-only">
-                        {title}
-                    </h2>
-                )}
-                {description && <p className="text-12 text-foreground/65 mx-5 mb-8 max-w-xl sm:mx-12">{description}</p>}
-                {count === 0 && emptyMessage !== "" && (
-                    <p role="status" className="text-14 text-foreground/65 mx-5 py-16 text-center">
-                        {emptyMessage ?? `No ${collectionName} Boards match your search.`}
-                    </p>
-                )}
-                {(count > 0 || listLabel) && (
-                    <div
-                        className={
-                            variant !== "default"
-                                ? "border-line/50 border-t"
-                                : embedded
-                                  ? "border-line/50 border-x"
-                                  : "border-line/50 mx-3 border-x sm:mx-10"
-                        }
-                    >
-                        <CarouselContent
-                            as={listLabel ? "ul" : "div"}
-                            aria-label={listLabel}
-                            tabIndex={listLabel ? -1 : undefined}
                             className={
                                 variant !== "default"
-                                    ? "cursor-grab items-start py-5 select-none active:cursor-grabbing"
+                                    ? "mb-3 flex items-center justify-between gap-4"
                                     : embedded
-                                      ? "cursor-grab py-2 select-none active:cursor-grabbing"
-                                      : "cursor-grab py-5 select-none active:cursor-grabbing md:py-8"
+                                      ? "mb-2 flex items-center justify-between gap-4"
+                                      : "mx-5 mb-6 flex items-center justify-between gap-4 sm:mx-12"
                             }
                         >
-                            {children}
-                        </CarouselContent>
-                        {count > 0 && (
-                            <div
-                                role="progressbar"
-                                aria-label={`${title} scroll position`}
-                                aria-valuemin={0}
-                                aria-valuemax={100}
-                                aria-valuenow={Math.round(position.progress * 100)}
+                            <h2
+                                id={`${id}-heading`}
+                                tabIndex={-1}
                                 className={
-                                    variant !== "default"
-                                        ? "bg-line/60 relative mt-3 mb-5 h-px w-full"
-                                        : "bg-line/60 relative mx-auto mt-8 mb-10 h-px w-2/3 max-w-[800px]"
+                                    variant === "profile"
+                                        ? "sr-only"
+                                        : "font-display text-foreground/60 text-24 md:text-36 font-medium"
                                 }
                             >
+                                {title}
+                            </h2>
+                        </div>
+                    )}
+                    {count === 0 && variant !== "default" && (
+                        <h2 id={`${id}-heading`} className="sr-only">
+                            {title}
+                        </h2>
+                    )}
+                    {description && (
+                        <p className="text-12 text-foreground/65 mx-5 mb-8 max-w-xl sm:mx-12">{description}</p>
+                    )}
+                    {count === 0 && emptyMessage !== "" && (
+                        <p role="status" className="text-14 text-foreground/65 mx-5 py-16 text-center">
+                            {emptyMessage ?? `No ${collectionName} Boards match your search.`}
+                        </p>
+                    )}
+                    {(count > 0 || listLabel) && (
+                        <div
+                            className={
+                                variant !== "default"
+                                    ? "border-line/50 border-t"
+                                    : embedded
+                                      ? "border-line/50 border-x"
+                                      : "border-line/50 mx-3 border-x sm:mx-10"
+                            }
+                        >
+                            <CarouselContent
+                                as={listLabel ? "ul" : "div"}
+                                aria-label={listLabel}
+                                tabIndex={listLabel ? -1 : undefined}
+                                className={
+                                    variant !== "default"
+                                        ? "cursor-grab items-start py-5 select-none active:cursor-grabbing"
+                                        : embedded
+                                          ? "cursor-grab py-2 select-none active:cursor-grabbing"
+                                          : "cursor-grab py-5 select-none active:cursor-grabbing md:py-8"
+                                }
+                            >
+                                {children}
+                            </CarouselContent>
+                            {count > 0 && (
                                 <div
-                                    className="bg-muted-foreground absolute -top-px h-[3px]"
-                                    style={{
-                                        width: `${position.visible * 100}%`,
-                                        left: `${position.progress * (1 - position.visible) * 100}%`
+                                    role="group"
+                                    aria-label={`${title} navigation`}
+                                    className="mx-auto grid w-fit grid-cols-2 place-items-center gap-3 pt-4"
+                                >
+                                    <CarouselPrevious
+                                        aria-label={`Previous ${collectionName} Boards`}
+                                        className="text-foreground static rounded-none border-0 disabled:opacity-100! [&>svg]:size-7"
+                                    />
+                                    <CarouselNext
+                                        aria-label={`Next ${collectionName} Boards`}
+                                        className="text-foreground static rounded-none border-0 disabled:opacity-100! [&>svg]:size-7"
+                                    />
+                                </div>
+                            )}
+                            {count > 0 && (
+                                <input
+                                    type="range"
+                                    aria-label={`${title} scroll position`}
+                                    min={0}
+                                    max={1000}
+                                    value={Math.round(position.progress * 1000)}
+                                    disabled={!api || position.visible >= 1}
+                                    onChange={(event) => {
+                                        if (api) scrollBoardLibrary(api, Number(event.target.value) / 1000);
                                     }}
+                                    style={{ "--thumb-size": `max(24px, ${position.visible * 100}%)` } as CSSProperties}
+                                    className={`board-library-scrollbar focus-visible:outline-foreground block focus-visible:outline-2 focus-visible:outline-offset-4 disabled:cursor-default ${variant !== "default" ? "mt-3 mb-5 w-full" : "mx-auto mt-8 mb-10 w-2/3 max-w-[800px]"}`}
                                 />
-                            </div>
-                        )}
-                    </div>
-                )}
-                {(count > 0 || variant === "default") && (
-                    <p className="text-10 text-foreground/65 mt-4 px-5 text-center" role="status">
-                        {loadingMore
-                            ? "Loading more Boards…"
-                            : `${count} ${count === 1 ? "Board" : "Boards"} · drag, swipe or scroll to explore`}
-                    </p>
-                )}
-            </Carousel>
+                            )}
+                        </div>
+                    )}
+                    {(count > 0 || variant === "default") && (
+                        <p className="text-10 text-foreground/65 mt-4 px-5 text-center" role="status">
+                            {loadingMore
+                                ? "Loading more Boards…"
+                                : `${count} ${count === 1 ? "Board" : "Boards"} · drag, swipe or scroll to explore`}
+                        </p>
+                    )}
+                </Carousel>
+            </BoardDragContext.Provider>
         </section>
     );
 }
