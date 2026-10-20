@@ -172,7 +172,15 @@ export default function LanguageEditor({ languages, onChangeLanguages, choices, 
                 </div>
             )}
 
-            <div ref={containerRef} className="relative mt-4 max-w-sm">
+            <div
+                ref={containerRef}
+                onBlur={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                        setIsOpen(false);
+                    }
+                }}
+                className="relative mt-4 max-w-sm"
+            >
                 <div className="relative">
                     <input
                         ref={inputRef}
@@ -181,6 +189,15 @@ export default function LanguageEditor({ languages, onChangeLanguages, choices, 
                         aria-expanded={isOpen && !isMaxReached}
                         aria-controls={listboxId}
                         aria-autocomplete="list"
+                        aria-activedescendant={
+                            isOpen &&
+                            !isMaxReached &&
+                            filteredChoices.length > 0 &&
+                            highlightedIndex >= 0 &&
+                            highlightedIndex < filteredChoices.length
+                                ? `${listboxId}-option-${highlightedIndex}`
+                                : undefined
+                        }
                         aria-label="Add language"
                         value={searchQuery}
                         disabled={isMaxReached}
@@ -222,7 +239,6 @@ export default function LanguageEditor({ languages, onChangeLanguages, choices, 
                             onClick={() => {
                                 if (isMaxReached) return;
                                 setIsOpen((prev) => !prev);
-                                inputRef.current?.focus();
                             }}
                             aria-label={isOpen ? "Close suggestions" : "Open suggestions"}
                             className="text-muted-foreground hover:text-foreground text-10 cursor-pointer disabled:cursor-not-allowed"
@@ -249,6 +265,7 @@ export default function LanguageEditor({ languages, onChangeLanguages, choices, 
                             filteredChoices.map((choice, index) => (
                                 <li
                                     key={choice}
+                                    id={`${listboxId}-option-${index}`}
                                     data-index={index}
                                     role="option"
                                     aria-selected={index === highlightedIndex}
