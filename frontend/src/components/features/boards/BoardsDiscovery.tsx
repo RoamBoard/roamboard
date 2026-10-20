@@ -467,6 +467,7 @@ export function DiscoveryCollectionContent({
                         description={source === "owned" ? "Your drafts and published Boards" : "Your saved Boards"}
                         boards={(state.data?.items ?? []).map(discoveryGallery)}
                         showStatus
+                        removeOnUnsave={source === "saved"}
                         hasMore={Boolean(state.data?.hasMore && !state.error)}
                         loadingMore={state.loading}
                         onLoadMore={() =>

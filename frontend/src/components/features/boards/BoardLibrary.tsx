@@ -26,7 +26,9 @@ type Props = {
     onBoardHighlight?: (boardId: string | null) => void;
     embedded?: boolean;
     showStatus?: boolean;
+    variant?: LibraryVariant;
     onSavedChange?: (boardId: string, saved: boolean) => void;
+    removeOnUnsave?: boolean;
 };
 
 export default function BoardLibrary({
@@ -40,85 +42,107 @@ export default function BoardLibrary({
     onBoardHighlight,
     embedded = false,
     showStatus = false,
-    onSavedChange
+    variant = "default",
+    onSavedChange,
+    removeOnUnsave = false
 }: Props) {
+    const root = useRef<HTMLDivElement>(null);
     const interaction = useRef<{ hovered: string | null; focused: string | null }>({ hovered: null, focused: null });
     return (
-        <BoardLibraryCarousel
-            count={boards.length}
-            id={id}
-            title={title}
-            description={description}
-            hasMore={hasMore}
-            loadingMore={loadingMore}
-            onLoadMore={onLoadMore}
-            embedded={embedded}
-        >
-            {boards.map((board, index) => (
-                <CarouselItem
-                    key={board.compact.id}
-                    aria-label={`${index + 1} of ${boards.length}: ${board.compact.title}`}
-                    className={
-                        "relative flex basis-[90%] justify-center px-3 sm:basis-[376px] sm:px-6 " +
-                        (embedded ? "py-2" : "py-5 sm:py-8")
-                    }
-                    onMouseEnter={() => {
-                        interaction.current.hovered = board.compact.id;
-                        onBoardHighlight?.(board.compact.id);
-                    }}
-                    onMouseLeave={() => {
-                        interaction.current.hovered = null;
-                        onBoardHighlight?.(interaction.current.focused);
-                    }}
-                    onFocusCapture={() => {
-                        interaction.current.focused = board.compact.id;
-                        onBoardHighlight?.(board.compact.id);
-                    }}
-                    onBlurCapture={(event) => {
-                        if (event.currentTarget.contains(event.relatedTarget)) return;
-                        interaction.current.focused = null;
-                        onBoardHighlight?.(interaction.current.hovered);
-                    }}
-                >
-                    <div className="w-full max-w-[328px] shrink-0 transition-transform duration-200 motion-safe:hover:-translate-y-1 motion-reduce:transition-none">
-                        <AccountPhotoBoardCard
-                            tilt
-                            board={
-                                board.photo ?? {
-                                    id: board.compact.id,
-                                    title: board.compact.title,
-                                    author: board.compact.author,
-                                    destination: board.compact.destination,
-                                    destinationLabel: board.compact.destinationLabel,
-                                    image: board.compact.image
+        <div ref={root}>
+            <BoardLibraryCarousel
+                count={boards.length}
+                id={id}
+                title={title}
+                description={description}
+                hasMore={hasMore}
+                loadingMore={loadingMore}
+                onLoadMore={onLoadMore}
+                embedded={embedded}
+                variant={variant}
+                emptyMessage={variant === "profile" ? "" : undefined}
+            >
+                {boards.map((board, index) => (
+                    <CarouselItem
+                        key={board.compact.id}
+                        data-library-board={board.compact.id}
+                        aria-label={`${index + 1} of ${boards.length}: ${board.compact.title}`}
+                        className={
+                            "relative flex basis-[90%] justify-center px-3 sm:basis-[376px] sm:px-6 " +
+                            (embedded || variant === "profile" ? "py-2" : "py-5 sm:py-8")
+                        }
+                        onMouseEnter={() => {
+                            interaction.current.hovered = board.compact.id;
+                            onBoardHighlight?.(board.compact.id);
+                        }}
+                        onMouseLeave={() => {
+                            interaction.current.hovered = null;
+                            onBoardHighlight?.(interaction.current.focused);
+                        }}
+                        onFocusCapture={() => {
+                            interaction.current.focused = board.compact.id;
+                            onBoardHighlight?.(board.compact.id);
+                        }}
+                        onBlurCapture={(event) => {
+                            if (event.currentTarget.contains(event.relatedTarget)) return;
+                            interaction.current.focused = null;
+                            onBoardHighlight?.(interaction.current.hovered);
+                        }}
+                    >
+                        <div className="w-full max-w-[328px] shrink-0 transition-transform duration-200 motion-safe:hover:-translate-y-1 motion-reduce:transition-none">
+                            <AccountPhotoBoardCard
+                                tilt
+                                board={
+                                    board.photo ?? {
+                                        id: board.compact.id,
+                                        title: board.compact.title,
+                                        author: board.compact.author,
+                                        destination: board.compact.destination,
+                                        destinationLabel: board.compact.destinationLabel,
+                                        image: board.compact.image
+                                    }
                                 }
-                            }
-                            href={board.href}
-                            ownership={board.ownership}
-                            initialSaved={board.savedByMe}
-                            onSavedChange={(saved) => onSavedChange?.(board.compact.id, saved)}
-                            showVisibility={showStatus}
-                            hideCoverCredit
-                            hoverActions={
-                                board.href
-                                    ? {
-                                          editHref: board.ownership === "owner" ? board.editHref : undefined,
-                                          viewHref: board.photo?.status === "draft" ? undefined : board.href
-                                      }
-                                    : undefined
-                            }
-                            details
-                            imageSizes="(max-width: 640px) 75vw, 328px"
-                        />
-                        {showStatus && board.photo?.status && (
-                            <p className="text-muted-foreground mt-3 text-center text-xs">
-                                {board.photo.status === "draft" ? "Draft" : "Published"}
-                            </p>
-                        )}
-                    </div>
-                </CarouselItem>
-            ))}
-        </BoardLibraryCarousel>
+                                href={board.href}
+                                ownership={board.ownership}
+                                initialSaved={board.savedByMe}
+                                onSavedChange={(saved) => {
+                                    const container = root.current;
+                                    const slides = Array.from(
+                                        container?.querySelectorAll<HTMLElement>("[data-library-board]") ?? []
+                                    );
+                                    const slide = slides.find((item) => item.dataset.libraryBoard === board.compact.id);
+                                    if (removeOnUnsave && !saved && slide?.contains(document.activeElement)) {
+                                        const next = slides[index + 1] ?? slides[index - 1];
+                                        const target =
+                                            next?.querySelector<HTMLElement>("a[href], button:not([disabled])") ??
+                                            container?.querySelector<HTMLElement>('[aria-roledescription="carousel"]');
+                                        target?.focus();
+                                    }
+                                    onSavedChange?.(board.compact.id, saved);
+                                }}
+                                showVisibility
+                                hideCoverCredit
+                                hoverActions={
+                                    board.href
+                                        ? {
+                                              editHref: board.ownership === "owner" ? board.editHref : undefined,
+                                              viewHref: board.photo?.status === "draft" ? undefined : board.href
+                                          }
+                                        : undefined
+                                }
+                                details
+                                imageSizes="(max-width: 640px) 75vw, 328px"
+                            />
+                            {showStatus && board.photo?.status && (
+                                <p className="text-muted-foreground mt-3 text-center text-xs">
+                                    {board.photo.status === "draft" ? "Draft" : "Published"}
+                                </p>
+                            )}
+                        </div>
+                    </CarouselItem>
+                ))}
+            </BoardLibraryCarousel>
+        </div>
     );
 }
 
@@ -222,7 +246,7 @@ export function BoardLibraryCarousel({
             aria-labelledby={`${id}-heading`}
             className={
                 variant !== "default"
-                    ? "mt-6 min-w-0"
+                    ? "mt-3 min-w-0"
                     : embedded
                       ? "mt-3 min-w-0"
                       : "mx-auto mt-20 max-w-[1320px] md:mt-24"
@@ -254,7 +278,7 @@ export function BoardLibraryCarousel({
                         <div
                             className={
                                 variant !== "default"
-                                    ? "mb-3 flex items-center justify-between gap-4"
+                                    ? "flex items-center justify-between gap-4"
                                     : embedded
                                       ? "mb-2 flex items-center justify-between gap-4"
                                       : "mx-5 mb-6 flex items-center justify-between gap-4 sm:mx-12"
@@ -290,7 +314,7 @@ export function BoardLibraryCarousel({
                         <div
                             className={
                                 variant !== "default"
-                                    ? "border-line/50 border-t"
+                                    ? ""
                                     : embedded
                                       ? "border-line/50 border-x"
                                       : "border-line/50 mx-3 border-x sm:mx-10"
@@ -302,7 +326,7 @@ export function BoardLibraryCarousel({
                                 tabIndex={listLabel ? -1 : undefined}
                                 className={
                                     variant !== "default"
-                                        ? "cursor-grab items-start py-5 select-none active:cursor-grabbing"
+                                        ? "cursor-grab items-start py-2 select-none active:cursor-grabbing"
                                         : embedded
                                           ? "cursor-grab py-2 select-none active:cursor-grabbing"
                                           : "cursor-grab py-5 select-none active:cursor-grabbing md:py-8"
@@ -314,7 +338,7 @@ export function BoardLibraryCarousel({
                                 <div
                                     role="group"
                                     aria-label={`${title} navigation`}
-                                    className="mx-auto grid w-fit grid-cols-2 place-items-center gap-3 pt-4"
+                                    className={`mx-auto grid w-fit grid-cols-2 place-items-center gap-3 ${variant === "profile" ? "pt-1" : "pt-4"}`}
                                 >
                                     <CarouselPrevious
                                         aria-label={`Previous ${collectionName} Boards`}
@@ -338,7 +362,7 @@ export function BoardLibraryCarousel({
                                         if (api) scrollBoardLibrary(api, Number(event.target.value) / 1000);
                                     }}
                                     style={{ "--thumb-size": `max(24px, ${position.visible * 100}%)` } as CSSProperties}
-                                    className={`board-library-scrollbar focus-visible:outline-foreground block focus-visible:outline-2 focus-visible:outline-offset-4 disabled:cursor-default ${variant !== "default" ? "mt-3 mb-5 w-full" : "mx-auto mt-8 mb-10 w-2/3 max-w-[800px]"}`}
+                                    className={`board-library-scrollbar focus-visible:outline-foreground block focus-visible:outline-2 focus-visible:outline-offset-4 disabled:cursor-default ${variant !== "default" ? "mt-2 mb-2 w-full" : "mx-auto mt-8 mb-10 w-2/3 max-w-[800px]"}`}
                                 />
                             )}
                         </div>

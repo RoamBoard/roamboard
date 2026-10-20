@@ -677,4 +677,15 @@ Board hover actions and the profile header share the same disclosure state as me
 
 The three Board browsing components opt into the shared `BoardCardTilt` presenter for the same subtle spring-based pointer tilt. It follows mouse position only, resets on pointer leave/press/cancel or drag suppression, and honors reduced motion. The former Continue-only tilt wrapper was removed to prevent nested transforms. Featured and destination galleries opt into visibility indicators for any known published visibility, regardless of ownership; unknown publication/access data remains unlabelled. Indicators reuse existing public/friends/restricted-access labels and icons and never grant edit permission.
 
+Owner and visitor profiles use the same BoardLibrary presenters for Currently inspired by (the profile owner's saved
+Boards) and My boards (their visible published Boards). Visitor View all buttons expand that person's collection in
+place. Saved membership on another profile never initializes the visitor's bookmark state. Profile libraries omit the
+thin inner divider above the cards; section dividers remain.
+Profile collection previews resolve authorized documents through the existing Board API for author photos, itinerary
+metadata, current viewer bookmark membership and edit permissions, retaining summary covers with retry on network
+failure. The shared photographic card opens its hover actions even when summary metadata is absent. Selected deck
+cards use the same lower Bookmark/View action placement as BoardLibrary, reserving the top right for known visibility.
+Profile card and navigation spacing is compact. Regression tests were authored alongside these changes; independent
+test review and browser verification remain pending.
+
 Continue/Remix galleries and their secondary/collection cards also opt into known visibility indicators, independent of Board ownership. BoardLibrary navigation uses a centered two-column group; arrows keep the foreground color even when disabled, while native disabled behavior remains.

@@ -4,6 +4,8 @@ import { Children, createElement, isValidElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import ProfilePageContent from "@/components/features/profile/ProfilePageContent";
+import { VisitorProfileContent } from "@/components/features/profile/HandleProfileContent";
+import { ProfileSavedBoardLibrary } from "@/components/features/profile/ProfilePageContent";
 import type { UserProfile, FriendUser } from "@/lib/profile";
 
 const mockRouter = {
@@ -128,4 +130,49 @@ test("ProfilePageContent renders friends rail without unfriend button and links 
     assert.ok(!markup.includes("unfriend"), "Expected friends rail on profile to not include unfriend button");
     assert.ok(markup.includes("/friends"), "Expected link to /friends page");
     assert.ok(markup.includes("view all (1)"), "Expected view all (1) link");
+});
+
+test("visitor profile shows the profile owner's saved and published collections through the shared libraries", () => {
+    const saved = {
+        boardId: 731,
+        title: "Friend's saved trip",
+        description: "",
+        owner: { id: "author", username: "author", displayName: "Author" },
+        coverImageUrl: null,
+        savedAt: "2026-10-20T00:00:00Z"
+    };
+    const { markup, nodes } = capture(() =>
+        VisitorProfileContent({
+            view: {
+                profile: mockProfile,
+                isOwner: false,
+                friendshipStatus: "accepted",
+                stats: {
+                    countriesVisited: 0,
+                    citiesExplored: 0,
+                    continentsCovered: 0,
+                    photosUploaded: 0,
+                    activitiesDone: 0,
+                    boardsCreated: 1,
+                    friends: 1,
+                    activitiesSaved: 0,
+                    boardsSaved: 1
+                },
+                boards: [
+                    { boardId: 732, title: "Friend's published trip", coverImageUrl: null, updatedAt: saved.savedAt }
+                ],
+                savedBoards: [saved],
+                destinations: []
+            }
+        })
+    );
+    assert.match(markup, /currently inspired by/);
+    assert.match(markup, /my boards/);
+    assert.match(markup, /731/);
+    assert.match(markup, /732/);
+    assert.equal(nodes.filter((node) => node.type === "button" && node.props.children === "view all \u2192").length, 2);
+    const library = nodes.find((node) => node.type === ProfileSavedBoardLibrary);
+    assert.ok(library);
+    assert.equal(library.props.ownCollection, false, "another user's saves must not become the visitor's bookmarks");
+    assert.deepEqual(library.props.boards, [saved]);
 });

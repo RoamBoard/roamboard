@@ -372,8 +372,8 @@ export default function VisitedWorldMap({
                 </div>
                 {destinationOptions.length > 0 && (
                     <label className="text-foreground ml-auto flex flex-wrap items-center gap-2 text-sm">
-                        select country
                         <select
+                            aria-label="Select a country"
                             className="border-line bg-background max-w-full rounded border px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2"
                             value={
                                 destinationOptions.find((option) =>
@@ -389,7 +389,7 @@ export default function VisitedWorldMap({
                                 setSelection(nextSelection);
                             }}
                         >
-                            <option value="">Choose a destination</option>
+                            <option value="">Select a country</option>
                             {destinationOptions.map((option) => (
                                 <option key={option.value} value={option.value}>
                                     {option.label}

@@ -131,6 +131,7 @@ test("destination selector lists published countries only and opens the producti
         onChange?: (event: { target: { value: string } }) => void;
         onClick?: () => void;
         "aria-pressed"?: boolean;
+        "aria-label"?: string;
         places?: typeof destinations;
     };
     function nodes(root: ReactNode): Array<{ type: unknown; props: Props }> {
@@ -148,9 +149,11 @@ test("destination selector lists published countries only and opens the producti
         return nodes(captured.tree);
     }
     const initial = render();
+    const selector = initial.find((node) => node.type === "select");
+    assert.equal(selector?.props["aria-label"], "Select a country");
     assert.ok(
         initial.some(
-            (node) => node.type === "label" && Children.toArray(node.props.children).includes("select country")
+            (node) => node.type === "option" && node.props.value === "" && node.props.children === "Select a country"
         )
     );
     assert.equal(
@@ -161,7 +164,6 @@ test("destination selector lists published countries only and opens the producti
         initial.filter((node) => node.type === "option").map((node) => node.props.value),
         ["", "country:VNM"]
     );
-    const selector = initial.find((node) => node.type === "select");
     assert.ok(selector?.props.onChange);
     selector.props.onChange({ target: { value: "country:VNM" } });
     const country = render();

@@ -177,6 +177,37 @@ test(
             await pool.query("INSERT INTO board_member (board_id,user_id,role) VALUES ($1,'traveler','viewer')", [
                 secretSaved
             ]);
+            for (const viewer of [null, "outsider", "pending", "friend"]) {
+                const profile = await service.publicProfile("traveler", viewer);
+                assert.deepEqual(
+                    profile.savedBoards.map((board) => board.boardId),
+                    [publicSaved],
+                    "profile friendship does not grant access to another author's friends-only or restricted saves"
+                );
+            }
+            assert.deepEqual(
+                new Set((await service.publicProfile("traveler", "author")).savedBoards.map((board) => board.boardId)),
+                new Set([saved, publicSaved]),
+                "a Board author can see their friends-only Board saved on someone else's profile"
+            );
+            assert.deepEqual(
+                new Set(
+                    (await service.publicProfile("traveler", "traveler")).savedBoards.map((board) => board.boardId)
+                ),
+                new Set([saved, publicSaved, secretSaved]),
+                "owners retain their authorized collaborator saves; own Boards are excluded"
+            );
+            await pool.query(
+                "DELETE FROM friendship WHERE requester_user_id='traveler' AND recipient_user_id='author'"
+            );
+            assert.deepEqual(
+                (await service.publicProfile("traveler", "author")).savedBoards.map((board) => board.boardId),
+                [publicSaved],
+                "a save disappears when the saver loses access"
+            );
+            await pool.query(
+                "INSERT INTO friendship (status,requester_user_id,recipient_user_id) VALUES ('accepted','traveler','author')"
+            );
             const savedMap = await service.mapDestinations("traveler", false, true);
             assert.deepEqual(new Set(savedMap.map((place) => place.boardId)), new Set([saved, publicSaved]));
             assert.ok(savedMap.every((place) => place.collection === "saved"));

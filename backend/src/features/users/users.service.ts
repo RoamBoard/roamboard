@@ -57,11 +57,12 @@ export function createUsersService(
         async publicProfile(handle: string, viewerId: string | null): Promise<PublicProfileView> {
             const userId = await repository.findIdByHandle(handle);
             if (!userId) throw new AppError(404, "Profile not found", "NOT_FOUND");
-            const [user, boards, userStats, photosUploaded] = await Promise.all([
+            const [user, boards, userStats, photosUploaded, saved] = await Promise.all([
                 read(userId),
                 repository.listBoards(userId, false, true, viewerId),
                 repository.stats(userId, viewerId),
-                repository.countPublicPhotos(userId, viewerId)
+                repository.countPublicPhotos(userId, viewerId),
+                repository.listSavedBoards(userId, 1, null, viewerId)
             ]);
             const destinations = boards.flatMap((board) =>
                 board.destinations.map((place) => ({
@@ -124,8 +125,10 @@ export function createUsersService(
                     boardId: Number(board.id),
                     title: board.title,
                     coverImageUrl: board.coverImageUrl,
+                    visibility: board.visibility,
                     updatedAt: board.updatedAt
                 })),
+                savedBoards: saved.items,
                 destinations
             };
         },

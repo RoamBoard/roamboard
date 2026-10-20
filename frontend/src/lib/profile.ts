@@ -47,6 +47,7 @@ export type PublicProfileView = {
     friendshipStatus?: FriendshipStatus;
     stats: ProfileStats;
     boards: PublishedBoardSummary[];
+    savedBoards?: SavedBoardSummary[];
     destinations: MapDestination[];
 };
 

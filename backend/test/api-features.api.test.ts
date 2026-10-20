@@ -228,6 +228,7 @@ test("profile reads and writes use the session owner and reject forged identity"
     };
     const seen: string[] = [];
     const mapReads: unknown[][] = [];
+    const savedReads: unknown[][] = [];
     const users: UsersRepository = {
         async read(id) {
             seen.push(id);
@@ -262,7 +263,8 @@ test("profile reads and writes use the session owner and reject forged identity"
                 boardsSaved: 0
             };
         },
-        async listSavedBoards() {
+        async listSavedBoards(...args) {
+            savedReads.push(args);
             return { items: [], hasMore: false };
         },
         async saveBoard() {
@@ -331,6 +333,8 @@ test("profile reads and writes use the session owner and reject forged identity"
     assert.equal(publicProfile.status, 200);
     assert.equal(publicProfile.body.data.profile.username, "owner");
     assert.equal(publicProfile.body.data.isOwner, false);
+    assert.deepEqual(publicProfile.body.data.savedBoards, []);
+    assert.deepEqual(savedReads[0], ["owner", 1, null, null], "handle reads use the profile owner and actual visitor");
     assert.equal("revision" in publicProfile.body.data.profile, false);
     assert.equal("defaultBoardVisibility" in publicProfile.body.data.profile, false);
     assert.equal(typeof publicProfile.body.data.stats.friends, "number");
