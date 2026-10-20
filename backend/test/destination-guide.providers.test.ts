@@ -3,6 +3,40 @@ import test from "node:test";
 import * as providers from "../src/features/destinations/destination.providers.js";
 import type { QuotaObserver } from "../src/features/quotas/quota.types.js";
 
+test("country articles accept an exact country title despite a distant provider center and reject nearby unrelated titles", async (t) => {
+    const pages = [
+        {
+            title: "Japan airport",
+            extract: "Wrong subject",
+            fullurl: "https://en.wikivoyage.org/wiki/Japan_airport",
+            coordinates: [{ lat: 36.5, lon: 139, primary: true }]
+        },
+        {
+            title: "Japan",
+            extract: "Country introduction",
+            fullurl: "https://en.wikivoyage.org/wiki/Japan",
+            coordinates: [{ lat: 35, lon: 136, primary: true }]
+        }
+    ];
+    t.mock.method(globalThis, "fetch", async () => Response.json({ query: { pages } }));
+    const country = {
+        name: "Japan",
+        country: "Japan",
+        countryCode: "JPN",
+        latitude: 36.5,
+        longitude: 139,
+        kind: "country" as const
+    };
+    assert.deepEqual(await providers.fetchWikivoyageGuide(country), {
+        title: "Japan",
+        description: "Country introduction",
+        url: "https://en.wikivoyage.org/wiki/Japan"
+    });
+    assert.equal(await providers.fetchWikivoyageGuide({ ...country, kind: undefined }), null);
+    pages[1]!.title = "Japan (Texas)";
+    assert.equal(await providers.fetchWikivoyageGuide(country), null);
+});
+
 test("Wikivoyage guide rejects unrelated, distant and disambiguation pages and chooses the nearest city-name match", async (t) => {
     const urls: URL[] = [];
     t.mock.method(globalThis, "fetch", async (input: string | URL) => {

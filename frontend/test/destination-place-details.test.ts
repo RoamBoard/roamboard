@@ -72,6 +72,19 @@ test("selected-sight lookup sends its city identity and encoded ID through the p
     assert.deepEqual(await loadPlaceDetails(city, place.id), details);
 });
 
+test("country sight details preserve the country scope in the public read request", async (t) => {
+    replaceFetch(t, async (input) => {
+        const url = new URL(String(input));
+        assert.equal(url.pathname, "/api/v1/destinations/place-details");
+        assert.equal(url.searchParams.get("kind"), "country");
+        assert.equal(url.searchParams.get("name"), "Japan");
+        assert.equal(url.searchParams.get("country"), "JPN");
+        assert.equal(url.searchParams.get("placeId"), place.id);
+        return Response.json({ data: details });
+    });
+    assert.deepEqual(await loadPlaceDetails({ ...city, name: "Japan", kind: "country" }, place.id), details);
+});
+
 test("missing image data is preserved and rejected detail requests do not masquerade as empty content", async (t) => {
     const responses = [
         Response.json({ data: { ...details, description: null, unavailable: ["image"] } }),

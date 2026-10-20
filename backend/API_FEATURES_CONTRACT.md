@@ -20,6 +20,26 @@ these tools. An unapproved mutation Origin returns `403 ORIGIN_NOT_ALLOWED`.
 
 ## Provider and Home routes
 
+Country guides use the same guide and selected-place endpoints with optional `kind=country`. Omitting it retains city
+behavior. Country scope is included in the returned destination and provider cache identity. It selects public Boards
+with matching activity countries at any distance; visibility and pagination rules are unchanged. Wikivoyage country
+titles must match the selected name without stripping parenthetical qualifiers. Country articles and getting-around
+tips do not require nearby page coordinates. For country guides, `places` contains the matched country's `city` map
+group, keeping its order and coordinates without a city-distance cutoff. Other map groups are ignored, and an empty
+city group stays empty without reading district guides. The same validation and ten-item limit used for sights apply.
+The country frontend selects these cities on the map and opens their city guides. Selection uses the existing
+`place-details` endpoint with `kind=country` for a short city description and a credited Wikimedia photograph; it does
+not make a place-match request. City guides retain their `see` listings and sight actions. Unsplash searches the country
+name once.
+
+Country city details read the selected marker's description from the country guide's Cities section and its attached
+Commons file. Missing listing text or photos can fall back to the city article linked by that marker, using its opening
+extract and lead image. At most one linked-article read is attempted. Only relative Wikivoyage article links are used;
+the public request cannot supply a URL. Intro-only reads do not replace cached full pages. All photos retain source and
+license credits and pass the existing size/format checks. Official Creative Commons HTTP license links are normalized
+to HTTPS; unknown HTTP license hosts remain unsupported. Missing content stays empty, and independent failures retain
+available text or photos with retry feedback. These reads use the existing quotas and bounded caches.
+
 ### City tips and selected-place details
 
 The guide's optional Getting around tip keeps up to two source sentences and 40 words. It is read from the matched city's plain-text Wikivoyage transport section. Advice without fare amounts is preferred. Missing text is `cityTip: null`; failed reads also add `cityTip` to `unavailable`.

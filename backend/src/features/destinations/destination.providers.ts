@@ -228,6 +228,17 @@ export function cityName(value: string): string {
         .trim();
 }
 
+export function guideNameMatches(title: string, destination: GuideDestination): boolean {
+    if (destination.kind !== "country") return cityName(title) === cityName(destination.name);
+    const normalize = (value: string) =>
+        value
+            .normalize("NFD")
+            .replace(/\p{Diacritic}/gu, "")
+            .trim()
+            .toLowerCase();
+    return normalize(title) === normalize(destination.name);
+}
+
 // Keep the guide brief without rewriting the source or cutting a sentence unless it alone exceeds the limit.
 export function guideExcerpt(text: string, sentenceLimit = 3, wordLimit = 80): string {
     const sentences = Array.from(new Intl.Segmenter("en", { granularity: "sentence" }).segment(text)).slice(
@@ -254,7 +265,7 @@ export async function fetchWikivoyageGuide(
     const parameters = {
         action: "query",
         generator: "search",
-        gsrsearch: `${destination.name} ${destination.country}`,
+        gsrsearch: destination.kind === "country" ? destination.name : `${destination.name} ${destination.country}`,
         gsrnamespace: "0",
         gsrlimit: "5",
         prop: "extracts|coordinates|pageprops|info",
@@ -279,19 +290,19 @@ export async function fetchWikivoyageGuide(
     if (body.error) throw new Error("Wikivoyage could not complete the guide search");
     const pages = objectValue(body.query).pages;
     let article: GuideArticle | null = null;
-    let nearest = 50;
+    let nearest = destination.kind === "country" ? Infinity : 50;
     for (const candidate of Array.isArray(pages) ? pages : []) {
         const page = objectValue(candidate);
-        if (
-            "disambiguation" in objectValue(page.pageprops) ||
-            cityName(stringValue(page.title)) !== cityName(destination.name)
-        )
+        if ("disambiguation" in objectValue(page.pageprops) || !guideNameMatches(stringValue(page.title), destination))
             continue;
         const coordinates = Array.isArray(page.coordinates) ? page.coordinates : [];
         const coordinate = coordinates.map(objectValue).find((item) => item.primary === true || item.primary === "");
-        if (!coordinate || (coordinate.globe !== undefined && coordinate.globe !== "earth")) continue;
-        const latitude = numberValue(coordinate.lat);
-        const longitude = numberValue(coordinate.lon);
+        if (coordinate?.globe !== undefined && coordinate.globe !== "earth") continue;
+        if (!coordinate && destination.kind !== "country") continue;
+        const latitude =
+            numberValue(coordinate?.lat) ?? (destination.kind === "country" ? destination.latitude : undefined);
+        const longitude =
+            numberValue(coordinate?.lon) ?? (destination.kind === "country" ? destination.longitude : undefined);
         if (latitude === undefined || longitude === undefined || Math.abs(latitude) > 90 || Math.abs(longitude) > 180)
             continue;
         const distance = distanceKm(destination.latitude, destination.longitude, latitude, longitude);

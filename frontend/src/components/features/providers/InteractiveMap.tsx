@@ -24,6 +24,8 @@ type Props = {
     onPointClick?: (point: MapPoint) => void;
     selectedPointId?: string;
     initialCenter?: { latitude: number; longitude: number };
+    initialZoom?: number;
+    selectedZoom?: number;
     fillHeight?: boolean;
     scrollZoom?: boolean;
 };
@@ -38,6 +40,8 @@ export default function InteractiveMap({
     onPointClick,
     selectedPointId,
     initialCenter,
+    initialZoom = 11,
+    selectedZoom = 14,
     fillHeight = false,
     scrollZoom = true,
     cooperativeGestures = false,
@@ -71,7 +75,7 @@ export default function InteractiveMap({
                 container: containerRef.current,
                 style: "mapbox://styles/mapbox/streets-v12",
                 center: [initialLongitude, initialLatitude],
-                zoom: 11,
+                zoom: initialZoom,
                 cooperativeGestures
             });
             if (!scrollZoom) map.scrollZoom.disable();
@@ -110,7 +114,7 @@ export default function InteractiveMap({
             mapRef.current?.remove();
             mapRef.current = null;
         };
-    }, [token, scrollZoom, initialLatitude, initialLongitude, cooperativeGestures]);
+    }, [token, scrollZoom, initialLatitude, initialLongitude, initialZoom, cooperativeGestures]);
 
     useEffect(() => {
         markersRef.current.forEach((marker) => marker.remove());
@@ -185,8 +189,8 @@ export default function InteractiveMap({
             }
         });
         if (!point) return;
-        mapRef.current?.easeTo({ center: [point.longitude, point.latitude], zoom: 14 });
-    }, [selectedPointId, points, mapReady]);
+        mapRef.current?.easeTo({ center: [point.longitude, point.latitude], zoom: selectedZoom });
+    }, [selectedPointId, points, mapReady, selectedZoom]);
 
     useEffect(() => {
         if (!containerRef.current) return;

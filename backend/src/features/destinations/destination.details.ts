@@ -1,4 +1,4 @@
-import { cityName, distanceKm, guideExcerpt } from "./destination.providers.js";
+import { guideNameMatches, distanceKm, guideExcerpt } from "./destination.providers.js";
 import { plain } from "./destination.sights.js";
 import { observeProviderResponse } from "../quotas/quota.feedback.js";
 import type { QuotaObserver } from "../quotas/quota.types.js";
@@ -11,6 +11,7 @@ type Page = {
     coordinates?: Array<{ lat: number; lon: number; primary?: boolean | string; globe?: string }>;
     pageprops?: { disambiguation?: string };
     mapdata?: string[];
+    pageimage?: string;
     imageinfo?: Array<{
         mime: string;
         width: number;
@@ -26,6 +27,59 @@ type Page = {
 type WikimediaResponse = { error?: unknown; query?: { pages?: Page[] } };
 type Listing = { properties?: { title?: string; description?: string } };
 
+function listingFor(page: Page, place: GuidePlace, group: "see" | "city") {
+    return (page.mapdata ?? [])
+        .flatMap((encoded) => (JSON.parse(encoded) as Record<string, Listing[]>)[group] ?? [])
+        .find(
+            (item) =>
+                plain(item.properties?.title).normalize("NFC").toLowerCase() ===
+                place.name.normalize("NFC").toLowerCase()
+        );
+}
+
+function linkedCityTitle(listing?: Listing): string | undefined {
+    const path = listing?.properties?.title?.match(/href=["']\/wiki\/([^"'?#]+)(?:#[^"']*)?["']/i)?.[1];
+    if (!path) return;
+    try {
+        const title = decodeURIComponent(plain(path)).replace(/_/g, " ").trim();
+        // Only a city article linked by the selected marker is eligible. Never fetch a supplied URL.
+        if (title && title.length <= 250 && !title.includes(":")) return title;
+    } catch {
+        return;
+    }
+}
+
+function listingDescription(
+    page: Page,
+    place: GuidePlace,
+    listing: Listing | undefined,
+    kind?: "country"
+): string | null {
+    const isCity = kind === "country";
+    const text = isCity
+        ? page.extract
+              ?.split(/^={2,}\s*(?:Cities(?: and towns)?|Towns)\s*={2,}\s*$/im)[1]
+              ?.split(/^={2,}[^=].*={2,}\s*$/m)[0]
+        : page.extract;
+    const name = place.name.normalize("NFC").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const pattern = isCity
+        ? `^(?:(?:\\d+[.)]?|[\u2022*])\\s+)?${name}(?:\\s*\\([^)]*\\))?(?=\\s*[-\u2013\u2014.,:]|\\s*$)`
+        : `^(?:\\d+\\s+)?${name}(?=\\s*[.,(]|\\s*$)`;
+    const prefix = new RegExp(pattern, "iu");
+    const line = text
+        ?.normalize("NFC")
+        .split(/\n/)
+        .find((value) => prefix.test(value.trim()));
+    const description = line
+        ? line
+              .trim()
+              .replace(prefix, "")
+              .replace(isCity ? /^[\s.,:\u2014\u2013-]+/ : /^[\s.,]+/, "")
+        : isCity
+          ? plain(listing?.properties?.description)
+          : "";
+    return guideExcerpt(isCity ? description : description.replace(/\s*\(updated [^)]*\)/g, ""), 2, 60) || null;
+}
 // TextExtracts already supplies plain text, including numbered listings. No HTML parser is needed.
 export function createWikivoyageDetails(reserveAdditional: () => Promise<void>) {
     const pages = new Map<number, { page: Page; expiresAt: number }>();
@@ -72,7 +126,7 @@ export function createWikivoyageDetails(reserveAdditional: () => Promise<void>) 
             explaintext: "1",
             exsectionformat: "wiki",
             exlimit: "1",
-            mpdgroups: "see",
+            mpdgroups: "see|city",
             coprimary: "primary",
             format: "json",
             formatversion: "2",
@@ -82,22 +136,24 @@ export function createWikivoyageDetails(reserveAdditional: () => Promise<void>) 
         const body = await read(url, observe, additional);
         const result: Page[] = body.query?.pages ?? [];
         for (const page of result)
-            if (page.pageid > 0 && typeof page.extract === "string")
+            // An intro-only fallback must not replace the full page used for tips and sight details.
+            if (page.pageid > 0 && typeof page.extract === "string" && parameters.exintro !== "1")
                 remember(pages, page.pageid, { page, expiresAt: Date.now() + 3_600_000 });
         return result;
     }
-    async function imageFor(page: Page, place: GuidePlace, observe?: QuotaObserver): Promise<PlaceDetails["image"]> {
-        // Only use a file attached to this exact listing, never a general city image search.
-        const listing = (page.mapdata ?? [])
-            .flatMap((encoded) => (JSON.parse(encoded) as { see?: Listing[] }).see ?? [])
-            .find(
-                (item) =>
-                    plain(item.properties?.title).normalize("NFC").toLowerCase() ===
-                    place.name.normalize("NFC").toLowerCase()
-            );
-        const filename = listing?.properties?.description?.match(/href=["']\/wiki\/(File:[^"']+)["']/)?.[1];
+    async function imageFor(
+        filename: string | undefined,
+        name: string,
+        observe?: QuotaObserver
+    ): Promise<PlaceDetails["image"]> {
         if (!filename) return null;
-        const title = decodeURIComponent(plain(filename));
+        let decoded: string;
+        try {
+            decoded = decodeURIComponent(plain(filename));
+        } catch {
+            return null;
+        }
+        const title = decoded.startsWith("File:") ? decoded : `File:${decoded}`;
         const previous = photos.get(title);
         if (previous && previous.expiresAt > Date.now()) return previous.image;
         const url = new URL("https://commons.wikimedia.org/w/api.php");
@@ -116,7 +172,11 @@ export function createWikivoyageDetails(reserveAdditional: () => Promise<void>) 
         const metadata = info?.extmetadata;
         const author = plain(metadata?.Artist?.value);
         const licenseName = plain(metadata?.LicenseShortName?.value);
-        const licenseUrl = plain(metadata?.LicenseUrl?.value);
+        // Commons still returns some official Creative Commons license links over HTTP.
+        const licenseUrl = plain(metadata?.LicenseUrl?.value).replace(
+            /^http:\/\/((?:www\.)?creativecommons\.org)\//i,
+            "https://$1/"
+        );
         const imageUrl = info?.thumburl ?? info?.url;
         const supportedFormat = /^image\/(jpeg|png|webp)$/.test(info?.mime ?? "");
         const largeEnough = info && Math.max(info.width, info.height) >= 800;
@@ -124,10 +184,11 @@ export function createWikivoyageDetails(reserveAdditional: () => Promise<void>) 
         const commonsUrl = /^https:\/\/(upload|thumb)\.wikimedia\.org\//.test(imageUrl ?? "");
         // Keep a placeholder when the source photo is too small or cannot be credited.
         let image: PlaceDetails["image"] = null;
-        if (info && imageUrl && supportedFormat && largeEnough && hasCredits && commonsUrl) {
+        const sourceUrl = /^https:\/\/commons\.wikimedia\.org\/wiki\/File:/.test(info?.descriptionurl ?? "");
+        if (info && imageUrl && supportedFormat && largeEnough && hasCredits && commonsUrl && sourceUrl) {
             image = {
                 url: imageUrl,
-                alt: place.name,
+                alt: name,
                 width: info.thumbwidth ?? info.width,
                 height: info.thumbheight ?? info.height,
                 author,
@@ -144,7 +205,10 @@ export function createWikivoyageDetails(reserveAdditional: () => Promise<void>) 
             const candidates = await readPages(
                 {
                     generator: "search",
-                    gsrsearch: `${destination.name} ${destination.country}`,
+                    gsrsearch:
+                        destination.kind === "country"
+                            ? destination.name
+                            : `${destination.name} ${destination.country}`,
                     gsrnamespace: "0",
                     gsrlimit: "5",
                     prop: "coordinates|pageprops",
@@ -156,16 +220,18 @@ export function createWikivoyageDetails(reserveAdditional: () => Promise<void>) 
             let match: Page | undefined;
             let closestDistance = Infinity;
             for (const candidate of candidates) {
-                if (cityName(candidate.title) !== cityName(destination.name)) continue;
+                if (!guideNameMatches(candidate.title, destination)) continue;
                 if (Object.hasOwn(candidate.pageprops ?? {}, "disambiguation")) continue;
                 const point = candidate.coordinates?.find(
                     (coordinate) =>
                         (coordinate.primary === true || coordinate.primary === "") &&
                         (!coordinate.globe || coordinate.globe === "earth")
                 );
-                if (!point) continue;
-                const distance = distanceKm(point.lat, point.lon, destination.latitude, destination.longitude);
-                if (distance <= 50 && distance < closestDistance) {
+                if (!point && destination.kind !== "country") continue;
+                const distance = point
+                    ? distanceKm(point.lat, point.lon, destination.latitude, destination.longitude)
+                    : 0;
+                if ((destination.kind === "country" || distance <= 50) && distance < closestDistance) {
                     match = candidate;
                     closestDistance = distance;
                 }
@@ -195,13 +261,12 @@ export function createWikivoyageDetails(reserveAdditional: () => Promise<void>) 
                   }
                 : null;
         },
-        async placeDetails(place: GuidePlace, observe?: QuotaObserver): Promise<PlaceDetails> {
+        async placeDetails(place: GuidePlace, observe?: QuotaObserver, kind?: "country"): Promise<PlaceDetails> {
             const pageId = Number(/^wikivoyage:(\d+):/.exec(place.id)?.[1]);
-            const sourceUrl = `https://en.wikivoyage.org/?curid=${pageId}#${encodeURIComponent(place.name.replace(/ /g, "_"))}`;
             const result: PlaceDetails = {
                 placeId: place.id,
                 description: null,
-                sourceUrl,
+                sourceUrl: `https://en.wikivoyage.org/?curid=${pageId}#${kind === "country" ? "Cities" : encodeURIComponent(place.name.replace(/ /g, "_"))}`,
                 image: null,
                 unavailable: []
             };
@@ -213,29 +278,52 @@ export function createWikivoyageDetails(reserveAdditional: () => Promise<void>) 
                         ? previous.page
                         : (await readPages({ pageids: String(pageId) }, observe))[0];
             } catch {
-                result.unavailable = ["description", "image"];
-                return result;
+                return { ...result, unavailable: ["description", "image"] };
             }
             if (!page) return result;
-            const name = place.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-            const prefix = new RegExp(`^(?:\\d+\\s+)?${name}(?=\\s*[.,(]|\\s*$)`, "iu");
-            const line = page.extract?.split(/\n/).find((value) => prefix.test(value.trim()));
-            if (line)
-                result.description =
-                    guideExcerpt(
-                        line
-                            .trim()
-                            .replace(prefix, "")
-                            .replace(/^[\s.,]+/, "")
-                            .replace(/\s*\(updated [^)]*\)/g, ""),
-                        2,
-                        60
-                    ) || null;
+            let listing: Listing | undefined;
             try {
-                result.image = await imageFor(page, place, observe);
+                listing = listingFor(page, place, kind === "country" ? "city" : "see");
             } catch {
                 result.unavailable.push("image");
             }
+            result.description = listingDescription(page, place, listing, kind);
+            const loadImage = (filename?: string) =>
+                imageFor(filename, place.name, observe).catch(() => {
+                    result.unavailable.push("image");
+                    return null;
+                });
+            result.image = await loadImage(
+                listing?.properties?.description?.match(/href=["']\/wiki\/(File:[^"']+)["']/)?.[1]
+            );
+            const cityTitle = kind === "country" ? linkedCityTitle(listing) : undefined;
+            const needsImage = !result.image && !result.unavailable.includes("image");
+            if (!cityTitle || (result.description && !needsImage)) return result;
+            const article = (
+                await readPages(
+                    {
+                        titles: cityTitle,
+                        redirects: "1",
+                        prop: "extracts|pageimages|pageprops",
+                        piprop: "name",
+                        ppprop: "disambiguation",
+                        exintro: "1"
+                    },
+                    observe,
+                    true
+                ).catch(() => {
+                    if (!result.description) result.unavailable.push("description");
+                    if (needsImage) result.unavailable.push("image");
+                    return [];
+                })
+            )[0];
+            if (!article || !(article.pageid > 0) || Object.hasOwn(article.pageprops ?? {}, "disambiguation"))
+                return result;
+            if (!result.description && article.extract) {
+                result.description = guideExcerpt(plain(article.extract), 2, 60) || null;
+                if (result.description) result.sourceUrl = `https://en.wikivoyage.org/?curid=${article.pageid}`;
+            }
+            if (needsImage && article.pageimage) result.image = await loadImage(article.pageimage);
             return result;
         }
     };
