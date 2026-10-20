@@ -246,7 +246,7 @@ export function loadLanguages() {
 }
 
 export function loadPublishedBoards() {
-    return apiRequest<PublishedBoardSummary[]>("/api/v1/boards?scope=published&page=1&limit=3");
+    return apiRequest<PublishedBoardSummary[]>("/api/v1/boards?scope=published&page=1&limit=10");
 }
 
 export function loadSavedBoards(page = 1, limit = 20) {

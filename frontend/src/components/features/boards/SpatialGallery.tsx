@@ -1,5 +1,6 @@
 "use client";
 
+import DestinationStoryCard from "../destinations/DestinationStoryCard";
 import ViewAllBoards from "./ViewAllBoards";
 import { useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
@@ -9,16 +10,24 @@ import { toEditorialPhotoBoardCard } from "@/lib/photo-board-card";
 import AccountPhotoBoardCard from "./cards/AccountPhotoBoardCard";
 
 export default function SpatialGallery({
-    boards,
+    boards: allBoards,
+    embedded = false,
+    resolveDetails = false,
     viewAllHref,
     description,
+    ariaLabel,
     saved = false
 }: {
     boards: readonly GalleryBoard[];
+    embedded?: boolean;
+    resolveDetails?: boolean;
     saved?: boolean;
     viewAllHref?: string;
     description?: string;
+    ariaLabel?: string;
 }) {
+    const boards = allBoards.slice(0, 10);
+    const Card = resolveDetails ? DestinationStoryCard : AccountPhotoBoardCard;
     const [selectedId, setSelectedId] = useState(boards[0]?.collage.id ?? "");
     const selectedIndex = Math.max(
         0,
@@ -46,45 +55,48 @@ export default function SpatialGallery({
 
     return (
         <section
-            aria-labelledby={saved ? "recently-saved-heading" : "featured-boards-heading"}
-            className={`mx-auto max-w-[1320px] ${saved ? "mt-32 md:mt-48" : "mt-10 md:mt-12"}`}
+            aria-labelledby={embedded ? undefined : saved ? "recently-saved-heading" : "featured-boards-heading"}
+            className={`mx-auto w-full max-w-[1320px] ${embedded ? "" : saved ? "mt-32 md:mt-48" : "mt-10 md:mt-12"}`}
         >
-            <div className="mx-5 flex min-h-11 items-center justify-between gap-4 sm:mx-12">
-                {viewAllHref && (
-                    <div className="order-last shrink-0">
-                        <ViewAllBoards href={viewAllHref} />
-                    </div>
-                )}
-                {saved ? (
-                    <h2
-                        id="recently-saved-heading"
-                        className="font-display text-foreground text-30 md:text-36 text-center leading-[.95] font-medium"
-                    >
-                        RECENTLY
-                        <br />
-                        SAVED
-                    </h2>
-                ) : (
-                    <h2
-                        id="featured-boards-heading"
-                        className="font-display text-foreground text-24 md:text-36 flex min-w-0 flex-wrap gap-x-3 gap-y-1 leading-none font-medium"
-                    >
-                        <span>FEATURED</span>
-                        <span>BOARDS</span>
-                    </h2>
-                )}
-            </div>
+            {!embedded && (
+                <div className="mx-5 flex min-h-11 items-center justify-between gap-4 sm:mx-12">
+                    {viewAllHref && (
+                        <div className="order-last shrink-0">
+                            <ViewAllBoards href={viewAllHref} />
+                        </div>
+                    )}
+                    {saved ? (
+                        <h2
+                            id="recently-saved-heading"
+                            className="font-display text-foreground text-30 md:text-36 text-center leading-[.95] font-medium"
+                        >
+                            RECENTLY
+                            <br />
+                            SAVED
+                        </h2>
+                    ) : (
+                        <h2
+                            id="featured-boards-heading"
+                            className="font-display text-foreground text-24 md:text-36 flex min-w-0 flex-wrap gap-x-3 gap-y-1 leading-none font-medium"
+                        >
+                            <span>FEATURED</span>
+                            <span>BOARDS</span>
+                        </h2>
+                    )}
+                </div>
+            )}
             {description && <p className="text-muted-foreground mx-5 mt-2 text-sm sm:mx-12">{description}</p>}
-            <div className={`mx-3 mt-6 sm:mx-10 ${saved ? "grid md:grid-cols-2 md:pt-28" : ""}`}>
+            <div className={`${embedded ? "" : "mx-3 mt-6 sm:mx-10"} ${saved ? "grid md:grid-cols-2 md:pt-28" : ""}`}>
                 <div className="min-w-0">
                     <div
                         role="region"
                         ref={gallery}
                         aria-roledescription="carousel"
                         aria-label={
-                            saved
+                            ariaLabel ??
+                            (saved
                                 ? "Recently saved Boards. Use left and right arrow keys to browse."
-                                : "Your Boards. Use left and right arrow keys to browse."
+                                : "Your Boards. Use left and right arrow keys to browse.")
                         }
                         tabIndex={0}
                         onKeyDown={(event) => {
@@ -100,6 +112,7 @@ export default function SpatialGallery({
                                 event.key === "End"
                             ) {
                                 event.preventDefault();
+                                event.stopPropagation();
                                 event.currentTarget.focus({ preventScroll: true });
                                 select(
                                     event.key === "Home"
@@ -119,7 +132,7 @@ export default function SpatialGallery({
                                 dragStep.current =
                                     (gallery.current
                                         ?.querySelector('[data-spatial-card="active"]')
-                                        ?.getBoundingClientRect().width ?? 400) * 0.78;
+                                        ?.getBoundingClientRect().width ?? 400) * 0.58;
                             }}
                             onPan={(_, info) => {
                                 dragged.current = true;
@@ -159,7 +172,7 @@ export default function SpatialGallery({
                                         initial={false}
                                         data-spatial-card={active ? "active" : "inactive"}
                                         animate={{
-                                            x: `${relative * 78}%`,
+                                            x: `${relative * 58}%`,
                                             y: Math.min(92, distance * 44),
                                             scale: Math.max(0.54, 1 - distance * 0.22),
                                             opacity: Math.max(0, 1 - distance * 0.4)
@@ -177,7 +190,7 @@ export default function SpatialGallery({
                                         inert={!visible}
                                         className={`absolute top-0 left-1/2 ${saved ? "w-[min(400px,82cqw)]" : "w-[min(400px,82cqw)] sm:w-[min(400px,48cqw)]"} origin-center -translate-x-1/2 ${!active && !dragging ? "hidden sm:block" : ""}`}
                                     >
-                                        <AccountPhotoBoardCard
+                                        <Card
                                             tilt
                                             showVisibility
                                             board={board.photo ?? toEditorialPhotoBoardCard(board.collage)}

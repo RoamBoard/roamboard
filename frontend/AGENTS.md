@@ -705,3 +705,14 @@ Profile card and navigation spacing is compact. Regression tests were authored a
 test review and browser verification remain pending.
 
 Continue/Remix galleries and their secondary/collection cards also opt into known visibility indicators, independent of Board ownership. BoardLibrary navigation uses a centered two-column group; arrows keep the foreground color even when disabled, while native disabled behavior remains.
+
+Board preview libraries and spatial galleries show at most ten Boards. Profile preview reads request ten; previews do
+not append pages or expose Load more. View all opens BoardCollectionGrid, which retains twenty results per page.
+Library totals are separate from the rendered-card count. Featured and destination stories share SpatialGallery,
+including its five-card overlapping desktop composition, drag handling and keyboard navigation. Discover collection
+routes embed the account-aware grid with their fixed OR tag scope. Discover direct cards resolve viewer permissions
+before offering owner Edit or another author's bookmark. Destination View all retains public activity locations in the
+same country or within 25 km, using the destination collection context. Browser visual acceptance remains pending.
+
+Discover vibe routes also embed BoardCollectionGrid with their fixed tag. Discover Featured and RoamFlow use the same
+permission-resolving card as other Discover lists; unknown ownership exposes no bookmark, and resolved owners get Edit.

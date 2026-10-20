@@ -6,7 +6,7 @@ import DiscoverBoardCard from "./DiscoverBoardCard";
 
 // Reuse the shared carousel for public Board summaries.
 export default function DiscoverBoardLibrary({
-    boards,
+    boards: allBoards,
     title,
     activeTagId
 }: {
@@ -14,12 +14,14 @@ export default function DiscoverBoardLibrary({
     title: string;
     activeTagId?: BoardTagId;
 }) {
+    const boards = allBoards.slice(0, 10);
     if (!boards.length) return null;
     return (
         <BoardLibraryCarousel
             id={`discover-library-${activeTagId ?? "samples"}`}
             title={title}
             count={boards.length}
+            totalCount={allBoards.length}
             variant="discover"
             viewAllHref={
                 activeTagId

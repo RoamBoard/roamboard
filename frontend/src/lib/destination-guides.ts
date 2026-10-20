@@ -164,7 +164,7 @@ export async function loadDestinationGuide(input: DestinationGuideInput, page = 
         latitude: String(input.latitude),
         longitude: String(input.longitude),
         page: String(page),
-        limit: "6"
+        limit: "10"
     });
     if (input.kind) params.set("kind", input.kind);
     const origin = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";

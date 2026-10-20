@@ -1,22 +1,46 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { loadBoardDocument, type BoardDocument } from "@/lib/board-creator-api";
 import { toPhotoBoardCard } from "@/lib/photo-board-card";
 import type { PhotoBoardCardProps } from "@/types/board-card";
 import AccountPhotoBoardCard from "@/components/features/boards/cards/AccountPhotoBoardCard";
 
-// Only the selected destination Board needs a document. Summary cards remain usable on failure.
+// Share concurrent reads without retaining viewer-specific data across sessions.
+const pendingDocuments = new Map<number, Promise<BoardDocument>>();
+function sharedDocument(boardId: number) {
+    const pending = pendingDocuments.get(boardId);
+    if (pending) return pending;
+    const request = loadBoardDocument(boardId).finally(() => pendingDocuments.delete(boardId));
+    pendingDocuments.set(boardId, request);
+    return request;
+}
+
+// Resolve viewer permissions for active gallery cards and direct list cards; retain summaries on failure.
 export default function DestinationStoryCard(props: PhotoBoardCardProps) {
+    const container = useRef<HTMLDivElement>(null);
+    const [visible, setVisible] = useState(false);
     const [document, setDocument] = useState<BoardDocument>();
     const [failed, setFailed] = useState(false);
     const [attempt, setAttempt] = useState(0);
-    const active = Boolean(props.selection?.selected);
+    const active = props.selection ? props.selection.selected : Boolean(props.href);
     const boardId = Number(props.board.id);
     useEffect(() => {
-        if (!active || document) return;
+        const element = container.current;
+        if (!element) return;
+        const observer = new IntersectionObserver((entries) => {
+            if (entries.some((entry) => entry.isIntersecting)) {
+                setVisible(true);
+                observer.disconnect();
+            }
+        });
+        observer.observe(element);
+        return () => observer.disconnect();
+    }, []);
+    useEffect(() => {
+        if (!active || !visible || document) return;
         const controller = new AbortController();
-        loadBoardDocument(boardId, controller.signal)
+        sharedDocument(boardId)
             .then((loaded) => {
                 if (controller.signal.aborted) return;
                 if (loaded.boardId !== boardId) throw new Error("Board identity changed");
@@ -27,16 +51,17 @@ export default function DestinationStoryCard(props: PhotoBoardCardProps) {
                 if (!controller.signal.aborted) setFailed(true);
             });
         return () => controller.abort();
-    }, [active, boardId, document, attempt]);
+    }, [active, visible, boardId, document, attempt]);
     const owner = document?.permissions.canManageBoard;
     return (
-        <>
+        <div ref={container} className="relative">
             <AccountPhotoBoardCard
                 tilt
                 showVisibility
                 board={document ? { ...toPhotoBoardCard(document), labelOffset: props.board.labelOffset } : props.board}
                 ownership={document ? (owner ? "owner" : "other") : "unknown"}
                 initialSaved={document?.savedByMe}
+                href={props.href}
                 details={props.details}
                 selection={props.selection}
                 imageSizes={props.imageSizes}
@@ -65,6 +90,6 @@ export default function DestinationStoryCard(props: PhotoBoardCardProps) {
                     Retry Board details
                 </button>
             )}
-        </>
+        </div>
     );
 }

@@ -230,3 +230,18 @@ test("recent gallery opens published boards without offering Remix; owned publis
     assert.match(ownedHtml, /href="\/boards\/88"/);
     assert.match(ownedHtml, /Published/);
 });
+
+test("shared Board previews show seven when available, cap larger libraries at ten, and retain the full total", () => {
+    for (const size of [7, 14]) {
+        const boards = Array.from({ length: size }, (_, i) => discoveryGallery({ ...card(true), boardId: 100 + i }));
+        const html = renderToStaticMarkup(
+            createElement(BoardLibrary, { boards, totalCount: 37, viewAllHref: "/boards/collections/mine" })
+        );
+        assert.equal((html.match(/data-library-board=/g) ?? []).length, Math.min(size, 10));
+        assert.match(html, /37 Boards/);
+        assert.match(html, /href="\/boards\/collections\/mine"/);
+        assert.doesNotMatch(html, /Load more/);
+        assert.match(html, /href="\/boards\/106"/);
+        assert.doesNotMatch(html, /href="\/boards\/110"/);
+    }
+});

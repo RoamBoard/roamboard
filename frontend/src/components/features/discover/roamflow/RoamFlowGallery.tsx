@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
-import AccountPhotoBoardCard from "@/components/features/boards/cards/AccountPhotoBoardCard";
+import DestinationStoryCard from "@/components/features/destinations/DestinationStoryCard";
 import { roamFlowPageSize, type RoamFlowBoard } from "@/lib/roamflow";
 
 const positions = [
@@ -62,11 +62,9 @@ export default function RoamFlowGallery({
                                         transition={{ duration: reducedMotion ? 0 : 0.5, ease: [0.22, 1, 0.36, 1] }}
                                         className={`relative motion-reduce:transform-none! motion-reduce:opacity-100! [&_a]:focus-visible:outline-offset-4 [&_a]:focus-visible:outline-white ${reducedMotion ? "" : "[&_img]:transition-transform [&_img]:duration-700 [&_img]:ease-out motion-safe:hover:[&_img]:scale-[1.025] motion-reduce:[&_img]:transition-none"}`}
                                     >
-                                        <AccountPhotoBoardCard
+                                        <DestinationStoryCard
                                             board={board}
                                             href={board.href}
-                                            ownership="other"
-                                            initialSaved={false}
                                             showVisibility
                                             hideCoverCredit
                                             hoverActions={board.href ? { viewHref: board.href } : undefined}

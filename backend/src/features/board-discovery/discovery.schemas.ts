@@ -39,7 +39,18 @@ export const featuredSchema = z.object({ period: z.enum(["month", "week"]).defau
 export const viewSchema = z.object({ token: z.uuid().optional() }).strict();
 
 export const collectionParamsSchema = z.object({
-    context: z.enum(["mine", "saved", "friends", "profile", "profile-saved", "map", "category", "recent", "featured"])
+    context: z.enum([
+        "mine",
+        "saved",
+        "friends",
+        "profile",
+        "profile-saved",
+        "map",
+        "category",
+        "destination",
+        "recent",
+        "featured"
+    ])
 });
 export const collectionQuerySchema = z
     .object({
@@ -70,6 +81,7 @@ export const collectionQuerySchema = z
             .default(20),
         handle: z.string().trim().min(1).max(100).optional(),
         tag: z.string().trim().min(1).max(100).optional(),
+        tags: selection(z.string().trim().min(1).max(100)).refine((values) => !values || values.length <= 20),
         period: z.enum(["week", "month"]).optional(),
         country: z.string().refine(isCountryCode, "Choose an ISO alpha-3 country").optional(),
         longitude: z.coerce.number().min(-180).max(180).optional(),

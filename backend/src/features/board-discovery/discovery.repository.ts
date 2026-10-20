@@ -1,3 +1,4 @@
+import { countryName, toAlpha2CountryCode } from "../../shared/countries.js";
 import { randomUUID } from "node:crypto";
 import { getPool } from "../../db.js";
 import type { DiscoveryCandidate, DiscoveryRepository, Place } from "./discovery.types.js";
@@ -119,13 +120,21 @@ export function createDiscoveryRepository(): DiscoveryRepository {
                        ($6 IN ('saved','both') AND EXISTS (SELECT 1 FROM saved_boards sb WHERE sb.board_id=b.board_id
                          AND sb.user_id=COALESCE((SELECT user_id FROM app_user WHERE lower(username)=lower($4)),$1)
                          AND b.owner_user_id<>sb.user_id))
-                     )) OR $5 IN ('mine','saved','category','recent','featured'))
-                   AND ($7::text IS NULL OR EXISTS (SELECT 1 FROM board_tag bt JOIN tag t ON t.tag_id=bt.tag_id WHERE bt.board_id=b.board_id AND lower(t.tag_name)=lower($7)))
-                   AND ($8::text IS NULL AND $9::numeric IS NULL OR EXISTS (
+                     )) OR $5 IN ('mine','saved','category','destination','recent','featured'))
+                   AND ($5 IS DISTINCT FROM 'destination' OR b.visibility='public')
+                   AND ($7::text[] IS NULL OR EXISTS (SELECT 1 FROM board_tag bt JOIN tag t ON t.tag_id=bt.tag_id WHERE bt.board_id=b.board_id AND lower(t.tag_name)=ANY($7::text[])))
+                   AND CASE WHEN $5='destination' THEN EXISTS (
+                     SELECT 1 FROM activity da JOIN location dl ON dl.location_id=da.location_id
+                     WHERE da.board_id=b.board_id AND upper(trim(dl.country))=ANY($12::text[])
+                       AND ($9::numeric IS NULL OR 6371 * acos(LEAST(1.0, GREATEST(-1.0,
+                         sin(radians(dl.latitude::float8))*sin(radians($10::float8)) +
+                         cos(radians(dl.latitude::float8))*cos(radians($10::float8))*cos(radians(dl.longitude::float8-$9::float8))
+                       ))) <= 25)
+                   ) ELSE ($8::text IS NULL AND $9::numeric IS NULL OR EXISTS (
                      SELECT 1 FROM location ml WHERE (ml.location_id=b.primary_location_id OR EXISTS (
                        SELECT 1 FROM activity ma WHERE ma.board_id=b.board_id AND ma.location_confirmed AND ma.location_id=ml.location_id))
                        AND ($8::text IS NULL OR ml.country=$8) AND ($9::numeric IS NULL OR (ml.longitude=$9 AND ml.latitude=$10))
-                   ))
+                   )) END
                    AND ($11::text IS NULL OR b.status=$11)
                  ORDER BY b.board_id`,
                 [
@@ -135,11 +144,19 @@ export function createDiscoveryRepository(): DiscoveryRepository {
                     context?.handle ?? null,
                     context?.context ?? null,
                     context?.collection ?? "published",
-                    context?.tag ?? null,
+                    context?.tags?.map((tag) => tag.toLowerCase()) ??
+                        (context?.tag ? [context.tag.toLowerCase()] : null),
                     context?.country ?? null,
                     context?.longitude ?? null,
                     context?.latitude ?? null,
-                    context?.status ?? null
+                    context?.status ?? null,
+                    context?.country
+                        ? [
+                              context.country,
+                              toAlpha2CountryCode(context.country),
+                              countryName(context.country).toUpperCase()
+                          ]
+                        : null
                 ]
             );
             return result.rows.map((row) => ({
