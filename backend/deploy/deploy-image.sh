@@ -62,22 +62,31 @@ if [[ -n "$changed_migrations" && "$ready_tag" != "$image_tag" ]]; then
     exit 1
 fi
 
-changed_infrastructure="$(repo_git diff --name-only "$previous_tag" "$image_tag" -- backend/deploy/compose.yaml backend/deploy/Caddyfile backend/deploy/init-db.sh)"
+infrastructure_files=(backend/deploy/compose.yaml backend/deploy/Caddyfile backend/deploy/init-db.sh)
+changed_infrastructure="$(repo_git diff --name-only "$previous_tag" "$image_tag" -- "${infrastructure_files[@]}")"
 if [[ -n "$changed_infrastructure" ]]; then
     echo "Deployment stopped: VM Compose, Caddy, or database initialization files changed since the deployed commit." >&2
     echo "Update the VM checkout, set IMAGE_TAG=$image_tag, pull both images, deploy the full Compose stack, verify it, then rerun this job." >&2
     exit 1
 fi
 
+for infrastructure_file in "${infrastructure_files[@]}"; do
+    if ! repo_git show "$image_tag:$infrastructure_file" | cmp -s - "$repo_path/$infrastructure_file"; then
+        echo "Deployment stopped: the VM copy of $infrastructure_file differs from commit $image_tag." >&2
+        echo "Review and update the VM checkout before rerunning this job." >&2
+        exit 1
+    fi
+done
+
 cd "$deploy_path"
-resolved_images="$(IMAGE_TAG="$image_tag" docker compose --env-file ../.env config --images)"
+resolved_images="$(IMAGE_TAG="$image_tag" docker compose -f compose.yaml --env-file ../.env config --images)"
 if ! grep -Fxq "ghcr.io/roamboard/roamboard-backend:$image_tag" <<< "$resolved_images" ||
    ! grep -Fxq "ghcr.io/roamboard/roamboard-frontend:$image_tag" <<< "$resolved_images"; then
     echo "The VM Compose file does not select both requested SHA images." >&2
     exit 1
 fi
 
-IMAGE_TAG="$image_tag" docker compose --env-file ../.env pull backend frontend > /dev/null
+IMAGE_TAG="$image_tag" docker compose -f compose.yaml --env-file ../.env pull backend frontend > /dev/null
 if ! docker image inspect "ghcr.io/roamboard/roamboard-backend:$previous_tag" > /dev/null 2>&1 ||
    ! docker image inspect "ghcr.io/roamboard/roamboard-frontend:$previous_tag" > /dev/null 2>&1; then
     echo "The previous images are not cached on the VM, so automatic rollback is unavailable." >&2
@@ -110,7 +119,7 @@ on_exit() {
     if (( status != 0 && switched == 1 )); then
         echo "Deployment failed; restoring the previous image tag." >&2
         if set_image_tag "$previous_tag" &&
-           docker compose --env-file ../.env up -d --no-build --pull never backend frontend > /dev/null; then
+           docker compose -f compose.yaml --env-file ../.env up -d --no-build --pull never backend frontend > /dev/null; then
             echo "Previous image tag restored: $previous_tag" >&2
         else
             echo "Automatic rollback failed. Inspect the VM containers immediately." >&2
@@ -125,7 +134,7 @@ trap on_exit EXIT
 
 switched=1
 set_image_tag "$image_tag"
-docker compose --env-file ../.env up -d --no-build --pull never backend frontend > /dev/null
+docker compose -f compose.yaml --env-file ../.env up -d --no-build --pull never backend frontend > /dev/null
 
 healthy=0
 for _ in {1..24}; do

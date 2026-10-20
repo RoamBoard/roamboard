@@ -88,7 +88,9 @@ not use `:latest`. Newly created GHCR packages default to private visibility: ei
 
 The deploy job uses Azure Run Command; it needs no inbound SSH rule for GitHub runners and no self-hosted runner on the
 public repository. It checks that the SHA belongs to `main` and that neither VM infrastructure nor SQL migrations have
-changed since the deployed SHA. It pulls both images before changing `IMAGE_TAG`, starts them without building locally,
+changed since the deployed SHA. It also compares the VM's actual Compose, Caddy, and database initialization files with
+the requested commit, so uncommitted edits to those files stop deployment. Compose runs with `-f compose.yaml` to use
+that checked file. It pulls both images before changing `IMAGE_TAG`, starts them without building locally,
 checks the API/database and frontend through Caddy, and restores the prior tag if a health check fails.
 
 SQL migrations remain manual. If the job stops for migration changes, take and verify a backup, apply and record the
