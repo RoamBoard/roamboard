@@ -4,24 +4,22 @@
 
 Follow [the shared image workflow](../../docs/IMAGE_WORKFLOW.md) and the applicable `AGENTS.md` whenever a teammate supplies images or image links. Coding agents must register them with the backend `images:add` command, verify persistence, and use the returned `library:` reference on the requested frontend page. Editorial files use public Cloudinary storage; Unsplash references retain provider delivery. User Board/activity/profile uploads remain authenticated, with saved image order and cover selections. Do not expose credentials or replace protected image URLs with public editorial URLs.
 
-This deploys PostgreSQL in Docker on one Azure Linux VM. Each developer keeps running
-`npm run dev` in `backend/` and connects to the same database through SSH. Express
-deployment is a separate, later step; this setup alone does not complete the hosted-server requirement.
+This deploys PostgreSQL, the Express backend, the Next.js frontend, and a Caddy reverse proxy in Docker on one Azure Linux VM. Developers can also continue running `npm run dev` in `backend/` locally and connecting to the same database through SSH.
 
-The team database is now deployed according to the maintainer. Teammates should start
+The team database is deployed. Teammates developing locally should start
 with [the backend quick start](../README.md#team-quick-start-local-backend-shared-azure-database),
 not recreate the VM or initialize another database. The sections below are the maintainer's runbook.
 
-## 1. Create the VM
+## 1. Create the VM and open ports
 
 In the Azure portal, create an Ubuntu 24.04 LTS VM with SSH key authentication.
-A small VM with 2 GB RAM is a reasonable starting point for this development database.
 Choose a region close to the team, check the estimated Azure cost, and keep auto-shutdown
-disabled if the database needs to stay available around the clock. Use a stable public IP.
+disabled if the service needs to stay available around the clock. Use a stable public IP and configure a DNS name label (for example, `roamboard.<region>.cloudapp.azure.com`).
 The VM must stay running; container restart settings cannot restart a stopped Azure VM.
+On a 1 GB RAM VM (`Standard B2ats v2`), provision a 4 GB `/swapfile` before building the Next.js container.
 
-Allow inbound SSH (TCP 22) from your teammates' public IP addresses in the Azure network
-security group. Do not open TCP 5432 publicly. Give teammates individual SSH access;
+Allow inbound SSH (TCP 22) from your teammates' public IP addresses and inbound HTTP/HTTPS (TCP 80 and 443) in the Azure network
+security group. Do not open TCP 5432, 3000, or 3001 publicly. Give teammates individual SSH access;
 do not share a private SSH key. Restrict Docker administration to the maintainers.
 
 - [Azure Linux VM creation](https://learn.microsoft.com/azure/virtual-machines/linux/quick-create-portal?tabs=ubuntu)
@@ -34,7 +32,7 @@ SSH into the VM, install Docker using the linked instructions, and enable its se
 sudo systemctl enable --now docker
 ```
 
-## 2. Start the database on the VM
+## 2. Start the stack on the VM
 
 Clone this repository onto the VM using your own GitHub access, then run from its root:
 
@@ -44,12 +42,17 @@ cp .env.example .env
 chmod 600 .env
 nano .env
 cd deploy
-sudo docker compose --env-file ../.env up -d
-sudo docker compose --env-file ../.env logs --tail=100 postgres
+sudo docker compose --env-file ../.env up -d --build
+sudo docker compose --env-file ../.env logs --tail=100 postgres backend frontend caddy
 sudo docker compose --env-file ../.env ps
 ```
 
-Replace both example passwords with different long random passwords before starting.
+Replace both example passwords with different long random passwords before starting, and set:
+
+- `PUBLIC_DOMAIN`: the public hostname (for example, `roamboard.belgiumcentral.cloudapp.azure.com`). Compose derives `https://<PUBLIC_DOMAIN>` for both the backend's `CLIENT_ORIGIN` and the frontend's build-time `NEXT_PUBLIC_API_URL` (also add `https://<PUBLIC_DOMAIN>` to Authorized JavaScript origins in Google Cloud Console).
+- `DOCKER_DATABASE_URL`: `postgresql://roamboard_user:YOUR_URL_ENCODED_APP_PASSWORD@postgres:5432/roamboard_dev` so the `backend` container connects to `postgres` over the Docker network.
+
+Rebuild (`sudo docker compose --env-file ../.env up -d --build`) whenever `PUBLIC_DOMAIN` or `GOOGLE_CLIENT_ID` changes, as Next.js inlines `NEXT_PUBLIC_*` variables at build time.
 Use the existing `backend/.env.example` as the only configuration template. If
 `backend/.env` already exists, edit it rather than copying over it. Both Docker Compose
 and the backend use `backend/.env`; there is no deployment-specific `.env` file.
