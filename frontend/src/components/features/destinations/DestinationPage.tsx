@@ -29,6 +29,19 @@ export function DestinationPage({ destination: guide, onLoadMore, onRetry, loadi
         source: "application" as const
     }));
     const tags = Array.from(new Set(guide.boards.flatMap((board) => board.tags)));
+    const cityTip = guide.cityTip ? (
+        <>
+            <p className="text-muted-foreground mt-2 text-sm leading-6 md:line-clamp-3">{guide.cityTip.text}</p>
+            <a
+                href={guide.cityTip.url}
+                target="_blank"
+                rel="noreferrer"
+                className="text-muted-foreground mt-2 inline-block text-xs underline"
+            >
+                Wikivoyage contributors / CC BY-SA 4.0
+            </a>
+        </>
+    ) : null;
     return (
         <MotionConfig reducedMotion="user">
             <DestinationRail name={destination.name}>
@@ -86,11 +99,11 @@ export function DestinationPage({ destination: guide, onLoadMore, onRetry, loadi
                     <div
                         id="destination-information"
                         tabIndex={-1}
-                        className="border-line flex h-full min-h-0 min-w-0 flex-col overflow-hidden border-x outline-none"
+                        className="border-line flex h-full min-h-0 min-w-0 flex-col overflow-y-auto overscroll-y-contain border-x outline-none"
                     >
                         <section
                             aria-labelledby="destination-about-heading"
-                            className="border-line flex min-h-0 flex-1 flex-col justify-center px-6 py-4 md:px-10 md:py-8 [@media(max-height:540px)]:py-3"
+                            className="border-line flex shrink-0 grow flex-col justify-center px-6 py-5 md:px-10 md:py-8 [@media(max-height:540px)]:py-3"
                         >
                             <h2
                                 id="destination-about-heading"
@@ -100,7 +113,7 @@ export function DestinationPage({ destination: guide, onLoadMore, onRetry, loadi
                             </h2>
                             {article ? (
                                 <>
-                                    <p className="text-muted-foreground mt-3 line-clamp-4 text-[clamp(0.75rem,1.8dvh,1rem)] leading-[1.6] md:line-clamp-none [@media(max-height:540px)]:line-clamp-3">
+                                    <p className="text-muted-foreground mt-3 line-clamp-4 shrink-0 text-sm leading-6 md:line-clamp-none md:text-[clamp(0.875rem,1.8dvh,1rem)] md:leading-[1.6]">
                                         {article.description}
                                     </p>
                                     <p className="text-muted-foreground mt-2 text-[10px] leading-4 md:text-xs">
@@ -132,20 +145,18 @@ export function DestinationPage({ destination: guide, onLoadMore, onRetry, loadi
                                 </p>
                             )}
                             {guide.cityTip ? (
-                                <div className="border-line mt-5 border-t pt-4">
-                                    <h3 className="text-sm font-semibold">{guide.cityTip.title}</h3>
-                                    <p className="text-muted-foreground mt-2 line-clamp-3 text-sm leading-6">
-                                        {guide.cityTip.text}
-                                    </p>
-                                    <a
-                                        href={guide.cityTip.url}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="text-muted-foreground mt-2 inline-block text-xs underline"
-                                    >
-                                        Wikivoyage contributors / CC BY-SA 4.0
-                                    </a>
-                                </div>
+                                <>
+                                    <details className="border-line mt-4 border-t md:hidden">
+                                        <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2">
+                                            {guide.cityTip.title}
+                                        </summary>
+                                        <div className="pb-3">{cityTip}</div>
+                                    </details>
+                                    <div className="border-line mt-5 hidden border-t pt-4 md:block">
+                                        <h3 className="text-sm font-semibold">{guide.cityTip.title}</h3>
+                                        {cityTip}
+                                    </div>
+                                </>
                             ) : null}
                             {guide.unavailable.includes("cityTip") ? (
                                 <p className="text-muted-foreground mt-3 text-xs" role="status">
@@ -178,7 +189,7 @@ export function DestinationPage({ destination: guide, onLoadMore, onRetry, loadi
                         </section>
                         <section
                             aria-labelledby="destination-tags-heading"
-                            className="border-line hidden border-t px-6 py-5 md:block md:px-10 [@media(max-height:540px)]:hidden"
+                            className="border-line hidden shrink-0 border-t px-6 py-5 md:block md:px-10 [@media(max-height:540px)]:hidden"
                         >
                             <h2 id="destination-tags-heading" className="text-lg font-bold">
                                 Tags from public boards
