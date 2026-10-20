@@ -166,6 +166,7 @@ test("notification list paginates, counts unread items and ties cursors to the a
             boardTitle: "Tokyo",
             commentId: id,
             body: "A".repeat(200),
+            kind: "comment",
             commenter: { displayName: "Reader", username: "reader", profilePictureUrl: null },
             createdAt: "2026-10-19T12:00:00.000Z",
             readAt: null
@@ -178,6 +179,7 @@ test("notification list paginates, counts unread items and ties cursors to the a
     assert.equal(first.headers["cache-control"], "no-store");
     assert.equal(first.body.data.length, 20);
     assert.equal(first.body.data[0].notificationId, 22);
+    assert.equal(first.body.data[0].kind, "comment");
     assert.equal(first.body.data[0].excerpt.length, 140);
     assert.equal(first.body.data[0].body, undefined);
     assert.equal(first.body.meta.unreadCount, 22);
@@ -207,6 +209,7 @@ test("only the recipient can mark an item read; repeated reads preserve its time
         boardTitle: "Tokyo",
         commentId: 1,
         body: "Hello",
+        kind: "comment",
         commenter: { displayName: "Reader", username: "reader", profilePictureUrl: null },
         createdAt: "2026-10-19T12:00:00.000Z",
         readAt: null

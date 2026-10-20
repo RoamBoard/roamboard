@@ -34,7 +34,7 @@ type ElementProps = {
     "aria-label"?: string;
     "aria-pressed"?: boolean;
     onClick?: () => unknown;
-    onChange?: (event: { target: { value: string } }) => void;
+    onChange?: (value: string) => void;
     onSubmit?: (event: { preventDefault: () => void }) => unknown;
     [key: string]: unknown;
 };
@@ -118,6 +118,7 @@ function comment(commentId: number): BoardComment {
         commentId,
         boardId: 42,
         body: "Loved this route!",
+        mentions: [],
         author: { displayName: "Avery Lee", username: "avery", profilePictureUrl: null },
         createdAt: "2026-10-19T14:00:00.000Z",
         editedAt: null,
@@ -287,6 +288,25 @@ test("long comments start collapsed with a way to reveal the full text", () => {
     assert.doesNotMatch(renderBody("A short comment."), />View more</);
 });
 
+test("a resolved @handle links to the current profile while unknown handles stay plain text", () => {
+    const markup = renderToStaticMarkup(
+        createElement(BoardCommentRow, {
+            comment: {
+                ...comment(81),
+                body: "Thanks @Avery and @unknown",
+                mentions: [{ handle: "avery", username: "renamed" }]
+            },
+            boardId: "42",
+            epoch: 0,
+            loginHref: "/login",
+            onUpdated() {},
+            onDeleted() {}
+        })
+    );
+    assert.match(markup, /href="\/profile\/renamed"[^>]*>@Avery<\/a>/);
+    assert.doesNotMatch(markup, /href="\/profile\/unknown"/);
+});
+
 test("comment targets update after same-page history navigation and fragment changes", (t) => {
     const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
     const browser = Object.assign(new EventTarget(), { location: { hash: "#comment-81" } });
@@ -373,7 +393,7 @@ test("mounted BoardComments retries initial load failures, retains failed post d
 
     const draftInput = loaded.nodes.find((node) => node.props.id === "board-comment-draft");
     assert.ok(draftInput, "Expected comment textarea for signed-in viewer");
-    draftInput.props.onChange?.({ target: { value: "  My retained comment draft  " } });
+    draftInput.props.onChange?.("  My retained comment draft  ");
 
     const withDraft = section.render();
     const form = withDraft.nodes.find((node) => node.type === "form");
@@ -481,7 +501,7 @@ test("mounted BoardCommentRow edits with retained draft on conflict, reloads cur
     const editInput = editing.nodes.find((node) => node.props.id === "edit-comment-81");
     assert.ok(editInput, "Expected edit textarea");
     assert.equal(editInput.props.value, "Original comment");
-    editInput.props.onChange?.({ target: { value: "My edited comment draft" } });
+    editInput.props.onChange?.("My edited comment draft");
 
     const dirtyEdit = row.render();
     const editForm = dirtyEdit.nodes.find((node) => node.type === "form");
@@ -550,6 +570,59 @@ test("mounted BoardCommentRow edits with retained draft on conflict, reloads cur
     assert.deepEqual(deletedIds, [81]);
 });
 
+test("new and edited comments block submission above ten distinct mentions", async (t) => {
+    const ten = Array.from({ length: 10 }, (_, index) => `@person${index}`).join(" ");
+    const eleven = `${ten} @person10`;
+    replaceFetch(t, async (input) => {
+        const path = new URL(String(input)).pathname;
+        if (path === "/api/v1/auth/me")
+            return json({ data: { userId: "user-1", username: "avery", displayName: "Avery Lee" } });
+        if (path === "/api/v1/boards/42/comment-subscription") return json({ data: { enabled: true } });
+        if (path === "/api/v1/boards/42/comments")
+            return json({ data: [comment(81)], meta: { nextCursor: null, hasMore: false } });
+        throw new Error(`Unexpected request: ${path}`);
+    });
+
+    const section = mount(t, () => BoardComments({ boardId: "42" }));
+    await flush();
+    const draftInput = section.render().nodes.find((node) => node.props.id === "board-comment-draft");
+    assert.ok(draftInput);
+    draftInput.props.onChange?.(eleven);
+    const overLimit = section.render();
+    assert.match(overLimit.markup, /Mention up to 10 distinct @handles per comment/);
+    assert.equal(overLimit.nodes.find((node) => node.props.children === "Post comment")?.props.disabled, true);
+    await overLimit.nodes.find((node) => node.type === "form")?.props.onSubmit?.({ preventDefault: noop });
+    draftInput.props.onChange?.(ten);
+    const withinLimit = section.render();
+    assert.doesNotMatch(withinLimit.markup, /Mention up to 10 distinct @handles per comment/);
+    assert.equal(withinLimit.nodes.find((node) => node.props.children === "Post comment")?.props.disabled, false);
+
+    const row = mount(t, () =>
+        BoardCommentRow({
+            comment: comment(81),
+            boardId: "42",
+            epoch: 1,
+            loginHref: "/login",
+            onUpdated() {},
+            onDeleted() {}
+        })
+    );
+    row.render()
+        .nodes.find((node) => node.props["aria-label"] === "Edit comment")
+        ?.props.onClick?.();
+    const editInput = row.render().nodes.find((node) => node.props.id === "edit-comment-81");
+    assert.ok(editInput);
+    editInput.props.onChange?.(eleven);
+    const editOverLimit = row.render();
+    assert.match(editOverLimit.markup, /Mention up to 10 distinct @handles per comment/);
+    assert.equal(editOverLimit.nodes.find((node) => node.props.children === "Save")?.props.disabled, true);
+    await editOverLimit.nodes.find((node) => node.type === "form")?.props.onSubmit?.({ preventDefault: noop });
+    editInput.props.onChange?.(ten);
+    const editWithinLimit = row.render();
+    assert.doesNotMatch(editWithinLimit.markup, /Mention up to 10 distinct @handles per comment/);
+    assert.equal(editWithinLimit.nodes.find((node) => node.props.children === "Save")?.props.disabled, false);
+});
+
 test("toggling the notification bell while post refresh is in flight preserves the newer bell choice", async (t) => {
     const subscriptionReads: Array<(response: Response) => void> = [];
     replaceFetch(t, async (input, init) => {
@@ -583,11 +656,7 @@ test("toggling the notification bell while post refresh is in flight preserves t
     await flush();
 
     const loaded = section.render();
-    loaded.nodes
-        .find((node) => node.props.id === "board-comment-draft")
-        ?.props.onChange?.({
-            target: { value: "New comment" }
-        });
+    loaded.nodes.find((node) => node.props.id === "board-comment-draft")?.props.onChange?.("New comment");
     await section
         .render()
         .nodes.find((node) => node.type === "form")

@@ -2,6 +2,7 @@ export type BoardComment = {
     commentId: number;
     boardId: number;
     body: string;
+    mentions: { handle: string; username: string }[];
     author: { displayName: string; username: string; profilePictureUrl: string | null };
     createdAt: string;
     editedAt: string | null;

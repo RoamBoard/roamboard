@@ -102,6 +102,7 @@ function fakeComments(): { repository: CommentsRepository; records: CommentRecor
                 boardId,
                 authorUserId,
                 body,
+                mentions: [],
                 author: { displayName: authorUserId, username: authorUserId, profilePictureUrl: null },
                 createdAt: "2026-10-19T12:00:00.000Z",
                 editedAt: null,
@@ -220,6 +221,34 @@ test("writes require session, exact Origin, a valid trimmed body and known field
     );
     assert.equal((await request(app).get("/api/v1/boards/2/comments")).status, 404);
     assert.equal((await request(app).get("/api/v1/boards/no/comments")).status, 400);
+});
+
+test("comments accept ten distinct handles and reject an eleventh on create or edit", async () => {
+    const { app, path, records } = setup();
+    const ten = Array.from({ length: 10 }, (_, index) => `@person${index}`).join(" ");
+    const eleven = `${ten} @person10`;
+    const create = (body: string) =>
+        request(app).post(path).set("Cookie", cookie("author")).set("Origin", origin).send({ body });
+
+    const rejected = await create(eleven);
+    assert.equal(rejected.status, 400);
+    assert.equal(rejected.body.error.code, "INVALID_REQUEST");
+    assert.equal(records.length, 0);
+
+    const accepted = await create(ten);
+    assert.equal(accepted.status, 201);
+    const target = `${path}/${accepted.body.data.commentId}`;
+    const editRejected = await request(app)
+        .patch(target)
+        .set("Cookie", cookie("author"))
+        .set("Origin", origin)
+        .send({ body: eleven, revision: 1 });
+    assert.equal(editRejected.status, 400);
+    assert.equal(records[0]?.body, ten);
+    assert.equal(records[0]?.revision, 1);
+
+    const repeatedHandle = await create(Array.from({ length: 11 }, () => "@Person0").join(" "));
+    assert.equal(repeatedHandle.status, 201);
 });
 
 test("authors edit with revision checks; owners can remove but cannot edit others' comments", async () => {

@@ -1,10 +1,12 @@
 import { z } from "zod";
+import { maxCommentMentions, mentionHandles } from "./board-comments.mentions.js";
 
 const id = z.coerce.number().int().positive().safe();
 const body = z
     .string()
     .transform((value) => value.trim())
-    .refine((value) => value.length > 0 && Array.from(value).length <= 2000);
+    .refine((value) => value.length > 0 && Array.from(value).length <= 2000)
+    .refine((value) => mentionHandles(value).length <= maxCommentMentions);
 
 export const commentBoardParamsSchema = z.object({ boardId: id }).strict();
 export const commentParamsSchema = z.object({ boardId: id, commentId: id }).strict();

@@ -5,18 +5,9 @@ import Image from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useEffect, useId, useRef, useSyncExternalStore, type ReactNode } from "react";
+import { useState, useEffect, useId, useRef, type ReactNode } from "react";
 import { observeCurrentUser, signOut, type AuthUser } from "@/lib/auth";
-import {
-    getMockAuthState,
-    getMockAuthStateServerSnapshot,
-    getMockProfile,
-    getMockProfileServerSnapshot,
-    restoreMockStore,
-    setMockAuthState,
-    subscribeMockStore,
-    updateMockSettings
-} from "@/data/mock-social";
+import { restoreMockStore, updateMockSettings } from "@/data/mock-social";
 import {
     DropdownMenu,
     DropdownMenuTrigger,
@@ -77,10 +68,6 @@ export default function ProfileControl({
         typeof document !== "undefined" && document.documentElement.classList.contains("dark") ? "dark" : "light"
     );
 
-    // Sync with external mock store
-    const profile = useSyncExternalStore(subscribeMockStore, getMockProfile, getMockProfileServerSnapshot);
-    const mockIsLoggedIn = useSyncExternalStore(subscribeMockStore, getMockAuthState, getMockAuthStateServerSnapshot);
-
     const selectTheme = (theme: string) => {
         if (theme !== "light" && theme !== "dark") return;
         document.documentElement.classList.toggle("dark", theme === "dark");
@@ -109,7 +96,6 @@ export default function ProfileControl({
                 // Proceed if backend session is already invalidated
             }
             setSessionUser(null);
-            setMockAuthState(false);
             router.replace("/login");
         } catch (cause) {
             setLogoutError(cause instanceof Error ? cause.message : "Could not sign out.");
@@ -118,11 +104,11 @@ export default function ProfileControl({
         }
     }
 
-    // Real account controls tied to backend session; demo user enabled through explicit user prop or demo login
-    const isLoggedIn = Boolean(user || sessionUser || mockIsLoggedIn);
+    // Real account controls tied to backend session; demo user enabled through explicit user prop
+    const isLoggedIn = Boolean(user || sessionUser);
 
-    const displayName = user?.name || sessionUser?.displayName || profile.name || userName || "Rowan";
-    const rawHandle = user?.handle || sessionUser?.username || profile.handle || handle;
+    const displayName = user?.name || sessionUser?.displayName || userName || "";
+    const rawHandle = user?.handle || sessionUser?.username || handle || "";
     const displayHandle = rawHandle ? (rawHandle.startsWith("@") ? rawHandle : `@${rawHandle}`) : null;
     const photoUrl =
         user?.avatarUrl ||

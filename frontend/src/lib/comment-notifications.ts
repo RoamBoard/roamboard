@@ -3,6 +3,7 @@ export type CommentNotification = {
     boardId: number;
     boardTitle: string;
     commentId: number;
+    kind: "comment" | "mention";
     commenter: { displayName: string; username: string; profilePictureUrl: string | null };
     excerpt: string;
     createdAt: string;
