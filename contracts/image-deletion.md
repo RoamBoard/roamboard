@@ -10,6 +10,10 @@ unused uploaded images from Cloudinary and PostgreSQL. This supersedes the previ
   Awaited cleanup is scoped to images removed by that change, attempts at most four and waits at most one second
   overall, including its queue query. In-flight scoped deletions may finish afterward; remaining work stays queued.
   Sign-in never waits for image deletion. Only the background worker/manual maintenance processes the global queue.
+  All cleanup instances in one backend process share a maximum of two database operations, including candidate
+  reads and image/intent deletion transactions. Slots stay occupied until the operation finishes even if the response
+  deadline expires. Busy cleanup skips work for a later sweep, preserving eight of the default ten pool connections
+  for API traffic instead of waiting in the connection queue.
 - Removing a saved photo in the editor takes effect on Save; cancelling edits preserves the saved photo. Changing the
   selected cover does not delete photos still attached to the Board. Crop/resize edits retain the original upload.
 - An image is deleted only when no Board, activity or profile refers to it. Saved Boards are bookmarks, so deleting

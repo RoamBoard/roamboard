@@ -68,7 +68,10 @@ See [the Smart Create contract](../contracts/smart-create.md).
 Migration 020 adds transactional deletion requests and reference tracking for profiles, Board/activity covers and
 image-link tables. After committed profile replacement/removal or Board edits/deletion, immediate cleanup targets only
 that change's removed image IDs, at most four, with a one-second overall request deadline. Sign-in never waits for image
-cleanup; global queue work belongs to the worker/manual maintenance. Successful cleanup removes unreferenced authenticated
+cleanup; global queue work belongs to the worker/manual maintenance.
+Cleanup factories and the worker share two process-wide operation slots, including candidate reads and deletion
+transactions. Hold slots through provider completion/rollback/release, even after response timeouts; skip busy cleanup
+for a later sweep so API requests retain pool capacity. Successful cleanup removes unreferenced authenticated
 Cloudinary assets, then their image/upload-intent rows. Retain referenced images, editorial
 assets and crop originals. Cloudinary failures preserve retry records; the server sweeps on startup and every minute.
 Fresh unattached uploads/incomplete intents keep the 24-hour grace period. See `../contracts/image-deletion.md`.
