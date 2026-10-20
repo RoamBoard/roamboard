@@ -21,5 +21,54 @@ services:
             timeout: 5s
             retries: 5
 
+    backend:
+        build:
+            context: ../..
+            dockerfile: backend/Dockerfile
+        restart: unless-stopped
+        depends_on:
+            postgres:
+                condition: service_healthy
+        env_file:
+            - ../.env
+        environment:
+            NODE_ENV: ${NODE_ENV:-production}
+            PORT: 3001
+            CLIENT_ORIGIN: ${CLIENT_ORIGIN:-http://localhost:3000}
+            DATABASE_URL: ${DOCKER_DATABASE_URL:-${DATABASE_URL}}
+
+    frontend:
+        build:
+            context: ../..
+            dockerfile: frontend/Dockerfile
+            args:
+                NEXT_PUBLIC_API_URL: ${CLIENT_ORIGIN:-http://localhost:3001}
+                NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+        restart: unless-stopped
+        depends_on:
+            - backend
+        environment:
+            NODE_ENV: production
+            PORT: 3000
+            HOSTNAME: 0.0.0.0
+
+    caddy:
+        image: caddy:2-alpine
+        restart: unless-stopped
+        depends_on:
+            - frontend
+            - backend
+        ports:
+            - "80:80"
+            - "443:443"
+        environment:
+            PUBLIC_DOMAIN: ${PUBLIC_DOMAIN:-localhost}
+        volumes:
+            - ./Caddyfile:/etc/caddy/Caddyfile:ro
+            - caddy_data:/data
+            - caddy_config:/config
+
 volumes:
     postgres_data:
+    caddy_data:
+    caddy_config:
