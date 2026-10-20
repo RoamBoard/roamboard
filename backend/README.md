@@ -1,5 +1,19 @@
 # Roamboard backend
 
+## Boards discovery
+
+`contracts/boards-discovery.md` describes the `/boards` feeds, search and three-second view protocol. The dedicated
+discovery endpoints preserve the existing generic `/search` API. Apply migration 018 once on other environments with
+`npm run db:discovery -- --apply`; the job first verifies a custom-format PostgreSQL backup using local `pg_dump` and
+`pg_restore` (PostgreSQL 18 on Windows, or PATH elsewhere). Shared development already has 018; do not reapply it.
+
+Run `npm run cleanup:discovery` daily through the deployment's scheduler to remove expired view challenges and browser
+identities, views older than 31 days and save events older than 60 days. This does not remove Boards or active saves.
+Expiry/window checks apply even before cleanup runs. The cleanup task is provided; no host scheduler is installed by
+the feature. Anonymous uniqueness is per browser, not guaranteed per person. Location recognition uses stored
+geographic metadata and a small built-in fallback; curated synonyms are versioned in the discovery ranking module.
+NLP/semantic search is the next iteration, not part of this implementation.
+
 ## Image workflow for coding agents
 
 Follow [the shared image workflow](../docs/IMAGE_WORKFLOW.md) and the applicable `AGENTS.md` whenever a teammate supplies images or image links. Coding agents must register them with the backend `images:add` command, verify persistence, and use the returned `library:` reference on the requested frontend page. Editorial files use public Cloudinary storage; Unsplash references retain provider delivery. User Board/activity/profile uploads remain authenticated, with saved image order and cover selections. Do not expose credentials or replace protected image URLs with public editorial URLs.

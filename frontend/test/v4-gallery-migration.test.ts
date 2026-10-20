@@ -124,21 +124,19 @@ test("featured browsing retains ten canonical cards and their direct views witho
     assert.doesNotMatch(markup, />open Board|>Open Board/);
 });
 
-test("sample fallback and archive libraries never acquire owner controls, persistence claims, sample URLs or fixture save totals", () => {
+test("visual sample galleries and libraries never acquire owner controls, persistence claims, sample URLs or fixture save totals", () => {
     const featured = renderToStaticMarkup(createElement(SpatialGallery, { boards: mockBoardCollections.created }));
     requireV4(featured, mockBoardCollections.created.length);
-    const archived = renderToStaticMarkup(
+    const library = renderToStaticMarkup(
         createElement(BoardLibrary, {
-            boards: mockBoardCollections.archived,
-            title: "ARCHIVED BOARDS",
-            description: "Sample archive · not connected to account state.",
-            archived: true
+            boards: mockBoardCollections.saved,
+            title: "VISUAL EXAMPLES",
+            description: "Sample collection · not connected to account state."
         })
     );
-    requireV4(archived, mockBoardCollections.archived.length);
-    assert.match(archived, /Sample archive/);
-    assert.match(archived, /Archived/);
-    for (const markup of [featured, archived]) {
+    requireV4(library, mockBoardCollections.saved.length);
+    assert.match(library, /Sample collection/);
+    for (const markup of [featured, library]) {
         assert.doesNotMatch(markup, /href=|aria-label="(?:Save|Unsave|Public|Friends|Restricted access) /);
         assert.doesNotMatch(markup, /[\d,]+ saves|saved to your collection/i);
     }

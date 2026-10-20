@@ -1,6 +1,10 @@
 import { createSmartCreateModule } from "./features/smart-create/smart-create.module.js";
 import type { SmartCreateResolver } from "./features/smart-create/smart-create.service.js";
 import express, { type Express } from "express";
+import { createDiscoveryModule } from "./features/board-discovery/discovery.module.js";
+import { createDiscoveryRepository } from "./features/board-discovery/discovery.repository.js";
+import { readBrowserCookie } from "./features/board-discovery/discovery.controller.js";
+import type { DiscoveryRepository } from "./features/board-discovery/discovery.types.js";
 import cors from "cors";
 import helmet from "helmet";
 
@@ -32,6 +36,7 @@ import { createSavedPlacesModule } from "./features/saved-places/saved-places.mo
 import type { SavedPlacesRepository } from "./features/saved-places/saved-places.types.js";
 
 export interface AppOptions extends AuthModuleOptions {
+    discoveryRepository?: DiscoveryRepository;
     smartCreateResolver?: SmartCreateResolver;
     libraryRepository?: LibraryRepository;
     libraryProvider?: LibraryProvider;
@@ -75,7 +80,15 @@ export function createApp(options: AppOptions = {}): Express {
     });
 
     const quota = options.quotaService ?? createQuotaService(createPostgresQuotaRepository(), createQuotaPolicies());
-    const auth = createAuthModule({ ...options, quotaService: quota });
+    const discoveryRepository = options.discoveryRepository ?? createDiscoveryRepository();
+    const auth = createAuthModule({
+        ...options,
+        quotaService: quota,
+        onSignedIn: async (cookie, userId) => {
+            const browserId = readBrowserCookie(cookie);
+            if (browserId) await discoveryRepository.mergeBrowser(browserId, userId);
+        }
+    });
     const attachUser = attachSessionUser(auth.service);
     const providers = createProviderModule(quota, attachUser);
     const destinations = createDestinationModule(quota);
@@ -101,6 +114,7 @@ export function createApp(options: AppOptions = {}): Express {
     app.use("/api/v1", users.publicRouter);
     app.use("/api/v1/search", search.router);
     app.use("/api/v1/saved-places", createSavedPlacesModule(attachUser, options.savedPlacesRepository).router);
+    app.use("/api/v1", createDiscoveryModule(attachUser, boardRepository, discoveryRepository).router);
     app.use("/api/v1", boards.router);
     app.use("/api/v1", createCommentsModule(attachUser, boards.repository, options.commentsRepository).router);
     app.use(

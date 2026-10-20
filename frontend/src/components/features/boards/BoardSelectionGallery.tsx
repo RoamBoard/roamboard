@@ -5,6 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { selectionEditorHref, type SelectionBoard } from "@/lib/board-selection";
 import PhotoBoardCard from "./cards/PhotoBoardCard";
+import AccountPhotoBoardCard from "./cards/AccountPhotoBoardCard";
 
 const spring = { type: "spring" as const, stiffness: 150, damping: 25, mass: 0.85 };
 const focusClass = "focus-visible:outline-foreground focus-visible:outline-2 focus-visible:outline-offset-4";
@@ -16,15 +17,17 @@ export function BoardSelectionGallery({
     error,
     onRetry,
     mode = "continue",
-    compact = false
+    compact = false,
+    onSavedChange
 }: {
     boards: SelectionBoard[];
     selected: SelectionBoard;
     onSelect: (id: number) => void;
     error?: string;
     onRetry: () => void;
-    mode?: "continue" | "remix";
+    mode?: "continue" | "remix" | "explore";
     compact?: boolean;
+    onSavedChange?: (boardId: number, saved: boolean) => void;
 }) {
     const reduced = useReducedMotion();
     const dragged = useRef(false);
@@ -34,19 +37,23 @@ export function BoardSelectionGallery({
     const [dragging, setDragging] = useState(false);
     const selectedIndex = boards.findIndex((board) => board.summary.boardId === selected.summary.boardId);
     const rest = boards.filter((board) => board.summary.boardId !== selected.summary.boardId);
+    const visibleBoards = [selected, ...rest.slice(0, 4)];
     const positions = new Map(rest.map((board, index) => [board.summary.boardId, index]));
-    const href = selected.document
-        ? mode === "remix"
-            ? `/boards/${selected.summary.boardId}`
-            : selectionEditorHref(selected.document)
-        : null;
+    const href = selected.previewResolved
+        ? (selected.editHref ??
+          (mode === "remix" && selected.photo.status === "published" ? `/boards/${selected.summary.boardId}` : null))
+        : selected.document
+          ? mode === "remix"
+              ? `/boards/${selected.summary.boardId}`
+              : selectionEditorHref(selected.document)
+          : null;
     const selectOffset = (offset: number) => {
         const next = boards[(selectedIndex + offset + boards.length) % boards.length];
         if (next) onSelect(next.summary.boardId);
     };
     return (
         <section
-            aria-label={mode === "continue" ? "Your Boards" : "Saved Boards"}
+            aria-label={mode === "continue" ? "Your Boards" : mode === "remix" ? "Saved Boards" : "Published Boards"}
             className={`mx-auto mt-12 max-w-[1400px] px-4 sm:mt-16 sm:px-10 lg:px-16 ${compact ? "selection-gallery" : ""}`}
         >
             <div
@@ -99,7 +106,7 @@ export function BoardSelectionGallery({
                     }}
                     className={`relative h-[min(calc(110cqw+4rem),36rem)] min-h-[320px] cursor-grab overflow-clip select-none active:cursor-grabbing sm:h-[min(calc(60cqw+4rem),36rem)] lg:h-[min(calc(45cqw+4rem),36rem)] ${compact ? "selection-stage" : ""}`}
                 >
-                    {boards.map((board) => {
+                    {visibleBoards.map((board) => {
                         const active = board.summary.boardId === selected.summary.boardId;
                         const position = positions.get(board.summary.boardId) ?? 0;
                         return (
@@ -133,14 +140,16 @@ export function BoardSelectionGallery({
                                 className={`absolute ml-[6cqw] w-[min(400px,88cqw)] sm:ml-0 sm:w-[min(400px,48cqw)] lg:w-[min(400px,36cqw)] ${!active ? "hidden sm:block" : ""} ${compact ? "selection-card" : ""}`}
                             >
                                 <>
-                                    <PhotoBoardCard
+                                    <AccountPhotoBoardCard
                                         tilt
                                         showVisibility
                                         hideCoverCredit
                                         suppressHover={dragging}
                                         board={board.photo}
                                         ownership={board.ownership}
-                                        details={active && Boolean(board.document)}
+                                        details={active && Boolean(board.document || board.previewResolved)}
+                                        initialSaved={board.savedByMe}
+                                        onSavedChange={(saved) => onSavedChange?.(board.summary.boardId, saved)}
                                         imageSizes="(max-width: 640px) 80vw, 400px"
                                         selection={{
                                             selected: active,
@@ -150,7 +159,7 @@ export function BoardSelectionGallery({
                                                     ? `/boards/${board.summary.boardId}`
                                                     : board.document
                                                       ? (selectionEditorHref(board.document) ?? undefined)
-                                                      : undefined,
+                                                      : board.editHref,
                                             remixHref:
                                                 active && mode === "remix" && href
                                                     ? `/boards/new?remix=${board.summary.boardId}`
@@ -167,7 +176,12 @@ export function BoardSelectionGallery({
                                             }
                                         }}
                                     />
-                                    {!board.document && active && (
+                                    {board.previewResolved && (
+                                        <p className="text-muted-foreground mt-3 text-center text-xs">
+                                            {board.summary.status === "draft" ? "Draft" : "Published"}
+                                        </p>
+                                    )}
+                                    {!board.document && !board.previewResolved && active && (
                                         <p
                                             role="status"
                                             className="text-muted-foreground mt-3 max-w-full text-xs leading-relaxed"
@@ -219,7 +233,7 @@ export function BoardSelectionGallery({
                 <div
                     className={`border-line relative z-30 flex flex-col items-center gap-3 py-3 sm:flex-row ${boards.length > 1 ? "border-b" : ""}`}
                 >
-                    {!href && (
+                    {!href && !selected.previewResolved && (
                         <span className="text-muted-foreground text-xs">
                             {mode === "remix"
                                 ? error
@@ -288,7 +302,9 @@ function SelectionAnnotations({ board }: { board: SelectionBoard }) {
                             ? "Saved Board"
                             : board.ownership === "owner"
                               ? "Your Board"
-                              : "Shared with you"}
+                              : board.previewResolved
+                                ? "Community Board"
+                                : "Shared with you"}
                     </dt>
                     <dd className="mt-1">
                         {status === "draft" ? "Unpublished draft" : "Published"}
@@ -297,9 +313,19 @@ function SelectionAnnotations({ board }: { board: SelectionBoard }) {
                 </div>
                 <div>
                     <dt className="text-foreground text-xs tracking-[.08em] uppercase">
-                        {board.summary.source === "saved" ? "Saved on" : "Last updated"}
+                        {board.summary.source === "saved"
+                            ? "Saved on"
+                            : board.firstPublishedAt && board.summary.source === "shared"
+                              ? "Published"
+                              : "Last updated"}
                     </dt>
-                    <dd className="mt-1">{formatSelectionDate(board.summary.updatedAt)}</dd>
+                    <dd className="mt-1">
+                        {formatSelectionDate(
+                            board.summary.source === "shared" && board.firstPublishedAt
+                                ? board.firstPublishedAt
+                                : board.summary.updatedAt
+                        )}
+                    </dd>
                 </div>
                 {board.destination && (
                     <div>
@@ -341,24 +367,23 @@ export function formatSelectionDate(value: string) {
 export function BoardSelectionCollection({
     boards,
     onSelect,
-    mode = "continue"
+    mode = "continue",
+    id = "selection-collection-heading"
 }: {
     boards: SelectionBoard[];
     onSelect: (id: number) => void;
-    mode?: "continue" | "remix";
+    mode?: "continue" | "remix" | "explore";
+    id?: string;
 }) {
     const reduced = useReducedMotion();
     if (!boards.length) return null;
     return (
         <section
-            aria-labelledby="selection-collection-heading"
+            aria-labelledby={id}
             className="border-line mx-auto mt-16 max-w-[1272px] border-t px-4 pt-12 sm:mt-24 sm:px-10 sm:pt-16"
         >
             <div className="flex items-end justify-between gap-5">
-                <h2
-                    id="selection-collection-heading"
-                    className="font-display text-muted-foreground/65 text-30 sm:text-40 leading-none font-bold"
-                >
+                <h2 id={id} className="font-display text-muted-foreground/65 text-30 sm:text-40 leading-none font-bold">
                     THE COLLECTION
                 </h2>
                 <span className="text-muted-foreground text-[10px]">Bring a Board into focus ↗</span>

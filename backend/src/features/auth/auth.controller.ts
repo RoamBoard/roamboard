@@ -23,7 +23,10 @@ export interface AuthController {
     signOut: RequestHandler;
 }
 
-export function createAuthController(service: AuthService): AuthController {
+export function createAuthController(
+    service: AuthService,
+    onSignedIn?: (cookie: string | undefined, userId: string) => Promise<void>
+): AuthController {
     const setSession = (response: Parameters<RequestHandler>[1], token: string) => {
         response.cookie(sessionCookieName(), token, { ...cookieOptions(), maxAge: SESSION_MAX_AGE_MS });
     };
@@ -31,6 +34,7 @@ export function createAuthController(service: AuthService): AuthController {
     const signIn: RequestHandler = async (request, response) => {
         const { credential } = request.body as { credential: string };
         const result = await service.signIn(credential);
+        await onSignedIn?.(request.headers.cookie, result.user.userId);
         setSession(response, result.sessionToken);
         response.status(200).json({ data: { user: result.user, isNew: result.isNew } });
     };
@@ -42,6 +46,7 @@ export function createAuthController(service: AuthService): AuthController {
     const createGuest: RequestHandler = async (request, response) => {
         const { username } = request.body as { username: string };
         const result = await service.createGuestAccount(username);
+        await onSignedIn?.(request.headers.cookie, result.user.userId);
         setSession(response, result.sessionToken);
         response.status(201).json({ data: { user: result.user, isNew: result.isNew } });
     };
@@ -49,6 +54,7 @@ export function createAuthController(service: AuthService): AuthController {
     const signInAsGuest: RequestHandler = async (request, response) => {
         const { userId } = request.body as { userId: string };
         const result = await service.signInAsGuest(userId);
+        await onSignedIn?.(request.headers.cookie, result.user.userId);
         setSession(response, result.sessionToken);
         response.json({ data: { user: result.user, isNew: result.isNew } });
     };

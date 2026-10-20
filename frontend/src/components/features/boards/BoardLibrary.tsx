@@ -20,12 +20,13 @@ type Props = {
     id?: string;
     title?: string;
     description?: string;
-    archived?: boolean;
     hasMore?: boolean;
     loadingMore?: boolean;
     onLoadMore?: () => Promise<void>;
     onBoardHighlight?: (boardId: string | null) => void;
     embedded?: boolean;
+    showStatus?: boolean;
+    onSavedChange?: (boardId: string, saved: boolean) => void;
 };
 
 export default function BoardLibrary({
@@ -36,9 +37,10 @@ export default function BoardLibrary({
     id = "board-library",
     title = "YOUR COLLECTION",
     description,
-    archived = false,
     onBoardHighlight,
-    embedded = false
+    embedded = false,
+    showStatus = false,
+    onSavedChange
 }: Props) {
     const interaction = useRef<{ hovered: string | null; focused: string | null }>({ hovered: null, focused: null });
     return (
@@ -94,21 +96,23 @@ export default function BoardLibrary({
                             href={board.href}
                             ownership={board.ownership}
                             initialSaved={board.savedByMe}
+                            onSavedChange={(saved) => onSavedChange?.(board.compact.id, saved)}
+                            showVisibility={showStatus}
                             hideCoverCredit
                             hoverActions={
                                 board.href
                                     ? {
                                           editHref: board.ownership === "owner" ? board.editHref : undefined,
-                                          viewHref: board.href
+                                          viewHref: board.photo?.status === "draft" ? undefined : board.href
                                       }
                                     : undefined
                             }
                             details
                             imageSizes="(max-width: 640px) 75vw, 328px"
                         />
-                        {archived && (
-                            <p className="text-10 text-foreground/65 mt-4 text-center tracking-[.12em] uppercase">
-                                Archived
+                        {showStatus && board.photo?.status && (
+                            <p className="text-muted-foreground mt-3 text-center text-xs">
+                                {board.photo.status === "draft" ? "Draft" : "Published"}
                             </p>
                         )}
                     </div>
@@ -258,6 +262,7 @@ export function BoardLibraryCarousel({
                         >
                             <h2
                                 id={`${id}-heading`}
+                                tabIndex={-1}
                                 className={
                                     variant === "profile"
                                         ? "sr-only"

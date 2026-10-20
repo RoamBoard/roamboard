@@ -20,6 +20,7 @@ export interface AuthModule {
 }
 
 export interface AuthModuleOptions {
+    onSignedIn?: (cookie: string | undefined, userId: string) => Promise<void>;
     quotaService?: QuotaService;
     imagesRepository?: ImagesRepository;
     repository?: AuthRepository;
@@ -39,7 +40,7 @@ export function createAuthModule(options: AuthModuleOptions = {}): AuthModule {
                 options.imagesRepository ?? createImagesRepository()
             )
     );
-    const controller = createAuthController(service);
+    const controller = createAuthController(service, options.onSignedIn);
     const router = createAuthRouter(controller);
     return { router, controller, service, repository };
 }
