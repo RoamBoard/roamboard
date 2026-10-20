@@ -1,4 +1,5 @@
 import { AppError } from "../../shared/app-error.js";
+import type { ImageCleanup } from "../images/images.cleanup.js";
 import type { UsersRepository, ProfileChanges } from "./users.types.js";
 import type { ImagesRepository } from "../images/images.types.js";
 import type { BoardRepository } from "../boards/boards.types.js";
@@ -29,7 +30,8 @@ function travelStats(boards: ProfileBoard[]) {
 export function createUsersService(
     repository: UsersRepository,
     images: Pick<ImagesRepository, "findImage">,
-    boards: Pick<BoardRepository, "listTags" | "getAccess">
+    boards: Pick<BoardRepository, "listTags" | "getAccess">,
+    cleanupImages?: ImageCleanup
 ) {
     const read = async (userId: string) => {
         const profile = await repository.read(userId);
@@ -154,6 +156,7 @@ export function createUsersService(
                     throw new AppError(404, "Owned image not found", "NOT_FOUND");
             }
             await repository.setPicture(userId, imageId);
+            await cleanupImages?.();
             return read(userId);
         },
         listBoards: (userId: string, recent = false) => repository.listBoards(userId, recent),

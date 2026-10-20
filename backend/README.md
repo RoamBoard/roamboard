@@ -300,11 +300,18 @@ uses these endpoints for upload, draft save, and publication.
   transformations remove embedded metadata, including GPS. This route uses
   backend bandwidth and matters when choosing a production host.
 
-Run `npm run cleanup:images` on a regular schedule in production, such as
-hourly. It removes Cloudinary assets and database rows that have been unlinked
-for at least 24 hours, plus abandoned upload intents after their grace period.
-The command is safe to repeat. Configure the scheduler on the eventual backend
-host; API requests do not run cleanup automatically.
+Apply migration 020 with `npm run db:images -- --apply` after checking status with `npm run db:images`.
+The command verifies a custom-format database backup before applying only that migration. See the
+[image deletion contract](../contracts/image-deletion.md) and migration log for rollout status.
+
+Replacing/removing a profile picture, removing photos in a saved Board edit or deleting a Board immediately
+attempts Cloudinary cleanup after commit. The image row and completed upload intent are removed only after
+provider success and only when no Board, activity or profile still uses the image. Covers and activity-only
+photos are included. Saved remixes retain their independently copied photos; editorial images are excluded.
+
+The API server runs an image-cleanup sweep on startup and every minute, retrying durable deletion requests.
+Fresh unattached uploads and expired incomplete intents retain their 24-hour grace period. Run
+`npm run cleanup:images` for manual maintenance; it returns a nonzero exit code if any asset fails.
 
 `npm run check` runs lint, typecheck, unit/API tests, and build without a live
 database or Cloudinary account. `npm run test:db` runs the PostgreSQL integration

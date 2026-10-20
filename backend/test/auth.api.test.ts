@@ -35,11 +35,13 @@ function fakeDependencies(
 ): {
     repository: AuthRepository;
     googleVerifier: GoogleVerifier;
+    cleanupImages: () => Promise<void>;
 } {
     const users = new Map<string, AppUser>(initialUsers.map((user) => [user.userId, user]));
     const sessions = new Map<string, { userId: string; expiresAt: Date }>();
 
     return {
+        async cleanupImages() {},
         repository: {
             async listGuestAccounts() {
                 return [...users.values()].filter((user) => user.userId.startsWith("guest:"));

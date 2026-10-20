@@ -78,7 +78,7 @@ The initial activity-category seed uses the current creator choices: `landmark`,
 - Initially order uploaded photos by capture time ascending when metadata provides it; put photos without capture time after those with metadata and show “No metadata available” for them. Once the user reorders photos, save and return that explicit order.
 - Images served to other users must have embedded GPS metadata removed. Use Cloudinary transformations without metadata-preservation flags for display variants. An unconfirmed location suggestion may remain in the owner's draft data, but published Board responses expose only confirmed location data. Do not expose raw photo metadata in public image or Board responses.
 - A selected Unsplash photo on an activity is stored as an external image reference plus photographer credit. The Unsplash `providerImageId` is persisted in `activity.external_image_id` together with `external_image_provider` and attribution fields; the URL is display metadata, not the image identity. It is separate from `uploaded_image`. `coverImageId` may select one of that activity's `uploadedImageIds`; omitting it chooses the first uploaded activity image, and explicit `null` selects no uploaded cover so the external image can be used. The exact external-image fields appear in the draft request example below.
-- Removing an image from the submitted Board document unlinks it from that Board and its activity. The backend records when it becomes unlinked. A scheduled cleanup removes uploads with no Board, activity, or profile reference after a 24-hour grace period. Referenced images are retained.
+- Removing an image from the submitted Board document unlinks it from that Board and its activity. After commit, cleanup immediately attempts to delete the authenticated Cloudinary asset and then its image/upload-intent rows if no Board, activity or profile reference remains. Provider failures stay queued for the server's automatic retry sweep. Fresh unattached uploads retain a 24-hour grace period. See [uploaded image deletion](../contracts/image-deletion.md).
 
 ## HTTP conventions
 
@@ -265,7 +265,7 @@ Both paths stream metadata-stripped variants with `Cache-Control: private, no-st
 
 ### `DELETE /api/v1/boards/:boardId`
 
-Owner-only. Returns `204` with no body. Database relationships such as days, activities, tags, memberships, and saved-Board records are deleted or unlinked according to their foreign keys. Uploaded files that become unreferenced enter the same 24-hour cleanup window.
+Owner-only. Returns `204` with no body. Database relationships such as days, activities, tags, memberships, and saved-Board records are deleted or unlinked according to their foreign keys. Uploaded files that become unreferenced, including Board/activity covers and activity-only photos, are queued transactionally and cleanup is attempted immediately after commit. Cloudinary failure leaves a durable request for the automatic retry worker; images still used by a profile or another Board are retained. See [uploaded image deletion](../contracts/image-deletion.md).
 
 ## Errors and frontend states
 

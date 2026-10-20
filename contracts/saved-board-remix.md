@@ -27,6 +27,9 @@ Calendar dates are cleared and persisted day/activity IDs are omitted. Uploaded 
 caller-owned authenticated assets with their own image IDs, including cover choices. Copies preserve the rendered
 display crop (up to 1600px), with that crop baked in; the uploader's uncropped original and private capture/GPS
 metadata are not copied. New crop/resize edits and Reset apply to this independent displayed image.
+Deleting the original Board must preserve the remixed Board's cover, activity photos and independent image records.
+Deleting the remix later cleans only its unused copies. Any older shared image references also prevent cleanup until
+the last Board/activity/profile reference is removed. See [uploaded image deletion](image-deletion.md).
 The original author, completion, visibility, memberships and save counts are not copied. The creator uses the
 current user's normal new-Board visibility preference. New Board ownership/completion follow normal creation.
 

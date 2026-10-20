@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { createImageCleanup } from "./images.cleanup.js";
 
 import { AppError } from "../../shared/app-error.js";
 import { canReadBoard } from "../boards/boards.service.js";
@@ -175,19 +176,6 @@ export function createImagesService(
                 variant === "original" ? null : image.presentationEdit
             );
         },
-        async cleanupUnused() {
-            const before = new Date(Date.now() - 24 * 60 * 60 * 1000);
-            const candidates = await repository.listCleanupCandidates(before, 100);
-            let removed = 0;
-            for (const candidate of candidates) {
-                const deleteProviderAsset = () => provider.destroy(candidate.storageKey);
-                if (candidate.imageId !== null) {
-                    if (await repository.cleanupImage(candidate.imageId, deleteProviderAsset)) removed += 1;
-                } else if (candidate.uploadId !== null) {
-                    if (await repository.cleanupIntent(candidate.uploadId, deleteProviderAsset)) removed += 1;
-                }
-            }
-            return { removed };
-        }
+        ...createImageCleanup(repository, provider)
     };
 }

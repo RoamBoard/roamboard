@@ -20,6 +20,7 @@
         "cleanup:images": "tsx src/jobs/cleanup-unused-images.ts",
         "cleanup:discovery": "tsx src/jobs/cleanup-discovery.ts",
         "db:discovery": "tsx src/jobs/apply-board-discovery.ts",
+        "db:images": "tsx src/jobs/apply-image-deletion.ts",
         "images:inventory": "tsx src/jobs/import-frontend-images.ts --inventory",
         "images:import": "tsx src/jobs/import-frontend-images.ts --apply",
         "images:add": "tsx src/jobs/register-image.ts",

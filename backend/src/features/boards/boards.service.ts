@@ -1,4 +1,5 @@
 import { AppError } from "../../shared/app-error.js";
+import type { ImageCleanup } from "../images/images.cleanup.js";
 import type { BoardWrite } from "./boards.schemas.js";
 import type { BoardRepository, BoardsService, CopyBoardImage } from "./boards.types.js";
 
@@ -79,7 +80,11 @@ async function validateDocument(repository: BoardRepository, input: BoardWrite):
     return normalized;
 }
 
-export function createBoardsService(repository: BoardRepository, copyImage?: CopyBoardImage): BoardsService {
+export function createBoardsService(
+    repository: BoardRepository,
+    copyImage?: CopyBoardImage,
+    cleanupImages?: ImageCleanup
+): BoardsService {
     return {
         async prepareRemix(userId, boardId) {
             const source = await repository.getBoard(boardId, userId);
@@ -160,7 +165,9 @@ export function createBoardsService(repository: BoardRepository, copyImage?: Cop
                 if (current?.isCompleted !== input.isCompleted)
                     throw new AppError(403, "Only the owner can change completion", "FORBIDDEN");
             }
-            return repository.saveBoard(userId, boardId, revision, validated);
+            const saved = await repository.saveBoard(userId, boardId, revision, validated);
+            await cleanupImages?.();
+            return saved;
         },
         async read(boardId, userId) {
             const board = await repository.getBoard(boardId, userId);
@@ -179,6 +186,7 @@ export function createBoardsService(repository: BoardRepository, copyImage?: Cop
             if (!(await repository.deleteBoard(boardId, userId))) {
                 throw new AppError(404, "Board not found", "NOT_FOUND");
             }
+            await cleanupImages?.();
         }
     };
 }

@@ -1,4 +1,5 @@
 import type { RequestHandler, Router } from "express";
+import type { ImageCleanup } from "../images/images.cleanup.js";
 
 import { createBoardsController } from "./boards.controller.js";
 import { createBoardsRepository } from "./boards.repository.js";
@@ -15,9 +16,10 @@ export interface BoardsModule {
 export function createBoardsModule(
     attachUser: RequestHandler,
     repository: BoardRepository = createBoardsRepository(),
-    copyImage?: CopyBoardImage
+    copyImage?: CopyBoardImage,
+    cleanupImages?: ImageCleanup
 ): BoardsModule {
-    const service = createBoardsService(repository, copyImage);
+    const service = createBoardsService(repository, copyImage, cleanupImages);
     const controller = createBoardsController(service);
     return { router: createBoardsRouter(controller, attachUser), service, repository };
 }
