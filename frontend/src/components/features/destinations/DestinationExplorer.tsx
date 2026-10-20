@@ -132,7 +132,7 @@ export function DestinationExplorerContent({
                 <h1 className="sr-only">Roamboard — find your destination</h1>
                 <form role="search" aria-label="Destination search" onSubmit={submit} className="relative">
                     <motion.div
-                        className="group relative flex min-h-20 items-center"
+                        className="group relative mx-auto flex min-h-20 w-fit max-w-full items-center"
                         initial={false}
                         animate="rest"
                         whileHover={reduced ? undefined : "approach"}
@@ -140,6 +140,12 @@ export function DestinationExplorerContent({
                         <label htmlFor="destination-search" className="sr-only">
                             Search destinations
                         </label>
+                        <span
+                            aria-hidden="true"
+                            className="text-16 max-[360px]:text-14 md:text-20 pointer-events-none invisible block whitespace-nowrap select-none"
+                        >
+                            {ROAM_PROMPT}
+                        </span>
                         <motion.input
                             id="destination-search"
                             role="combobox"
@@ -158,7 +164,7 @@ export function DestinationExplorerContent({
                             whileHover={reduced ? undefined : { letterSpacing: "0.015em" }}
                             animate={{ letterSpacing: !reduced && open ? "0.008em" : "0em" }}
                             transition={reduced ? { duration: 0 } : { type: "spring", stiffness: 180, damping: 28 }}
-                            className={`text-16 max-[360px]:text-14 md:text-20 focus-visible:outline-foreground/20 w-full min-w-0 cursor-text rounded-sm bg-transparent py-7 text-center outline-none focus-visible:outline-1 focus-visible:-outline-offset-4 ${query ? "px-6" : "px-0"} ${open ? "placeholder:text-muted-foreground" : "placeholder:text-transparent"}`}
+                            className={`text-16 max-[360px]:text-14 md:text-20 focus-visible:outline-foreground/20 absolute inset-0 w-full min-w-0 cursor-text rounded-sm bg-transparent py-7 text-left outline-none placeholder:text-transparent focus-visible:outline-1 focus-visible:-outline-offset-4 ${query ? "caret-foreground pr-7" : "caret-transparent"}`}
                             onPointerDown={onEngage}
                             onFocus={() => {
                                 onEngage?.();
@@ -177,30 +183,83 @@ export function DestinationExplorerContent({
                                 }
                             }}
                         />
-                        {!query && !open && (
+                        {!query && (
                             <div
                                 aria-hidden="true"
-                                className="pointer-events-none absolute inset-0 flex items-center justify-center px-6"
+                                className="pointer-events-none absolute inset-0 flex items-center justify-start"
                             >
                                 <motion.span
-                                    className="text-muted-foreground group-hover:text-foreground/80 text-16 max-[360px]:text-14 md:text-20 relative whitespace-nowrap transition-colors duration-500 motion-reduce:transition-none"
+                                    className={`text-16 max-[360px]:text-14 md:text-20 relative inline-flex items-center whitespace-nowrap transition-colors duration-300 motion-reduce:transition-none ${
+                                        open
+                                            ? "text-muted-foreground/40"
+                                            : "text-muted-foreground/80 group-hover:text-foreground"
+                                    }`}
                                     variants={{
-                                        rest: { letterSpacing: "0em" },
-                                        approach: { letterSpacing: "0.015em" }
+                                        rest: { letterSpacing: "0em", y: 0 },
+                                        approach: { letterSpacing: open ? "0.008em" : "0.015em", y: open ? 0 : -1 }
                                     }}
+                                    animate={!reduced && open ? { letterSpacing: "0.008em", y: 0 } : undefined}
                                     transition={{ type: "spring", stiffness: 180, damping: 28 }}
                                 >
                                     <span className="invisible">{ROAM_PROMPT}</span>
-                                    <span className="absolute inset-0 text-left">{promptText}</span>
+                                    <span className="absolute inset-0 flex items-center text-left">
+                                        <span className="relative inline-flex items-center">
+                                            <span>{promptText}</span>
+                                            <motion.span
+                                                initial={false}
+                                                animate={{
+                                                    left: open ? "0%" : "100%",
+                                                    x: open ? -6 : 2,
+                                                    opacity:
+                                                        reduced || (!open && promptText.length < ROAM_PROMPT.length)
+                                                            ? 0.85
+                                                            : [1, 0.15, 1]
+                                                }}
+                                                transition={{
+                                                    left: reduced
+                                                        ? { duration: 0 }
+                                                        : { type: "spring", stiffness: 260, damping: 28 },
+                                                    x: reduced
+                                                        ? { duration: 0 }
+                                                        : { type: "spring", stiffness: 260, damping: 28 },
+                                                    opacity:
+                                                        reduced || (!open && promptText.length < ROAM_PROMPT.length)
+                                                            ? { duration: 0 }
+                                                            : { duration: 1.1, repeat: Infinity, ease: "easeInOut" }
+                                                }}
+                                                className={`absolute top-1/2 h-[1.15em] w-[1.5px] -translate-y-1/2 transition-colors duration-300 ${
+                                                    open
+                                                        ? "bg-foreground"
+                                                        : "bg-muted-foreground/75 group-hover:bg-foreground"
+                                                }`}
+                                            />
+                                        </span>
+                                    </span>
                                 </motion.span>
                             </div>
                         )}
+                        <div
+                            aria-hidden="true"
+                            className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center"
+                        >
+                            <div className="bg-line/70 group-hover:bg-foreground/35 relative h-px w-full overflow-hidden transition-colors duration-300">
+                                <motion.span
+                                    initial={false}
+                                    animate={{
+                                        scaleX: open || Boolean(query) ? 1 : 0,
+                                        opacity: open || Boolean(query) ? 1 : 0
+                                    }}
+                                    transition={{ duration: reduced ? 0 : 0.3, ease: [0.22, 1, 0.36, 1] }}
+                                    className="bg-foreground absolute inset-0 block origin-left"
+                                />
+                            </div>
+                        </div>
                         {query.trim() ? (
                             <button
                                 type="submit"
                                 aria-label="Explore selected destination"
                                 disabled={loading || leaving}
-                                className="text-muted-foreground hover:text-foreground focus-visible:outline-foreground absolute right-0 grid size-11 place-items-center focus-visible:outline-2 disabled:opacity-40"
+                                className="text-muted-foreground hover:text-foreground focus-visible:outline-foreground absolute -right-8 grid size-11 place-items-center focus-visible:outline-2 disabled:opacity-40"
                             >
                                 <ArrowRight size={16} strokeWidth={1.2} aria-hidden="true" />
                             </button>
@@ -213,7 +272,7 @@ export function DestinationExplorerContent({
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0 }}
                                 transition={{ duration: reduced ? 0 : 0.16 }}
-                                className="bg-background absolute inset-x-0 top-full z-20 pt-3 pb-4"
+                                className="absolute inset-x-0 top-full z-20 pt-3 pb-4"
                             >
                                 <ul
                                     id="destination-suggestions"
@@ -248,7 +307,7 @@ export function DestinationExplorerContent({
                                     ))}
                                 </ul>
                                 {(loading || error || (!loading && searched && !results.length)) && (
-                                    <p className="text-muted-foreground text-12 px-2 py-3 leading-4">
+                                    <p className="text-muted-foreground text-12 px-2 py-3 text-center leading-4">
                                         {loading ? "Searching destinations…" : error || "No destinations found."}
                                         {error && (
                                             <button
