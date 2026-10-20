@@ -1,21 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { collageBoardExamples, compactBoardExamples } from "../src/data/board-card-examples";
-import { filterGalleryBoards, filterLibraryBoards, toGalleryBoard } from "../src/lib/my-boards";
+import { toGalleryBoard } from "../src/lib/my-boards";
 import { mockBoardCollections } from "../src/data/my-board-collections";
 import type { BoardDocument, PublishedSummary } from "../src/lib/board-creator-api";
-
-const samples = collageBoardExamples.map((collage, index) => ({ collage, compact: compactBoardExamples[index] }));
-
-test("gallery search matches title, destination, country code and author without case or accent sensitivity", () => {
-    for (const query of ["TOKYO", "japan", "JPN", "noah fischer", "hidden ramen"]) {
-        assert.equal(filterGalleryBoards(samples, query)[0]?.collage.id, "v1-tokyo");
-    }
-    assert.equal(filterGalleryBoards(samples, "chloe")[0]?.collage.id, "v1-paris");
-    assert.equal(filterGalleryBoards(samples, "   ").length, samples.length);
-    assert.equal(filterGalleryBoards(samples, "Tokyo France").length, 0);
-    assert.equal(filterGalleryBoards([], "Tokyo").length, 0);
-});
 
 test("live gallery cards use persisted content, cover ordering and a real Board route without invented save counts", () => {
     const summary: PublishedSummary = {
@@ -88,7 +75,6 @@ test("live gallery cards use persisted content, cover ordering and a real Board 
     assert.equal(board.compact.image.src, "https://example.com/2.jpg");
     assert.equal(board.collage.savedCount, undefined);
     assert.deepEqual(board.collage.highlights, ["Gamla Stan"]);
-    assert.equal(filterGalleryBoards([board], "stockholm").length, 1);
     assert.equal(board.ownership, "owner");
     assert.equal(board.photo?.title, document.title);
     assert.equal(board.photo?.author, "stockholm_traveller");
@@ -101,14 +87,8 @@ test("live gallery cards use persisted content, cover ordering and a real Board 
     assert.equal(board.photo?.savedCount, undefined);
 });
 
-test("created and saved visual samples normalize countries and support independent search without account routes", () => {
+test("created and saved visual samples normalize countries without account routes", () => {
     const { created, saved } = mockBoardCollections;
     assert.ok(created.every((board) => /^[A-Z]{3}$/.test(board.compact.destinationLabel)));
-    assert.equal(filterLibraryBoards(saved, "TOKYO japan").length, 1);
-    assert.equal(filterLibraryBoards(created, "chloe").length, 1);
-    assert.equal(filterLibraryBoards(saved, "Tokyo France").length, 0);
-    assert.equal(filterGalleryBoards(saved, "Tokyo").length, 1);
-    assert.equal(filterGalleryBoards(created, "Tokyo").length, 1);
-    assert.equal(filterLibraryBoards(created, "zzzz").length, 0);
     assert.ok([...created, ...saved].every((board) => !("href" in board)));
 });

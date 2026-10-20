@@ -14,7 +14,6 @@ backend/.env
 backend/backups
 frontend/.env*
 !frontend/.env.example
-express-demo
 docs
 contracts
 work
