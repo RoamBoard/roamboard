@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import test, { type TestContext } from "node:test";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import DestinationLoading from "../src/components/features/destinations/DestinationLoading";
 import { createDestinationLoadingStore } from "../src/lib/destination-loading";
 
 const kyoto = "/discover/destinations/kyoto";
@@ -308,4 +311,27 @@ test("switching to reduced motion during an attempt removes only the animation g
     assert.equal(store.getSnapshot()?.phase, "revealing");
     context.mock.timers.tick(30000);
     assert.equal(store.getSnapshot()?.phase, "revealing");
+});
+
+test("loading dialog focuses the modal container rather than Return to search so repeated Enter does not cancel", () => {
+    const loadingHtml = renderToStaticMarkup(
+        createElement(DestinationLoading, {
+            state: {
+                id: 1,
+                name: "Paris",
+                href: paris,
+                phase: "loading",
+                introComplete: false,
+                pageReady: false,
+                error: ""
+            },
+            reduced: true,
+            mobile: false,
+            onCancel() {},
+            onRetry() {},
+            onRevealed() {}
+        })
+    );
+    assert.match(loadingHtml, /<div\b[^>]*role="dialog"[^>]*tabindex="-1"/);
+    assert.doesNotMatch(loadingHtml, /<button\b[^>]*autofocus[^>]*>Return to search<\/button>/i);
 });

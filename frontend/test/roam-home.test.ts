@@ -85,10 +85,14 @@ for (const engage of ["pointer", "keyboard"] as const) {
         view.prompt.start();
         context.mock.timers.tick(180);
         assert.equal(view.prompt.getSnapshot(), "s");
+        assert.match(view.html(), /left:100%/);
         if (engage === "pointer") view.input().onPointerDown!();
         view.input().onFocus!();
         assert.equal(view.prompt.getSnapshot(), ROAM_PROMPT);
         assert.equal(view.search.getSnapshot().open, true);
+        assert.match(view.html(), /text-muted-foreground\/40/);
+        assert.match(view.html(), /left:0%/);
+        assert.match(view.html(), /id="destination-search"[^>]*text-left/);
         view.input().onChange!({ target: { value: "京都" } });
         assert.equal(view.input().value, "京都");
         Array.from({ length: 100 }).forEach(() => context.mock.timers.tick(100));
