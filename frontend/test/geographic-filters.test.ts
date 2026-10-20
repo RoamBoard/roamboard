@@ -43,6 +43,19 @@ function renderFilters(search: string) {
     return { nodes: holder.nodes, navigations, html };
 }
 
+test("rapid country changes accumulate before navigation commits", () => {
+    const { nodes, navigations } = renderFilters("q=food&page=3");
+    const checkboxes = nodes.filter((node) => node.type === "input" && node.props.type === "checkbox");
+    (checkboxes[0].props.onChange as () => void)();
+    (checkboxes[1].props.onChange as () => void)();
+    const first = new URL(navigations[0], "https://roamboard.test").searchParams;
+    const second = new URL(navigations[1], "https://roamboard.test").searchParams;
+    assert.equal(second.getAll("countries").length, 2);
+    assert.ok(second.getAll("countries").includes(first.get("countries")!));
+    assert.equal(second.get("q"), "food");
+    assert.equal(second.has("page"), false);
+});
+
 function globalValue(t: TestContext, name: string, value: unknown) {
     const previous = Object.getOwnPropertyDescriptor(globalThis, name);
     Object.defineProperty(globalThis, name, { configurable: true, value });

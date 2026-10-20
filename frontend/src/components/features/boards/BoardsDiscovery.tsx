@@ -511,7 +511,9 @@ function SearchResults({
     geography: string;
 }) {
     const path = `/boards/search?${new URLSearchParams({ q: query, page: String(page), limit: "20", location })}&${geography}`;
-    const { state, store } = useDiscovery(path);
+    const { state: requestedState, store } = useDiscovery(path);
+    const state: DiscoveryState =
+        requestedState.key === path ? requestedState : { key: path, data: null, loading: true, error: "" };
     const total = state.data?.total ?? 0;
     return (
         <section aria-labelledby="search-results-heading" className="mx-auto mt-16 max-w-[1320px] px-5">

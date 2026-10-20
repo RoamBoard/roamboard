@@ -12,6 +12,8 @@ type FilterKey = "countries" | "continents";
 export default function GeographicFilters() {
     const params = useSearchParams() ?? new URLSearchParams();
     const pathname = usePathname();
+    const committedQuery = params.toString();
+    const pending = useRef({ query: committedQuery, navigations: [] as string[] });
     const router = useRouter();
     const [search, setSearch] = useState("");
     const [open, setOpen] = useState<FilterKey | null>(null);
@@ -31,8 +33,18 @@ export default function GeographicFilters() {
             document.removeEventListener("focusin", dismiss);
         };
     }, [open]);
+    useEffect(() => {
+        const index = pending.current.navigations.indexOf(committedQuery);
+        if (index >= 0) {
+            // Intermediate navigation must preserve selections queued after it.
+            pending.current.navigations.splice(0, index + 1);
+        } else {
+            pending.current.navigations = [];
+        }
+        if (!pending.current.navigations.length) pending.current.query = committedQuery;
+    }, [committedQuery, pathname]);
     const update = (key: string, value?: string) => {
-        const next = new URLSearchParams(params.toString());
+        const next = new URLSearchParams(pending.current.query);
         const values = next.getAll(key);
         next.delete(key);
         next.delete("page");
@@ -44,6 +56,8 @@ export default function GeographicFilters() {
             next.delete("countries");
             next.delete("continents");
         }
+        pending.current.query = next.toString();
+        pending.current.navigations.push(pending.current.query);
         router.replace(pathname + (next.size ? "?" + next : ""), { scroll: false });
     };
     const navigate = (event: KeyboardEvent<HTMLDetailsElement>) => {

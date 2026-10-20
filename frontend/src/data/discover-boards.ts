@@ -67,6 +67,7 @@ export const publicDiscoverPreviewBoards = [
             description: board.description,
             author: "Sample traveller",
             tags: board.tags,
+            destinations: board.destinations,
             image: board.coverImage
         }))
 ];
