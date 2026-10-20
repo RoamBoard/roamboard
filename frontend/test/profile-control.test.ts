@@ -752,15 +752,20 @@ test("NotificationControl newer read supersedes older pending read", async (cont
     assert.equal(tracker.count, 2);
 });
 
-test("Sidebar renders navigation links including labs, and notification menu above profile control", () => {
+test("Sidebar renders navigation links in order without labs, and notification menu above profile control", () => {
     const html = renderToStaticMarkup(
         createElement(RouterWrapper, null, createElement(Sidebar, { activeHref: "/home" }))
     );
     assert.ok(html.includes("ROAMBOARD"));
     assert.ok(html.includes('href="/home"'));
+    assert.ok(html.includes('href="/boards"'));
     assert.ok(html.includes('href="/discover"'));
-    assert.ok(html.includes('href="/dev/providers"'));
-    assert.ok(html.includes("labs"));
+    assert.ok(html.includes('href="/create"'));
+    assert.ok(html.includes('href="/social"'));
+    assert.ok(!html.includes('href="/dev/providers"'));
+    assert.ok(!html.includes(">labs<"));
+    assert.ok(html.indexOf('href="/boards"') < html.indexOf('href="/discover"'));
+    assert.ok(html.indexOf('href="/discover"') < html.indexOf('href="/create"'));
     assert.ok(html.includes("Notifications"));
     assert.ok(html.includes("Account menu"));
 
