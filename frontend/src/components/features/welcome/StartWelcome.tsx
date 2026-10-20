@@ -11,25 +11,17 @@ export default function StartWelcome() {
 
     useEffect(() => {
         const state = { active: true };
-        const timeout = setTimeout(() => {
-            state.active = false;
-            setSignedOut(true);
-        }, 3000);
         getCurrentUser()
             .then((currentUser) => {
                 if (!state.active) return;
-                clearTimeout(timeout);
                 if (currentUser) router.replace("/welcome");
                 else setSignedOut(true);
             })
             .catch(() => {
-                if (!state.active) return;
-                clearTimeout(timeout);
-                setSignedOut(true);
+                if (state.active) setSignedOut(true);
             });
         return () => {
             state.active = false;
-            clearTimeout(timeout);
         };
     }, [router]);
 
