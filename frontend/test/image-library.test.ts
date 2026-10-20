@@ -32,7 +32,10 @@ test("production editorial fixtures use registered database references with orig
             page.closingImage.src,
             ...page.places.map((place) => place.image.src)
         ]),
-        ...roamFlowBoards.map((board) => board.image.src),
+        ...roamFlowBoards.map((board) => {
+            assert.ok(board.image);
+            return board.image.src;
+        }),
         ...Object.values(discoverPhotos).map((photo) => photo.src),
         ...tagCatalog.tags.map((tag) => tag.gridImage.url)
     ];

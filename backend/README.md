@@ -176,10 +176,11 @@ See [the deployment guide](deploy/README.md) for VM administration, migrations a
 
 When deploying the full application stack (`postgres`, `backend`, `frontend`, and `caddy`) through `backend/deploy/compose.yaml`, set these additional variables in `backend/.env`:
 
-- `PUBLIC_DOMAIN`: The public hostname served by Caddy (for example, `roamboard.belgiumcentral.cloudapp.azure.com`), used to provision TLS certificates, route `/api/*` and `/health*` to the backend container, and set `https://<PUBLIC_DOMAIN>` as both the backend's `CLIENT_ORIGIN` and the frontend's build-time `NEXT_PUBLIC_API_URL`.
+- `PUBLIC_DOMAIN`: The public hostname served by Caddy (for example, `roamboard.belgiumcentral.cloudapp.azure.com`), used to provision TLS certificates, route `/api/*` and `/health*` to the backend container, and set `https://<PUBLIC_DOMAIN>` as the backend's `CLIENT_ORIGIN` (and the frontend's build-time `NEXT_PUBLIC_API_URL` when building locally).
+- `IMAGE_TAG`: The `main` commit SHA (`git rev-parse HEAD`) for the matched `ghcr.io/roamboard/roamboard-backend:${IMAGE_TAG}` and `ghcr.io/roamboard/roamboard-frontend:${IMAGE_TAG}` images to run.
 - `DOCKER_DATABASE_URL`: The container-network PostgreSQL connection string (`postgresql://roamboard_user:YOUR_URL_ENCODED_APP_PASSWORD@postgres:5432/roamboard_dev`), required so the `backend` container connects to the `postgres` service over the Compose network while preserving `DATABASE_URL` (`127.0.0.1:15432`) for local SSH-tunneled development.
 
-Because Next.js embeds `NEXT_PUBLIC_API_URL` (`https://${PUBLIC_DOMAIN}`) and `NEXT_PUBLIC_GOOGLE_CLIENT_ID` (`GOOGLE_CLIENT_ID`) at build time, rebuild the `frontend` image (`docker compose --env-file ../.env up -d --build`) whenever `PUBLIC_DOMAIN` or `GOOGLE_CLIENT_ID` changes.
+Because Next.js embeds `NEXT_PUBLIC_API_URL` (`https://${PUBLIC_DOMAIN}`) and `NEXT_PUBLIC_GOOGLE_CLIENT_ID` (`GOOGLE_CLIENT_ID`) at build time, the [Docker publish workflow](../.github/workflows/docker-publish.yml) uses `PUBLIC_DOMAIN` and `GOOGLE_CLIENT_ID` GitHub secrets that must match the VM's `backend/.env`. After CI checks, it publishes both SHA-tagged images and deploys that SHA through Azure Run Command. See the [one-time setup and migration gate](deploy/README.md#one-time-automatic-deployment-setup). GHCR packages must be made public or the VM must authenticate with a `read:packages` token before pulling them.
 
 ## Alternative: independent local PostgreSQL setup
 

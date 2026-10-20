@@ -7,6 +7,7 @@ import { findCountry } from "@/lib/countries";
 import type { PhotoBoardCardData } from "@/types/board-card";
 
 export function toDiscoverPhotoBoardCard(board: DiscoverBoard): PhotoBoardCardData {
+    if (board.card) return board.card;
     const countries = (board.destinations ?? []).map((place) => findCountry(place.countryCode || place.country));
     return {
         id: board.id,
@@ -30,11 +31,11 @@ export function toDiscoverPhotoBoardCard(board: DiscoverBoard): PhotoBoardCardDa
     };
 }
 
-// These sources currently have no persistent Board identity or detail URL. Tags remain real navigation.
+// Public API Boards link to their saved document. Editorial examples remain non-navigable.
 export default function DiscoverBoardCard({ board, activeTagId }: { board: DiscoverBoard; activeTagId?: BoardTagId }) {
     return (
         <div className="min-w-0">
-            <PhotoBoardCard board={toDiscoverPhotoBoardCard(board)} details />
+            <PhotoBoardCard board={toDiscoverPhotoBoardCard(board)} href={board.href} details />
             <ul aria-label="Explore Board tags" className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
                 {board.tags.map((id) => {
                     const tag = getBoardTag(id);

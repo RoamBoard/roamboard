@@ -5,7 +5,10 @@ import DiscoverSearch from "./DiscoverSearch";
 import DiscoverMoodMarquees from "./DiscoverMoodMarquees";
 import FeaturedBoards from "./FeaturedBoards";
 import RoamFlow from "./roamflow/RoamFlow";
-import { roamFlowInitialPage } from "@/data/roamflow-boards";
+import { roamFlowPageSize } from "@/lib/roamflow";
+import { filterBoardsByDestination, type DiscoverBoard } from "@/data/discover-boards";
+import { filterBoardsByTags } from "@/data/board-tags";
+import { toDiscoverPhotoBoardCard } from "./DiscoverBoardCard";
 import { Marquee } from "@/components/ui/marquee";
 import type { CSSProperties } from "react";
 import Link from "next/link";
@@ -59,9 +62,7 @@ export function DiscoverHero() {
                     </Link>
                 </div>
             </div>
-            <p className="text-muted-foreground text-10 absolute top-28 left-5 md:top-5 md:left-10">
-                DESIGN PREVIEW · SAMPLE CONTENT
-            </p>
+            <p className="text-muted-foreground text-10 absolute top-28 left-5 md:top-5 md:left-10">EDITORIAL PICK</p>
         </section>
     );
 }
@@ -108,7 +109,23 @@ export function DiscoverJourney({ mobilePanel }: { mobilePanel?: number } = {}) 
     );
 }
 
-export function DiscoverFeed() {
+export function DiscoverFeed({
+    boards = [],
+    featured = [],
+    available = false,
+    featuredAvailable = false
+}: {
+    boards?: readonly DiscoverBoard[];
+    featured?: readonly DiscoverBoard[];
+    available?: boolean;
+    featuredAvailable?: boolean;
+} = {}) {
+    const initialPage = {
+        boards: boards
+            .slice(0, roamFlowPageSize)
+            .map((board) => ({ ...toDiscoverPhotoBoardCard(board), href: board.href })),
+        nextCursor: boards.length > roamFlowPageSize ? "2" : available ? null : "1"
+    };
     return (
         <div className="bg-background w-[var(--panel-width)] shrink-0">
             <div className="px-5 pt-14 md:px-10 md:pt-10">
@@ -120,6 +137,11 @@ export function DiscoverFeed() {
                     >
                         CURATED COLLECTIONS
                     </h2>
+                    {!available ? (
+                        <p role="status" className="text-muted-foreground mt-4">
+                            Public Boards could not be loaded. Refresh to try again.
+                        </p>
+                    ) : null}
                     <div className="mt-5 grid gap-2 @min-[26rem]/bento:auto-rows-[minmax(14rem,auto)] @min-[26rem]/bento:grid-cols-2 @min-[68rem]/bento:grid-cols-12 @min-[68rem]/bento:grid-rows-[repeat(2,minmax(14rem,1fr))]">
                         {discoverBentoCollections.map((collection) => (
                             <Link
@@ -150,6 +172,11 @@ export function DiscoverFeed() {
                                             </span>
                                         ))}
                                     </h3>
+                                    {available ? (
+                                        <p className="mt-3 text-xs">
+                                            {filterBoardsByTags(boards, collection.tagIds).length} Boards
+                                        </p>
+                                    ) : null}
                                     <p className="text-12 mt-4 max-w-52 border-t border-white/50 pt-3 leading-snug">
                                         {collection.description}
                                     </p>
@@ -182,19 +209,20 @@ export function DiscoverFeed() {
                                     {destination.name}
                                 </h3>
                                 <p className="text-10 absolute right-3 bottom-3">
-                                    {destination.previewBoardCount} boards
-                                    <span className="sr-only"> (sample count)</span>
+                                    {available
+                                        ? `${filterBoardsByDestination(boards, destination.countryCode).length} boards`
+                                        : "Boards unavailable"}
                                 </p>
                             </Link>
                         ))}
                     </div>
                 </section>
                 <DiscoverMoodMarquees />
-                <FeaturedBoards />
+                <FeaturedBoards boards={featured} available={featuredAvailable} />
             </div>
             <div className="h-32 bg-gradient-to-b from-transparent to-black" />
             <VibeGrid />
-            <RoamFlow initialPage={roamFlowInitialPage} />
+            <RoamFlow initialPage={initialPage} />
             <footer className="border-line border-t px-5 py-10 md:px-10">
                 <details className="text-12">
                     <summary className="w-fit cursor-pointer py-2 underline underline-offset-4 focus-visible:outline-2">

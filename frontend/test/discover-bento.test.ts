@@ -12,6 +12,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { compile } from "tailwindcss";
 import { Children, createElement, isValidElement, type ReactNode } from "react";
 import { DiscoverFeed } from "../src/components/features/discover/DiscoverContent";
+import type { DiscoverBoard } from "../src/data/discover-boards";
 
 type Props = { children?: ReactNode; [key: string]: unknown };
 
@@ -27,14 +28,34 @@ function textContent(node: ReactNode): string {
     return isValidElement<Props>(node) ? textContent(node.props.children) : "";
 }
 
-test("refined Discover tiles retain complete destination identity, sample-count disclosure and navigation", () => {
-    const feed = nodes(DiscoverFeed());
+test("Discover destination tiles count supplied public Boards and retain country navigation", () => {
+    const boards: DiscoverBoard[] = [
+        {
+            id: "721",
+            title: "Island walk",
+            description: "Author notes",
+            author: "actual_author",
+            tags: ["by-the-water"],
+            destinations: [{ country: "Indonesia", countryCode: "IDN" }]
+        }
+    ];
+    const feed = nodes(DiscoverFeed({ boards, featured: [], available: true }));
     const indonesia = feed.find((node) => node.props["aria-label"] === "Explore Indonesia");
     assert.ok(indonesia);
     assert.equal(indonesia.props.href, "/discover/destinations/indonesia");
     assert.equal(nodes(indonesia.props.children).find((node) => node.type === "h3")?.props.children, "Indonesia");
-    assert.match(textContent(indonesia.props.children), /68 boards \(sample count\)/);
+    assert.match(textContent(indonesia.props.children), /1 board/);
+    assert.doesNotMatch(textContent(indonesia.props.children), /sample count/);
     assert.equal(nodes(indonesia.props.children).filter((node) => typeof node.props.href === "string").length, 0);
+});
+
+test("empty public collections remain visible without sample Board counts", () => {
+    const feed = nodes(DiscoverFeed({ boards: [], featured: [], available: true }));
+    assert.ok(feed.some((node) => node.props.href === "/discover/collections/by-the-water"));
+    const indonesia = feed.find((node) => node.props["aria-label"] === "Explore Indonesia");
+    assert.ok(indonesia);
+    assert.match(textContent(indonesia.props.children), /0 boards/);
+    assert.doesNotMatch(textContent(indonesia.props.children), /sample count/);
 });
 
 test("By the Water keeps its accessible collection title, full supporting copy and photographic cover", () => {

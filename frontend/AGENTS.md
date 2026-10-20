@@ -132,7 +132,7 @@ or Publish creates a Board. See [the remix contract](../contracts/saved-board-re
 
 Secondary screens use the shared `BackLink`: profile/settings, notifications, Board selection/editing/viewing and Discover details. It shares the primary-color 16px medium-weight navigation style and 16px arrows with ViewAllBoards through `navigation-link-style.ts` and scrolls away with the page content; it has no separate header bar. Keep it inside each screen's actual scroll container. Main navigation destinations omit it. `BackNavigationTracker` records the previous internal URL on browser history entries while preserving router state, so Back uses browser history after refresh or forward/back; direct entries use a route-specific parent fallback. Authentication/welcome screens are excluded as return destinations. Board editor leave confirmation preserves Back or fallback replacement after discarding unsaved changes.
 
-`Sidebar` is shared by `AppShell` and `PublishedBoardShell`. It uses a sticky 64px mobile / 80px desktop rail in the page grid; desktop expansion grows to 176px and resizes the page beside it. Hovering a navigation or account control for 150ms temporarily reveals labels; leaving the rail collapses it after 100ms, and returning cancels that collapse. The logo and navigation positions stay fixed during expansion. Keyboard focus reveals labels immediately. The explicit keep-open choice is saved in `roamboard-sidebar-expanded` local storage. Navigation uses icons with lowercase labels on expansion and an underlined active destination, ordered Roam, Create, Discover, Boards, Social. Mobile expansion opens a native modal drawer. The sidebar account control expands its sign-in/profile, Settings, and Light/Dark choices inline above the trigger. Navigation scrolls at every height; the account panel has a viewport-based height bound and its own scrolling. Active destinations are derived from the pathname, including nested creation, Board, Discover, profile, and developer routes. Discover keeps its own scroll-driven intro behavior independently of navigation expansion; Discover panels and destination chapters use their available container width.
+`Sidebar` is shared by `AppShell` and `PublishedBoardShell`. It uses a sticky 64px mobile / 80px desktop rail in the page grid; desktop expansion grows to 176px and resizes the page beside it. Hovering a navigation or account control for 150ms temporarily reveals labels; leaving the rail collapses it after 100ms, and returning cancels that collapse. The logo and navigation positions stay fixed during expansion. Keyboard focus reveals labels immediately. The explicit keep-open choice is saved in `roamboard-sidebar-expanded` local storage. Navigation uses icons with lowercase labels on expansion and an underlined active destination, ordered Roam, Boards, Discover, Create, Social. Mobile expansion opens a native modal drawer. The sidebar account control expands its sign-in/profile, Settings, and Light/Dark choices inline above the trigger. Navigation scrolls at every height; the account panel has a viewport-based height bound and its own scrolling. Active destinations are derived from the pathname, including nested creation, Board, Discover, profile, and developer routes. Discover keeps its own scroll-driven intro behavior independently of navigation expansion; Discover panels and destination chapters use their available container width.
 
 The `/dev` index links to implemented routes and explains how to open `/boards/[boardId]` with a saved Board ID.
 The creation landing page is `/create`; `/boards` now uses the discovery flow described above. Featured retains the Motion spatial gallery; Recently Published, My Boards and Saved Boards use BoardLibrary.
@@ -538,12 +538,22 @@ uses a native V4 card button that also toggles metadata when selected; navigatio
 the tab order, save controls keep their own keyboard interaction, and pan selection returns focus to the gallery region. Linked V4 cards preview metadata on the first touch and navigate on the next; mouse and keyboard retain normal link activation. There is no visible Details/Close button.
 See [V4 backend handoff](../docs/V4_BACKEND_HANDOFF.md) for cumulative gaps.
 
-### RoamFlow discovery preview
+### Live Discover Boards
 
-Discover's RoamFlow section reuses `PhotoBoardCard` (V4) in responsive, staggered CSS Grid groups of seven.
-`src/data/roamflow-boards.ts` contains 27 distinct fictional editorial stories with existing photography;
-sample cards have no Board detail links. The paged mock source and presentation types in
-`src/lib/roamflow.ts` are not a backend API contract. `useRoamFlow` handles request guards, cancellation,
+Discover reads public, published summaries through the existing Recent and weekly Featured APIs with credentials
+omitted. `data/discover-boards.ts` shares paginated summary reads within one server render, maps persisted tag names
+to catalog IDs, and supplies real Board links, collection matches and destination counts. Collection tag matching
+uses OR semantics and deduplicates Boards. Empty collections and vibes remain visible with an empty state; failed
+reads show unavailable messages, never sample Boards or fabricated counts. Editorial covers and definitions remain.
+Featured and RoamFlow reuse equal-sized PhotoBoardCards with the distinctive staggered placement; outer card edges
+align with the section padding. RoamFlow uses real recent Boards,
+including named placeholders for missing covers, and fetches further pages from the same public API.
+
+### RoamFlow layout
+
+Discover's RoamFlow section reuses `PhotoBoardCard` (V4) in responsive CSS Grid groups of seven with equal-sized cards and staggered vertical positions.
+`src/data/roamflow-boards.ts` retains fictional fixtures for tests and explicit demos; production uses the live loader in
+`src/lib/roamflow.ts`. `useRoamFlow` handles request guards, cancellation,
 deduplication, retry, and cursor progress. Automatic loading pauses after two pages until the user continues;
 the skip link cancels pending loading and keeps the existing Discover footer reachable.
 

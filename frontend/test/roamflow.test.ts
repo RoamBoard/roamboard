@@ -6,35 +6,41 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import PhotoBoardCard from "../src/components/features/boards/cards/PhotoBoardCard";
 import { photoBoardExamples } from "../src/data/board-card-examples";
-import { roamFlowBoards, roamFlowInitialPage } from "../src/data/roamflow-boards";
+import { roamFlowBoards } from "../src/data/roamflow-boards";
 import { appendRoamFlowBoards, loadRoamFlowPage } from "../src/lib/roamflow";
 import { editorialFallback } from "../src/lib/image-library";
+import { discoveryCard } from "./fixtures/discovery-card";
 
-test("RoamFlow starts small, pages through unique stories, and ends without looping", async () => {
-    const state = { boards: [...roamFlowInitialPage.boards], cursor: roamFlowInitialPage.nextCursor, pages: 1 };
-    const pageSizes = [state.boards.length];
-    assert.equal(state.boards.length, 7);
-    // A partial final page must end pagination instead of causing repeated requests.
-    while (state.cursor !== null) {
-        const page = await loadRoamFlowPage(state.cursor, new AbortController().signal);
-        assert.notEqual(page.nextCursor, state.cursor);
-        assert.ok(page.boards.length > 0 && page.boards.length <= 7);
-        pageSizes.push(page.boards.length);
-        state.boards.push(...page.boards);
-        state.cursor = page.nextCursor;
-        state.pages += 1;
-        assert.ok(state.pages < 10, "Pagination must terminate");
-    }
-    assert.equal(state.pages, 4);
-    assert.deepEqual(pageSizes, [7, 7, 7, 6]);
-    assert.equal(state.boards.length, 27);
-    assert.equal(new Set(state.boards.map((board) => board.id)).size, 27);
-    assert.equal(new Set(state.boards.map((board) => board.title)).size, 27);
-    assert.equal(new Set(state.boards.map((board) => board.image.src)).size, 27);
+void globalThis.fetch;
+
+test("RoamFlow pages public published summaries and retains Boards without covers", async (t) => {
+    const signal = new AbortController().signal;
+    const calls: string[] = [];
+    t.mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {
+        const url = new URL(String(input));
+        calls.push(url.searchParams.get("page")!);
+        assert.equal(url.pathname, "/api/v1/boards/recent");
+        assert.equal(url.searchParams.get("limit"), "7");
+        assert.equal(init?.credentials, "omit");
+        assert.equal(init?.signal, signal);
+        return Response.json({
+            data: {
+                items: [discoveryCard(url.searchParams.get("page") === "2" ? 721 : 722, { coverImageUrl: null })],
+                hasMore: url.searchParams.get("page") === "2"
+            }
+        });
+    });
+    const second = await loadRoamFlowPage("2", signal);
     assert.deepEqual(
-        state.boards.map((board) => board.id),
-        roamFlowBoards.map((board) => board.id)
+        second.boards.map((board) => board.id),
+        ["721"]
     );
+    assert.equal(second.boards[0].href, "/boards/721");
+    assert.equal(second.boards[0].image, undefined);
+    assert.equal(second.nextCursor, "3");
+    const last = await loadRoamFlowPage(second.nextCursor!, signal);
+    assert.equal(last.nextCursor, null);
+    assert.deepEqual(calls, ["2", "3"]);
 });
 
 test("RoamFlow preserves identity and order when pages overlap or contain duplicates", () => {
@@ -51,18 +57,28 @@ test("RoamFlow preserves identity and order when pages overlap or contain duplic
     );
 });
 
-test("RoamFlow supports cancellation and rejects malformed preview cursors", async () => {
+test("RoamFlow supports cancellation and rejects malformed page cursors", async (t) => {
+    const call = t.mock.method(globalThis, "fetch", async () => Response.json({ data: { items: [], hasMore: false } }));
     const controller = new AbortController();
     controller.abort();
     await assert.rejects(loadRoamFlowPage("7", controller.signal), { name: "AbortError" });
     await assert.rejects(loadRoamFlowPage("invalid", new AbortController().signal));
+    assert.equal(call.mock.callCount(), 0);
     const last = await loadRoamFlowPage("9999", new AbortController().signal);
     assert.deepEqual(last, { boards: [], nextCursor: null });
+});
+
+test("RoamFlow provider failure rejects without substituting sample stories", async (t) => {
+    t.mock.method(globalThis, "fetch", async () =>
+        Response.json({ error: { message: "Unavailable" } }, { status: 503 })
+    );
+    await assert.rejects(loadRoamFlowPage("2", new AbortController().signal));
 });
 
 test("RoamFlow samples reference existing images and never link to fake Board details", async () => {
     await Promise.all(
         roamFlowBoards.map(async (board) => {
+            assert.ok(board.image);
             assert.ok(board.image.src.startsWith("library:"));
             const fallback = editorialFallback(board.image.src);
             assert.ok(fallback);

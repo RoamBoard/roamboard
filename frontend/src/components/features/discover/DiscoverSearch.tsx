@@ -227,7 +227,8 @@ export default function DiscoverSearch() {
                 Search a city or country and select a match to build its guide with photos and public boards.
             </p>
             <p id="discover-preview-note" className="text-muted-foreground text-12 mt-3">
-                Editorial selections and counts on Discover are samples. Destination guides load real public boards.
+                Explore curated themes and real public travel Boards. Destination guides include travel information and
+                maps.
             </p>
         </section>
     );
