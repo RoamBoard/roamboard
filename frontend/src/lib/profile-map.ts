@@ -62,6 +62,11 @@ export async function loadMapBoardGallery(places: MapDestination[]) {
                 return {
                     ...board,
                     photo: toPhotoBoardCard(document),
+                    editHref:
+                        document.permissions.canManageBoard && document.permissions.canEditContent
+                            ? `/boards/${document.boardId}/edit`
+                            : undefined,
+                    savedByMe: document.savedByMe,
                     ownership: document.permissions.canManageBoard ? ("owner" as const) : ("other" as const)
                 };
             } finally {

@@ -3,6 +3,7 @@ import test from "node:test";
 import { Children, createElement, isValidElement, type ComponentProps, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import PhotoBoardCard, { PhotoBoardCardContent } from "../src/components/features/boards/cards/PhotoBoardCard";
+import AccountPhotoBoardCard from "../src/components/features/boards/cards/AccountPhotoBoardCard";
 import { BoardCardFrame } from "../src/components/features/boards/cards/BoardCardParts";
 import { photoBoardExamples } from "../src/data/board-card-examples";
 import type { PhotoBoardCardData } from "../src/types/board-card";
@@ -21,6 +22,80 @@ const board: PhotoBoardCardData = {
     visibility: "public",
     image: { src: "/api/v1/images/42/content?variant=display", alt: "Oslo waterfront" }
 };
+
+test("owner hover actions retain the profile identity and link the pen to the permitted editor", () => {
+    const markup = html({
+        expanded: true,
+        ownership: "owner",
+        hoverActions: { editHref: "/boards/71/edit" }
+    });
+    assert.match(markup, /href="\/profile\/a_long_and_complete_author_handle"/);
+    assert.match(markup, /@a_long_and_complete_author_handle/);
+    assert.match(markup, /href="\/boards\/71\/edit"/);
+    assert.match(markup, /lucide-pencil/);
+    assert.doesNotMatch(markup, /lucide-eye|aria-label="(?:Save |Unsave )|lucide-plus/);
+});
+
+test("other-author hover exposes View and an independent filled saved bookmark, without Remix", () => {
+    const calls = { saves: 0 };
+    const cardProps = props({
+        expanded: true,
+        ownership: "other",
+        hoverActions: { viewHref: "/boards/71" },
+        save: {
+            state: "saved",
+            onToggle: () => {
+                calls.saves++;
+            }
+        }
+    });
+    const view = PhotoBoardCardContent(cardProps);
+    const bookmark = control(view, (candidate) => candidate["aria-label"] === `Unsave ${board.title}`);
+    bookmark.onClick?.({ stopPropagation: () => {} });
+    assert.equal(calls.saves, 1);
+    const markup = renderToStaticMarkup(view);
+    assert.match(markup, /href="\/boards\/71"/);
+    assert.match(markup, /lucide-eye/);
+    assert.match(markup, /aria-pressed="true"/);
+    assert.match(markup, /fill="currentColor"/);
+    assert.doesNotMatch(markup, /lucide-plus|remix=/);
+    const unsaved = html({ ...cardProps, save: { state: "unsaved" } });
+    assert.match(unsaved, /aria-pressed="false"/);
+});
+
+test("gallery credit suppression retains the cover URL and leaves other card placements unchanged", () => {
+    const credited = {
+        ...board,
+        image: {
+            src: "https://images.unsplash.com/chosen.jpg?ixid=original",
+            unoptimized: true,
+            alt: "Chosen cover",
+            credit: "Actual Photographer",
+            creditUrl: "https://unsplash.com/@actual"
+        }
+    };
+    const gallery = html({ board: credited, hideCoverCredit: true });
+    assert.match(gallery, /images\.unsplash\.com/);
+    assert.doesNotMatch(gallery, /Photo by|Actual Photographer/);
+    assert.match(html({ board: credited }), /Actual Photographer/);
+});
+
+test("nonprimary account cards stay selection-only and expose their saved bookmark only after promotion", () => {
+    function render(selected: boolean) {
+        return renderToStaticMarkup(
+            createElement(AccountPhotoBoardCard, {
+                board: { ...board, id: "71" },
+                ownership: "other",
+                initialSaved: true,
+                details: selected,
+                selection: { selected, onSelect() {} },
+                hoverActions: selected ? { viewHref: "/boards/71" } : undefined
+            })
+        );
+    }
+    assert.doesNotMatch(render(false), /aria-label="(?:Save |Unsave |View )/);
+    assert.match(render(true), /aria-label="Unsave /);
+});
 type CardProps = ComponentProps<typeof PhotoBoardCardContent>;
 type EventControl = {
     children?: ReactNode;
@@ -29,6 +104,7 @@ type EventControl = {
     href?: string;
     tabIndex?: number;
     "aria-expanded"?: boolean;
+    "aria-controls"?: string;
     "aria-pressed"?: boolean;
     "aria-label"?: string;
     "data-photo-board-expanded"?: boolean;
@@ -37,6 +113,7 @@ type EventControl = {
     onKeyDown?: (event: { key: string; stopPropagation: () => void; preventDefault: () => void }) => void;
     onHoverStart?: () => void;
     onHoverEnd?: () => void;
+    onPointerLeave?: (event: { buttons: number }) => void;
     onFocusCapture?: (event: {
         currentTarget: { contains: () => boolean };
         target: { matches: () => boolean };
@@ -68,7 +145,29 @@ function html(overrides: Partial<CardProps> = {}) {
     return renderToStaticMarkup(createElement(PhotoBoardCardContent, props(overrides)));
 }
 
-test("editable selection uses a native card link and pen; unselected cards still only select", () => {
+test("drag suppression hides the profile and action overlays with the metadata, and leaving while pressed clears disclosure", () => {
+    const closed: boolean[] = [];
+    const cardProps = props({
+        expanded: true,
+        suppressHover: true,
+        ownership: "owner",
+        hoverActions: { editHref: "/boards/71/edit", viewHref: "/boards/71" },
+        onExpandedChange: (value) => closed.push(value)
+    });
+    const view = PhotoBoardCardContent(cardProps);
+    const markup = renderToStaticMarkup(view);
+    assert.match(markup, /data-photo-board-expanded="false"/);
+    assert.doesNotMatch(markup, /group-hover\/card:opacity-100|group-focus-within\/card:opacity-100/);
+    for (const label of [`View @${board.author}'s profile`, `Edit ${board.title}`, `View ${board.title}`]) {
+        const action = control(view, (item) => item["aria-label"] === label) as EventControl & { className: string };
+        assert.match(action.className, /pointer-events-none opacity-0/);
+        assert.match(action.className, /hover:scale-105/);
+    }
+    control(view, (item) => Boolean(item.onPointerLeave)).onPointerLeave?.({ buttons: 1 });
+    assert.deepEqual(closed, [false]);
+});
+
+test("editable selections retain a separate native editor action and background link", () => {
     const actions = { selections: 0, disclosures: 0 };
     const selection = { selected: true, href: "/boards/71/edit", onSelect: () => actions.selections++ };
     const card = PhotoBoardCardContent(props({ selection, onExpandedChange: () => actions.disclosures++ }));
@@ -77,12 +176,41 @@ test("editable selection uses a native card link and pen; unselected cards still
     assert.equal(edit.onClick, undefined, "Mouse, touch and keyboard activation keep native link navigation");
     assert.deepEqual(actions, { selections: 0, disclosures: 0 });
     const markup = html({ selection });
-    assert.equal((markup.match(/href="\/boards\/71\/edit"/g) ?? []).length, 1);
+    assert.equal((markup.match(/href="\/boards\/71\/edit"/g) ?? []).length, 2);
     assert.match(markup, /lucide-pencil/);
-    assert.doesNotMatch(markup, /<button\b/);
+    assert.match(markup, /aria-label="Show details for /);
     const unselected = html({ selection: { ...selection, selected: false, tabIndex: -1 } });
     assert.doesNotMatch(unselected, /href="\/boards\/71\/edit"|lucide-pencil/);
     assert.match(unselected, /aria-pressed="false"/);
+});
+
+test("a published owner card background and eye open its view while the pen opens its editor", () => {
+    const card = PhotoBoardCardContent(
+        props({
+            ownership: "owner",
+            selection: {
+                selected: true,
+                href: "/boards/71/edit",
+                viewHref: "/boards/71",
+                onSelect: () => assert.fail("A view click must not select")
+            }
+        })
+    );
+    const body = control(card, (item) => item["aria-label"] === `Open ${board.title}`);
+    const eye = control(card, (item) => item["aria-label"] === `View ${board.title}`);
+    const pen = control(card, (item) => item["aria-label"] === `Edit ${board.title}`);
+    assert.equal(body.href, "/boards/71");
+    assert.equal(eye.href, "/boards/71");
+    assert.equal(pen.href, "/boards/71/edit");
+    assert.equal(body.onClick, undefined);
+    assert.equal(eye.onClick, undefined);
+    assert.equal(pen.onClick, undefined);
+    const readOnly = html({
+        ownership: "owner",
+        selection: { selected: true, viewHref: "/boards/71", onSelect() {} }
+    });
+    assert.match(readOnly, /aria-label="View /);
+    assert.doesNotMatch(readOnly, /aria-label="Edit /);
 });
 
 function renderedFrame(node: ReactNode): ReactNode {
@@ -264,6 +392,29 @@ test("owned Boards with unresolved publication status do not imply configured vi
     assert.ok(markup.includes(board.author));
 });
 
+test("featured visibility indicators use known access settings without granting owner actions", () => {
+    for (const [visibility, label] of [
+        ["public", "Public"],
+        ["friends", "Friends"],
+        ["collaborators", "Restricted access"]
+    ] as const) {
+        const markup = html({
+            ownership: "other",
+            showVisibility: true,
+            board: { ...board, visibility },
+            hoverActions: { viewHref: "/boards/71" },
+            save: { state: "saved" }
+        });
+        assert.ok(markup.includes(`aria-label="${label}`));
+        assert.match(markup, /aria-label="Unsave /);
+        assert.doesNotMatch(markup, /aria-label="Edit /);
+    }
+    assert.doesNotMatch(
+        html({ showVisibility: true, board: { ...board, status: undefined } }),
+        /aria-label="(?:Public|Friends|Restricted access) /
+    );
+});
+
 test("save feedback is accessible and unauthenticated users get the supplied sign-in destination", () => {
     const failed = html({ ownership: "other", save: { state: "unsaved", error: "Board access changed." } });
     assert.match(failed, /role="alert"/);
@@ -365,6 +516,67 @@ test("drag-suppressed gallery clicks and inactive card selection do not open the
     control(inactive, (candidate) => candidate["aria-label"] === `Select ${board.title}`).onClick?.(clickEvent());
     assert.deepEqual(selections, [1]);
     assert.deepEqual(expandedStates, [], "Selecting a neighboring card must retain its existing gallery workflow");
+});
+
+test("browsing gallery cards keep direct touch navigation and offer an independent details toggle", () => {
+    for (const placement of ["library", "selected"] as const) {
+        const expandedStates: boolean[] = [];
+        const pointerType: NonNullable<CardProps["pointerType"]> = { current: "" };
+        const cardProps = props({
+            pointerType,
+            ...(placement === "library"
+                ? { href: "/boards/71", hoverActions: { viewHref: "/boards/71" } }
+                : {
+                      selection: {
+                          selected: true,
+                          viewHref: "/boards/71",
+                          onSelect: () => assert.fail("Details must not select the card")
+                      }
+                  }),
+            onExpandedChange: (expanded) => expandedStates.push(expanded)
+        });
+        const collapsed = PhotoBoardCardContent(cardProps);
+        control(collapsed, (candidate) => !!candidate.onPointerDownCapture).onPointerDownCapture?.({
+            pointerType: "touch",
+            stopPropagation: () => {}
+        });
+        const navigation = control(
+            placement === "library" ? renderedFrame(collapsed) : collapsed,
+            (candidate) => candidate.href === "/boards/71"
+        );
+        const touch = clickEvent();
+        navigation.onClick?.(touch);
+        assert.equal(touch.defaultPrevented, false, "The card background opens its Board on the first touch");
+        assert.deepEqual(expandedStates, []);
+        const show = control(collapsed, (candidate) => candidate["aria-label"] === `Show details for ${board.title}`);
+        assert.equal(show.type, "button");
+        assert.equal(show["aria-expanded"], false);
+        assert.equal(show["aria-controls"], "test-board-details");
+        show.onClick?.(clickEvent());
+        assert.deepEqual(expandedStates, [true]);
+        const expanded = PhotoBoardCardContent({ ...cardProps, expanded: true });
+        const markup = renderToStaticMarkup(expanded);
+        assert.match(markup, /id="test-board-details"[^>]*aria-label="Board details" aria-hidden="false"/);
+        assert.match(markup, /A quiet route along the waterfront\./);
+        assert.match(markup, /Architecture/);
+        assert.match(markup, /17 saves/);
+        const hide = control(expanded, (candidate) => candidate["aria-label"] === `Hide details for ${board.title}`);
+        assert.equal(hide["aria-expanded"], true);
+        hide.onClick?.(clickEvent());
+        assert.deepEqual(expandedStates, [true, false]);
+        assert.match(html({ ...cardProps, expanded: false }), /aria-label="Board details" aria-hidden="true"/);
+        assert.doesNotMatch(markup, /<a\b[^>]*>(?:(?!<\/a>)[\s\S])*<button\b/);
+    }
+});
+
+test("inactive gallery cards do not expose a touch details action", () => {
+    const markup = html({
+        details: false,
+        selection: { selected: false, viewHref: "/boards/71", onSelect() {}, tabIndex: -1 }
+    });
+    assert.doesNotMatch(markup, /aria-label="(?:Show|Hide) details for /);
+    assert.match(markup, /aria-label="Select /);
+    assert.doesNotMatch(markup, /href="\/boards\/71"/);
 });
 
 test("linked cards preview on the first touch and preserve navigation on the next touch", () => {

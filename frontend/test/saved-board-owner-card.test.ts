@@ -98,28 +98,17 @@ test("Saved Board owner controls use the canonical handle and protected author p
         profileChildren.some((node) => /(?:^|\s)size-12(?:\s|$)/.test(node.props.className ?? "")),
         "The visible avatar is slightly smaller than the 56px action buttons"
     );
-    const eye = nodes(view.props.children).find((node) => /right-\[calc\(/.test(node.props.className ?? ""));
-    assert.ok(eye, "The overview eye shares a centered pair with the plus");
-    for (const control of [remix, eye]) {
-        assert.match(control.props.className ?? "", /size-14/);
-        assert.match(control.props.className ?? "", /top-\[60%\]/);
-        assert.doesNotMatch(control.props.className ?? "", /-translate-x-/);
-    }
-    const plusInset = /left-\[calc\(([\d.]+)%[_ ]?-[_ ]?([\d.]+)rem\)\]/.exec(remix.props.className ?? "");
-    const eyeInset = /right-\[calc\(([\d.]+)%[_ ]?-[_ ]?([\d.]+)rem\)\]/.exec(eye.props.className ?? "");
-    assert.ok(plusInset);
-    assert.ok(eyeInset);
-    assert.deepEqual(plusInset.slice(1), eyeInset.slice(1), "Matching insets center the action pair");
-    for (const width of [240, 320, 400]) {
-        const inset = (width * Number(plusInset[1])) / 100 - Number(plusInset[2]) * 16;
-        const plusCenter = inset + 28;
-        const eyeCenter = width - inset - 28;
-        assert.ok(Math.abs((plusCenter + eyeCenter) / 2 - width / 2) < 0.001);
-        assert.ok(
-            Math.abs(eyeCenter - plusCenter - (0.435 * width - 28)) < 0.001,
-            "Moving the pair preserves its previous spacing at every card width"
+    const pair = nodes(tree).find((node) => {
+        const children = nodes(node.props.children);
+        return (
+            node.type === "div" &&
+            node.props.className?.includes("justify-center") &&
+            children.some((child) => child.props["aria-label"] === "View A saved journey") &&
+            children.some((child) => child.props["aria-label"] === "Remix A saved journey")
         );
-    }
+    });
+    assert.ok(pair, "View and Remix share the centered action row above the metadata");
+    for (const action of [view, remix]) assert.match(action.props.className ?? "", /size-14/);
     const markup = renderToStaticMarkup(tree);
     assert.equal(
         (markup.replace(/<[^>]+>/g, " ").match(/@alex\+travels/g) ?? []).length,
@@ -131,7 +120,7 @@ test("Saved Board owner controls use the canonical handle and protected author p
     assert.ok(markup.includes(photo.toString().replaceAll("&", "&amp;")));
 });
 
-test("Owner controls fall back when the author has no photograph and remain absent from inactive and Continue cards", () => {
+test("author controls fall back for missing photos, stay absent from inactive cards and appear on Continue", () => {
     const missing = source();
     missing.author.photo = null;
     const board = toPhotoBoardCard(missing);
@@ -152,16 +141,16 @@ test("Owner controls fall back when the author has no photograph and remain abse
             props({ selection: { selected: true, href: "/boards/91/edit", onSelect() {} } })
         )
     );
-    assert.match(continued, /THE JOURNEY/);
+    assert.match(continued, /href="\/profile\/alex%2Btravels"/);
     assert.match(continued, /lucide-pencil/);
-    assert.doesNotMatch(continued, /href="\/profile\/|lucide-eye|lucide-plus/);
+    assert.doesNotMatch(continued, /THE JOURNEY|lucide-eye|lucide-plus/);
 });
 
-test("Touch-only primary saved cards reserve room for the owner row without moving inactive or Continue titles", () => {
+test("touch primary saved and Continue cards reserve profile space without moving inactive card titles", () => {
     const selections: Array<{ primary: boolean; selection: Props["selection"] }> = [
         { primary: true, selection: props().selection },
         { primary: false, selection: { ...props().selection!, selected: false } },
-        { primary: false, selection: { selected: true, href: "/boards/91/edit", onSelect() {} } }
+        { primary: true, selection: { selected: true, href: "/boards/91/edit", onSelect() {} } }
     ];
     for (const { primary, selection } of selections) {
         const tree = PhotoBoardCardContent(props({ expanded: false, selection }));
