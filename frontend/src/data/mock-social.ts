@@ -31,6 +31,11 @@ const storeMeta = {
     isRestored: false
 };
 
+export function resetMockStore(): void {
+    storeMeta.isRestored = false;
+    store.settings = { ...defaultUserSettings };
+}
+
 export function restoreMockStore(): void {
     if (storeMeta.isRestored) return;
     if (typeof window === "undefined") return;

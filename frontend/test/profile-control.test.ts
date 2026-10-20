@@ -8,6 +8,7 @@ import NotificationControl from "../src/components/ui/NotificationControl";
 import Sidebar from "../src/components/layout/Sidebar";
 import { subscribeToFriendRequestUpdates, type FriendRequest } from "../src/lib/profile";
 import { publishAccountUpdate, signInWithGoogle, type AuthUser } from "../src/lib/auth";
+import { resetMockStore } from "../src/data/mock-social";
 
 const mockRouter = {
     back: () => {},
@@ -166,6 +167,225 @@ test("ProfileControl does not display Rowan or mock profile data when signed out
     assert.ok(!html.includes("Rowan"));
     assert.ok(!html.includes("ROWAN"));
     assert.ok(!html.includes("rowan.mercer"));
+});
+
+test("ProfileControl client regression: signs out from a real session with legacy mock-auth data without flashing mock profile", async (context) => {
+    resetMockStore();
+
+    // 1. Mock browser storage with legacy mockauth and mock profile keys
+    const storage = new Map<string, string>();
+    storage.set("roamboard_mock_auth", "true");
+    storage.set(
+        "roamboard_mock_profile",
+        JSON.stringify({
+            name: "Rowan Mercer",
+            handle: "@rowan.mercer",
+            avatarUrl: "https://photos.test/rowan-mock.jpg"
+        })
+    );
+
+    const mockLocalStorage = {
+        getItem: (key: string) => storage.get(key) ?? null,
+        setItem: (key: string, value: string) => storage.set(key, String(value)),
+        removeItem: (key: string) => storage.delete(key),
+        clear: () => storage.clear()
+    };
+
+    const classList = new Set<string>();
+    const mockDocument = {
+        documentElement: {
+            classList: {
+                contains: (cls: string) => classList.has(cls),
+                add: (cls: string) => classList.add(cls),
+                remove: (cls: string) => classList.delete(cls),
+                toggle: (cls: string, force?: boolean) => {
+                    if (force ?? !classList.has(cls)) classList.add(cls);
+                    else classList.delete(cls);
+                }
+            }
+        },
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        dispatchEvent: () => true
+    };
+
+    const previousWindow = globalThis.window;
+    const previousLocalStorage = globalThis.localStorage;
+    const previousDocument = globalThis.document;
+    const previousAddEventListener = (globalThis as unknown as { addEventListener?: unknown }).addEventListener;
+    const previousRemoveEventListener = (globalThis as unknown as { removeEventListener?: unknown })
+        .removeEventListener;
+
+    (globalThis as unknown as { window: unknown }).window = globalThis;
+    (globalThis as unknown as { localStorage: unknown }).localStorage = mockLocalStorage;
+    (globalThis as unknown as { document: unknown }).document = mockDocument;
+    (globalThis as unknown as { addEventListener?: unknown }).addEventListener = () => {};
+    (globalThis as unknown as { removeEventListener?: unknown }).removeEventListener = () => {};
+
+    context.after(() => {
+        resetMockStore();
+        if (typeof previousWindow === "undefined") {
+            delete (globalThis as unknown as { window?: unknown }).window;
+        } else {
+            (globalThis as unknown as { window: unknown }).window = previousWindow;
+        }
+        if (typeof previousLocalStorage === "undefined") {
+            delete (globalThis as unknown as { localStorage?: unknown }).localStorage;
+        } else {
+            (globalThis as unknown as { localStorage: unknown }).localStorage = previousLocalStorage;
+        }
+        if (typeof previousDocument === "undefined") {
+            delete (globalThis as unknown as { document?: unknown }).document;
+        } else {
+            (globalThis as unknown as { document: unknown }).document = previousDocument;
+        }
+        if (typeof previousAddEventListener === "undefined") {
+            delete (globalThis as unknown as { addEventListener?: unknown }).addEventListener;
+        } else {
+            (globalThis as unknown as { addEventListener?: unknown }).addEventListener = previousAddEventListener;
+        }
+        if (typeof previousRemoveEventListener === "undefined") {
+            delete (globalThis as unknown as { removeEventListener?: unknown }).removeEventListener;
+        } else {
+            (globalThis as unknown as { removeEventListener?: unknown }).removeEventListener =
+                previousRemoveEventListener;
+        }
+    });
+
+    const realUser: AuthUser = {
+        userId: "user-real-42",
+        username: "adalovelace",
+        displayName: "Ada Lovelace",
+        profilePictureUrl: "https://photos.test/ada.jpg"
+    };
+
+    const routerPushCalls: string[] = [];
+    const router = {
+        ...mockRouter,
+        replace: (url: string) => routerPushCalls.push(url)
+    };
+
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+        const url = String(input);
+        if (url.includes("/api/v1/auth/logout")) {
+            return Response.json({ ok: true });
+        }
+        if (url.includes("/api/v1/auth/google")) {
+            return Response.json({ data: { user: realUser, isNew: false } });
+        }
+        if (url.includes("/api/v1/auth/me")) {
+            return Response.json({ data: realUser });
+        }
+        return Response.json({ data: [] });
+    });
+
+    await signInWithGoogle("real-user-credential");
+
+    // Stateful harness that retains React state and executes effects
+    const states: Record<number, unknown> = {};
+    const refs: Record<number, { current: unknown }> = {};
+    const effects: Array<() => void | (() => void)> = [];
+    const cleanups: Array<() => void> = [];
+    const mounted = { value: false };
+
+    const render = () => {
+        const cursor = { state: 0, ref: 0 };
+        const original = { useState: React.useState, useRef: React.useRef, useEffect: React.useEffect };
+        const holder: { tree: ReactNode } = { tree: null };
+
+        function Probe() {
+            React.useState = ((initial: unknown) => {
+                const index = cursor.state++;
+                if (!(index in states)) states[index] = typeof initial === "function" ? initial() : initial;
+                return [
+                    states[index],
+                    (next: unknown) => {
+                        states[index] =
+                            typeof next === "function" ? (next as (prev: unknown) => unknown)(states[index]) : next;
+                    }
+                ];
+            }) as typeof React.useState;
+
+            React.useRef = ((initial: unknown) => {
+                const index = cursor.ref++;
+                return (refs[index] ??= { current: initial });
+            }) as typeof React.useRef;
+
+            React.useEffect = (effect) => {
+                if (!mounted.value) effects.push(effect);
+            };
+
+            try {
+                holder.tree = ProfileControl({
+                    user: null,
+                    sidebar: true,
+                    sidebarAccountOpen: true
+                });
+                return holder.tree;
+            } finally {
+                Object.assign(React, original);
+            }
+        }
+
+        const markup = renderToStaticMarkup(
+            createElement(
+                AppRouterContext.Provider,
+                { value: router as unknown as Parameters<typeof AppRouterContext.Provider>[0]["value"] },
+                createElement(Probe)
+            )
+        );
+
+        if (!mounted.value) {
+            mounted.value = true;
+            for (const effect of effects) {
+                const cleanup = effect();
+                if (typeof cleanup === "function") cleanups.push(cleanup);
+            }
+        }
+
+        return { markup, nodes: elements(holder.tree) };
+    };
+
+    context.after(() => cleanups.forEach((c) => c()));
+
+    // Initial mount triggers useEffect: restoreMockStore() runs (purging legacy localStorage keys)
+    // and observeCurrentUser queries /api/v1/auth/me
+    render();
+
+    // Allow observeCurrentUser promise to resolve and setSessionUser(realUser)
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // Re-render with logged-in user state
+    const loggedInView = render();
+    assert.ok(loggedInView.markup.includes("Ada Lovelace"), "Expected real user display name");
+    assert.ok(loggedInView.markup.includes("my profile"), "Expected my profile link");
+    assert.ok(!loggedInView.markup.includes("Rowan"), "Should not display Rowan while logged in");
+
+    // Legacy mock keys in localStorage should have been removed by restoreMockStore()
+    assert.equal(storage.get("roamboard_mock_auth"), undefined, "roamboard_mock_auth must be purged");
+    assert.equal(storage.get("roamboard_mock_profile"), undefined, "roamboard_mock_profile must be purged");
+
+    // Locate and click the 'log out' button
+    const logoutBtn = loggedInView.nodes.find((n) => n.type === "button" && n.props.children === "log out");
+    assert.ok(logoutBtn, "Expected logout button when logged in");
+
+    await logoutBtn.props.onClick?.();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // Re-render after logout has completed
+    const signedOutView = render();
+
+    // Verify signed out state
+    assert.ok(signedOutView.markup.includes("sign in"), "Expected sign in prompt after logout");
+    assert.ok(!signedOutView.markup.includes("log out"), "Log out button should be gone");
+    assert.ok(!signedOutView.markup.includes("Ada Lovelace"), "Real user name should be cleared");
+
+    // CRITICAL REGRESSION ASSERTIONS: No Rowan Mercer name, handle, or photo in markup
+    assert.ok(!signedOutView.markup.includes("Rowan"), "No Rowan in signed out markup");
+    assert.ok(!signedOutView.markup.includes("ROWAN"), "No ROWAN in signed out markup");
+    assert.ok(!signedOutView.markup.includes("rowan.mercer"), "No rowan.mercer in signed out markup");
+    assert.ok(!signedOutView.markup.includes("rowan-mock.jpg"), "No mock avatar in signed out markup");
+    assert.ok(!signedOutView.markup.includes("https://photos.test/ada.jpg"), "No real avatar in signed out markup");
 });
 
 test("Sidebar renders navigation links and does not render theme select", () => {
