@@ -1,4 +1,4 @@
-{$PUBLIC_DOMAIN:localhost} {
+{$PUBLIC_DOMAIN} {
     @backend path /api/* /health /health/*
     handle @backend {
         reverse_proxy backend:3001

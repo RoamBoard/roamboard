@@ -176,11 +176,10 @@ See [the deployment guide](deploy/README.md) for VM administration, migrations a
 
 When deploying the full application stack (`postgres`, `backend`, `frontend`, and `caddy`) through `backend/deploy/compose.yaml`, set these additional variables in `backend/.env`:
 
-- `PUBLIC_DOMAIN`: The public hostname served by Caddy (for example, `roamboard.belgiumcentral.cloudapp.azure.com`), used to provision TLS certificates and route `/api/*` and `/health*` to the backend container.
-- `CLIENT_ORIGIN`: Must match the public HTTPS origin (`https://<PUBLIC_DOMAIN>`) for CORS, Origin verification on writes, and the frontend's build-time `NEXT_PUBLIC_API_URL`.
+- `PUBLIC_DOMAIN`: The public hostname served by Caddy (for example, `roamboard.belgiumcentral.cloudapp.azure.com`), used to provision TLS certificates, route `/api/*` and `/health*` to the backend container, and set `https://<PUBLIC_DOMAIN>` as both the backend's `CLIENT_ORIGIN` and the frontend's build-time `NEXT_PUBLIC_API_URL`.
 - `DOCKER_DATABASE_URL`: The container-network PostgreSQL connection string (`postgresql://roamboard_user:YOUR_URL_ENCODED_APP_PASSWORD@postgres:5432/roamboard_dev`), required so the `backend` container connects to the `postgres` service over the Compose network while preserving `DATABASE_URL` (`127.0.0.1:15432`) for local SSH-tunneled development.
 
-Because Next.js embeds `NEXT_PUBLIC_API_URL` (`CLIENT_ORIGIN`) and `NEXT_PUBLIC_GOOGLE_CLIENT_ID` (`GOOGLE_CLIENT_ID`) at build time, rebuild the `frontend` image (`docker compose --env-file ../.env up -d --build`) whenever either value changes.
+Because Next.js embeds `NEXT_PUBLIC_API_URL` (`https://${PUBLIC_DOMAIN}`) and `NEXT_PUBLIC_GOOGLE_CLIENT_ID` (`GOOGLE_CLIENT_ID`) at build time, rebuild the `frontend` image (`docker compose --env-file ../.env up -d --build`) whenever `PUBLIC_DOMAIN` or `GOOGLE_CLIENT_ID` changes.
 
 ## Alternative: independent local PostgreSQL setup
 

@@ -49,11 +49,10 @@ sudo docker compose --env-file ../.env ps
 
 Replace both example passwords with different long random passwords before starting, and set:
 
-- `PUBLIC_DOMAIN`: the public hostname (for example, `roamboard.belgiumcentral.cloudapp.azure.com`).
-- `CLIENT_ORIGIN`: `https://<PUBLIC_DOMAIN>` (also add this origin to Authorized JavaScript origins in Google Cloud Console).
+- `PUBLIC_DOMAIN`: the public hostname (for example, `roamboard.belgiumcentral.cloudapp.azure.com`). Compose derives `https://<PUBLIC_DOMAIN>` for both the backend's `CLIENT_ORIGIN` and the frontend's build-time `NEXT_PUBLIC_API_URL` (also add `https://<PUBLIC_DOMAIN>` to Authorized JavaScript origins in Google Cloud Console).
 - `DOCKER_DATABASE_URL`: `postgresql://roamboard_user:YOUR_URL_ENCODED_APP_PASSWORD@postgres:5432/roamboard_dev` so the `backend` container connects to `postgres` over the Docker network.
 
-Rebuild (`sudo docker compose --env-file ../.env up -d --build`) whenever `CLIENT_ORIGIN` or `GOOGLE_CLIENT_ID` changes, as Next.js inlines `NEXT_PUBLIC_*` variables at build time.
+Rebuild (`sudo docker compose --env-file ../.env up -d --build`) whenever `PUBLIC_DOMAIN` or `GOOGLE_CLIENT_ID` changes, as Next.js inlines `NEXT_PUBLIC_*` variables at build time.
 Use the existing `backend/.env.example` as the only configuration template. If
 `backend/.env` already exists, edit it rather than copying over it. Both Docker Compose
 and the backend use `backend/.env`; there is no deployment-specific `.env` file.

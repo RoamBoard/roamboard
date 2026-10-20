@@ -34,7 +34,7 @@ services:
         environment:
             NODE_ENV: ${NODE_ENV:-production}
             PORT: 3001
-            CLIENT_ORIGIN: ${CLIENT_ORIGIN:-http://localhost:3000}
+            CLIENT_ORIGIN: https://${PUBLIC_DOMAIN:?Set PUBLIC_DOMAIN in backend/.env}
             DATABASE_URL: ${DOCKER_DATABASE_URL:?Set DOCKER_DATABASE_URL in backend/.env (using @postgres:5432)}
 
     frontend:
@@ -42,7 +42,7 @@ services:
             context: ../..
             dockerfile: frontend/Dockerfile
             args:
-                NEXT_PUBLIC_API_URL: ${CLIENT_ORIGIN:-http://localhost:3001}
+                NEXT_PUBLIC_API_URL: https://${PUBLIC_DOMAIN:?Set PUBLIC_DOMAIN in backend/.env}
                 NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
         restart: unless-stopped
         depends_on:
@@ -62,7 +62,7 @@ services:
             - "80:80"
             - "443:443"
         environment:
-            PUBLIC_DOMAIN: ${PUBLIC_DOMAIN:-localhost}
+            PUBLIC_DOMAIN: ${PUBLIC_DOMAIN:?Set PUBLIC_DOMAIN in backend/.env}
         volumes:
             - ./Caddyfile:/etc/caddy/Caddyfile:ro
             - caddy_data:/data
