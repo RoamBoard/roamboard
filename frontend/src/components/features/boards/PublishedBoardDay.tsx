@@ -164,7 +164,7 @@ export default function PublishedBoardDay({
                                 image={photos.first}
                                 placeholderLabel={photoLabels.first || first.location?.name || `Day ${day.number}`}
                                 showCredit
-                                className={`hidden aspect-[1.8] grayscale lg:row-start-1 lg:block ${evenDay ? "lg:col-span-4 lg:col-start-7" : "lg:col-span-5 lg:col-start-1"}`}
+                                className={`hidden aspect-[1.8] lg:row-start-1 lg:block ${evenDay ? "lg:col-span-4 lg:col-start-7" : "lg:col-span-5 lg:col-start-1"}`}
                             />
                         ) : null}
                         {day.items.map((item, index) => {
@@ -192,7 +192,7 @@ export default function PublishedBoardDay({
                                 image={photos.second}
                                 placeholderLabel={photoLabels.second || fourth.location?.name || `Day ${day.number}`}
                                 showCredit
-                                className="hidden aspect-[1.7] grayscale lg:col-span-4 lg:col-start-7 lg:row-start-3 lg:block"
+                                className="hidden aspect-[1.7] lg:col-span-4 lg:col-start-7 lg:row-start-3 lg:block"
                             />
                         ) : null}
                     </div>
