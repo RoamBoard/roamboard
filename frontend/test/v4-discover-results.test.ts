@@ -182,6 +182,8 @@ test("Featured displays real Board actions and preserves an honest missing-cover
     for (const id of [741, 742, 743, 744, 745]) {
         assert.ok(html.includes(`href="/boards/${id}"`));
         assert.ok(html.includes(`Published Board ${id}`));
+        assert.ok(html.includes(`aria-label="View Published Board ${id}"`));
+        assert.ok(html.includes(`aria-label="Save Published Board ${id}"`));
     }
     assert.match(html, /No cover photo/);
     assert.doesNotMatch(html, /<img\b|sample|Sample traveller/);
