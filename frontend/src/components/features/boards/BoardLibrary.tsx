@@ -44,85 +44,103 @@ export default function BoardLibrary({
     variant = "default",
     onSavedChange
 }: Props) {
+    const root = useRef<HTMLDivElement>(null);
     const interaction = useRef<{ hovered: string | null; focused: string | null }>({ hovered: null, focused: null });
     return (
-        <BoardLibraryCarousel
-            count={boards.length}
-            id={id}
-            title={title}
-            description={description}
-            hasMore={hasMore}
-            loadingMore={loadingMore}
-            onLoadMore={onLoadMore}
-            embedded={embedded}
-            variant={variant}
-            emptyMessage={variant === "profile" ? "" : undefined}
-        >
-            {boards.map((board, index) => (
-                <CarouselItem
-                    key={board.compact.id}
-                    aria-label={`${index + 1} of ${boards.length}: ${board.compact.title}`}
-                    className={
-                        "relative flex basis-[90%] justify-center px-3 sm:basis-[376px] sm:px-6 " +
-                        (embedded || variant === "profile" ? "py-2" : "py-5 sm:py-8")
-                    }
-                    onMouseEnter={() => {
-                        interaction.current.hovered = board.compact.id;
-                        onBoardHighlight?.(board.compact.id);
-                    }}
-                    onMouseLeave={() => {
-                        interaction.current.hovered = null;
-                        onBoardHighlight?.(interaction.current.focused);
-                    }}
-                    onFocusCapture={() => {
-                        interaction.current.focused = board.compact.id;
-                        onBoardHighlight?.(board.compact.id);
-                    }}
-                    onBlurCapture={(event) => {
-                        if (event.currentTarget.contains(event.relatedTarget)) return;
-                        interaction.current.focused = null;
-                        onBoardHighlight?.(interaction.current.hovered);
-                    }}
-                >
-                    <div className="w-full max-w-[328px] shrink-0 transition-transform duration-200 motion-safe:hover:-translate-y-1 motion-reduce:transition-none">
-                        <AccountPhotoBoardCard
-                            tilt
-                            board={
-                                board.photo ?? {
-                                    id: board.compact.id,
-                                    title: board.compact.title,
-                                    author: board.compact.author,
-                                    destination: board.compact.destination,
-                                    destinationLabel: board.compact.destinationLabel,
-                                    image: board.compact.image
+        <div ref={root}>
+            <BoardLibraryCarousel
+                count={boards.length}
+                id={id}
+                title={title}
+                description={description}
+                hasMore={hasMore}
+                loadingMore={loadingMore}
+                onLoadMore={onLoadMore}
+                embedded={embedded}
+                variant={variant}
+                emptyMessage={variant === "profile" ? "" : undefined}
+            >
+                {boards.map((board, index) => (
+                    <CarouselItem
+                        key={board.compact.id}
+                        data-library-board={board.compact.id}
+                        aria-label={`${index + 1} of ${boards.length}: ${board.compact.title}`}
+                        className={
+                            "relative flex basis-[90%] justify-center px-3 sm:basis-[376px] sm:px-6 " +
+                            (embedded || variant === "profile" ? "py-2" : "py-5 sm:py-8")
+                        }
+                        onMouseEnter={() => {
+                            interaction.current.hovered = board.compact.id;
+                            onBoardHighlight?.(board.compact.id);
+                        }}
+                        onMouseLeave={() => {
+                            interaction.current.hovered = null;
+                            onBoardHighlight?.(interaction.current.focused);
+                        }}
+                        onFocusCapture={() => {
+                            interaction.current.focused = board.compact.id;
+                            onBoardHighlight?.(board.compact.id);
+                        }}
+                        onBlurCapture={(event) => {
+                            if (event.currentTarget.contains(event.relatedTarget)) return;
+                            interaction.current.focused = null;
+                            onBoardHighlight?.(interaction.current.hovered);
+                        }}
+                    >
+                        <div className="w-full max-w-[328px] shrink-0 transition-transform duration-200 motion-safe:hover:-translate-y-1 motion-reduce:transition-none">
+                            <AccountPhotoBoardCard
+                                tilt
+                                board={
+                                    board.photo ?? {
+                                        id: board.compact.id,
+                                        title: board.compact.title,
+                                        author: board.compact.author,
+                                        destination: board.compact.destination,
+                                        destinationLabel: board.compact.destinationLabel,
+                                        image: board.compact.image
+                                    }
                                 }
-                            }
-                            href={board.href}
-                            ownership={board.ownership}
-                            initialSaved={board.savedByMe}
-                            onSavedChange={(saved) => onSavedChange?.(board.compact.id, saved)}
-                            showVisibility
-                            hideCoverCredit
-                            hoverActions={
-                                board.href
-                                    ? {
-                                          editHref: board.ownership === "owner" ? board.editHref : undefined,
-                                          viewHref: board.photo?.status === "draft" ? undefined : board.href
-                                      }
-                                    : undefined
-                            }
-                            details
-                            imageSizes="(max-width: 640px) 75vw, 328px"
-                        />
-                        {showStatus && board.photo?.status && (
-                            <p className="text-muted-foreground mt-3 text-center text-xs">
-                                {board.photo.status === "draft" ? "Draft" : "Published"}
-                            </p>
-                        )}
-                    </div>
-                </CarouselItem>
-            ))}
-        </BoardLibraryCarousel>
+                                href={board.href}
+                                ownership={board.ownership}
+                                initialSaved={board.savedByMe}
+                                onSavedChange={(saved) => {
+                                    const container = root.current;
+                                    const slides = Array.from(
+                                        container?.querySelectorAll<HTMLElement>("[data-library-board]") ?? []
+                                    );
+                                    const slide = slides.find((item) => item.dataset.libraryBoard === board.compact.id);
+                                    if (!saved && slide?.contains(document.activeElement)) {
+                                        const next = slides[index + 1] ?? slides[index - 1];
+                                        const target =
+                                            next?.querySelector<HTMLElement>("a[href], button:not([disabled])") ??
+                                            container?.querySelector<HTMLElement>('[aria-roledescription="carousel"]');
+                                        target?.focus();
+                                    }
+                                    onSavedChange?.(board.compact.id, saved);
+                                }}
+                                showVisibility
+                                hideCoverCredit
+                                hoverActions={
+                                    board.href
+                                        ? {
+                                              editHref: board.ownership === "owner" ? board.editHref : undefined,
+                                              viewHref: board.photo?.status === "draft" ? undefined : board.href
+                                          }
+                                        : undefined
+                                }
+                                details
+                                imageSizes="(max-width: 640px) 75vw, 328px"
+                            />
+                            {showStatus && board.photo?.status && (
+                                <p className="text-muted-foreground mt-3 text-center text-xs">
+                                    {board.photo.status === "draft" ? "Draft" : "Published"}
+                                </p>
+                            )}
+                        </div>
+                    </CarouselItem>
+                ))}
+            </BoardLibraryCarousel>
+        </div>
     );
 }
 

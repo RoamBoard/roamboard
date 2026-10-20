@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Plus, UserRound } from "lucide-react";
@@ -57,13 +57,9 @@ export function LiveBoardLibrary({
     ownership: PhotoBoardCardProps["ownership"];
     publicView?: boolean;
 }) {
-    if (!boards.length) return null;
-    return (
-        <ProfileBoardLibrary
-            id="profile-published-library"
-            title={publicView ? "Profile Boards" : "My Boards"}
-            variant="profile"
-            boards={boards.map((board) => {
+    const libraryBoards = useMemo(
+        () =>
+            boards.map((board) => {
                 const photo = toProfilePhotoBoardCard(board, author);
                 return {
                     compact: { ...photo, image: photo.image ?? { src: "", alt: "" } },
@@ -72,7 +68,16 @@ export function LiveBoardLibrary({
                     href: `/boards/${board.boardId}`,
                     editHref: ownership === "owner" ? `/boards/${board.boardId}/edit` : undefined
                 };
-            })}
+            }),
+        [boards, author, ownership]
+    );
+    if (!boards.length) return null;
+    return (
+        <ProfileBoardLibrary
+            id="profile-published-library"
+            title={publicView ? "Profile Boards" : "My Boards"}
+            variant="profile"
+            boards={libraryBoards}
         />
     );
 }
@@ -86,13 +91,9 @@ export function ProfileSavedBoardLibrary({
     onSavedChange?: (boardId: string, saved: boolean) => void;
     ownCollection?: boolean;
 }) {
-    if (!boards.length) return null;
-    return (
-        <ProfileBoardLibrary
-            id="profile-saved-library"
-            title="Currently Inspired By"
-            variant="profile"
-            boards={boards.map((board) => {
+    const libraryBoards = useMemo(
+        () =>
+            boards.map((board) => {
                 const photo = toSavedPhotoBoardCard(board);
                 return {
                     compact: { ...photo, image: photo.image ?? { src: "", alt: "" } },
@@ -101,7 +102,15 @@ export function ProfileSavedBoardLibrary({
                     savedByMe: ownCollection ? true : undefined,
                     href: `/boards/${board.boardId}`
                 };
-            })}
+            }),
+        [boards, ownCollection]
+    );
+    return (
+        <ProfileBoardLibrary
+            id="profile-saved-library"
+            title="Currently Inspired By"
+            variant="profile"
+            boards={libraryBoards}
             onSavedChange={onSavedChange}
         />
     );

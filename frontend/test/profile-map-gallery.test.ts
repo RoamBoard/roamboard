@@ -358,3 +358,28 @@ test("an empty map selection makes no Board requests and a retry replaces summar
     assert.equal(retry.failed, false);
     assert.equal(retry.boards[0].photo?.title, "Saigon after the rain");
 });
+
+test("profile detail requests are bounded, ordered and stop starting work after cancellation", async (context) => {
+    const controller = new AbortController();
+    const started: number[] = [];
+    const release: Array<() => void> = [];
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+        const id = Number(String(input).split("/").at(-1));
+        started.push(id);
+        await new Promise<void>((resolve) => release.push(resolve));
+        return Response.json({ data: fullBoard(id) });
+    });
+    const summaries = mapBoardGallery(Array.from({ length: 12 }, (_, index) => destination(index + 1, "VNM", 106)));
+    const pending = loadProfileLibraryBoards(summaries, controller.signal);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.deepEqual(started, [1, 2, 3], "only three requests can run at once");
+    controller.abort();
+    release.forEach((resolve) => resolve());
+    const result = await pending;
+    assert.equal(started.length, 3, "queued requests never start after cancellation");
+    assert.deepEqual(
+        result.boards.map((board) => board.compact.id),
+        summaries.map((board) => board.compact.id)
+    );
+    assert.equal(result.failed, true);
+});

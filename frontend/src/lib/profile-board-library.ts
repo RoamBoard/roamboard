@@ -9,19 +9,34 @@ export type ProfileLibraryBoard = Pick<
 
 // Resolve real metadata, account membership and edit permission rather than inferring them from a profile visit.
 export async function loadProfileLibraryBoards(boards: readonly ProfileLibraryBoard[], signal: AbortSignal) {
-    const results = await Promise.allSettled(
-        boards.map(async (board) => {
-            const document = await loadBoardDocument(Number(board.compact.id), signal);
-            return {
-                ...board,
-                photo: toPhotoBoardCard(document),
-                ownership: document.permissions.canManageBoard ? ("owner" as const) : ("other" as const),
-                savedByMe: document.savedByMe,
-                editHref:
-                    document.permissions.canManageBoard && document.permissions.canEditContent
-                        ? `/boards/${document.boardId}/edit`
-                        : undefined
-            };
+    const results: PromiseSettledResult<ProfileLibraryBoard>[] = [];
+    const queue = boards.map((board, index) => ({ board, index }));
+    await Promise.all(
+        Array.from({ length: Math.min(3, boards.length) }, async () => {
+            while (queue.length) {
+                const entry = queue.shift();
+                if (!entry) return;
+                const { board, index } = entry;
+                try {
+                    signal.throwIfAborted();
+                    const value = await (async () => {
+                        const document = await loadBoardDocument(Number(board.compact.id), signal);
+                        return {
+                            ...board,
+                            photo: toPhotoBoardCard(document),
+                            ownership: document.permissions.canManageBoard ? ("owner" as const) : ("other" as const),
+                            savedByMe: document.savedByMe,
+                            editHref:
+                                document.permissions.canManageBoard && document.permissions.canEditContent
+                                    ? `/boards/${document.boardId}/edit`
+                                    : undefined
+                        };
+                    })();
+                    results[index] = { status: "fulfilled", value };
+                } catch (reason) {
+                    results[index] = { status: "rejected", reason };
+                }
+            }
         })
     );
     return {
