@@ -715,10 +715,11 @@ test("clicking undo performs a version-checked restore without redirecting", asy
     await flushRequests();
     const rendered = page.render();
     const saveBar = rendered.nodes.find((node) => node.type === SettingsSaveBar);
-    assert.equal(saveBar?.props.showToast, true);
-    assert.equal(saveBar?.props.canUndo, true);
+    assert.ok(saveBar);
+    assert.equal(saveBar.props.showToast, true);
+    assert.equal(saveBar.props.canUndo, true);
 
-    const { nodes: saveBarNodes } = capture(() => SettingsSaveBar(saveBar.props));
+    const { nodes: saveBarNodes } = capture(() => SettingsSaveBar(saveBar.props as SaveBarProps));
     const undoButton = saveBarNodes.find((node) => node.type === "button" && node.props.children === "Undo");
     assert.ok(undoButton, "The toast must render the real Undo button");
     (undoButton.props.onClick as () => void)();
@@ -769,11 +770,12 @@ test("a failed undo preserves the snapshot and allows retry until successful", a
 
     const saved = page.render();
     const saveBar = saved.nodes.find((node) => node.type === SettingsSaveBar);
-    assert.equal(saveBar?.props.showToast, true);
-    assert.equal(saveBar?.props.canUndo, true);
+    assert.ok(saveBar);
+    assert.equal(saveBar.props.showToast, true);
+    assert.equal(saveBar.props.canUndo, true);
 
     // Click the real Undo button from the toast
-    const { nodes: toastNodes } = capture(() => SettingsSaveBar(saveBar.props));
+    const { nodes: toastNodes } = capture(() => SettingsSaveBar(saveBar.props as SaveBarProps));
     const undoBtn = toastNodes.find((node) => node.type === "button" && node.props.children === "Undo");
     assert.ok(undoBtn, "Toast must render the real Undo button");
     (undoBtn.props.onClick as () => void)();
@@ -782,12 +784,13 @@ test("a failed undo preserves the snapshot and allows retry until successful", a
     // The undo failed: error is shown, snapshot is preserved, toast is dismissed
     const failed = page.render();
     const failedBar = failed.nodes.find((node) => node.type === SettingsSaveBar);
-    assert.ok(failedBar?.props.error, "An error must be reported after undo failure");
-    assert.equal(failedBar?.props.canUndo, true, "canUndo must remain true so snapshot is not lost");
-    assert.equal(failedBar?.props.showToast, false, "Toast is dismissed so error alert can take precedence");
+    assert.ok(failedBar);
+    assert.ok(failedBar.props.error, "An error must be reported after undo failure");
+    assert.equal(failedBar.props.canUndo, true, "canUndo must remain true so snapshot is not lost");
+    assert.equal(failedBar.props.showToast, false, "Toast is dismissed so error alert can take precedence");
 
     // The error alert must offer a retry button
-    const { nodes: failedNodes } = capture(() => SettingsSaveBar(failedBar.props));
+    const { nodes: failedNodes } = capture(() => SettingsSaveBar(failedBar.props as SaveBarProps));
     const retryBtn = failedNodes.find((node) => node.type === "button" && node.props.children === "Retry undo");
     assert.ok(retryBtn, "Error alert must offer a 'Retry undo' button");
 
