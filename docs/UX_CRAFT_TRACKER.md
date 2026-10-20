@@ -56,6 +56,18 @@ the information panel to scroll. An unusable measurement retains the readable CS
 applying `font-size: 0`. A lifecycle regression covers fallback/recovery; Chrome checks at 667×375 and
 568×320 verify the correction. Portrait/tablet/desktop composition and the approved gallery remain unchanged.
 
+### Reference composition refinements — awaiting visual approval
+
+Reviewed against current `main` (`1d13a84`), preserving its newer Board and profile functionality.
+The live gallery already matches the preferred 1280×600 reference: complete-cover typography,
+flowing authors, visibility controls and the approved country-code crop remain unchanged.
+The closing chapter now uses a horizontal desktop heading and an oversized photograph sweeping
+in from the right, with matching light-theme paper layering. Longer headings can wrap and scroll;
+mobile attribution flows beneath the supporting copy instead of overlapping it.
+Chrome verification covered 1280×600, 1440×900, 1920×1080, tablet and mobile in both themes,
+plus a long destination name and keyboard access. Native touch gestures were not directly exercised.
+No new screenshot collection or implementation report was added. Implementation 05 has not started.
+
 ## Continuation priorities
 
 Follow the refresh audit's remaining order, reassessing each item against current `main` before implementation:
