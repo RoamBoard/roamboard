@@ -26,10 +26,11 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-COPY --from=build /workspace/frontend/.next/standalone ./
-COPY --from=build /workspace/frontend/.next/static ./frontend/.next/static
-COPY --from=build /workspace/frontend/public ./frontend/public
+COPY --from=build --chown=node:node /workspace/frontend/.next/standalone ./
+COPY --from=build --chown=node:node /workspace/frontend/.next/static ./frontend/.next/static
+COPY --from=build --chown=node:node /workspace/frontend/public ./frontend/public
 
+USER node
 EXPOSE 3000
 
 CMD ["node", "frontend/server.js"]

@@ -35,7 +35,7 @@ services:
             NODE_ENV: ${NODE_ENV:-production}
             PORT: 3001
             CLIENT_ORIGIN: ${CLIENT_ORIGIN:-http://localhost:3000}
-            DATABASE_URL: ${DOCKER_DATABASE_URL:-${DATABASE_URL}}
+            DATABASE_URL: ${DOCKER_DATABASE_URL:?Set DOCKER_DATABASE_URL in backend/.env (using @postgres:5432)}
 
     frontend:
         build:
