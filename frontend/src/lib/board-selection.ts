@@ -11,6 +11,10 @@ export type SelectionSummary = DraftSummary & {
 };
 export type SelectionFilter = "all" | "draft" | "published";
 export type SelectionBoard = {
+    previewResolved?: boolean;
+    editHref?: string;
+    savedByMe?: boolean;
+    firstPublishedAt?: string | null;
     summary: SelectionSummary;
     collage: CollageBoardCardData;
     photo: PhotoBoardCardData;

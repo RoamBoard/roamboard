@@ -1,5 +1,18 @@
 # Shared development database migration log
 
+## Boards discovery — 2026-10-20
+
+Applied only `016_board_discovery.sql` after verifying prerequisite publication, saved-at and comment columns and a
+fresh custom-format backup using `pg_restore --list`. The migration adds browser identities, qualified views,
+short-lived view challenges and save-event history with a trigger. Existing saves seed their known timestamps;
+existing Board content and first-publication timestamps are unchanged. No historical views were invented.
+
+Backup: `backend/backups/pre-016-2026-10-20T021120365Z.dump` (Git-ignored). Restore and off-machine retention were
+not tested. Isolated-schema integration tests verified early/replayed/expired view challenges, identity merging,
+active unique saves/comments and friendship access changes. Mounted read-only API checks against shared development
+returned 200 for monthly/weekly Featured, Recently Published and Stockholm search/suggestions.
+Do not reapply 016 to this database; use `npm run db:discovery` to inspect its presence on another environment.
+
 ## Pending Board comment migrations
 
 `013_board_comments.sql` creates persisted Board comments. `014_board_comment_notifications.sql` adds comment bell preferences and in-app notifications. Neither migration was applied to the shared database in this implementation session. The requester applies migrations; check the actual schema and migration history first, particularly if the earlier `012_board_comments.sql` filename was already used. Apply 014 only after the comment table exists.

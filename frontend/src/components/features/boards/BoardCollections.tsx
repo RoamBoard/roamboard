@@ -2,16 +2,12 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { mockBoardCollections } from "@/data/my-board-collections";
-import { filterLibraryBoards } from "@/lib/my-boards";
 import { createSavedBoardsStore } from "@/lib/saved-boards-store";
-import BoardLibrary from "./BoardLibrary";
 import SavedBoardGrid from "./SavedBoardGrid";
 
 export default function BoardCollections({ query }: { query: string }) {
     const [store] = useState(() => createSavedBoardsStore());
     const saved = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
-    const archived = filterLibraryBoards(mockBoardCollections.archived, query);
     useEffect(() => {
         void store.loadFirst();
     }, [store]);
@@ -72,22 +68,6 @@ export default function BoardCollections({ query }: { query: string }) {
                         Load more
                     </button>
                 )}
-            </section>
-            <section aria-labelledby="archive-saves-heading" className="mx-auto mt-28 max-w-[1320px] md:mt-44">
-                <h2
-                    id="archive-saves-heading"
-                    className="font-display text-foreground/60 text-30 md:text-36 mx-auto grid max-w-md grid-cols-2 font-medium"
-                >
-                    <span className="border-line border-r py-6 pr-5 text-right">ARCHIVE</span>
-                    <span className="pt-20 pl-5">SAVES</span>
-                </h2>
-                <BoardLibrary
-                    id="archive-library"
-                    title="ARCHIVED BOARDS"
-                    description="Sample archive · past journeys kept apart from active Boards."
-                    boards={archived}
-                    archived
-                />
             </section>
         </>
     );
