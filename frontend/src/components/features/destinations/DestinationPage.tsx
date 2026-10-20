@@ -50,7 +50,7 @@ export function DestinationPage({ destination: guide, onLoadMore, onRetry, loadi
                     data-destination-chapter
                     tabIndex={-1}
                     aria-label={`${destination.name} introduction`}
-                    className="relative grid h-full w-[var(--destination-width)] shrink-0 snap-start snap-always grid-rows-[38%_minmax(0,1fr)] overflow-hidden outline-none md:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] md:grid-rows-1"
+                    className="relative grid h-full w-[var(--destination-width)] shrink-0 snap-start snap-always grid-rows-[minmax(10rem,38%)_minmax(0,1fr)] overflow-hidden outline-none md:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] md:grid-rows-1"
                 >
                     <DestinationArtwork name={destination.name} country={destination.country} image={guide.images[0]} />
                     <div

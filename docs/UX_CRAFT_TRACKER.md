@@ -44,11 +44,17 @@ Living implementation status. Research: [original audit](UX_CRAFT_AUDIT.md) and
 The latest `origin/main` country-destination work was integrated with a normal merge. Its backend,
 country lookup/cache, country-scope URLs, city list/details/navigation, map labels/zoom and Board copy
 were retained alongside the Craft readiness serializer and responsive scroll ownership. The approved
-gallery presenter is unchanged. Integration verification: 780 frontend tests, 219 backend tests,
+gallery presenter is unchanged. Integration verification: 781 frontend tests, 219 backend tests,
 both TypeScript checks/builds, root formatting and frontend/backend lint pass. The frontend build ran
 in a temporary copy to preserve the running development server. Chrome verified the Sweden country
 guide, its city list/map selection and navigation to Stockholm. Existing historical evidence and the
 development-only typography review were retained; no new screenshot collection or experimental route remains.
+
+The final PR review exposed a zero-sized heading at 667×375. Short mobile artwork now keeps a 10rem
+minimum row and a 3rem minimum heading frame, preventing navigation/attribution collisions while allowing
+the information panel to scroll. An unusable measurement retains the readable CSS fallback instead of
+applying `font-size: 0`. A lifecycle regression covers fallback/recovery; Chrome checks at 667×375 and
+568×320 verify the correction. Portrait/tablet/desktop composition and the approved gallery remain unchanged.
 
 ## Continuation priorities
 

@@ -203,6 +203,20 @@ test("actual safe frame refits on width and height changes, including a sidebar-
     assert.equal(heading.render().props["aria-label"], "Stockholm");
 });
 
+test("a frame shorter than its country label keeps readable fallback text and recovers after resize", (t) => {
+    const heading = harness(t);
+    heading.frame.clientHeight = 15;
+    heading.observations[0].callback();
+    const fallback = heading.flush();
+    assert.equal(fallback.props.style, undefined, "An unusable fit must not override CSS with a zero font size");
+    assert.equal(text(fallback), "Stockholm");
+    assert.equal(fallback.props["aria-label"], "Stockholm");
+    heading.frame.clientHeight = 48;
+    heading.observations[0].callback();
+    const recovered = heading.flush();
+    assert.ok(Number((recovered.props.style as { fontSize: number }).fontSize) > 0);
+});
+
 test("font readiness and later loading clear old metrics without churning identical fits", async (t) => {
     const heading = harness(t);
     const before = heading.size();

@@ -33,7 +33,7 @@ const image: DestinationGuideData["images"][number] = {
 export default function DestinationTypographyLab() {
     const [name, setName] = useState(names[0]);
     return (
-        <div className="bg-background text-foreground grid h-dvh min-w-0 grid-rows-[38%_minmax(0,1fr)] overflow-hidden md:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] md:grid-rows-1">
+        <div className="bg-background text-foreground grid h-dvh min-w-0 grid-rows-[minmax(10rem,38%)_minmax(0,1fr)] overflow-hidden md:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] md:grid-rows-1">
             <DestinationArtwork name={name} country="Local fixture" image={image} />
             <section className="font-body flex min-h-0 flex-col overflow-y-auto px-6 py-6 md:justify-center md:px-10 [&>*]:shrink-0">
                 <h2 className="font-display text-2xl">Destination typography review</h2>

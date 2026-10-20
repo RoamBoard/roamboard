@@ -41,9 +41,11 @@ export default function DestinationHeading({ name, country }: { name: string; co
                 measure
             );
             setFit((previous) =>
-                previous?.fontSize === next.fontSize && previous.lines.join("\n") === next.lines.join("\n")
-                    ? previous
-                    : next
+                next.fontSize <= 0
+                    ? null
+                    : previous?.fontSize === next.fontSize && previous.lines.join("\n") === next.lines.join("\n")
+                      ? previous
+                      : next
             );
         };
         const schedule = () => {
@@ -74,7 +76,7 @@ export default function DestinationHeading({ name, country }: { name: string; co
         <div
             ref={frame}
             data-destination-type-frame
-            className="absolute top-1/2 right-[42%] left-5 flex h-[min(calc(100%_-_8rem),42cqw)] -translate-y-1/2 flex-col justify-center md:left-8"
+            className="absolute top-1/2 right-[42%] left-5 flex h-[min(max(3rem,calc(100%_-_8rem)),42cqw)] -translate-y-1/2 flex-col justify-center md:left-8"
         >
             <p ref={label} className="mb-2 shrink-0 text-xs leading-4 tracking-widest uppercase">
                 {country}
