@@ -43,7 +43,7 @@ export class DiscoveryApiError extends Error {
 export async function discoveryRequest<T>(path: string, init?: RequestInit): Promise<T> {
     const response = await fetch(`${origin}/api/v1${path}`, {
         ...init,
-        credentials: "include",
+        credentials: init?.credentials ?? "include",
         cache: "no-store",
         headers: { ...(init?.body ? { "Content-Type": "application/json" } : {}), ...init?.headers }
     });

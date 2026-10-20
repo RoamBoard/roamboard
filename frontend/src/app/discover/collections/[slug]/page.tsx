@@ -35,6 +35,11 @@ export default async function CollectionPage({ params }: Props) {
                             {collection.title}
                         </h1>
                         <p className="text-20 mt-4 max-w-2xl">{collection.description}</p>
+                        {available ? (
+                            <p className="text-muted-foreground mt-4 text-sm">
+                                {boards.length} public {boards.length === 1 ? "Board" : "Boards"}
+                            </p>
+                        ) : null}
                     </div>
                     <div className="bg-faint relative aspect-[4/3] overflow-hidden">
                         <DiscoverPhoto
@@ -57,12 +62,12 @@ export default async function CollectionPage({ params }: Props) {
                 ) : (
                     <section aria-labelledby="collection-empty-title" className="border-line mt-8 border p-6 md:p-8">
                         <h2 id="collection-empty-title" className="font-display text-24">
-                            {available ? "No Boards in this collection yet." : "Collection Boards are coming soon."}
+                            {available ? "No Boards in this collection yet." : "Collection Boards could not be loaded."}
                         </h2>
                         <p className="text-14 mt-3 max-w-xl">
                             {available
                                 ? "Explore another collection to find your next adventure."
-                                : "Public Board discovery is not connected yet. This collection will show matching Boards once it is available."}
+                                : "Refresh to try again, or explore another collection."}
                         </p>
                         <Link
                             href={discoverHref}

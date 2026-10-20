@@ -60,7 +60,7 @@ export default function RoamFlow({ initialPage, source = loadRoamFlowPage, reduc
         <section
             id="roamflow"
             aria-labelledby="roamflow-title"
-            className="font-body scroll-mt-6 bg-black px-4 pt-10 pb-14 text-white md:px-10 md:pt-14 md:pb-20"
+            className="font-body scroll-mt-6 bg-black px-5 pt-10 pb-14 text-white md:px-10 md:pt-14 md:pb-20"
         >
             <header className="border-t border-white/25 pt-7">
                 <div className="flex flex-col-reverse justify-between gap-8 md:flex-row md:gap-12">
@@ -86,7 +86,7 @@ export default function RoamFlow({ initialPage, source = loadRoamFlowPage, reduc
                         </a>
                     </div>
                 </div>
-                <p className="text-10 mt-7 text-white/45">EDITORIAL PREVIEW · FICTIONAL TRAVEL STORIES</p>
+                <p className="text-10 mt-7 text-white/45">Explore public travel Boards from the Roamboard community.</p>
             </header>
 
             <div className="mt-10 md:mt-4">
