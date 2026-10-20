@@ -22,6 +22,7 @@ services:
             retries: 5
 
     backend:
+        image: ghcr.io/roamboard/roamboard-backend:${IMAGE_TAG:?Set IMAGE_TAG in backend/.env to the commit SHA to deploy}
         build:
             context: ../..
             dockerfile: backend/Dockerfile
@@ -38,6 +39,7 @@ services:
             DATABASE_URL: ${DOCKER_DATABASE_URL:?Set DOCKER_DATABASE_URL in backend/.env (using @postgres:5432)}
 
     frontend:
+        image: ghcr.io/roamboard/roamboard-frontend:${IMAGE_TAG:?Set IMAGE_TAG in backend/.env to the commit SHA to deploy}
         build:
             context: ../..
             dockerfile: frontend/Dockerfile

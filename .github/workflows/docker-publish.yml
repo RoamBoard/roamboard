@@ -1,0 +1,180 @@
+name: Publish Docker Images
+
+on:
+    push:
+        branches: [main]
+    workflow_dispatch:
+
+permissions:
+    contents: read
+    packages: write
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: false
+
+jobs:
+    verify-ci:
+        name: Verify Format, Lint, Typecheck & Tests
+        if: github.ref == 'refs/heads/main'
+        runs-on: ubuntu-latest
+        timeout-minutes: 20
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v7
+
+            - name: Install pnpm
+              uses: pnpm/action-setup@v6
+              with:
+                  version: 12.5.1
+                  run_install: false
+
+            - name: Set up Node.js
+              uses: actions/setup-node@v7
+              with:
+                  node-version: 24
+                  cache: pnpm
+                  cache-dependency-path: |
+                      pnpm-lock.yaml
+                      frontend/pnpm-lock.yaml
+
+            - name: Install root dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Install frontend dependencies
+              working-directory: frontend
+              run: pnpm install --frozen-lockfile
+
+            - name: Install backend dependencies
+              working-directory: backend
+              run: npm ci
+
+            - name: Check repository formatting
+              run: pnpm format:check
+
+            - name: Run frontend lint, typecheck & tests
+              working-directory: frontend
+              run: |
+                  pnpm lint
+                  pnpm exec tsc --noEmit
+                  pnpm test
+
+            - name: Run backend lint, typecheck & tests
+              working-directory: backend
+              run: |
+                  npm run lint
+                  npm run typecheck
+                  npm test
+
+    build-and-push:
+        name: Build and Push Backend & Frontend Images
+        needs: [verify-ci]
+        if: github.ref == 'refs/heads/main'
+        runs-on: ubuntu-latest
+        timeout-minutes: 30
+
+        steps:
+            - name: Validate required build secrets
+              env:
+                  PUBLIC_DOMAIN: ${{ secrets.PUBLIC_DOMAIN }}
+                  GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+              run: |
+                  if [ -z "$PUBLIC_DOMAIN" ] || [ -z "$GOOGLE_CLIENT_ID" ]; then
+                      echo "Error: PUBLIC_DOMAIN and GOOGLE_CLIENT_ID repository secrets must be set." >&2
+                      exit 1
+                  fi
+
+            - name: Checkout repository
+              uses: actions/checkout@v7
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Log in to GitHub Container Registry
+              uses: docker/login-action@v3
+              with:
+                  registry: ghcr.io
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Build and push backend image by commit SHA
+              uses: docker/build-push-action@v6
+              with:
+                  context: .
+                  file: backend/Dockerfile
+                  push: true
+                  tags: ghcr.io/roamboard/roamboard-backend:${{ github.sha }}
+                  cache-from: type=gha,scope=backend
+                  cache-to: type=gha,mode=max,scope=backend
+
+            - name: Build and push frontend image by commit SHA
+              uses: docker/build-push-action@v6
+              with:
+                  context: .
+                  file: frontend/Dockerfile
+                  push: true
+                  tags: ghcr.io/roamboard/roamboard-frontend:${{ github.sha }}
+                  build-args: |
+                      NEXT_PUBLIC_API_URL=https://${{ secrets.PUBLIC_DOMAIN }}
+                      NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+                  cache-from: type=gha,scope=frontend
+                  cache-to: type=gha,mode=max,scope=frontend
+
+    deploy:
+        name: Deploy matched images to Azure VM
+        needs: [build-and-push]
+        if: github.ref == 'refs/heads/main'
+        runs-on: ubuntu-latest
+        environment: production
+        timeout-minutes: 15
+        permissions:
+            contents: read
+            id-token: write
+
+        steps:
+            - name: Checkout deployment script
+              uses: actions/checkout@v7
+
+            - name: Validate Azure deployment settings
+              env:
+                  AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+                  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+                  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+                  AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+                  AZURE_VM_NAME: ${{ vars.AZURE_VM_NAME }}
+              run: |
+                  if [ -z "$AZURE_CLIENT_ID" ] || [ -z "$AZURE_TENANT_ID" ] || [ -z "$AZURE_SUBSCRIPTION_ID" ] ||
+                     [ -z "$AZURE_RESOURCE_GROUP" ] || [ -z "$AZURE_VM_NAME" ]; then
+                      echo "Azure OIDC secrets and AZURE_RESOURCE_GROUP/AZURE_VM_NAME variables are required." >&2
+                      exit 1
+                  fi
+
+            - name: Sign in to Azure with OIDC
+              uses: azure/login@v3
+              with:
+                  client-id: ${{ secrets.AZURE_CLIENT_ID }}
+                  tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+                  subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+            - name: Deploy commit SHA and verify result
+              env:
+                  AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+                  AZURE_VM_NAME: ${{ vars.AZURE_VM_NAME }}
+                  DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '/home/azureuser/roamboard' }}
+              run: |
+                  result="$(az vm run-command invoke \
+                      --resource-group "$AZURE_RESOURCE_GROUP" \
+                      --name "$AZURE_VM_NAME" \
+                      --command-id RunShellScript \
+                      --scripts @backend/deploy/deploy-image.sh \
+                      --parameters "$GITHUB_SHA" "$DEPLOY_PATH" \
+                      --output json)"
+
+                  if ! jq -e --arg sha "$GITHUB_SHA" \
+                      '[.value[]?.message] | join("\n") | contains("DEPLOY_OK_SHA=" + $sha)' \
+                      <<< "$result" > /dev/null; then
+                      jq -r '.value[]?.message' <<< "$result" >&2
+                      echo "The VM did not confirm a healthy deployment." >&2
+                      exit 1
+                  fi
