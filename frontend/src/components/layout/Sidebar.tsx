@@ -4,28 +4,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import {
-    ArrowUpRight,
-    Compass,
-    FlaskConical,
-    Layers,
-    PanelLeftClose,
-    PanelLeftOpen,
-    Plus,
-    Users,
-    X
-} from "lucide-react";
+import { ArrowUpRight, Compass, Layers, PanelLeftClose, PanelLeftOpen, Plus, Users, X } from "lucide-react";
 import ProfileControl, { type ProfileControlProps } from "@/components/ui/ProfileControl";
 import NotificationControl from "@/components/ui/NotificationControl";
 import { getSidebarExpanded, getSidebarServerSnapshot, setSidebarExpanded, subscribeSidebar } from "./sidebar-state";
 
 const navigation = [
     { href: "/home", label: "roam", icon: ArrowUpRight },
-    { href: "/create", label: "create", icon: Plus },
-    { href: "/discover", label: "discover", icon: Compass },
     { href: "/boards", label: "boards", icon: Layers },
-    { href: "/social", label: "social", icon: Users },
-    { href: "/dev/providers", label: "labs", icon: FlaskConical }
+    { href: "/discover", label: "discover", icon: Compass },
+    { href: "/create", label: "create", icon: Plus },
+    { href: "/social", label: "social", icon: Users }
 ];
 
 function subscribeDesktop(callback: () => void) {
@@ -38,7 +27,6 @@ const getDesktopServerSnapshot = () => true;
 
 function activeDestination(pathname: string | null, fallback: string) {
     if (!pathname) return fallback;
-    if (pathname.startsWith("/dev")) return "/dev/providers";
     if (
         pathname === "/boards/new" ||
         pathname.startsWith("/boards/drafts") ||
