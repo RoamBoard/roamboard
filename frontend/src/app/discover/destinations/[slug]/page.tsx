@@ -8,7 +8,7 @@ import DiscoverPhoto from "@/components/features/discover/DiscoverPhoto";
 import DiscoverBoardCard from "@/components/features/discover/DiscoverBoardCard";
 import { getDiscoverDestination } from "@/data/discover-destinations";
 import { getDiscoverBoardsByDestination } from "@/data/discover-boards";
-import { destinationGuideHref, getDestinationGuideInput } from "@/lib/destination-guides";
+import { destinationGuideHref, destinationRouteHref, getDestinationGuideInput } from "@/lib/destination-guides";
 import { findCountry } from "@/lib/countries";
 import { searchDestinations } from "@/lib/destinations";
 import DestinationGuide from "@/components/features/destinations/DestinationGuide";
@@ -19,7 +19,9 @@ type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<Destina
 const searchCountry = cache((name: string) => searchDestinations(name));
 
 async function resolveDestination({ params, searchParams }: Props) {
-    const slug = (await params).slug;
+    // Next supplies an encoded path segment. Decode once; the shared serializer encodes the logical slug once.
+    // Malformed escapes remain an actual route failure, rather than acknowledging an ambiguous identity.
+    const slug = decodeURIComponent((await params).slug);
     const selection = (await searchParams) ?? {};
     const selectedGuide = getDestinationGuideInput(slug, selection);
     const destination = getDiscoverDestination(slug);
@@ -39,12 +41,7 @@ async function resolveDestination({ params, searchParams }: Props) {
             : undefined);
     // Selected guides carry their identity. Historical country links retain their namesake checks.
     if (!guide && (!destination || !destinationSelectionMatches(destination, "country", selection))) notFound();
-    const query = new URLSearchParams();
-    Object.entries(selection).forEach(([key, value]) => {
-        if (Array.isArray(value)) value.forEach((entry) => query.append(key, entry));
-        else if (value !== undefined) query.set(key, value);
-    });
-    const href = `/discover/destinations/${encodeURIComponent(slug)}${query.size ? `?${query}` : ""}`;
+    const href = destinationRouteHref(slug, selection);
     return { guide, destination, href };
 }
 

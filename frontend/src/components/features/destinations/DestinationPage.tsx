@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import BackLink from "@/components/ui/BackLink";
-import { motion, MotionConfig, useReducedMotion } from "motion/react";
+import { MotionConfig } from "motion/react";
 import { ArrowUpRight } from "lucide-react";
 import BoardPhoto from "@/components/features/boards/BoardPhoto";
 import { destinationPhotoUrl, type DestinationGuideData } from "@/lib/destination-guides";
@@ -10,6 +9,7 @@ import { DestinationRail } from "./DestinationRail";
 import { DestinationStories } from "./DestinationStories";
 import DestinationPhotoCredit from "./DestinationPhotoCredit";
 import DestinationPlaces from "./DestinationPlaces";
+import DestinationArtwork from "./DestinationArtwork";
 
 type Props = {
     destination: DestinationGuideData;
@@ -21,7 +21,6 @@ type Props = {
 
 // The same layout renders every selected city; text, photos and Boards come from the API.
 export function DestinationPage({ destination: guide, onLoadMore, onRetry, loadingMore = false, error = "" }: Props) {
-    const reduced = useReducedMotion();
     const { destination, article } = guide;
     const photos = guide.images.map((photo) => ({
         ...photo,
@@ -29,6 +28,19 @@ export function DestinationPage({ destination: guide, onLoadMore, onRetry, loadi
         source: "application" as const
     }));
     const tags = Array.from(new Set(guide.boards.flatMap((board) => board.tags)));
+    const cityTip = guide.cityTip ? (
+        <>
+            <p className="text-muted-foreground mt-2 text-sm leading-6 md:line-clamp-3">{guide.cityTip.text}</p>
+            <a
+                href={guide.cityTip.url}
+                target="_blank"
+                rel="noreferrer"
+                className="text-muted-foreground mt-2 inline-block text-xs underline"
+            >
+                Wikivoyage contributors / CC BY-SA 4.0
+            </a>
+        </>
+    ) : null;
     return (
         <MotionConfig reducedMotion="user">
             <DestinationRail name={destination.name}>
@@ -38,59 +50,17 @@ export function DestinationPage({ destination: guide, onLoadMore, onRetry, loadi
                     data-destination-chapter
                     tabIndex={-1}
                     aria-label={`${destination.name} introduction`}
-                    className="relative grid h-full w-[var(--destination-width)] shrink-0 snap-start snap-always grid-rows-[38%_minmax(0,1fr)] overflow-hidden outline-none md:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] md:grid-rows-1"
+                    className="relative grid h-full w-[var(--destination-width)] shrink-0 snap-start snap-always grid-rows-[minmax(10rem,38%)_minmax(0,1fr)] overflow-hidden outline-none md:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] md:grid-rows-1"
                 >
-                    <div className="border-line @container relative isolate h-full min-w-0 overflow-hidden border-r">
-                        <BackLink
-                            fallbackHref="/discover"
-                            className="bg-background/90 absolute top-5 left-5 z-20 px-2 md:left-8"
-                        />
-                        <motion.div
-                            initial={{ opacity: 0.35, rotate: -35 }}
-                            animate={{ opacity: 1, rotate: 0 }}
-                            transition={{ duration: reduced ? 0 : 1.1, ease: [0.22, 1, 0.36, 1] }}
-                            className="absolute top-1/2 right-0 aspect-square w-[200%] -translate-y-1/2 overflow-hidden rounded-full"
-                        >
-                            <BoardPhoto
-                                image={photos[0]}
-                                placeholderLabel={destination.name}
-                                preload
-                                sizes="(max-width: 767px) 680px, 1100px"
-                                className="h-full w-full"
-                            />
-                            <span aria-hidden="true" className="bg-background absolute inset-[19%] rounded-full" />
-                        </motion.div>
-                        {/* Match the white cutout's circle so lettering can never cover the photograph. */}
-                        <div className="pointer-events-none absolute inset-0 [clip-path:circle(62cqw_at_0_50%)]">
-                            <div className="absolute top-1/2 right-[45%] left-5 -translate-y-1/2 md:left-8">
-                                <p className="mb-2 text-xs tracking-widest uppercase">{destination.country}</p>
-                                <h1
-                                    style={{
-                                        fontSize: `clamp(1rem, ${Math.min(12, 90 / destination.name.length)}cqw, 6rem)`
-                                    }}
-                                    className="font-display leading-[0.9] font-bold tracking-[-0.065em] break-words uppercase"
-                                >
-                                    {destination.name}
-                                </h1>
-                            </div>
-                        </div>
-                        <div className="bg-background/90 absolute right-5 bottom-7 left-5 w-fit max-w-[85%] px-2 py-1 md:left-8">
-                            <DestinationPhotoCredit {...guide.images[0]} />
-                            {!guide.images[0] ? (
-                                <p className="text-muted-foreground text-xs">
-                                    Photo unavailable for {destination.name}
-                                </p>
-                            ) : null}
-                        </div>
-                    </div>
+                    <DestinationArtwork name={destination.name} country={destination.country} image={guide.images[0]} />
                     <div
                         id="destination-information"
                         tabIndex={-1}
-                        className="border-line flex h-full min-h-0 min-w-0 flex-col overflow-hidden border-x outline-none"
+                        className="border-line flex h-full min-h-0 min-w-0 flex-col overflow-y-auto overscroll-y-contain border-x outline-none"
                     >
                         <section
                             aria-labelledby="destination-about-heading"
-                            className="border-line flex min-h-0 flex-1 flex-col justify-center px-6 py-4 md:px-10 md:py-8 [@media(max-height:540px)]:py-3"
+                            className="border-line flex shrink-0 grow flex-col justify-center px-6 py-5 md:px-10 md:py-8 [@media(max-height:540px)]:py-3"
                         >
                             <h2
                                 id="destination-about-heading"
@@ -100,7 +70,7 @@ export function DestinationPage({ destination: guide, onLoadMore, onRetry, loadi
                             </h2>
                             {article ? (
                                 <>
-                                    <p className="text-muted-foreground mt-3 line-clamp-4 text-[clamp(0.75rem,1.8dvh,1rem)] leading-[1.6] md:line-clamp-none [@media(max-height:540px)]:line-clamp-3">
+                                    <p className="text-muted-foreground mt-3 line-clamp-4 shrink-0 text-sm leading-6 md:line-clamp-none md:text-[clamp(0.875rem,1.8dvh,1rem)] md:leading-[1.6]">
                                         {article.description}
                                     </p>
                                     <p className="text-muted-foreground mt-2 text-[10px] leading-4 md:text-xs">
@@ -132,20 +102,18 @@ export function DestinationPage({ destination: guide, onLoadMore, onRetry, loadi
                                 </p>
                             )}
                             {guide.cityTip ? (
-                                <div className="border-line mt-5 border-t pt-4">
-                                    <h3 className="text-sm font-semibold">{guide.cityTip.title}</h3>
-                                    <p className="text-muted-foreground mt-2 line-clamp-3 text-sm leading-6">
-                                        {guide.cityTip.text}
-                                    </p>
-                                    <a
-                                        href={guide.cityTip.url}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="text-muted-foreground mt-2 inline-block text-xs underline"
-                                    >
-                                        Wikivoyage contributors / CC BY-SA 4.0
-                                    </a>
-                                </div>
+                                <>
+                                    <details className="border-line mt-4 border-t md:hidden">
+                                        <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2">
+                                            {guide.cityTip.title}
+                                        </summary>
+                                        <div className="pb-3">{cityTip}</div>
+                                    </details>
+                                    <div className="border-line mt-5 hidden border-t pt-4 md:block">
+                                        <h3 className="text-sm font-semibold">{guide.cityTip.title}</h3>
+                                        {cityTip}
+                                    </div>
+                                </>
                             ) : null}
                             {guide.unavailable.includes("cityTip") ? (
                                 <p className="text-muted-foreground mt-3 text-xs" role="status">
@@ -179,7 +147,7 @@ export function DestinationPage({ destination: guide, onLoadMore, onRetry, loadi
                         </section>
                         <section
                             aria-labelledby="destination-tags-heading"
-                            className="border-line hidden border-t px-6 py-5 md:block md:px-10 [@media(max-height:540px)]:hidden"
+                            className="border-line hidden shrink-0 border-t px-6 py-5 md:block md:px-10 [@media(max-height:540px)]:hidden"
                         >
                             <h2 id="destination-tags-heading" className="text-lg font-bold">
                                 Tags from public boards

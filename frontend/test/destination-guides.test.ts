@@ -1,12 +1,20 @@
 import assert from "node:assert/strict";
 import test, { type TestContext } from "node:test";
-import { Children, createElement, isValidElement, type ComponentProps, type ReactElement, type ReactNode } from "react";
+import React, {
+    Children,
+    createElement,
+    isValidElement,
+    type ComponentProps,
+    type ReactElement,
+    type ReactNode
+} from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import DestinationRoute, { generateMetadata } from "../src/app/discover/destinations/[slug]/page";
 import NewBoardPage from "../src/app/boards/new/page";
 import BoardCreator from "../src/components/features/boards/BoardCreator";
 import { DestinationPage } from "../src/components/features/destinations/DestinationPage";
+import DestinationPlaces from "../src/components/features/destinations/DestinationPlaces";
 import {
     destinationGuideHref,
     destinationPhotoUrl,
@@ -909,4 +917,60 @@ test("loaded public Boards remain visible beside pagination failures and loading
     const loading = renderGuide(guide({ hasMore: true }), { loadingMore: true, onLoadMore() {} });
     assert.match(loading, /href="\/boards\/721"/);
     assert.match(loading, /<button\b[^>]*disabled[^>]*>[\s\S]*?(?:Loading|Load more)/i);
+});
+
+test("compact guide offers secondary travel advice as a closed native disclosure without losing prose or attribution", () => {
+    const markup = renderGuide(
+        guide({
+            cityTip: {
+                title: "Getting around Tokyo",
+                text: "Use the metro, then explore each neighborhood on foot.",
+                url: "https://en.wikivoyage.org/wiki/Tokyo#Get_around"
+            }
+        })
+    );
+    const disclosure = markup.match(/<details\b[^>]*>[\s\S]*?<\/details>/)?.[0];
+    assert.ok(disclosure, "Secondary travel advice must be available through a keyboard-operable disclosure");
+    assert.doesNotMatch(disclosure, /^<details[^>]*\bopen(?:[\s=>])/);
+    assert.match(disclosure, /<summary[^>]*>Getting around Tokyo<\/summary>/);
+    assert.match(disclosure, /Use the metro, then explore each neighborhood on foot\./);
+    assert.match(disclosure, /href="https:\/\/en\.wikivoyage\.org\/wiki\/Tokyo#Get_around"/);
+    assert.match(disclosure, /Wikivoyage contributors \/ CC BY-SA 4\.0/);
+    assert.match(markup, /Tokyo is a city in Japan\. This opening comes from the matched article\./);
+    assert.match(markup, /href="#destination-places"/);
+    assert.match(markup, /href="https:\/\/en\.wikivoyage\.org\/wiki\/Tokyo"/);
+    const withoutTip = renderGuide(guide({ cityTip: null }));
+    assert.doesNotMatch(withoutTip, /<details\b/);
+});
+
+test("destination map opts into cooperative gestures while retaining its live place points and selection handler", () => {
+    const captured: { tree: ReactNode } = { tree: null };
+    const source = guide();
+    function Probe() {
+        const original = React.useState;
+        // Supply the resolved provider token; do not mount Mapbox or issue provider requests in Node.
+        React.useState = ((initial: unknown) =>
+            original(initial === undefined ? "test-map-token" : initial)) as typeof React.useState;
+        try {
+            captured.tree = DestinationPlaces({ guide: source });
+        } finally {
+            React.useState = original;
+        }
+        return null;
+    }
+    renderToStaticMarkup(createElement(Probe));
+    function mapNode(
+        root: ReactNode
+    ):
+        | ReactElement<{ token?: string; cooperativeGestures?: boolean; points?: unknown[]; onPointClick?: unknown }>
+        | undefined {
+        if (!isValidElement<{ token?: string; children?: ReactNode }>(root)) return;
+        if (root.props.token === "test-map-token") return root;
+        return Children.toArray(root.props.children).map(mapNode).find(Boolean);
+    }
+    const map = mapNode(captured.tree);
+    assert.ok(map);
+    assert.equal(map.props.cooperativeGestures, true);
+    assert.equal(map.props.points?.length, source.places.length);
+    assert.equal(typeof map.props.onPointClick, "function");
 });

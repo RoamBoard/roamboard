@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, useSyncExternalStore, type SetStateAction } from "react";
 import { ArrowUpRight, Search, X } from "lucide-react";
 import { observeCurrentUser, type AuthUser } from "@/lib/auth";
 import {
@@ -24,8 +24,9 @@ import AccountPhotoBoardCard from "./cards/AccountPhotoBoardCard";
 const action =
     "min-h-11 cursor-pointer px-3 py-3 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 disabled:opacity-50";
 
-function useDiscovery(path: string | null, delay = 0) {
-    const [store] = useState(createDiscoveryStore);
+function useDiscovery(path: string | null, delay = 0, viewerKey = "visitor") {
+    // Scope result state to the viewer without remounting the input that owns the draft query and focus.
+    const { store } = useMemo(() => ({ viewerKey, store: createDiscoveryStore() }), [viewerKey]);
     const state = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
     useEffect(() => {
         if (!path) {
@@ -57,7 +58,7 @@ export default function BoardsDiscovery() {
     useEffect(() => observeCurrentUser((user) => setAccount({ ready: true, user })), []);
     return (
         <BoardsDiscoveryContent
-            key={`${params.toString()}:${account.user?.userId ?? "visitor"}`}
+            key={params.toString()}
             query={params.get("q")?.trim().slice(0, 100) ?? ""}
             page={Math.max(1, Math.min(10000, Math.floor(Number(params.get("page"))) || 1))}
             location={params.get("location") === "off" ? "off" : "auto"}
@@ -78,6 +79,8 @@ export function BoardsDiscoveryContent({
     account: { ready: boolean; user: AuthUser | null };
 }) {
     const fullSearch = query.length >= 2;
+    // Pending identification is not a signed-out viewer: its cookie-bearing reads may still contain private results.
+    const viewerKey = account.ready ? (account.user?.userId ?? "visitor") : "pending";
     const [period, setPeriod] = useState<"month" | "week">("month");
     return (
         <article className="font-body min-w-0 overflow-x-clip pb-24">
@@ -88,12 +91,17 @@ export function BoardsDiscoveryContent({
                 <p className="text-muted-foreground mx-auto mt-5 max-w-lg text-sm">
                     Find your next adventure in Boards shared by the community.
                 </p>
-                <BoardSearch key={`${query}:${location}`} initialQuery={query} location={location} />
+                <BoardSearch
+                    key={`${query}:${location}`}
+                    initialQuery={query}
+                    location={location}
+                    viewerKey={viewerKey}
+                />
             </header>
             {fullSearch ? (
-                <SearchResults query={query} page={page} location={location} />
+                <SearchResults key={viewerKey} query={query} page={page} location={location} />
             ) : (
-                <>
+                <Fragment key={viewerKey}>
                     <section aria-label="Featured period" className="mx-auto mt-16 flex justify-center gap-3">
                         {(
                             [
@@ -161,23 +169,39 @@ export function BoardsDiscoveryContent({
                             Loading your account…
                         </p>
                     )}
-                </>
+                </Fragment>
             )}
         </article>
     );
 }
 
-function BoardSearch({ initialQuery, location }: { initialQuery: string; location: "auto" | "off" }) {
+function BoardSearch({
+    initialQuery,
+    location,
+    viewerKey
+}: {
+    initialQuery: string;
+    location: "auto" | "off";
+    viewerKey: string;
+}) {
     const router = useRouter();
     const [query, setQuery] = useState(initialQuery);
     const [open, setOpen] = useState(false);
-    const [active, setActive] = useState(-1);
     const [locationMode, setLocationMode] = useState(location);
     const path =
         query.trim().length >= 2
             ? `/boards/search/suggestions?${new URLSearchParams({ q: query.trim(), location: locationMode })}`
             : null;
-    const { state, store } = useDiscovery(path, 220);
+    const { state, store } = useDiscovery(path, 220, viewerKey);
+    // A new viewer's results require a new explicit selection, even after switching back to a previous account.
+    const [highlight, setHighlight] = useState({ store, index: -1 });
+    const active = highlight.store === store ? highlight.index : -1;
+    function setActive(value: SetStateAction<number>) {
+        setHighlight((previous) => ({
+            store,
+            index: typeof value === "function" ? value(previous.store === store ? previous.index : -1) : value
+        }));
+    }
     const current = state.key === path;
     const items = current ? (state.data?.items ?? []) : [];
     const interpreted = current ? state.data?.location : null;

@@ -249,3 +249,57 @@ test("direct public Board cover delivery preserves the image error callback and 
     invoke(image, "onError");
     assert.equal(calls.failures, 1, "Image failures must reach V4's existing failed-cover fallback");
 });
+
+function story(root: ReactNode, id: number) {
+    return find(
+        root,
+        (node) => node.type === DestinationStoryCard && (node.props.board as { id: string }).id === String(id)
+    );
+}
+
+test("destination fan keeps identifying text inside every card with consistent full-cover typography and a scoped country watermark", (t) => {
+    const gallery = galleryHarness(t);
+    for (const id of [101, 102, 103]) {
+        const card = story(gallery.render(), id);
+        assert.equal(card.props.galleryCover, true);
+        assert.equal((card.props.board as { title: string }).title, `Journey ${id}`);
+        assert.equal((card.props.board as { author: string }).author, `traveller_${id}`);
+        const offset = (card.props.board as { labelOffset: number }).labelOffset;
+        assert.ok(offset > 0 && offset < 40.75, "Only this placement should move the country watermark left");
+        assert.equal(offset, (story(gallery.render(), 101).props.board as { labelOffset: number }).labelOffset);
+    }
+    assert.equal(
+        nodes(gallery.render()).filter((node) => node.props["aria-label"] === "Neighbouring Boards").length,
+        0
+    );
+    keyboard(gallery.render(), "ArrowRight");
+    assert.equal(story(gallery.render(), 102).props.galleryCover, true);
+    assert.equal(story(gallery.render(), 102).props.details, true);
+    assert.equal(story(gallery.render(), 101).props.galleryCover, true);
+    assert.equal((story(gallery.render(), 102).props.selection as { viewHref: string }).viewHref, "/boards/102");
+});
+
+test("dragging and cancellation preserve in-card identity and selected presentation while suppressing the resulting pointer navigation", (t) => {
+    const gallery = galleryHarness(t);
+    const surface = find(gallery.render(), (node) => typeof node.props.onPanEnd === "function");
+    invoke(surface, "onPointerDown");
+    invoke(surface, "onPan", {}, { offset: { x: -25, y: 0 }, velocity: { x: 0, y: 0 } });
+    assert.equal(story(gallery.render(), 101).props.galleryCover, true);
+    assert.equal(story(gallery.render(), 101).props.suppressHover, true);
+    assert.equal(story(gallery.render(), 102).props.galleryCover, true);
+    invoke(
+        find(gallery.render(), (node) => typeof node.props.onPointerCancel === "function"),
+        "onPointerCancel"
+    );
+    assert.equal(story(gallery.render(), 101).props.galleryCover, true);
+    assert.equal(story(gallery.render(), 101).props.suppressHover, false);
+    const selection = story(gallery.render(), 101).props.selection as { onNavigate: (event: unknown) => void };
+    const prevented = { value: false };
+    selection.onNavigate({
+        detail: 1,
+        preventDefault: () => {
+            prevented.value = true;
+        }
+    });
+    assert.equal(prevented.value, true);
+});

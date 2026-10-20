@@ -221,7 +221,7 @@ export default function DestinationPlaces({
                 id="destination-place-list"
                 tabIndex={-1}
                 aria-labelledby="destination-places-heading"
-                className={`border-line h-0 min-h-0 w-full flex-1 flex-col border-r px-6 py-6 outline-none md:h-full md:w-[clamp(320px,30vw,440px)] md:flex-none md:px-8 md:py-8 [@media(max-height:540px)]:py-3 ${mobileView === "list" ? "flex" : "hidden md:flex"}`}
+                className={`border-line h-0 min-h-0 w-full flex-1 flex-col overflow-y-auto overscroll-y-contain border-r px-6 py-6 outline-none md:h-full md:w-[clamp(320px,30vw,440px)] md:flex-none md:px-8 md:py-8 [&>*]:shrink-0 [@media(max-height:540px)]:py-3 ${mobileView === "list" ? "flex" : "hidden md:flex"}`}
             >
                 <p className="text-muted-foreground text-xs leading-5 [@media(max-height:540px)]:hidden">
                     Explore {guide.destination.name}
@@ -238,8 +238,8 @@ export default function DestinationPlaces({
                 {shown.length ? (
                     <ol
                         start={currentPage * pageSize + 1}
-                        style={{ gridTemplateRows: `repeat(${pageSize}, minmax(0, 1fr))` }}
-                        className="divide-line mt-4 grid min-h-0 flex-1 divide-y [@media(max-height:540px)]:mt-2"
+                        style={{ gridTemplateRows: `repeat(${pageSize}, minmax(3.5rem, 1fr))` }}
+                        className="divide-line mt-4 grid grow divide-y [@media(max-height:540px)]:mt-2"
                     >
                         {shown.map((place, index) => (
                             <li key={place.id} className="min-h-0">
@@ -355,7 +355,7 @@ export default function DestinationPlaces({
                 ref={detail}
                 tabIndex={-1}
                 aria-label={isCountry ? "Selected city and country map" : "Selected place and city map"}
-                className={`border-line h-0 min-h-0 w-full flex-1 flex-col border-r px-6 py-6 outline-none md:h-full md:w-auto md:min-w-0 md:px-8 md:py-8 [@media(max-height:540px)]:px-4 [@media(max-height:540px)]:py-3 ${mobileView === "map" ? "flex" : "hidden md:flex"}`}
+                className={`border-line h-0 min-h-0 w-full flex-1 flex-col overflow-y-auto overscroll-y-contain border-r px-6 py-6 outline-none md:h-full md:w-auto md:min-w-0 md:px-8 md:py-8 [@media(max-height:540px)]:px-4 [@media(max-height:540px)]:py-3 ${mobileView === "map" ? "flex" : "hidden md:flex"}`}
             >
                 <div className="mb-4 flex shrink-0 items-center justify-between gap-4 [@media(max-height:540px)]:hidden">
                     <p className="flex min-w-0 items-center gap-2 text-sm font-medium">
@@ -367,7 +367,7 @@ export default function DestinationPlaces({
                     </p>
                 </div>
                 <div
-                    className="border-line bg-faint relative min-h-0 flex-1 overflow-hidden rounded-lg border"
+                    className="border-line bg-faint relative min-h-52 flex-1 shrink-0 overflow-hidden rounded-lg border"
                     aria-label={guide.destination.kind === "country" ? "Country map" : "City map"}
                 >
                     {token ? (
@@ -380,6 +380,7 @@ export default function DestinationPlaces({
                             selectedZoom={isCountry ? 6 : 14}
                             selectedPointId={selected?.id}
                             fillHeight
+                            cooperativeGestures
                             onPointClick={(point) => {
                                 const place = places.find((item) => item.id === point.id);
                                 if (place) choose(place);

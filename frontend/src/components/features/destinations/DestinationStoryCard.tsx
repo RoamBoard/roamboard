@@ -34,12 +34,13 @@ export default function DestinationStoryCard(props: PhotoBoardCardProps) {
             <AccountPhotoBoardCard
                 tilt
                 showVisibility
-                board={document ? toPhotoBoardCard(document) : props.board}
+                board={document ? { ...toPhotoBoardCard(document), labelOffset: props.board.labelOffset } : props.board}
                 ownership={document ? (owner ? "owner" : "other") : "unknown"}
                 initialSaved={document?.savedByMe}
                 details={props.details}
                 selection={props.selection}
                 imageSizes={props.imageSizes}
+                galleryCover={props.galleryCover}
                 hideCoverCredit
                 suppressHover={props.suppressHover}
                 hoverActions={

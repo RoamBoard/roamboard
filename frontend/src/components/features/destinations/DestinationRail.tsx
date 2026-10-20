@@ -3,7 +3,20 @@
 import { useCallback, useEffect, useRef, type ReactNode } from "react";
 import { useReducedMotion } from "motion/react";
 
-// Four screen-sized chapters use native snapping; wheel and keyboard advance one chapter at a time.
+// Native vertical scrolling belongs to the nearest panel that still has room in the requested direction.
+function verticalScroller(target: Element, rail: HTMLElement, direction: number): HTMLElement | null {
+    if (target === rail) return null;
+    if (
+        target instanceof HTMLElement &&
+        /^(auto|scroll)$/.test(window.getComputedStyle(target).overflowY) &&
+        target.scrollHeight > target.clientHeight + 1 &&
+        (direction < 0 ? target.scrollTop > 1 : target.scrollTop < target.scrollHeight - target.clientHeight - 1)
+    )
+        return target;
+    return target.parentElement ? verticalScroller(target.parentElement, rail, direction) : null;
+}
+
+// Four screen-sized chapters retain native horizontal snapping and independent inner vertical scrolling.
 export function DestinationRail({ name, children }: { name: string; children: ReactNode }) {
     const viewport = useRef<HTMLDivElement>(null);
     const reduced = useReducedMotion();
@@ -26,14 +39,25 @@ export function DestinationRail({ name, children }: { name: string; children: Re
     useEffect(() => {
         const container = viewport.current;
         if (!container) return;
-        const gesture = { locked: false, timer: 0 };
+        const gesture = { locked: false, timer: 0, inner: false, lastWheel: 0 };
         const wheel = (event: WheelEvent) => {
             // Leave map wheel events to Mapbox so zooming never moves the guide sideways.
             if (event.target instanceof Element && event.target.closest(".mapboxgl-map")) return;
             if (event.ctrlKey || event.metaKey) return;
-            event.preventDefault();
-            const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+            const horizontal = Math.abs(event.deltaX) > Math.abs(event.deltaY);
+            const delta = horizontal ? event.deltaX : event.deltaY;
             if (!delta) return;
+            const continuing = Date.now() - gesture.lastWheel < 160;
+            gesture.lastWheel = Date.now();
+            if (!horizontal && event.target instanceof Element && verticalScroller(event.target, container, delta)) {
+                gesture.inner = true;
+                return;
+            }
+            event.preventDefault();
+            // A fling reaching the bottom must not immediately throw the reader into the next chapter.
+            // A fresh gesture after the wheel settles can leave either boundary; horizontal intent is always explicit.
+            if (!horizontal && gesture.inner && continuing) return;
+            gesture.inner = false;
             const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? container.clientWidth : 1;
             const gallery =
                 event.target instanceof Element ? event.target.closest<HTMLElement>("[data-destination-scroll]") : null;
@@ -104,6 +128,7 @@ export function DestinationRail({ name, children }: { name: string; children: Re
                 }}
                 onKeyDown={(event) => {
                     if (
+                        event.defaultPrevented ||
                         event.ctrlKey ||
                         event.altKey ||
                         event.metaKey ||
@@ -130,11 +155,17 @@ export function DestinationRail({ name, children }: { name: string; children: Re
                         ].includes(event.key)
                     )
                         return;
-                    if (event.key === " " && event.target.closest("a, button")) return;
-                    event.preventDefault();
+                    if (event.key === " " && event.target.closest("a, button, summary")) return;
                     const container = event.currentTarget;
                     const backwards =
-                        ["ArrowLeft", "ArrowUp", "PageUp"].includes(event.key) || (event.key === " " && event.shiftKey);
+                        ["ArrowLeft", "ArrowUp", "PageUp", "Home"].includes(event.key) ||
+                        (event.key === " " && event.shiftKey);
+                    if (
+                        !["ArrowLeft", "ArrowRight"].includes(event.key) &&
+                        verticalScroller(event.target, container, backwards ? -1 : 1)
+                    )
+                        return;
+                    event.preventDefault();
                     const nextChapter = container.scrollLeft + container.clientWidth * (backwards ? -1 : 1);
                     const next = event.key === "Home" ? 0 : event.key === "End" ? container.scrollWidth : nextChapter;
                     container.scrollTo({ left: next, behavior: reduced ? "instant" : "smooth" });

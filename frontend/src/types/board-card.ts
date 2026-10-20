@@ -80,6 +80,8 @@ export type PhotoBoardCardProps = {
     reduceMotion?: boolean;
     imageSizes?: string;
     hideCoverCredit?: boolean;
+    // Destination fan keeps one flowing cover composition across selection states.
+    galleryCover?: boolean;
     suppressHover?: boolean;
     tilt?: boolean;
     showVisibility?: boolean;

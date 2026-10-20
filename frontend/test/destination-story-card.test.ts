@@ -23,7 +23,7 @@ function harness(t: TestContext) {
         current.effect = effect;
     });
     return {
-        render(selected = true) {
+        render(selected = true, presentation: Partial<ComponentProps<typeof DestinationStoryCard>> = {}) {
             current.index = 0;
             return DestinationStoryCard({
                 board: {
@@ -34,7 +34,8 @@ function harness(t: TestContext) {
                     destinationLabel: "JPN"
                 },
                 details: selected,
-                selection: { selected, onSelect() {} }
+                selection: { selected, onSelect() {} },
+                ...presentation
             });
         },
         load: () => current.effect?.()
@@ -147,4 +148,40 @@ test("failed destination metadata stays usable and retries into the permitted ow
     const loaded = accountProps(card.render());
     assert.equal(loaded.ownership, "owner");
     assert.deepEqual(loaded.hoverActions, { editHref: "/boards/91/edit", viewHref: "/boards/91" });
+});
+
+test("destination typography and watermark placement survive canonical enrichment without changing permissions or adding requests", async (t) => {
+    const requests: string[] = [];
+    t.mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {
+        requests.push(new URL(String(input)).pathname);
+        assert.equal(init?.credentials, "include");
+        return Response.json({ data: { ...document, permissions: { canManageBoard: true, canEditContent: true } } });
+    });
+    const appearance = {
+        board: {
+            id: "91",
+            title: "Summary title",
+            author: "summary_author",
+            destination: "Kyoto",
+            destinationLabel: "JPN",
+            labelOffset: 33
+        }
+    };
+    const card = harness(t);
+    assert.equal(accountProps(card.render(true, { ...appearance, galleryCover: true })).board.labelOffset, 33);
+    card.load();
+    await setImmediate();
+    const inactive = accountProps(card.render(false, { ...appearance, galleryCover: true }));
+    assert.equal(inactive.galleryCover, true);
+    assert.equal(inactive.board.title, "Real title");
+    assert.equal(inactive.board.labelOffset, 33);
+    assert.equal(inactive.ownership, "owner");
+    assert.equal(inactive.initialSaved, true);
+    assert.equal(inactive.hoverActions, undefined);
+    const selected = accountProps(card.render(true, { ...appearance, galleryCover: true }));
+    assert.equal(selected.galleryCover, true);
+    assert.equal(selected.board.labelOffset, 33);
+    assert.deepEqual(selected.hoverActions, { editHref: "/boards/91/edit", viewHref: "/boards/91" });
+    card.load();
+    assert.deepEqual(requests, ["/api/v1/boards/91"]);
 });

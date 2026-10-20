@@ -210,6 +210,7 @@ export function DestinationStories({
                                             author: item.username,
                                             destination: name,
                                             destinationLabel: countryCode,
+                                            labelOffset: 35,
                                             description: item.description ?? undefined,
                                             tags: item.tags,
                                             durationDays: item.durationDays,
@@ -227,6 +228,7 @@ export function DestinationStories({
                                                 : undefined
                                         }}
                                         details={focused}
+                                        galleryCover
                                         suppressHover={dragging}
                                         imageSizes="(max-width: 768px) 75vw, 420px"
                                         selection={{
