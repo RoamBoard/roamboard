@@ -62,6 +62,12 @@ export function BoardCardPhoto({
     onError?: () => void;
 }) {
     // Direct delivery retains API cookies; keep V4's error callback and the shared crop/position wrapper.
+    if (!image.src)
+        return (
+            <div className={`bg-faint text-muted-foreground grid place-items-center ${className}`}>
+                <span className="text-12">No cover photo</span>
+            </div>
+        );
     const Photo = image.src.startsWith("library:") ? LibraryImage : Image;
     return (
         <div className={`relative overflow-hidden ${className}`}>

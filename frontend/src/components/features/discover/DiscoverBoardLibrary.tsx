@@ -1,10 +1,10 @@
 import { collectionHref } from "@/lib/board-collections";
 import { BoardLibraryCarousel, BoardLibrarySlide } from "@/components/features/boards/BoardLibrary";
 import type { DiscoverBoard } from "@/data/discover-boards";
-import type { BoardTagId } from "@/data/board-tags";
+import { getBoardTag, type BoardTagId } from "@/data/board-tags";
 import DiscoverBoardCard from "./DiscoverBoardCard";
 
-// Editorial samples keep their tag links and honest lack of persistent Board/account actions.
+// Reuse the shared carousel for public Board summaries.
 export default function DiscoverBoardLibrary({
     boards,
     title,
@@ -21,7 +21,11 @@ export default function DiscoverBoardLibrary({
             title={title}
             count={boards.length}
             variant="discover"
-            viewAllHref={collectionHref("samples", activeTagId ? { tag: activeTagId } : {})}
+            viewAllHref={
+                activeTagId
+                    ? collectionHref("category", { tag: getBoardTag(activeTagId)?.name ?? activeTagId })
+                    : undefined
+            }
         >
             {boards.map((board, index) => (
                 <BoardLibrarySlide

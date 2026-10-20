@@ -47,7 +47,7 @@ export default function DiscoverMoodMarquees() {
         <section
             id="discover-moods"
             aria-label="More curated collections"
-            className="relative mt-16 scroll-mt-0 md:mt-20"
+            className="relative -mx-5 mt-16 scroll-mt-0 md:-mx-10 md:mt-20"
         >
             <button
                 type="button"

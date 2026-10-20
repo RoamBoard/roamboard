@@ -4,7 +4,6 @@ import { motion, useReducedMotion } from "motion/react";
 import PhotoBoardCard from "@/components/features/boards/cards/PhotoBoardCard";
 import { roamFlowPageSize, type RoamFlowBoard } from "@/lib/roamflow";
 
-// Four intimate portraits followed by three larger stories. Each group retains DOM reading order.
 const positions = [
     "md:mt-16 min-[87.5rem]:col-span-3 min-[87.5rem]:mt-32",
     "min-[87.5rem]:col-span-3",

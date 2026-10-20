@@ -105,23 +105,34 @@ function elements(node: ReactNode): Array<{ type: unknown; props: TreeProps }> {
     return [{ type: node.type, props: node.props }, ...Children.toArray(node.props.children).flatMap(elements)];
 }
 
-test("Collections retains its unavailable presentation and navigation without fictional Board results or API calls", async (t) => {
+test("Collections keeps navigation and an unavailable state when the public Board read fails", async (t) => {
     const { default: CollectionPage } = await import("../src/app/discover/collections/[slug]/page");
     const { discoverCollections } = await import("../src/data/discover-collections");
     const fetch = t.mock.method(globalThis, "fetch", async () => {
-        throw new Error("No public discovery contract exists");
+        throw new Error("Public discovery unavailable");
     });
     const page = await CollectionPage({ params: Promise.resolve({ slug: discoverCollections[0].slug }) });
     const nodes = elements(page);
     const unavailable = nodes.find((node) => node.props["aria-labelledby"] === "collection-empty-title");
     assert.ok(unavailable, "The real route must retain its unavailable state");
     const html = renderToStaticMarkup(createElement("section", unavailable.props));
-    assert.match(html, /Collection Boards are coming soon/);
-    assert.match(html, /Public Board discovery is not connected yet/);
+    assert.doesNotMatch(html, /No Boards in this collection yet/);
     assert.match(html, /Explore other collections/);
     assert.doesNotMatch(html, /href="\/boards\/|aria-roledescription="slide"|aria-label="(?:Save |Unsave )/);
     assert.ok(nodes.some((node) => node.type === "h1" && node.props.children === discoverCollections[0].title));
-    assert.equal(fetch.mock.callCount(), 0);
+    assert.equal(fetch.mock.callCount(), 1);
+});
+
+test("an empty live collection remains reachable and shows its empty state", async (t) => {
+    const { default: CollectionPage } = await import("../src/app/discover/collections/[slug]/page");
+    t.mock.method(globalThis, "fetch", async () => Response.json({ data: { items: [], hasMore: false } }));
+    const page = await CollectionPage({ params: Promise.resolve({ slug: "by-the-water" }) });
+    const empty = elements(page).find((node) => node.props["aria-labelledby"] === "collection-empty-title");
+    assert.ok(empty);
+    const html = renderToStaticMarkup(createElement("section", empty.props));
+    assert.match(html, /No Boards in this collection yet/);
+    assert.match(html, /Explore other collections/);
+    assert.doesNotMatch(html, /href="\/boards\/\d/);
 });
 
 test("saved-library presentation keeps genuine membership, Board URLs and a keyboard focus destination without metadata requests", (t) => {
@@ -155,29 +166,32 @@ test("saved-library presentation keeps genuine membership, Board URLs and a keyb
     assert.equal(fetch.mock.callCount(), 0);
 });
 
-test("Vibes routes tag-filtered sample Boards through the shared browsing presentation while keeping active tags and honest disclosure", async (t) => {
+test("Vibes reads published summaries and keeps tag links beside genuine Board actions", async (t) => {
     const { default: VibePage } = await import("../src/app/discover/vibes/[id]/page");
     const { boardTags } = await import("../src/data/board-tags");
-    const { getDiscoverPreviewBoardsByTag } = await import("../src/data/discover-boards");
-    const tag = boardTags.find((candidate) => getDiscoverPreviewBoardsByTag(candidate.id).length > 0);
+    const { discoveryCard } = await import("./fixtures/discovery-card");
+    const tag = boardTags.find((candidate) => candidate.id === "foodie");
     assert.ok(tag);
-    const expected = getDiscoverPreviewBoardsByTag(tag.id);
-    const fetch = t.mock.method(globalThis, "fetch", async () => {
-        throw new Error("Sample collections must not request account state");
+    const fetch = t.mock.method(globalThis, "fetch", async (_input: string | URL | Request, init?: RequestInit) => {
+        assert.equal(init?.credentials, "omit");
+        return Response.json({
+            data: {
+                items: [discoveryCard(721), discoveryCard(722), discoveryCard(723, { tags: ["Architecture"] })],
+                hasMore: false
+            }
+        });
     });
     const page = await VibePage({ params: Promise.resolve({ id: tag.id }) });
     const nodes = elements(page);
     const header = nodes.find((node) => node.type === "header");
     assert.ok(header);
     const headingHtml = renderToStaticMarkup(createElement("header", header.props));
-    assert.match(headingHtml, /Preview/);
-    assert.match(headingHtml, /sample Boards?/);
-    assert.match(headingHtml, /Live public Boards will appear when discovery is connected/);
+    assert.doesNotMatch(headingHtml, /Preview|sample Boards?|discovery is connected/);
     const library = nodes.find((node) => Array.isArray(node.props.boards));
     assert.ok(library, "The actual Vibe route must use its Board library presenter");
     assert.deepEqual(
         (library.props.boards as Array<{ id: string }>).map((board) => board.id),
-        expected.map((board) => board.id)
+        ["721", "722"]
     );
     const html = renderToStaticMarkup(createElement(library.type as ElementType, library.props));
     assert.match(html, /aria-roledescription="carousel"/);
@@ -186,10 +200,10 @@ test("Vibes routes tag-filtered sample Boards through the shared browsing presen
     assert.match(html, /aria-label="Next [^\"]+"/);
     assert.match(html, /aria-current="page"/);
     assert.ok(html.includes(`href="/discover/vibes/${encodeURIComponent(tag.id)}"`));
-    for (const board of expected) assert.ok(html.includes(board.title));
-    assert.match(html, /href="\/boards\/collections\/samples\?tag=/);
-    assert.doesNotMatch(html, /href="\/boards\/\d|aria-label="(?:Save |Unsave )|aria-pressed=|\d[\d,]* saves/);
-    assert.equal(fetch.mock.callCount(), 0);
+    assert.match(html, /href="\/boards\/721"/);
+    assert.match(html, /href="\/boards\/722"/);
+    assert.doesNotMatch(html, /href="\/boards\/collections\/samples|Published Board 723/);
+    assert.equal(fetch.mock.callCount(), 1);
 });
 
 test("visitor profile library renders only supplied authorized results and keeps membership unknown instead of granting owner controls", (t) => {

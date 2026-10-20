@@ -1,7 +1,9 @@
 import type { BoardCardImage, PhotoBoardCardData } from "@/types/board-card";
+import { discoveryPhoto } from "./boards-discovery";
+import { loadPublicBoardPage } from "./public-discover";
 
 // Presentation and loader types only. These do not define the public Boards API contract.
-export type RoamFlowBoard = PhotoBoardCardData & { image: BoardCardImage; href?: string };
+export type RoamFlowBoard = PhotoBoardCardData & { image?: BoardCardImage; href?: string };
 export type RoamFlowPage = { boards: readonly RoamFlowBoard[]; nextCursor: string | null };
 export type RoamFlowSource = (cursor: string, signal: AbortSignal) => Promise<RoamFlowPage>;
 export const roamFlowPageSize = 7;
@@ -20,13 +22,14 @@ export function appendRoamFlowBoards(current: readonly RoamFlowBoard[], incoming
 
 export const loadRoamFlowPage: RoamFlowSource = async (cursor, signal) => {
     signal.throwIfAborted();
-    const { roamFlowBoards } = await import("@/data/roamflow-boards");
+    if (!/^[1-9]\d*$/.test(cursor) || Number(cursor) > 10000) throw new Error("Invalid RoamFlow page");
+    const page = Number(cursor);
+    const result = await loadPublicBoardPage(page, roamFlowPageSize, signal);
     signal.throwIfAborted();
-    if (!/^\d+$/.test(cursor)) throw new Error("Invalid RoamFlow preview cursor");
-    const offset = Number(cursor);
-    const end = offset + roamFlowPageSize;
     return {
-        boards: roamFlowBoards.slice(offset, end),
-        nextCursor: end < roamFlowBoards.length ? String(end) : null
+        boards: result.items
+            .filter((board) => board.status === "published" && board.visibility === "public")
+            .map((board) => ({ ...discoveryPhoto(board), href: `/boards/${board.boardId}` })),
+        nextCursor: result.hasMore ? String(page + 1) : null
     };
 };

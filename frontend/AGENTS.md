@@ -538,12 +538,22 @@ uses a native V4 card button that also toggles metadata when selected; navigatio
 the tab order, save controls keep their own keyboard interaction, and pan selection returns focus to the gallery region. Linked V4 cards preview metadata on the first touch and navigate on the next; mouse and keyboard retain normal link activation. There is no visible Details/Close button.
 See [V4 backend handoff](../docs/V4_BACKEND_HANDOFF.md) for cumulative gaps.
 
-### RoamFlow discovery preview
+### Live Discover Boards
 
-Discover's RoamFlow section reuses `PhotoBoardCard` (V4) in responsive, staggered CSS Grid groups of seven.
-`src/data/roamflow-boards.ts` contains 27 distinct fictional editorial stories with existing photography;
-sample cards have no Board detail links. The paged mock source and presentation types in
-`src/lib/roamflow.ts` are not a backend API contract. `useRoamFlow` handles request guards, cancellation,
+Discover reads public, published summaries through the existing Recent and weekly Featured APIs with credentials
+omitted. `data/discover-boards.ts` shares paginated summary reads within one server render, maps persisted tag names
+to catalog IDs, and supplies real Board links, collection matches and destination counts. Collection tag matching
+uses OR semantics and deduplicates Boards. Empty collections and vibes remain visible with an empty state; failed
+reads show unavailable messages, never sample Boards or fabricated counts. Editorial covers and definitions remain.
+Featured and RoamFlow reuse equal-sized PhotoBoardCards with the distinctive staggered placement; outer card edges
+align with the section padding. RoamFlow uses real recent Boards,
+including named placeholders for missing covers, and fetches further pages from the same public API.
+
+### RoamFlow layout
+
+Discover's RoamFlow section reuses `PhotoBoardCard` (V4) in responsive CSS Grid groups of seven with equal-sized cards and staggered vertical positions.
+`src/data/roamflow-boards.ts` retains fictional fixtures for tests and explicit demos; production uses the live loader in
+`src/lib/roamflow.ts`. `useRoamFlow` handles request guards, cancellation,
 deduplication, retry, and cursor progress. Automatic loading pauses after two pages until the user continues;
 the skip link cancels pending loading and keeps the existing Discover footer reachable.
 
