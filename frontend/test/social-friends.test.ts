@@ -4,6 +4,7 @@ import { Children, createElement, isValidElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import SocialFriendsContent from "@/components/features/social/SocialFriendsContent";
+import UnderlineTabs from "@/components/ui/UnderlineTabs";
 import FindFriendsDialog from "@/components/features/social/FindFriendsDialog";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import type { FriendUser, FriendBoardSummary, FriendActivityItem, UserSearchResult } from "@/lib/profile";
@@ -50,12 +51,41 @@ test("SocialFriendsContent renders header, audience tabs, and empty state sectio
     assert.ok(html.includes("SOCIAL"));
     assert.ok(html.includes("FRIENDS"));
     assert.ok(html.includes("ME"));
-    assert.ok(html.includes("EXPLORE"));
+    assert.ok(!html.includes("EXPLORE"));
+    assert.ok(!html.includes("collaborate with friends"));
+    assert.ok(html.includes("create new board"));
+    assert.ok(html.includes("explore boards"));
+    assert.ok(html.includes("explore destinations"));
     assert.ok(html.includes("my friends"));
     assert.ok(html.includes("recent activity"));
     assert.ok(html.includes("feeling inspired?"));
     assert.ok(html.includes("boards created by your friends"));
     assert.ok(html.includes("No travel pals yet"));
+});
+
+test("SocialFriendsContent tab navigation routes to /profile on ME click and omits EXPLORE tab", (context) => {
+    const pushed = { route: "" };
+    context.mock.method(mockRouter, "push", (href: string) => {
+        pushed.route = href;
+    });
+
+    const { nodes } = capture(() =>
+        SocialFriendsContent({
+            initialFriends: [],
+            initialBoards: [],
+            initialActivities: []
+        })
+    );
+    const tabsNode = nodes.find((n) => n.type === UnderlineTabs);
+    assert.ok(tabsNode, "UnderlineTabs must exist");
+
+    const tabs = (tabsNode.props as { tabs: string[] }).tabs;
+    assert.deepEqual(tabs, ["ME", "FRIENDS"]);
+    assert.ok(!tabs.includes("EXPLORE"));
+
+    const onChange = (tabsNode.props as { onChange: (tab: string) => void }).onChange;
+    onChange("ME");
+    assert.equal(pushed.route, "/profile");
 });
 
 test("SocialFriendsContent renders friends, activity, and friends boards when available", () => {
