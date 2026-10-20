@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test, { type TestContext } from "node:test";
 import React, { Children, isValidElement, type ComponentProps, type ReactNode } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { setImmediate } from "node:timers/promises";
 import DestinationStoryCard from "../src/components/features/destinations/DestinationStoryCard";
 import AccountPhotoBoardCard from "../src/components/features/boards/cards/AccountPhotoBoardCard";
@@ -184,4 +185,23 @@ test("destination typography and watermark placement survive canonical enrichmen
     assert.deepEqual(selected.hoverActions, { editHref: "/boards/91/edit", viewHref: "/boards/91" });
     card.load();
     assert.deepEqual(requests, ["/api/v1/boards/91"]);
+});
+
+test("a direct collection card resolves owner permissions before offering Edit instead of a bookmark", async (t) => {
+    t.mock.method(globalThis, "fetch", async () =>
+        Response.json({ data: { ...document, permissions: { canManageBoard: true, canEditContent: true } } })
+    );
+    const card = harness(t);
+    const direct = { selection: undefined, href: "/boards/91" };
+    assert.equal(accountProps(card.render(true, direct)).ownership, "unknown");
+    card.load();
+    await setImmediate();
+    const props = accountProps(card.render(true, direct));
+    assert.equal(props.href, "/boards/91");
+    assert.equal(props.ownership, "owner");
+    assert.deepEqual(props.hoverActions, { editHref: "/boards/91/edit", viewHref: "/boards/91" });
+    t.mock.restoreAll();
+    const html = renderToStaticMarkup(React.createElement(AccountPhotoBoardCard, props));
+    assert.match(html, /aria-label="Edit Real title"/);
+    assert.doesNotMatch(html, /aria-label="(?:Save |Unsave )/);
 });

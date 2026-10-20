@@ -559,7 +559,7 @@ test("guide reads use the real credentialed API with city identity, page, limit 
         latitude: "35.6762",
         longitude: "139.6503",
         page: "2",
-        limit: "6"
+        limit: "10"
     });
     assert.equal(calls[0].init?.credentials, "include");
     assert.equal(calls[0].init?.signal, signal);
@@ -831,7 +831,7 @@ test("public Boards use spatial V4 cards with chosen covers and honest fallbacks
     assert.match(boards, /real_traveller/);
 });
 
-test("the fixed public Boards chapter keeps every loaded Board reachable in its keyboard gallery", () => {
+test("the fixed public Boards chapter caps previews at ten with View all in its keyboard gallery", () => {
     const sample = guide().boards[0];
     const boards = Array.from({ length: 12 }, (_, index) => ({
         ...sample,
@@ -848,7 +848,7 @@ test("the fixed public Boards chapter keeps every loaded Board reachable in its 
     const selections = Array.from(chapter.matchAll(/<button\b[^>]*aria-label="Select Tokyo public trip (\d+)"[^>]*>/g));
     assert.deepEqual(
         selections.map(([, number]) => Number(number)),
-        boards.slice(1).map((_, index) => index + 2)
+        boards.slice(1, 10).map((_, index) => index + 2)
     );
     for (const [button] of selections) {
         assert.match(button, /tabindex="-1"/);
@@ -856,10 +856,12 @@ test("the fixed public Boards chapter keeps every loaded Board reachable in its 
     const links = Array.from(chapter.matchAll(/<a\b[^>]*href="\/boards\/(\d+)"[^>]*>/g));
     assert.deepEqual([...new Set(links.map(([, id]) => Number(id)))], [boards[0].boardId]);
     assert.doesNotMatch(chapter, />Open Board/);
-    assert.match(chapter, /aria-label="Previous slide"/);
-    assert.match(chapter, /aria-label="Next slide"/);
-    for (const board of boards) assert.ok(chapter.includes(board.username));
-    assert.match(chapter, /<button\b[^>]*>Load more boards<\/button>/);
+    assert.match(chapter, /aria-label="Previous Board"/);
+    assert.match(chapter, /aria-label="Next Board"/);
+    for (const board of boards.slice(0, 10)) assert.ok(chapter.includes(board.username));
+    for (const board of boards.slice(10)) assert.ok(!chapter.includes(board.username));
+    assert.doesNotMatch(chapter, />Load more boards/);
+    assert.match(chapter, /view all/);
     assert.equal((markup.match(/\bdata-destination-chapter\b/g) ?? []).length, 4);
 });
 
@@ -905,7 +907,7 @@ test("loaded public Boards remain visible beside pagination failures and loading
     const markup = renderGuide(loaded);
     assert.match(markup, /href="\/boards\/721"/);
     assert.match(markup, /aria-label="Select Tokyo morning platforms"/);
-    assert.match(markup, /aria-label="Next slide"/);
+    assert.match(markup, /aria-label="Next Board"/);
     const failed = renderGuide(guide({ hasMore: true }), {
         error: "Page two unavailable",
         onLoadMore() {},
@@ -916,7 +918,8 @@ test("loaded public Boards remain visible beside pagination failures and loading
     assert.match(failed, /Try again|Retry/i);
     const loading = renderGuide(guide({ hasMore: true }), { loadingMore: true, onLoadMore() {} });
     assert.match(loading, /href="\/boards\/721"/);
-    assert.match(loading, /<button\b[^>]*disabled[^>]*>[\s\S]*?(?:Loading|Load more)/i);
+    assert.doesNotMatch(loading, />Load more boards/);
+    assert.match(loading, /view all/);
 });
 
 test("compact guide offers secondary travel advice as a closed native disclosure without losing prose or attribution", () => {

@@ -173,6 +173,8 @@ export function DestinationPage({ destination: guide, onLoadMore, onRetry, loadi
                     kind={destination.kind}
                     name={destination.name}
                     countryCode={destination.countryCode}
+                    latitude={destination.latitude}
+                    longitude={destination.longitude}
                     boards={guide.boards}
                     hasMore={guide.hasMore}
                     onLoadMore={onLoadMore}

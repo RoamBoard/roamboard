@@ -33,7 +33,12 @@ const card = (boardId: number, owned = false): DiscoveryCard => ({
     updatedAt: "2026-10-20T00:00:00Z",
     permissions: { canEditContent: owned, canManageBoard: owned }
 });
-function render(context: CollectionContext, search: string, store = createDiscoveryStore()) {
+function render(
+    context: CollectionContext,
+    search: string,
+    store = createDiscoveryStore(),
+    category?: { title: string; tags: readonly string[] }
+) {
     const navigations: string[] = [];
     const holder: { nodes: ReturnType<typeof elements> } = { nodes: [] };
     const router = {
@@ -47,6 +52,7 @@ function render(context: CollectionContext, search: string, store = createDiscov
     function Probe() {
         const tree = BoardCollectionGridContent({
             context,
+            category,
             account: { ready: true, user: { userId: "viewer", username: "viewer", displayName: "Viewer" } },
             store
         });
@@ -161,4 +167,26 @@ test("empty collections and no search matches remain distinct and failures retai
     await store.load("/boards/collections/saved?page=1&limit=20&sort=saved-at-desc");
     assert.match(render("saved", "", store).markup, /Try again later/);
     assert.doesNotMatch(render("saved", "", store).markup, /No Boards in this collection yet/);
+});
+
+test("Discover collection tags stay fixed across sorting and pagination and show owner edit actions", async (t) => {
+    const category = { title: "Food Boards", tags: ["Foodie", "Street Food"] };
+    const store = createDiscoveryStore();
+    const calls: URL[] = [];
+    t.mock.method(globalThis, "fetch", async (input: string, init?: RequestInit) => {
+        calls.push(new URL(input));
+        assert.equal(init?.credentials, "include");
+        return Response.json({ data: { items: [card(1, true), card(2)], total: 37 } });
+    });
+    await store.load("/boards/collections/category?page=1&limit=20&tags=Foodie&tags=Street+Food&sort=published-desc");
+    const view = render("category", "", store, category);
+    assert.match(view.markup, /Food Boards/);
+    const cards = view.nodes.filter((node) => node.type === AccountPhotoBoardCard);
+    assert.equal(cards.length, 2);
+    assert.equal(cards[0].props.ownership, "owner");
+    assert.equal((cards[0].props.hoverActions as { editHref: string }).editHref, "/boards/1/edit");
+    assert.equal(cards[1].props.ownership, "other");
+    assert.deepEqual(calls[0].searchParams.getAll("tags"), category.tags);
+    const pagination = view.nodes.find((node) => node.type === Pagination)!;
+    assert.equal(pagination.props.totalPages, 2);
 });

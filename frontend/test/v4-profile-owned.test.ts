@@ -92,7 +92,7 @@ test("own profile consumes actual visibility from its existing summary endpoint 
     assert.match(markup, /Restricted access — you and invited Board members/);
     assert.ok(markup.includes(author));
     assert.doesNotMatch(markup, /aria-pressed=|aria-label="(?:Save |Unsave )/);
-    assert.deepEqual(requests, ["/api/v1/boards?scope=published&page=1&limit=3"]);
+    assert.deepEqual(requests, ["/api/v1/boards?scope=published&page=1&limit=10"]);
 });
 
 test("public profile summaries expose unknown saving honestly without owner or editing controls", async (t) => {

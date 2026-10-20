@@ -156,7 +156,7 @@ export default function ProfilePageContent({
     const [profile, setProfile] = useState<UserProfile | null>(initialProfile);
     const [stats, setStats] = useState<ProfileStats | null>(initialStats);
     const [published, setPublished] = useState<PublishedBoardSummary[]>(initialPublished);
-    const [savedStore] = useState(() => createSavedBoardsStore(3));
+    const [savedStore] = useState(() => createSavedBoardsStore(10));
     const saved = useSyncExternalStore(savedStore.subscribe, savedStore.getSnapshot, savedStore.getSnapshot);
     const [friends, setFriends] = useState<FriendUser[]>(initialFriends);
     const [destinations, setDestinations] = useState<MapDestination[]>(initialDestinations);

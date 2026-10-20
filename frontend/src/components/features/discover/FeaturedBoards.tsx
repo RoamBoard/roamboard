@@ -1,4 +1,4 @@
-import AccountPhotoBoardCard from "@/components/features/boards/cards/AccountPhotoBoardCard";
+import DestinationStoryCard from "@/components/features/destinations/DestinationStoryCard";
 import type { DiscoverBoard } from "@/data/discover-boards";
 import { toDiscoverPhotoBoardCard } from "./DiscoverBoardCard";
 
@@ -52,12 +52,10 @@ export default function FeaturedBoards({
             <div className="contents">
                 {boards.slice(0, 5).map((board, index) => (
                     <div key={board.id} className={`min-w-0 self-start ${positions[index]}`}>
-                        <AccountPhotoBoardCard
+                        <DestinationStoryCard
                             tilt
                             board={toDiscoverPhotoBoardCard(board)}
                             href={board.href}
-                            ownership="other"
-                            initialSaved={false}
                             showVisibility
                             hideCoverCredit
                             hoverActions={board.href ? { viewHref: board.href } : undefined}

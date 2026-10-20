@@ -67,10 +67,12 @@ const sorts = [
 
 export default function BoardCollectionGrid({
     context,
-    embedded = false
+    embedded = false,
+    category
 }: {
     context: CollectionContext;
     embedded?: boolean;
+    category?: { title: string; tags: readonly string[] };
 }) {
     const [account, setAccount] = useState<{ ready: boolean; user: AuthUser | null }>({ ready: false, user: null });
     useEffect(
@@ -87,6 +89,7 @@ export default function BoardCollectionGrid({
             key={viewer}
             context={context}
             embedded={embedded}
+            category={category}
             account={account}
             store={store}
         />
@@ -96,11 +99,13 @@ export default function BoardCollectionGrid({
 export function BoardCollectionGridContent({
     context,
     embedded = false,
+    category,
     account,
     store
 }: {
     context: CollectionContext;
     embedded?: boolean;
+    category?: { title: string; tags: readonly string[] };
     account: { ready: boolean; user: AuthUser | null };
     store: ReturnType<typeof createDiscoveryStore>;
 }) {
@@ -116,6 +121,10 @@ export function BoardCollectionGridContent({
     for (const key of sourceKeys) {
         const value = params.get(key);
         if (value !== null) query.set(key, value);
+    }
+    if (category) {
+        query.delete("tag");
+        for (const tag of category.tags) query.append("tags", tag);
     }
     for (const key of ["countries", "continents"]) for (const value of params.getAll(key)) query.append(key, value);
     if (q) query.set("q", q);
@@ -161,9 +170,9 @@ export function BoardCollectionGridContent({
             : [];
     const total = context === "samples" ? samples.length : (state.data?.total ?? 0);
     const Heading = embedded ? "h2" : "h1";
-    const title = params.get("handle")
-        ? `${collectionTitles[context]} · @${params.get("handle")}`
-        : collectionTitles[context];
+    const title =
+        category?.title ??
+        (params.get("handle") ? `${collectionTitles[context]} · @${params.get("handle")}` : collectionTitles[context]);
     return (
         <section
             aria-labelledby={`collection-${context}-heading`}
