@@ -787,6 +787,7 @@ test("a failed undo preserves the snapshot and allows retry until successful", a
     assert.ok(failedBar);
     assert.ok(failedBar.props.error, "An error must be reported after undo failure");
     assert.equal(failedBar.props.canUndo, true, "canUndo must remain true so snapshot is not lost");
+    assert.equal(failedBar.props.canRetryUndo, true, "canRetryUndo must be true when undo fails");
     assert.equal(failedBar.props.showToast, false, "Toast is dismissed so error alert can take precedence");
 
     // The error alert must offer a retry button
@@ -804,9 +805,49 @@ test("a failed undo preserves the snapshot and allows retry until successful", a
     const restoredBar = restored.nodes.find((node) => node.type === SettingsSaveBar);
     assert.equal(restoredBar?.props.error, null);
     assert.equal(restoredBar?.props.canUndo, false);
+    assert.equal(restoredBar?.props.canRetryUndo, false);
     const details = restored.nodes.find((node) => node.type === PersonalDetailsForm);
     assert.equal(details?.props.name, "Traveler");
     assert.deepEqual(page.destinations, []);
+});
+
+test("editing after a save clears the snapshot and does not offer retry undo on subsequent save failure", async (context) => {
+    const requests: RequestInit[] = [];
+    settingsFetch(context, (init) => {
+        requests.push(init);
+        return Promise.resolve(
+            Response.json({
+                data: { ...initialProfile, displayName: "First save", username: "canonical_name", revision: 5 }
+            })
+        );
+    });
+    const page = mountPage(context, SettingsContent);
+    await flushRequests();
+    changeName(page, "First save");
+    submit(page);
+    await flushRequests();
+
+    const saved = page.render();
+    const saveBar = saved.nodes.find((node) => node.type === SettingsSaveBar);
+    assert.ok(saveBar);
+    assert.equal(saveBar.props.showToast, true);
+    assert.equal(saveBar.props.canUndo, true);
+
+    // User starts a new edit (which fails local validation)
+    changeName(page, " ");
+    submit(page);
+    await flushRequests();
+
+    const failed = page.render();
+    const failedBar = failed.nodes.find((node) => node.type === SettingsSaveBar);
+    assert.ok(failedBar);
+    assert.ok(failedBar.props.error, "Local validation error must be reported");
+    assert.equal(failedBar.props.canUndo, false, "Snapshot must be cleared when starting a new edit");
+    assert.equal(failedBar.props.canRetryUndo, false, "Retry undo must not be offered for a failed save");
+
+    const { nodes: failedNodes } = capture(() => SettingsSaveBar(failedBar.props as SaveBarProps));
+    const retryBtn = failedNodes.find((node) => node.type === "button" && node.props.children === "Retry undo");
+    assert.equal(retryBtn, undefined, "Error alert must not offer 'Retry undo' after an ordinary save failure");
 });
 
 test("mounted toast automatically dismisses after six seconds", (context) => {

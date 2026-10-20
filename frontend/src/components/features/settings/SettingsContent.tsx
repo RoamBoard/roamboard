@@ -64,6 +64,7 @@ export default function SettingsContent() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [undoing, setUndoing] = useState(false);
+    const [undoFailed, setUndoFailed] = useState(false);
     const writeInProgress = useRef(false);
     const mounted = useRef(false);
     const [error, setError] = useState("");
@@ -110,6 +111,7 @@ export default function SettingsContent() {
         setSaveError(null);
         setShowSaveToast(false);
         setLastSaved(null);
+        setUndoFailed(false);
         setSaved(null);
         setDraft(null);
         setRetry((value) => value + 1);
@@ -119,6 +121,8 @@ export default function SettingsContent() {
     function change(field: ProfileSettingsField, value: string | string[] | null) {
         if (writeInProgress.current || !draft) return;
         setShowSaveToast(false);
+        setLastSaved(null);
+        setUndoFailed(false);
         setDraft((current) => (current ? { ...current, [field]: value } : current));
         if (saveError?.fields?.[field]) {
             const remaining = { ...saveError.fields };
@@ -168,6 +172,7 @@ export default function SettingsContent() {
         if (!beginWrite()) return;
         setSaveError(null);
         setShowSaveToast(false);
+        setUndoFailed(false);
         try {
             const previous = saved;
             const next = await updateProfile({
@@ -217,10 +222,12 @@ export default function SettingsContent() {
             });
             setLastSaved(null);
             setShowSaveToast(false);
+            setUndoFailed(false);
         } catch (caught) {
             if (mounted.current) {
                 setSaveError(profileSaveError(caught));
                 setShowSaveToast(false);
+                setUndoFailed(true);
                 // Preserve lastSaved so the user can retry undoing.
             }
         } finally {
@@ -232,9 +239,13 @@ export default function SettingsContent() {
     function handleDismissToast() {
         setShowSaveToast(false);
         setLastSaved(null);
+        setUndoFailed(false);
     }
 
     function onPictureChange(profile: UserProfile) {
+        setShowSaveToast(false);
+        setLastSaved(null);
+        setUndoFailed(false);
         setSaved((current) => latestProfile(current, profile));
         setDraft((current) =>
             current && current.revision > profile.revision
@@ -401,6 +412,7 @@ export default function SettingsContent() {
                             setSaveError(null);
                             setShowSaveToast(false);
                             setLastSaved(null);
+                            setUndoFailed(false);
                         }}
                         saving={saving}
                         undoing={undoing}
@@ -411,6 +423,7 @@ export default function SettingsContent() {
                         onDismissToast={handleDismissToast}
                         onUndo={() => void undo()}
                         canUndo={Boolean(lastSaved) && !saving && !undoing}
+                        canRetryUndo={undoFailed && Boolean(lastSaved) && !saving && !undoing}
                         toastKey={toastKey}
                     />
                 </form>

@@ -16,6 +16,7 @@ type Props = {
     onDismissToast?: () => void;
     onUndo?: () => void;
     canUndo?: boolean;
+    canRetryUndo?: boolean;
     toastKey?: number | string;
 };
 
@@ -44,6 +45,7 @@ export default function SettingsSaveBar({
     onDismissToast,
     onUndo,
     canUndo = false,
+    canRetryUndo = false,
     toastKey = 0
 }: Props) {
     const errorRef = useRef<HTMLDivElement>(null);
@@ -248,7 +250,7 @@ export default function SettingsSaveBar({
                                     Reload latest profile
                                 </button>
                             )}
-                            {canUndo && onUndo && (
+                            {canRetryUndo && onUndo && (
                                 <button
                                     type="button"
                                     onClick={onUndo}
