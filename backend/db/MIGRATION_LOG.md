@@ -1,5 +1,9 @@
 # Shared development database migration log
 
+## Expanded spoken language catalog — 2026-10-20
+
+Applied migration `019_add_spoken_languages.sql` in one transaction to the shared Azure database `roamboard_dev` through the SSH tunnel. It seeds 79 additional spoken languages into the `language` table (bringing the total to 107 persisted languages, covering all 106 spoken languages defined in `shared/spoken-languages.json`) to satisfy the `FK_user_language_1` foreign key constraint when users select and save newly supported languages in their profile. The migration is idempotent (`ON CONFLICT (language_name) DO NOTHING;`). Do not rerun 019.
+
 ## Boards discovery — 2026-10-20
 
 Applied the discovery schema under its former filename `016_board_discovery.sql`, now renamed to
