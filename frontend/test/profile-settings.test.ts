@@ -311,13 +311,30 @@ test("saving disables repeat saves and reset while announcing progress", () => {
 // This runs the production page handlers and API clients without a browser or a new test dependency.
 function mountPage(context: TestContext, page: () => ReactNode) {
     const documentBefore = Object.getOwnPropertyDescriptor(globalThis, "document");
+    const windowBefore = Object.getOwnPropertyDescriptor(globalThis, "window");
     Object.defineProperty(globalThis, "document", {
         configurable: true,
-        value: { documentElement: { classList: { contains: () => false } }, getElementById: () => null }
+        value: {
+            documentElement: { classList: { contains: () => false } },
+            getElementById: () => null,
+            hidden: false,
+            hasFocus: () => true,
+            addEventListener: noop,
+            removeEventListener: noop
+        }
+    });
+    Object.defineProperty(globalThis, "window", {
+        configurable: true,
+        value: {
+            addEventListener: noop,
+            removeEventListener: noop
+        }
     });
     context.after(() => {
         if (documentBefore) Object.defineProperty(globalThis, "document", documentBefore);
         else Reflect.deleteProperty(globalThis, "document");
+        if (windowBefore) Object.defineProperty(globalThis, "window", windowBefore);
+        else Reflect.deleteProperty(globalThis, "window");
     });
     const destinations: string[] = [];
     const router = {
@@ -379,6 +396,201 @@ function mountPage(context: TestContext, page: () => ReactNode) {
     const unmount = () => cleanups.splice(0).forEach((cleanup) => cleanup());
     context.after(unmount);
     return { render, destinations, unmount };
+}
+
+type SaveBarProps = Parameters<typeof SettingsSaveBar>[0];
+
+function mountSaveBar(
+    context: TestContext,
+    initialProps: SaveBarProps,
+    environment: { documentHidden?: boolean; windowFocused?: boolean } = {}
+) {
+    context.mock.timers.enable({ apis: ["setTimeout", "Date"] });
+
+    const docListeners = new Map<string, Set<(e: unknown) => void>>();
+    const winListeners = new Map<string, Set<(e: unknown) => void>>();
+
+    const docState = {
+        hidden: Boolean(environment.documentHidden),
+        hasFocus: () => (environment.windowFocused !== undefined ? environment.windowFocused : true),
+        addEventListener: (type: string, listener: (e: unknown) => void) => {
+            if (!docListeners.has(type)) docListeners.set(type, new Set());
+            docListeners.get(type)!.add(listener);
+        },
+        removeEventListener: (type: string, listener: (e: unknown) => void) => {
+            docListeners.get(type)?.delete(listener);
+        },
+        documentElement: { classList: { contains: () => false } },
+        getElementById: () => null
+    };
+
+    const winState = {
+        addEventListener: (type: string, listener: (e: unknown) => void) => {
+            if (!winListeners.has(type)) winListeners.set(type, new Set());
+            winListeners.get(type)!.add(listener);
+        },
+        removeEventListener: (type: string, listener: (e: unknown) => void) => {
+            winListeners.get(type)?.delete(listener);
+        }
+    };
+
+    const originalDoc = Object.getOwnPropertyDescriptor(globalThis, "document");
+    const originalWin = Object.getOwnPropertyDescriptor(globalThis, "window");
+
+    Object.defineProperty(globalThis, "document", { configurable: true, value: docState });
+    Object.defineProperty(globalThis, "window", { configurable: true, value: winState });
+
+    context.after(() => {
+        if (originalDoc) Object.defineProperty(globalThis, "document", originalDoc);
+        else Reflect.deleteProperty(globalThis, "document");
+        if (originalWin) Object.defineProperty(globalThis, "window", originalWin);
+        else Reflect.deleteProperty(globalThis, "window");
+    });
+
+    const propsHolder = { current: { ...initialProps } };
+    const refs: Array<{ current: unknown }> = [];
+    const effectRecords: Array<{
+        effect: () => void | (() => void);
+        deps: unknown[] | undefined;
+        cleanup?: void | (() => void);
+    }> = [];
+
+    const mockProgressBar = {
+        style: {
+            animationPlayState: "running"
+        }
+    };
+
+    function attachRefs(node: ReactNode) {
+        if (!isValidElement(node)) return;
+        const props = node.props as { ref?: unknown; className?: unknown; children?: ReactNode } | undefined;
+        const ref = props?.ref;
+        if (ref && typeof ref === "object" && "current" in ref) {
+            const className = String(props?.className ?? "");
+            if (className.includes("animate-toast-progress")) {
+                (ref as { current: unknown }).current = mockProgressBar;
+            }
+        }
+        Children.toArray(props?.children).forEach(attachRefs);
+    }
+
+    const renderHolder: { current: { result: ReactNode; nodes: ReturnType<typeof elements> } } = {
+        current: { result: null, nodes: [] }
+    };
+
+    function runRender() {
+        const cursor = { ref: 0, effect: 0 };
+        const originalHooks = {
+            useRef: React.useRef,
+            useCallback: React.useCallback,
+            useEffect: React.useEffect
+        };
+
+        React.useRef = ((initial: unknown) => {
+            const index = cursor.ref++;
+            return (refs[index] ??= { current: initial });
+        }) as typeof React.useRef;
+
+        React.useCallback = ((fn: (...args: unknown[]) => unknown) => {
+            return fn;
+        }) as typeof React.useCallback;
+
+        React.useEffect = (effect, deps) => {
+            const index = cursor.effect++;
+            const prev = effectRecords[index];
+            const hasChanged = !prev || !deps || !prev.deps || deps.some((dep, i) => !Object.is(dep, prev.deps![i]));
+            if (hasChanged) {
+                if (prev?.cleanup && typeof prev.cleanup === "function") {
+                    prev.cleanup();
+                }
+                effectRecords[index] = {
+                    effect,
+                    deps: deps ? [...deps] : undefined,
+                    cleanup: undefined
+                };
+            }
+        };
+
+        const holder: { tree: ReactNode } = { tree: null };
+        try {
+            holder.tree = SettingsSaveBar(propsHolder.current);
+        } finally {
+            Object.assign(React, originalHooks);
+        }
+
+        attachRefs(holder.tree);
+
+        for (const record of effectRecords) {
+            if (record.cleanup === undefined) {
+                record.cleanup = record.effect() ?? undefined;
+            }
+        }
+
+        const nodes = elements(holder.tree);
+        return { result: holder.tree, nodes };
+    }
+
+    renderHolder.current = runRender();
+
+    const setProps = (nextProps: Partial<SaveBarProps>) => {
+        propsHolder.current = { ...propsHolder.current, ...nextProps };
+        renderHolder.current = runRender();
+        return renderHolder.current;
+    };
+
+    const unmount = () => {
+        for (const record of effectRecords) {
+            if (record.cleanup && typeof record.cleanup === "function") {
+                record.cleanup();
+                record.cleanup = undefined;
+            }
+        }
+    };
+    context.after(unmount);
+
+    return {
+        get nodes() {
+            return renderHolder.current.nodes;
+        },
+        get progressBar() {
+            return mockProgressBar;
+        },
+        setProps,
+        unmount,
+        emitWindowBlur: () => {
+            const ev = typeof Event !== "undefined" ? new Event("blur") : { type: "blur" };
+            winListeners.get("blur")?.forEach((cb) => cb(ev));
+        },
+        emitWindowFocus: () => {
+            const ev = typeof Event !== "undefined" ? new Event("focus") : { type: "focus" };
+            winListeners.get("focus")?.forEach((cb) => cb(ev));
+        },
+        emitVisibilityChange: (hidden: boolean) => {
+            docState.hidden = hidden;
+            const ev = typeof Event !== "undefined" ? new Event("visibilitychange") : { type: "visibilitychange" };
+            docListeners.get("visibilitychange")?.forEach((cb) => cb(ev));
+        },
+        setDocumentFocus: (focused: boolean) => {
+            docState.hasFocus = () => focused;
+        },
+        setDocumentHidden: (hidden: boolean) => {
+            docState.hidden = hidden;
+        },
+        getToastElement: () =>
+            renderHolder.current.nodes.find((n) => n.props.role === "status" && n.props["aria-live"] === "polite"),
+        getUndoButton: () =>
+            renderHolder.current.nodes.find(
+                (n) =>
+                    n.type === "button" &&
+                    (n.props.children === "Undo" ||
+                        n.props.children === "Undoing…" ||
+                        n.props.children === "Restoring…")
+            ),
+        getDismissButton: () =>
+            renderHolder.current.nodes.find(
+                (n) => n.type === "button" && n.props["aria-label"] === "Dismiss notification"
+            )
+    };
 }
 
 const flushRequests = () => new Promise<void>((resolve) => setImmediate(resolve));
@@ -505,7 +717,12 @@ test("clicking undo performs a version-checked restore without redirecting", asy
     const saveBar = rendered.nodes.find((node) => node.type === SettingsSaveBar);
     assert.equal(saveBar?.props.showToast, true);
     assert.equal(saveBar?.props.canUndo, true);
-    (saveBar?.props.onUndo as () => void)();
+
+    const { nodes: saveBarNodes } = capture(() => SettingsSaveBar(saveBar.props));
+    const undoButton = saveBarNodes.find((node) => node.type === "button" && node.props.children === "Undo");
+    assert.ok(undoButton, "The toast must render the real Undo button");
+    (undoButton.props.onClick as () => void)();
+
     await flushRequests();
     assert.equal(requests.length, 2);
     const undoPayload = JSON.parse(String(requests[1].body));
@@ -515,6 +732,325 @@ test("clicking undo performs a version-checked restore without redirecting", asy
     const details = restored.nodes.find((node) => node.type === PersonalDetailsForm);
     assert.equal(details?.props.name, "Traveler");
     assert.deepEqual(page.destinations, []);
+});
+
+test("a failed undo preserves the snapshot and allows retry until successful", async (context) => {
+    const requests: RequestInit[] = [];
+    const flags = { shouldFailUndo: true };
+    settingsFetch(context, (init) => {
+        requests.push(init);
+        if (requests.length === 1) {
+            return Promise.resolve(
+                Response.json({
+                    data: { ...initialProfile, displayName: "New name", username: "canonical_name", revision: 5 }
+                })
+            );
+        }
+        if (flags.shouldFailUndo) {
+            flags.shouldFailUndo = false;
+            return Promise.resolve(
+                new Response(JSON.stringify({ error: { code: "INTERNAL_ERROR", message: "Server error" } }), {
+                    status: 500,
+                    headers: { "Content-Type": "application/json" }
+                })
+            );
+        }
+        return Promise.resolve(
+            Response.json({
+                data: { ...initialProfile, displayName: "Traveler", username: "canonical_name", revision: 6 }
+            })
+        );
+    });
+    const page = mountPage(context, SettingsContent);
+    await flushRequests();
+    changeName(page, "New name");
+    submit(page);
+    await flushRequests();
+
+    const saved = page.render();
+    const saveBar = saved.nodes.find((node) => node.type === SettingsSaveBar);
+    assert.equal(saveBar?.props.showToast, true);
+    assert.equal(saveBar?.props.canUndo, true);
+
+    // Click the real Undo button from the toast
+    const { nodes: toastNodes } = capture(() => SettingsSaveBar(saveBar.props));
+    const undoBtn = toastNodes.find((node) => node.type === "button" && node.props.children === "Undo");
+    assert.ok(undoBtn, "Toast must render the real Undo button");
+    (undoBtn.props.onClick as () => void)();
+    await flushRequests();
+
+    // The undo failed: error is shown, snapshot is preserved, toast is dismissed
+    const failed = page.render();
+    const failedBar = failed.nodes.find((node) => node.type === SettingsSaveBar);
+    assert.ok(failedBar?.props.error, "An error must be reported after undo failure");
+    assert.equal(failedBar?.props.canUndo, true, "canUndo must remain true so snapshot is not lost");
+    assert.equal(failedBar?.props.showToast, false, "Toast is dismissed so error alert can take precedence");
+
+    // The error alert must offer a retry button
+    const { nodes: failedNodes } = capture(() => SettingsSaveBar(failedBar.props));
+    const retryBtn = failedNodes.find((node) => node.type === "button" && node.props.children === "Retry undo");
+    assert.ok(retryBtn, "Error alert must offer a 'Retry undo' button");
+
+    // Click 'Retry undo'
+    (retryBtn.props.onClick as () => void)();
+    await flushRequests();
+
+    // Succeeded on retry
+    assert.equal(requests.length, 3);
+    const restored = page.render();
+    const restoredBar = restored.nodes.find((node) => node.type === SettingsSaveBar);
+    assert.equal(restoredBar?.props.error, null);
+    assert.equal(restoredBar?.props.canUndo, false);
+    const details = restored.nodes.find((node) => node.type === PersonalDetailsForm);
+    assert.equal(details?.props.name, "Traveler");
+    assert.deepEqual(page.destinations, []);
+});
+
+test("mounted toast automatically dismisses after six seconds", (context) => {
+    const dismissed: boolean[] = [];
+    const harness = mountSaveBar(context, {
+        isDirty: false,
+        onReset: noop,
+        saving: false,
+        error: null,
+        showToast: true,
+        canUndo: true,
+        onUndo: noop,
+        onDismissToast: () => dismissed.push(true),
+        toastKey: 1
+    });
+
+    assert.equal(harness.progressBar.style.animationPlayState, "running");
+    context.mock.timers.tick(5999);
+    assert.equal(dismissed.length, 0);
+
+    context.mock.timers.tick(1);
+    assert.equal(dismissed.length, 1);
+});
+
+test("hovering the mounted toast pauses both dismissal timer and progress bar animation", (context) => {
+    const dismissed: boolean[] = [];
+    const harness = mountSaveBar(context, {
+        isDirty: false,
+        onReset: noop,
+        saving: false,
+        error: null,
+        showToast: true,
+        canUndo: true,
+        onUndo: noop,
+        onDismissToast: () => dismissed.push(true),
+        toastKey: 1
+    });
+
+    context.mock.timers.tick(2000);
+    assert.equal(harness.progressBar.style.animationPlayState, "running");
+
+    const toast = harness.getToastElement();
+    assert.ok(toast);
+    (toast.props.onMouseEnter as () => void)();
+    assert.equal(harness.progressBar.style.animationPlayState, "paused");
+
+    context.mock.timers.tick(10000);
+    assert.equal(dismissed.length, 0);
+
+    (toast.props.onMouseLeave as () => void)();
+    assert.equal(harness.progressBar.style.animationPlayState, "running");
+
+    context.mock.timers.tick(3999);
+    assert.equal(dismissed.length, 0);
+
+    context.mock.timers.tick(1);
+    assert.equal(dismissed.length, 1);
+});
+
+test("focusing within the mounted toast pauses both dismissal timer and progress bar animation", (context) => {
+    const dismissed: boolean[] = [];
+    const harness = mountSaveBar(context, {
+        isDirty: false,
+        onReset: noop,
+        saving: false,
+        error: null,
+        showToast: true,
+        canUndo: true,
+        onUndo: noop,
+        onDismissToast: () => dismissed.push(true),
+        toastKey: 1
+    });
+
+    context.mock.timers.tick(1500);
+    const toast = harness.getToastElement();
+    assert.ok(toast);
+    (toast.props.onFocus as () => void)();
+    assert.equal(harness.progressBar.style.animationPlayState, "paused");
+
+    context.mock.timers.tick(10000);
+    assert.equal(dismissed.length, 0);
+
+    (toast.props.onBlur as (e: { currentTarget: { contains: () => boolean }; relatedTarget: null }) => void)({
+        currentTarget: { contains: () => false },
+        relatedTarget: null
+    });
+    assert.equal(harness.progressBar.style.animationPlayState, "running");
+
+    context.mock.timers.tick(4499);
+    assert.equal(dismissed.length, 0);
+
+    context.mock.timers.tick(1);
+    assert.equal(dismissed.length, 1);
+});
+
+test("window blur pauses both dismissal timer and progress bar, and focus resumes them", (context) => {
+    const dismissed: boolean[] = [];
+    const harness = mountSaveBar(context, {
+        isDirty: false,
+        onReset: noop,
+        saving: false,
+        error: null,
+        showToast: true,
+        canUndo: true,
+        onUndo: noop,
+        onDismissToast: () => dismissed.push(true),
+        toastKey: 1
+    });
+
+    context.mock.timers.tick(2500);
+    harness.emitWindowBlur();
+    assert.equal(harness.progressBar.style.animationPlayState, "paused", "Progress bar must pause on window blur");
+
+    context.mock.timers.tick(10000);
+    assert.equal(dismissed.length, 0, "Dismissal timer must pause on window blur");
+
+    harness.emitWindowFocus();
+    assert.equal(harness.progressBar.style.animationPlayState, "running", "Progress bar must resume on window focus");
+
+    context.mock.timers.tick(3499);
+    assert.equal(dismissed.length, 0);
+
+    context.mock.timers.tick(1);
+    assert.equal(dismissed.length, 1);
+});
+
+test("document visibility change pauses dismissal timer and progress bar", (context) => {
+    const dismissed: boolean[] = [];
+    const harness = mountSaveBar(context, {
+        isDirty: false,
+        onReset: noop,
+        saving: false,
+        error: null,
+        showToast: true,
+        canUndo: true,
+        onUndo: noop,
+        onDismissToast: () => dismissed.push(true),
+        toastKey: 1
+    });
+
+    context.mock.timers.tick(2000);
+    harness.emitVisibilityChange(true);
+    assert.equal(harness.progressBar.style.animationPlayState, "paused");
+
+    context.mock.timers.tick(10000);
+    assert.equal(dismissed.length, 0);
+
+    harness.emitVisibilityChange(false);
+    assert.equal(harness.progressBar.style.animationPlayState, "running");
+
+    context.mock.timers.tick(3999);
+    assert.equal(dismissed.length, 0);
+
+    context.mock.timers.tick(1);
+    assert.equal(dismissed.length, 1);
+});
+
+test("toast mounted while page is hidden or window is unfocused starts paused", (context) => {
+    const dismissed: boolean[] = [];
+    const harness = mountSaveBar(
+        context,
+        {
+            isDirty: false,
+            onReset: noop,
+            saving: false,
+            error: null,
+            showToast: true,
+            canUndo: true,
+            onUndo: noop,
+            onDismissToast: () => dismissed.push(true),
+            toastKey: 1
+        },
+        { documentHidden: true, windowFocused: false }
+    );
+
+    assert.equal(harness.progressBar.style.animationPlayState, "paused");
+
+    context.mock.timers.tick(10000);
+    assert.equal(dismissed.length, 0, "Timer must not advance while page started hidden");
+
+    harness.setDocumentHidden(false);
+    harness.setDocumentFocus(true);
+    harness.emitWindowFocus();
+
+    assert.equal(harness.progressBar.style.animationPlayState, "running");
+
+    context.mock.timers.tick(5999);
+    assert.equal(dismissed.length, 0);
+
+    context.mock.timers.tick(1);
+    assert.equal(dismissed.length, 1);
+});
+
+test("pressing escape or clicking close dismisses the toast immediately", (context) => {
+    const counts = { dismiss: 0 };
+    const harness = mountSaveBar(context, {
+        isDirty: false,
+        onReset: noop,
+        saving: false,
+        error: null,
+        showToast: true,
+        canUndo: true,
+        onUndo: noop,
+        onDismissToast: () => {
+            counts.dismiss++;
+        },
+        toastKey: 1
+    });
+
+    const toast = harness.getToastElement();
+    assert.ok(toast);
+    (toast.props.onKeyDown as (e: { key: string }) => void)({ key: "Escape" });
+    assert.equal(counts.dismiss, 1);
+
+    const dismissBtn = harness.getDismissButton();
+    assert.ok(dismissBtn);
+    (dismissBtn.props.onClick as () => void)();
+    assert.equal(counts.dismiss, 2);
+});
+
+test("toast pauses while undoing is in progress", (context) => {
+    const dismissed: boolean[] = [];
+    const harness = mountSaveBar(context, {
+        isDirty: false,
+        onReset: noop,
+        saving: false,
+        error: null,
+        showToast: true,
+        canUndo: true,
+        onUndo: noop,
+        onDismissToast: () => dismissed.push(true),
+        toastKey: 1
+    });
+
+    context.mock.timers.tick(2000);
+    assert.equal(harness.progressBar.style.animationPlayState, "running");
+
+    harness.setProps({ undoing: true });
+    assert.equal(harness.progressBar.style.animationPlayState, "paused");
+
+    context.mock.timers.tick(10000);
+    assert.equal(dismissed.length, 0, "Dismissal must not trigger while undo is in flight");
+
+    const undoBtn = harness.getUndoButton();
+    assert.ok(undoBtn);
+    assert.equal(undoBtn.props.disabled, true);
+    assert.match(String(undoBtn.props.children), /Undoing|Restoring/);
 });
 
 test("a save that finishes after leaving settings does not redirect the user", async (context) => {

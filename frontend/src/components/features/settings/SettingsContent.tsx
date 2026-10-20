@@ -63,6 +63,7 @@ export default function SettingsContent() {
     const [saveError, setSaveError] = useState<ProfileSaveError | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [undoing, setUndoing] = useState(false);
     const writeInProgress = useRef(false);
     const mounted = useRef(false);
     const [error, setError] = useState("");
@@ -194,7 +195,8 @@ export default function SettingsContent() {
     }
 
     async function undo() {
-        if (!lastSaved || !saved || !beginWrite()) return;
+        if (!lastSaved || !saved || !beginWrite() || undoing) return;
+        setUndoing(true);
         const profileToRestore = lastSaved;
         const draftBeforeUndo = draft;
         setSaveError(null);
@@ -216,8 +218,13 @@ export default function SettingsContent() {
             setLastSaved(null);
             setShowSaveToast(false);
         } catch (caught) {
-            if (mounted.current) setSaveError(profileSaveError(caught));
+            if (mounted.current) {
+                setSaveError(profileSaveError(caught));
+                setShowSaveToast(false);
+                // Preserve lastSaved so the user can retry undoing.
+            }
         } finally {
+            if (mounted.current) setUndoing(false);
             endWrite();
         }
     }
@@ -396,13 +403,14 @@ export default function SettingsContent() {
                             setLastSaved(null);
                         }}
                         saving={saving}
+                        undoing={undoing}
                         error={saveError}
                         onFocusField={focusField}
                         onReload={reload}
                         showToast={showSaveToast && !isDirty}
                         onDismissToast={handleDismissToast}
                         onUndo={() => void undo()}
-                        canUndo={Boolean(lastSaved) && !saving}
+                        canUndo={Boolean(lastSaved) && !saving && !undoing}
                         toastKey={toastKey}
                     />
                 </form>

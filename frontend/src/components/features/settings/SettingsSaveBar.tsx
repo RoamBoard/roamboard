@@ -8,6 +8,7 @@ type Props = {
     isDirty: boolean;
     onReset: () => void;
     saving?: boolean;
+    undoing?: boolean;
     error?: ProfileSaveError | null;
     onFocusField?: (field: ProfileSettingsField) => void;
     onReload?: () => void;
@@ -35,6 +36,7 @@ export default function SettingsSaveBar({
     isDirty,
     onReset,
     saving = false,
+    undoing = false,
     error = null,
     onFocusField,
     onReload,
@@ -45,6 +47,7 @@ export default function SettingsSaveBar({
     toastKey = 0
 }: Props) {
     const errorRef = useRef<HTMLDivElement>(null);
+    const progressBarRef = useRef<HTMLDivElement>(null);
     const hasError = Boolean(error);
     useEffect(() => {
         if (hasError) errorRef.current?.focus({ preventScroll: true });
@@ -65,6 +68,9 @@ export default function SettingsSaveBar({
     const pauseTimer = useCallback(() => {
         if (!showToast || isPausedRef.current) return;
         isPausedRef.current = true;
+        if (progressBarRef.current) {
+            progressBarRef.current.style.animationPlayState = "paused";
+        }
         if (timerRef.current) {
             clearTimeout(timerRef.current);
             timerRef.current = null;
@@ -76,6 +82,9 @@ export default function SettingsSaveBar({
     const resumeTimer = useCallback(() => {
         if (!showToast || !isPausedRef.current) return;
         isPausedRef.current = false;
+        if (progressBarRef.current) {
+            progressBarRef.current.style.animationPlayState = "running";
+        }
         startRef.current = Date.now();
         if (remainingRef.current > 0) {
             timerRef.current = setTimeout(() => {
@@ -97,16 +106,30 @@ export default function SettingsSaveBar({
 
         remainingRef.current = AUTO_DISMISS_MS;
         startRef.current = Date.now();
-        isPausedRef.current = false;
 
-        timerRef.current = setTimeout(() => {
-            onDismissToastRef.current?.();
-        }, AUTO_DISMISS_MS);
+        const isDocHidden = typeof document !== "undefined" && Boolean(document.hidden);
+        const isWindowUnfocused =
+            typeof document !== "undefined" && typeof document.hasFocus === "function" && !document.hasFocus();
+
+        if (isDocHidden || isWindowUnfocused || undoing) {
+            isPausedRef.current = true;
+            if (progressBarRef.current) {
+                progressBarRef.current.style.animationPlayState = "paused";
+            }
+        } else {
+            isPausedRef.current = false;
+            if (progressBarRef.current) {
+                progressBarRef.current.style.animationPlayState = "running";
+            }
+            timerRef.current = setTimeout(() => {
+                onDismissToastRef.current?.();
+            }, AUTO_DISMISS_MS);
+        }
 
         const handleVisibilityChange = () => {
             if (typeof document !== "undefined" && document.hidden) {
                 pauseTimer();
-            } else if (!isHoveredRef.current && !isFocusedRef.current) {
+            } else if (!isHoveredRef.current && !isFocusedRef.current && !undoing) {
                 resumeTimer();
             }
         };
@@ -116,8 +139,8 @@ export default function SettingsSaveBar({
         };
 
         const handleWindowFocus = () => {
-            const isDocHidden = typeof document !== "undefined" && document.hidden;
-            if (!isHoveredRef.current && !isFocusedRef.current && !isDocHidden) {
+            const isDocHidden = typeof document !== "undefined" && Boolean(document.hidden);
+            if (!isHoveredRef.current && !isFocusedRef.current && !isDocHidden && !undoing) {
                 resumeTimer();
             }
         };
@@ -140,7 +163,7 @@ export default function SettingsSaveBar({
                 window.removeEventListener("focus", handleWindowFocus);
             }
         };
-    }, [showToast, toastKey, pauseTimer, resumeTimer]);
+    }, [showToast, toastKey, undoing, pauseTimer, resumeTimer]);
 
     const handleMouseEnter = () => {
         isHoveredRef.current = true;
@@ -225,27 +248,43 @@ export default function SettingsSaveBar({
                                     Reload latest profile
                                 </button>
                             )}
+                            {canUndo && onUndo && (
+                                <button
+                                    type="button"
+                                    onClick={onUndo}
+                                    disabled={undoing}
+                                    className="mt-3 block cursor-pointer underline underline-offset-4 disabled:opacity-60"
+                                >
+                                    {undoing ? "Restoring previous profile…" : "Retry undo"}
+                                </button>
+                            )}
                         </div>
                     )}
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="flex flex-wrap items-center gap-3">
                             <button
                                 type="submit"
-                                disabled={saving || !isDirty}
+                                disabled={saving || undoing || !isDirty}
                                 className="bg-foreground text-background hover:bg-foreground/90 font-body text-12 cursor-pointer rounded-[2px] px-5 py-2.5 font-bold tracking-wider uppercase transition-colors focus-visible:outline-1 focus-visible:outline-offset-4 disabled:cursor-wait disabled:opacity-60"
                             >
                                 {saving ? "Saving..." : "Save Changes"}
                             </button>
                             <button
                                 type="button"
-                                disabled={saving}
+                                disabled={saving || undoing}
                                 onClick={onReset}
                                 className="border-line bg-background text-12 text-muted-foreground hover:text-foreground hover:border-foreground font-body cursor-pointer rounded-[2px] border px-4 py-2 font-medium transition-colors disabled:cursor-wait disabled:opacity-60"
                             >
                                 Reset
                             </button>
                             <span role="status" className="text-muted-foreground text-12 font-medium">
-                                {saving ? "Saving your profile. Please wait..." : "You have unsaved changes."}
+                                {undoing
+                                    ? "Restoring previous profile. Please wait..."
+                                    : saving
+                                      ? "Saving your profile. Please wait..."
+                                      : isDirty
+                                        ? "You have unsaved changes."
+                                        : ""}
                             </span>
                         </div>
                         <Link
@@ -289,13 +328,11 @@ export default function SettingsSaveBar({
                 {canUndo && onUndo && (
                     <button
                         type="button"
-                        onClick={() => {
-                            onUndo();
-                            onDismissToast?.();
-                        }}
-                        className="text-11 text-foreground hover:text-muted-foreground ml-1 cursor-pointer font-bold tracking-wider whitespace-nowrap uppercase underline transition-colors"
+                        onClick={onUndo}
+                        disabled={undoing}
+                        className="text-11 text-foreground hover:text-muted-foreground ml-1 cursor-pointer font-bold tracking-wider whitespace-nowrap uppercase underline transition-colors disabled:opacity-60"
                     >
-                        Undo
+                        {undoing ? "Restoring…" : "Undo"}
                     </button>
                 )}
 
@@ -311,7 +348,11 @@ export default function SettingsSaveBar({
                 {/* 6s countdown line at the bottom */}
                 <div className="bg-line/40 absolute inset-x-0 bottom-0 h-[2.5px] overflow-hidden">
                     {showToast && (
-                        <div key={toastKey} className="bg-feedback-success animate-toast-progress h-full origin-left" />
+                        <div
+                            ref={progressBarRef}
+                            key={toastKey}
+                            className="bg-feedback-success animate-toast-progress h-full origin-left"
+                        />
                     )}
                 </div>
             </div>
