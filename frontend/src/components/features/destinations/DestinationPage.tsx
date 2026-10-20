@@ -173,7 +173,8 @@ export function DestinationPage({ destination: guide, onLoadMore, onRetry, loadi
                                 href="#destination-places"
                                 className="mt-3 flex min-h-11 items-center gap-4 text-sm underline underline-offset-4"
                             >
-                                Explore places on the map <ArrowUpRight size={18} />
+                                Explore {destination.kind === "country" ? "cities" : "places"} on the map{" "}
+                                <ArrowUpRight size={18} />
                             </a>
                         </section>
                         <section
@@ -201,6 +202,7 @@ export function DestinationPage({ destination: guide, onLoadMore, onRetry, loadi
                 </header>
                 <DestinationPlaces guide={guide} onRetry={onRetry} loading={loadingMore} />
                 <DestinationStories
+                    kind={destination.kind}
                     name={destination.name}
                     countryCode={destination.countryCode}
                     boards={guide.boards}

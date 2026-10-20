@@ -130,6 +130,47 @@ test("anonymous guide reads return the selected identity, article, distinct phot
     assert.deepEqual(calls, { articles: 1, images: 1, boards: 2 });
 });
 
+test("country guide reads preserve their scope through providers, response and public Board lookup", async () => {
+    const selected = { name: "Japan", country: "JPN", latitude: 36.5, longitude: 139, kind: "country" };
+    const destination = { ...selected, country: "Japan", countryCode: "JPN" };
+    const calls: string[] = [];
+    const server = app({
+        providers: {
+            async article(input: unknown) {
+                assert.deepEqual(input, destination);
+                calls.push("article");
+                return { title: "Japan", description: "Country opening", url: "https://en.wikivoyage.org/wiki/Japan" };
+            },
+            async images() {
+                return [];
+            },
+            async cityTip(input: unknown) {
+                assert.deepEqual(input, destination);
+                calls.push("tip");
+                return null;
+            },
+            async places(input: unknown) {
+                assert.deepEqual(input, destination);
+                calls.push("places");
+                return [];
+            }
+        },
+        repository: {
+            async listPublic(input: unknown) {
+                assert.deepEqual(input, { ...selected, page: 1, limit: 6 });
+                calls.push("boards");
+                return { boards: [], hasMore: false };
+            }
+        }
+    });
+    const response = await request(server).get("/api/v1/destinations/guide").query(selected).expect(200);
+    assert.deepEqual(response.body.data.destination, destination);
+    assert.equal(response.body.data.article.description, "Country opening");
+    assert.ok(calls.includes("article"));
+    assert.ok(calls.includes("places"));
+    assert.ok(calls.includes("boards"));
+});
+
 test("guide validation rejects incomplete, malformed and unknown inputs before calling any dependency", async () => {
     const server = app({
         providers: {
@@ -157,6 +198,8 @@ test("guide validation rejects incomplete, malformed and unknown inputs before c
         { ...identity, page: 0 },
         { ...identity, limit: 21 },
         { ...identity, extra: "unsupported" },
+        { ...identity, kind: "continent" },
+        { ...identity, kind: ["country", "country"] },
         { name: "Paris", country: "FRA", longitude: 2.35 }
     ]) {
         const response = await request(server).get("/api/v1/destinations/guide").query(query).expect(400);

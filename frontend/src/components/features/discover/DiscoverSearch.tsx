@@ -23,23 +23,25 @@ export default function DiscoverSearch() {
     const router = useRouter();
     const [query, setQuery] = useState("");
     const [open, setOpen] = useState(false);
-    const [citySearch, setCitySearch] = useState<{ query: string; destinations: Destination[]; error: string } | null>(
-        null
-    );
+    const [destinationSearch, setDestinationSearch] = useState<{
+        query: string;
+        destinations: Destination[];
+        error: string;
+    } | null>(null);
     const [attempt, setAttempt] = useState(0);
     const search = query.trim();
     const canSearch = search.length >= 2 && search.length <= 100;
-    const currentSearch = citySearch?.query === search ? citySearch : null;
+    const currentSearch = destinationSearch?.query === search ? destinationSearch : null;
 
     useEffect(() => {
         if (!open || !canSearch) return;
         const controller = new AbortController();
-        // Suggestions need only city identities. Wikipedia and photos load after selection.
+        // Suggestions need only destination identities. Wikipedia and photos load after selection.
         const timer = setTimeout(() => {
             searchDestinations(search, controller.signal)
                 .then((destinations) => {
                     if (!controller.signal.aborted)
-                        setCitySearch({
+                        setDestinationSearch({
                             query: search,
                             destinations: destinations.filter((city) => destinationGuideHref(city)),
                             error: ""
@@ -47,10 +49,10 @@ export default function DiscoverSearch() {
                 })
                 .catch((error: unknown) => {
                     if (!controller.signal.aborted)
-                        setCitySearch({
+                        setDestinationSearch({
                             query: search,
                             destinations: [],
-                            error: error instanceof Error ? error.message : "Cities could not be loaded."
+                            error: error instanceof Error ? error.message : "Destinations could not be loaded."
                         });
                 });
         }, 400);
@@ -108,12 +110,12 @@ export default function DiscoverSearch() {
                         <>
                             <div role="status" className="text-muted-foreground px-3 py-2 text-xs">
                                 {!currentSearch
-                                    ? "Searching cities..."
+                                    ? "Searching destinations..."
                                     : currentSearch.error
                                       ? currentSearch.error
                                       : !currentSearch.destinations.length
-                                        ? "No matching cities found."
-                                        : "Select a city to open its guide."}
+                                        ? "No matching destinations found."
+                                        : "Select a city or country to open its guide."}
                                 {currentSearch?.error ? (
                                     <button
                                         type="button"
@@ -123,26 +125,28 @@ export default function DiscoverSearch() {
                                             if (event.key === "Enter") event.stopPropagation();
                                         }}
                                         onClick={() => {
-                                            setCitySearch(null);
+                                            setDestinationSearch(null);
                                             setAttempt((value) => value + 1);
                                         }}
                                     >
-                                        Retry city search
+                                        Retry destination search
                                     </button>
                                 ) : null}
                             </div>
-                            <CommandGroup heading="City guides">
+                            <CommandGroup heading="Destination guides">
                                 {currentSearch?.destinations.map((city) => (
                                     <CommandItem
                                         key={city.id}
-                                        value={`city:${city.id}`}
+                                        value={`guide:${city.id}`}
                                         keywords={[search, city.name, city.address]}
                                         onSelect={() => navigate(destinationGuideHref(city)!)}
                                     >
                                         <MapPin size={16} aria-hidden="true" />
                                         <span>
                                             {city.name}
-                                            <span className="text-muted-foreground ml-2 text-xs">{city.address}</span>
+                                            <span className="text-muted-foreground ml-2 text-xs">
+                                                {city.placeType === "country" ? "Country" : city.address}
+                                            </span>
                                         </span>
                                         <ArrowUpRight className="ml-auto" size={14} aria-hidden="true" />
                                     </CommandItem>
@@ -181,18 +185,27 @@ export default function DiscoverSearch() {
                         </CommandGroup>
                     ) : null}
                     <CommandGroup heading="Destinations">
-                        {discoverDestinations.map((destination) => (
-                            <CommandItem
-                                key={destination.countryCode}
-                                value={`destination:${destination.countryCode}`}
-                                keywords={[destination.name, destination.description]}
-                                onSelect={() => navigate(discoverDestinationHref(destination))}
-                            >
-                                <MapPin size={16} aria-hidden="true" />
-                                <span>{destination.name}</span>
-                                <ArrowUpRight className="ml-auto" size={14} aria-hidden="true" />
-                            </CommandItem>
-                        ))}
+                        {discoverDestinations
+                            .filter(
+                                (destination) =>
+                                    !currentSearch?.destinations.some(
+                                        (result) =>
+                                            result.placeType === "country" &&
+                                            result.countryCode === destination.countryCode
+                                    )
+                            )
+                            .map((destination) => (
+                                <CommandItem
+                                    key={destination.countryCode}
+                                    value={`destination:${destination.countryCode}`}
+                                    keywords={[destination.name, destination.description]}
+                                    onSelect={() => navigate(discoverDestinationHref(destination))}
+                                >
+                                    <MapPin size={16} aria-hidden="true" />
+                                    <span>{destination.name}</span>
+                                    <ArrowUpRight className="ml-auto" size={14} aria-hidden="true" />
+                                </CommandItem>
+                            ))}
                     </CommandGroup>
                     <CommandGroup heading="Vibes">
                         {boardTags.map((tag) => (
@@ -211,10 +224,10 @@ export default function DiscoverSearch() {
                 </CommandList>
             </Command>
             <p id="discover-search-note" className="text-muted-foreground text-12 mt-4">
-                Search a city and select a match to build its guide with photos and public boards.
+                Search a city or country and select a match to build its guide with photos and public boards.
             </p>
             <p id="discover-preview-note" className="text-muted-foreground text-12 mt-3">
-                Editorial selections and counts on Discover are samples. City guides load real public boards.
+                Editorial selections and counts on Discover are samples. Destination guides load real public boards.
             </p>
         </section>
     );

@@ -47,6 +47,7 @@ export interface DestinationContext {
 }
 
 export interface GuideDestination {
+    kind?: "country";
     name: string;
     country: string;
     countryCode: string;
@@ -81,6 +82,7 @@ export interface PlaceDetails {
 }
 
 export interface GuidePlace {
+    // The country guide returns cities; city guides return sightseeing listings.
     provider?: "wikivoyage";
     id: string;
     name: string;

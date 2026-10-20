@@ -33,12 +33,19 @@ export function createDestinationRepository(): DestinationRepository {
                  WHERE b.status='published' AND b.visibility='public' AND EXISTS (
                    SELECT 1 FROM activity a JOIN location l ON l.location_id=a.location_id
                    WHERE a.board_id=b.board_id AND upper(trim(l.country))=ANY($3::text[])
-                   AND 6371 * acos(LEAST(1.0, GREATEST(-1.0,
+                   AND ($6::boolean OR 6371 * acos(LEAST(1.0, GREATEST(-1.0,
                      sin(radians(l.latitude::float8))*sin(radians($1::float8)) +
                      cos(radians(l.latitude::float8))*cos(radians($1::float8))*cos(radians(l.longitude::float8 - $2::float8))
-                   ))) <= 25
+                   ))) <= 25)
                  ) ORDER BY b.updated_at DESC, b.board_id DESC LIMIT $4 OFFSET $5`,
-                [input.latitude, input.longitude, countries, input.limit + 1, (input.page - 1) * input.limit]
+                [
+                    input.latitude,
+                    input.longitude,
+                    countries,
+                    input.limit + 1,
+                    (input.page - 1) * input.limit,
+                    input.kind === "country"
+                ]
             );
             return {
                 boards: result.rows.slice(0, input.limit).map((row) => row.document),

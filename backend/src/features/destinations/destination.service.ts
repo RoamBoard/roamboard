@@ -31,7 +31,7 @@ export interface DestinationGuideDependencies {
         images(query: string, accessKey: string, observe?: QuotaObserver): Promise<ProviderPhoto[]>;
         places(destination: GuideDestination, observe?: QuotaObserver): Promise<GuidePlace[]>;
         cityTip(destination: GuideDestination, observe?: QuotaObserver): Promise<CityTip | null>;
-        placeDetails(place: GuidePlace, observe?: QuotaObserver): Promise<PlaceDetails>;
+        placeDetails(place: GuidePlace, observe?: QuotaObserver, kind?: "country"): Promise<PlaceDetails>;
         matchPlace(
             input: MatchPlaceInput,
             token: string,
@@ -80,16 +80,17 @@ export function createDestinationService(
         cache.set(key, entry);
         return entry.result;
     }
-    function identity(input: Pick<DestinationGuideQuery, "name" | "country" | "latitude" | "longitude">) {
+    function identity(input: Pick<DestinationGuideQuery, "name" | "country" | "latitude" | "longitude" | "kind">) {
         return {
             destination: {
+                ...(input.kind ? { kind: input.kind } : {}),
                 name: input.name,
                 country: countryName(input.country),
                 countryCode: input.country,
                 latitude: input.latitude,
                 longitude: input.longitude
             },
-            key: JSON.stringify([input.name.toLowerCase(), input.country, input.latitude, input.longitude])
+            key: JSON.stringify([input.name.toLowerCase(), input.country, input.latitude, input.longitude, input.kind])
         };
     }
     function readSights(destination: GuideDestination, key: string) {
@@ -116,7 +117,9 @@ export function createDestinationService(
             const cacheKey = `${key}:${place.id}`;
             try {
                 const result = await cached(details, cacheKey, () =>
-                    quota.run("wikipedia.action_api", (observe) => dependencies.providers.placeDetails(place, observe))
+                    quota.run("wikipedia.action_api", (observe) =>
+                        dependencies.providers.placeDetails(place, observe, input.kind)
+                    )
                 );
                 // Partial failures stay retryable instead of becoming a one-hour empty result.
                 if (result.unavailable.length) details.delete(cacheKey);
@@ -174,7 +177,11 @@ export function createDestinationService(
                     const accessKey = env.UNSPLASH_ACCESS_KEY;
                     if (!accessKey) throw new Error("Unsplash is not configured");
                     return quota.run("unsplash.requests", (observe) =>
-                        dependencies.providers.images(`${input.name} ${destination.country}`, accessKey, observe)
+                        dependencies.providers.images(
+                            input.kind === "country" ? input.name : `${input.name} ${destination.country}`,
+                            accessKey,
+                            observe
+                        )
                     );
                 }),
                 dependencies.repository.listPublic(input),
