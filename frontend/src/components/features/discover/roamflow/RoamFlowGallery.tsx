@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
-import PhotoBoardCard from "@/components/features/boards/cards/PhotoBoardCard";
+import AccountPhotoBoardCard from "@/components/features/boards/cards/AccountPhotoBoardCard";
 import { roamFlowPageSize, type RoamFlowBoard } from "@/lib/roamflow";
 
 const positions = [
@@ -62,7 +62,16 @@ export default function RoamFlowGallery({
                                         transition={{ duration: reducedMotion ? 0 : 0.5, ease: [0.22, 1, 0.36, 1] }}
                                         className={`relative motion-reduce:transform-none! motion-reduce:opacity-100! [&_a]:focus-visible:outline-offset-4 [&_a]:focus-visible:outline-white ${reducedMotion ? "" : "[&_img]:transition-transform [&_img]:duration-700 [&_img]:ease-out motion-safe:hover:[&_img]:scale-[1.025] motion-reduce:[&_img]:transition-none"}`}
                                     >
-                                        <PhotoBoardCard board={board} href={board.href} />
+                                        <AccountPhotoBoardCard
+                                            board={board}
+                                            href={board.href}
+                                            ownership="other"
+                                            initialSaved={false}
+                                            showVisibility
+                                            hideCoverCredit
+                                            hoverActions={board.href ? { viewHref: board.href } : undefined}
+                                            details
+                                        />
                                     </motion.div>
                                 </div>
                                 <div className="text-12 mt-3 flex items-baseline justify-between gap-3 leading-relaxed text-white/55">
