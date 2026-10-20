@@ -288,11 +288,9 @@ export default function SocialFriendsContent({
         };
     }, [initialFriends, initialFriendsError, initialBoards, initialActivities]);
 
-    const handleTabChange = (tab: "ME" | "FRIENDS" | "EXPLORE") => {
+    const handleTabChange = (tab: "ME" | "FRIENDS") => {
         if (tab === "ME") {
             router.push("/profile");
-        } else if (tab === "EXPLORE") {
-            router.push("/discover");
         }
     };
 
@@ -328,7 +326,7 @@ export default function SocialFriendsContent({
                             SOCIAL
                         </h1>
                         <UnderlineTabs
-                            tabs={["ME", "FRIENDS", "EXPLORE"] as const}
+                            tabs={["ME", "FRIENDS"] as const}
                             activeTab="FRIENDS"
                             onChange={handleTabChange}
                             ariaLabel="Audience filter"
@@ -570,19 +568,6 @@ export default function SocialFriendsContent({
                                             <Plus size={16} strokeWidth={1.5} className="text-muted-foreground" />
                                             <span className="font-body text-12 text-foreground font-medium">
                                                 create new board
-                                            </span>
-                                        </div>
-                                        <ArrowRight size={14} strokeWidth={1.5} className="text-muted-foreground" />
-                                    </Link>
-
-                                    <Link
-                                        href="/create"
-                                        className="hover:bg-faint/50 flex items-center justify-between p-4 transition-colors"
-                                    >
-                                        <div className="flex items-center gap-2.5">
-                                            <UserRound size={16} strokeWidth={1.5} className="text-muted-foreground" />
-                                            <span className="font-body text-12 text-foreground font-medium">
-                                                collaborate with friends
                                             </span>
                                         </div>
                                         <ArrowRight size={14} strokeWidth={1.5} className="text-muted-foreground" />

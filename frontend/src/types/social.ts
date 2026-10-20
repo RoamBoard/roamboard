@@ -72,7 +72,7 @@ export type UserProfile = {
     milestones: TravelMilestone[];
 };
 
-export type AudienceFilter = "ME" | "FRIENDS" | "EXPLORE";
+export type AudienceFilter = "ME" | "FRIENDS";
 
 export type UserSettings = {
     theme: "light" | "dark";
