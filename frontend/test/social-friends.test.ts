@@ -79,11 +79,11 @@ test("SocialFriendsContent tab navigation routes to /profile on ME click and omi
     const tabsNode = nodes.find((n) => n.type === UnderlineTabs);
     assert.ok(tabsNode, "UnderlineTabs must exist");
 
-    const tabs = (tabsNode.props as { tabs: string[] }).tabs;
+    const tabs = (tabsNode.props as unknown as { tabs: string[] }).tabs;
     assert.deepEqual(tabs, ["ME", "FRIENDS"]);
     assert.ok(!tabs.includes("EXPLORE"));
 
-    const onChange = (tabsNode.props as { onChange: (tab: string) => void }).onChange;
+    const onChange = (tabsNode.props as unknown as { onChange: (tab: string) => void }).onChange;
     onChange("ME");
     assert.equal(pushed.route, "/profile");
 });
