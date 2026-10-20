@@ -66,8 +66,10 @@ See [the Smart Create contract](../contracts/smart-create.md).
 ## Uploaded image deletion
 
 Migration 020 adds transactional deletion requests and reference tracking for profiles, Board/activity covers and
-image-link tables. After committed profile replacement/removal or Board edits/deletion, cleanup immediately removes
-unreferenced authenticated Cloudinary assets, then their image/upload-intent rows. Retain referenced images, editorial
+image-link tables. After committed profile replacement/removal or Board edits/deletion, immediate cleanup targets only
+that change's removed image IDs, at most four, with a one-second overall request deadline. Sign-in never waits for image
+cleanup; global queue work belongs to the worker/manual maintenance. Successful cleanup removes unreferenced authenticated
+Cloudinary assets, then their image/upload-intent rows. Retain referenced images, editorial
 assets and crop originals. Cloudinary failures preserve retry records; the server sweeps on startup and every minute.
 Fresh unattached uploads/incomplete intents keep the 24-hour grace period. See `../contracts/image-deletion.md`.
 `npm run db:images` checks migration status; `-- --apply` verifies a backup and applies only 020. Consult the migration log

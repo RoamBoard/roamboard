@@ -150,13 +150,16 @@ export function createUsersService(
             return read(userId);
         },
         async setPicture(userId: string, imageId: number | null) {
+            const previousImageId = (await read(userId)).profilePicture?.imageId;
             if (imageId !== null) {
                 const image = await images.findImage(imageId);
                 if (!image || image.uploaderUserId !== userId)
                     throw new AppError(404, "Owned image not found", "NOT_FOUND");
             }
             await repository.setPicture(userId, imageId);
-            await cleanupImages?.();
+            if (previousImageId !== undefined && previousImageId !== imageId) {
+                await cleanupImages?.([previousImageId]);
+            }
             return read(userId);
         },
         listBoards: (userId: string, recent = false) => repository.listBoards(userId, recent),

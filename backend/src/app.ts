@@ -89,7 +89,6 @@ export function createApp(options: AppOptions = {}): Express {
         onSignedIn: async (cookie, userId) => {
             const browserId = readBrowserCookie(cookie);
             if (browserId) await discoveryRepository.mergeBrowser(browserId, userId);
-            await cleanupImages();
         }
     });
     const attachUser = attachSessionUser(auth.service);

@@ -309,6 +309,8 @@ Replacing/removing a profile picture, removing photos in a saved Board edit or d
 attempts Cloudinary cleanup after commit. The image row and completed upload intent are removed only after
 provider success and only when no Board, activity or profile still uses the image. Covers and activity-only
 photos are included. Saved remixes retain their independently copied photos; editorial images are excluded.
+An immediate attempt covers only images removed by that request, at most four, and waits at most one second overall.
+The worker handles the remaining queue; sign-in never waits for image cleanup.
 
 The API server runs an image-cleanup sweep on startup and every minute, retrying durable deletion requests.
 Fresh unattached uploads and expired incomplete intents retain their 24-hour grace period. Run

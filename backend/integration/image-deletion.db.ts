@@ -135,6 +135,12 @@ test(
                 days: []
             });
 
+            // Unrelated queued images must not be processed by another Board/profile request.
+            const unrelated = await upload("roamboard/unrelated-queued");
+            await pool.query("UPDATE uploaded_image SET deletion_requested_at=NOW() WHERE uploaded_image_id=$1", [
+                unrelated
+            ]);
+
             // A different user's saved remix retains its cover and activity photos after source deletion.
             const sourceCover = await upload("roamboard/remix-source-cover");
             const sourceActivity = await upload("roamboard/remix-source-activity");
@@ -206,6 +212,8 @@ test(
                 .expect(204);
             await assertGone(sourceCover, "roamboard/remix-source-cover");
             await assertGone(sourceActivity, "roamboard/remix-source-activity");
+            assert.ok(assets.has("roamboard/unrelated-queued"));
+            assert.ok(await images.findImage(unrelated));
             const survivingRemix = await remixService.read(remixed.boardId, "other");
             assert.equal(survivingRemix.coverImageId, prepared.coverImageId);
             assert.equal(
@@ -260,6 +268,7 @@ test(
                 .send({ imageId: replacement })
                 .expect(200);
             await assertGone(avatar, "roamboard/avatar-old");
+            assert.ok(assets.has("roamboard/unrelated-queued"));
             assert.equal((await images.findImage(replacement))?.profileOwnerUserId, "owner");
             await users.setPicture("owner", replacement);
             assert.equal(assets.has("roamboard/avatar-new"), true);
@@ -306,7 +315,7 @@ test(
                 true
             );
             unavailable.clear();
-            await createImageCleanup(createImagesRepository(), provider).cleanupRequested();
+            await createImageCleanup(createImagesRepository(), provider).cleanupRequested([retained]);
             await assertGone(retained, "roamboard/retained");
 
             // If storage succeeds but the DB delete fails, retry tolerates the now-missing provider asset.
@@ -325,7 +334,7 @@ test(
                 1
             );
             await pool.query("DROP TRIGGER reject_image_delete ON uploaded_image; DROP FUNCTION reject_image_delete()");
-            await cleanup.cleanupRequested();
+            await cleanup.cleanupRequested([dbFailure]);
             await assertGone(dbFailure, "roamboard/db-failure");
 
             // Concurrent sweeps use the row lock rather than deleting the same provider asset twice.
@@ -333,7 +342,10 @@ test(
             const profileRepository = createUsersRepository();
             await profileRepository.setPicture("owner", concurrent);
             await profileRepository.setPicture("owner", null);
-            await Promise.all([cleanup.cleanupRequested(), createImageCleanup(images, provider).cleanupRequested()]);
+            await Promise.all([
+                cleanup.cleanupRequested([concurrent]),
+                createImageCleanup(images, provider).cleanupRequested([concurrent])
+            ]);
             await assertGone(concurrent, "roamboard/concurrent");
             assert.equal(attempts.filter((key) => key === "roamboard/concurrent").length, 1);
 
@@ -377,7 +389,7 @@ test(
             } finally {
                 client.release();
             }
-            await cleanup.cleanupRequested();
+            await cleanup.cleanupRequested([staged]);
             assert.equal(assets.has("roamboard/staged"), true);
             const fresh = await upload("roamboard/fresh");
             const editorial = await upload("roamboard/editorial/never-delete");
@@ -386,6 +398,7 @@ test(
                 [editorial]
             );
             await cleanup.cleanupUnused();
+            await assertGone(unrelated, "roamboard/unrelated-queued");
             assert.ok(await images.findImage(fresh));
             assert.ok(await images.findImage(editorial));
             assert.equal(attempts.includes("roamboard/editorial/never-delete"), false);

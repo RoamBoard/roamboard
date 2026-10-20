@@ -1,5 +1,5 @@
 import { AppError } from "../../shared/app-error.js";
-import type { ImageCleanup } from "../images/images.cleanup.js";
+import { boardImageIds, type ImageCleanup } from "../images/images.cleanup.js";
 import type { BoardWrite } from "./boards.schemas.js";
 import type { BoardRepository, BoardsService, CopyBoardImage } from "./boards.types.js";
 
@@ -155,18 +155,19 @@ export function createBoardsService(
             if (!owner && input.visibility !== access.visibility) {
                 throw new AppError(403, "Only the owner can change visibility", "FORBIDDEN");
             }
+            const current = await repository.getBoard(boardId, userId);
             const destination =
                 input.destination === undefined && input.status === "published"
-                    ? (await repository.getBoard(boardId, userId))?.destination
+                    ? current?.destination
                     : input.destination;
             const validated = await validateDocument(repository, { ...input, destination });
             if (!owner && input.isCompleted !== undefined) {
-                const current = await repository.getBoard(boardId, userId);
                 if (current?.isCompleted !== input.isCompleted)
                     throw new AppError(403, "Only the owner can change completion", "FORBIDDEN");
             }
             const saved = await repository.saveBoard(userId, boardId, revision, validated);
-            await cleanupImages?.();
+            const retainedImages = new Set(boardImageIds(saved));
+            await cleanupImages?.(boardImageIds(current).filter((id) => !retainedImages.has(id)));
             return saved;
         },
         async read(boardId, userId) {
@@ -183,10 +184,11 @@ export function createBoardsService(
             if (access.ownerUserId !== userId) {
                 throw new AppError(403, "Cannot delete this Board", "FORBIDDEN");
             }
+            const imageIds = cleanupImages ? boardImageIds(await repository.getBoard(boardId, userId)) : [];
             if (!(await repository.deleteBoard(boardId, userId))) {
                 throw new AppError(404, "Board not found", "NOT_FOUND");
             }
-            await cleanupImages?.();
+            await cleanupImages?.(imageIds);
         }
     };
 }

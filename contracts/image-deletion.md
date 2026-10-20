@@ -7,6 +7,9 @@ unused uploaded images from Cloudinary and PostgreSQL. This supersedes the previ
 
 - Profile replacement/removal and committed Board edits/deletion request cleanup immediately after the database
   transaction commits. Board covers, activity covers and activity-only photos are included, including cascading deletes.
+  Awaited cleanup is scoped to images removed by that change, attempts at most four and waits at most one second
+  overall, including its queue query. In-flight scoped deletions may finish afterward; remaining work stays queued.
+  Sign-in never waits for image deletion. Only the background worker/manual maintenance processes the global queue.
 - Removing a saved photo in the editor takes effect on Save; cancelling edits preserves the saved photo. Changing the
   selected cover does not delete photos still attached to the Board. Crop/resize edits retain the original upload.
 - An image is deleted only when no Board, activity or profile refers to it. Saved Boards are bookmarks, so deleting

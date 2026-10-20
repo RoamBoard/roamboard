@@ -192,7 +192,7 @@ export function createImagesRepository(): ImagesRepository {
                 longitude: row.longitude === null ? null : Number(row.longitude)
             }));
         },
-        async listCleanupCandidates(before, limit, requestedOnly = false) {
+        async listCleanupCandidates(before, limit, requestedOnly = false, imageIds) {
             const result = await getPool().query<{
                 image_id: number | null;
                 storage_key: string;
@@ -202,15 +202,17 @@ export function createImagesRepository(): ImagesRepository {
                         i.cleanup_attempted_at AS last_attempt
                  FROM uploaded_image i
                  WHERE (i.deletion_requested_at IS NOT NULL OR (NOT $3 AND i.orphaned_at < $1))
+                   AND ($4::int[] IS NULL OR i.uploaded_image_id = ANY($4::int[]))
                    AND NOT starts_with(i.storage_key, 'roamboard/editorial/') AND ${unreferenced}
                  UNION ALL
                  SELECT NULL::int AS image_id, ui.storage_key, ui.upload_id, ui.cleanup_attempted_at AS last_attempt
                  FROM image_upload_intent ui
                  WHERE NOT $3 AND ui.uploaded_image_id IS NULL AND ui.expires_at < $1
+                   AND $4::int[] IS NULL
                    AND NOT starts_with(ui.storage_key, 'roamboard/editorial/')
                  ORDER BY last_attempt NULLS FIRST, image_id, upload_id
                  LIMIT $2`,
-                [before, limit, requestedOnly]
+                [before, limit, requestedOnly, imageIds ?? null]
             );
             return result.rows.map((row) => ({
                 imageId: row.image_id,
