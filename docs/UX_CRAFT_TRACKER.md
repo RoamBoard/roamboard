@@ -59,8 +59,11 @@ applying `font-size: 0`. A lifecycle regression covers fallback/recovery; Chrome
 ### Reference composition refinements — awaiting visual approval
 
 Reviewed against current `main` (`1d13a84`), preserving its newer Board and profile functionality.
-The live gallery already matches the preferred 1280×600 reference: complete-cover typography,
-flowing authors, visibility controls and the approved country-code crop remain unchanged.
+The gallery retains complete-cover typography, flowing authors, visibility controls and the approved
+country-code crop. Follow-up review found taller stages cropped the outer edges of neighbouring covers;
+the horizontal spread now contracts only when necessary to keep those complete edges inside the stage.
+Font sizes and internal positions are unchanged; foreground overlap still naturally obscures content.
+Drag progress uses the same constrained spacing, with focused regression coverage.
 The closing chapter now uses a horizontal desktop heading and an oversized photograph sweeping
 in from the right, with matching light-theme paper layering. Longer headings can wrap and scroll;
 mobile attribution flows beneath the supporting copy instead of overlapping it.
