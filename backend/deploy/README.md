@@ -42,17 +42,64 @@ cp .env.example .env
 chmod 600 .env
 nano .env
 cd deploy
-sudo docker compose --env-file ../.env up -d --build
+grep -q '^IMAGE_TAG=' ../.env && sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$(git rev-parse HEAD)/" ../.env || echo "IMAGE_TAG=$(git rev-parse HEAD)" >> ../.env
+sudo docker compose --env-file ../.env pull
+sudo docker compose --env-file ../.env up -d
 sudo docker compose --env-file ../.env logs --tail=100 postgres backend frontend caddy
 sudo docker compose --env-file ../.env ps
 ```
 
 Replace both example passwords with different long random passwords before starting, and set:
 
-- `PUBLIC_DOMAIN`: the public hostname (for example, `roamboard.belgiumcentral.cloudapp.azure.com`). Compose derives `https://<PUBLIC_DOMAIN>` for both the backend's `CLIENT_ORIGIN` and the frontend's build-time `NEXT_PUBLIC_API_URL` (also add `https://<PUBLIC_DOMAIN>` to Authorized JavaScript origins in Google Cloud Console).
+- `PUBLIC_DOMAIN`: the public hostname (for example, `roamboard.belgiumcentral.cloudapp.azure.com`). Compose derives `https://<PUBLIC_DOMAIN>` for the backend's runtime `CLIENT_ORIGIN` (and for the frontend's `NEXT_PUBLIC_API_URL` when building locally with `--build`). Add `https://<PUBLIC_DOMAIN>` to Authorized JavaScript origins in Google Cloud Console.
+- `IMAGE_TAG`: the `main` commit SHA (`git rev-parse HEAD`) for the matched `roamboard-backend` and `roamboard-frontend` images to deploy.
+- `MIGRATION_READY_TAG`: leave empty unless a maintainer has applied the SQL migrations for a blocked deployment; then set it to that deployment's commit SHA.
 - `DOCKER_DATABASE_URL`: `postgresql://roamboard_user:YOUR_URL_ENCODED_APP_PASSWORD@postgres:5432/roamboard_dev` so the `backend` container connects to `postgres` over the Docker network.
 
-Rebuild (`sudo docker compose --env-file ../.env up -d --build`) whenever `PUBLIC_DOMAIN` or `GOOGLE_CLIENT_ID` changes, as Next.js inlines `NEXT_PUBLIC_*` variables at build time.
+The [Docker publish workflow](../../.github/workflows/docker-publish.yml) builds both images after its CI checks pass,
+tags them with the full commit SHA, and deploys that SHA to the VM. Next.js embeds the workflow's `PUBLIC_DOMAIN` and
+`GOOGLE_CLIENT_ID` secrets at build time; keep them equal to those values in the VM's `backend/.env`. The workflow does
+not use `:latest`. Newly created GHCR packages default to private visibility: either make both packages public or run
+`sudo docker login ghcr.io` on the VM with a `read:packages` token before the first pull.
+
+### One-time automatic deployment setup
+
+1. Confirm the live checkout path (expected: `/home/azureuser/roamboard`), the exact Azure VM name and resource group,
+   and that the VM can reach GitHub, GHCR, and Azure over HTTPS. Keep the VM's SSH rule limited to maintainers' IPs.
+2. After the workflow first publishes images, update the VM checkout to that commit and complete one manual deployment
+   using the commands above. The deploy job may fail during this bootstrap. Verify `/health/db`, the frontend, the
+   current database schema and a restorable backup. Automatic deployment requires a full, known-good `IMAGE_TAG` in
+   `backend/.env`.
+3. Protect `main` in GitHub before granting deployment access: require pull requests and the existing backend,
+   frontend and formatting CI checks, and prevent direct pushes or bypasses. A merged change to this public repository's
+   workflow can otherwise run a root-level VM command.
+4. In Azure, create a user-assigned managed identity for deployment and a federated credential trusting the GitHub
+   subject `repo:RoamBoard@332067389/roamboard@1381981366:environment:production`. This repository uses GitHub's
+   immutable OIDC subject format; in Azure's GitHub credential form, enter organization ID `332067389` and repository ID
+   `1381981366`. Grant it Run Command access to this VM only. Azure's
+   [OIDC guide](https://learn.microsoft.com/azure/developer/github/connect-from-azure-openid-connect) and
+   [Run Command permissions](https://learn.microsoft.com/azure/virtual-machines/linux/run-command#limiting-access-to-run-command)
+   describe the setup. Do not grant subscription-wide VM Contributor or store a client secret in GitHub.
+5. Create a GitHub `production` environment restricted to the `main` branch, without required reviewers so successful
+   merges deploy automatically. Add `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_SUBSCRIPTION_ID` as environment
+   secrets. Add `AZURE_RESOURCE_GROUP` and `AZURE_VM_NAME` as environment variables, using their verified Azure names.
+   Set optional `DEPLOY_PATH` if the checkout is not `/home/azureuser/roamboard`. Keep `PUBLIC_DOMAIN` and
+   `GOOGLE_CLIENT_ID` as repository secrets for the image build.
+
+The deploy job uses Azure Run Command; it needs no inbound SSH rule for GitHub runners and no self-hosted runner on the
+public repository. It checks that the SHA belongs to `main` and that neither VM infrastructure nor SQL migrations have
+changed since the deployed SHA. It also compares the VM's actual Compose, Caddy, and database initialization files with
+the requested commit, so uncommitted edits to those files stop deployment. Compose runs with `-f compose.yaml` to use
+that checked file. It pulls both images before changing `IMAGE_TAG`, starts them without building locally,
+checks the API/database and frontend through Caddy, and restores the prior tag if a health check fails.
+
+SQL migrations remain manual. If the job stops for migration changes, take and verify a backup, apply and record the
+migrations as described below, set `MIGRATION_READY_TAG=<commit SHA>` in the VM's `backend/.env`, then rerun that
+workflow's failed deploy job. Changes to VM Compose, Caddy, or database initialization files also stop deployment.
+For those releases, update the VM checkout, set `IMAGE_TAG` to the new SHA, pull both images, and run
+`sudo docker compose --env-file ../.env up -d --no-build --pull never` from `backend/deploy/` to recreate the full
+stack as needed. Verify `/health/db`, the frontend, and Caddy's configuration before rerunning the failed deploy job.
+The image workflow does not modify the checkout, apply SQL migrations, or roll back infrastructure changes.
 Use the existing `backend/.env.example` as the only configuration template. If
 `backend/.env` already exists, edit it rather than copying over it. Both Docker Compose
 and the backend use `backend/.env`; there is no deployment-specific `.env` file.

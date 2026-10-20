@@ -164,7 +164,7 @@ function ProviderState({
                 children
             ) : (
                 <p className="text-14 text-graphite mt-5 leading-6">
-                    Add this provider key to `layered-backend-demo1/.env`, restart the API container, and return here.
+                    Add this provider key to `backend/.env`, restart the local backend, and return here.
                 </p>
             )}
         </div>
