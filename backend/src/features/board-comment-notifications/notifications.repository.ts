@@ -6,6 +6,7 @@ interface NotificationRow {
     board_id: number;
     title: string;
     comment_id: number;
+    kind: "comment" | "mention";
     body: string;
     display_name: string;
     username: string;
@@ -29,6 +30,7 @@ function mapRow(row: NotificationRow): NotificationRecord {
         boardId: row.board_id,
         boardTitle: row.title,
         commentId: row.comment_id,
+        kind: row.kind,
         body: row.body,
         commenter: {
             displayName: row.display_name,
@@ -61,7 +63,7 @@ export function createNotificationsRepository(): NotificationsRepository {
         },
         async list(userId, cursor, limit) {
             const result = await getPool().query<NotificationRow>(
-                `SELECT n.notification_id, b.board_id, b.title, c.comment_id, c.body,
+                `SELECT n.notification_id, b.board_id, b.title, c.comment_id, c.body, n.kind,
                         u.display_name, u.username, u.profile_picture_image_id, n.created_at, n.read_at
                  FROM board_comment_notification n
                  JOIN board_comment c ON c.comment_id = n.comment_id

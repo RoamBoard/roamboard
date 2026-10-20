@@ -4,6 +4,7 @@ export interface NotificationRecord {
     boardTitle: string;
     commentId: number;
     body: string;
+    kind: "comment" | "mention";
     commenter: { displayName: string; username: string; profilePictureUrl: string | null };
     createdAt: string;
     readAt: string | null;

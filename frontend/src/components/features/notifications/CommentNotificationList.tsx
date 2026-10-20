@@ -31,7 +31,7 @@ export default function CommentNotificationList({
                             event.preventDefault();
                             if (pendingId === null) void onOpen(notification);
                         }}
-                        aria-label={`${notification.commenter.displayName} commented on ${notification.boardTitle}`}
+                        aria-label={`${notification.commenter.displayName} ${notification.kind === "mention" ? "mentioned you in" : "commented on"} ${notification.boardTitle}`}
                         aria-disabled={pendingId !== null}
                         className={`border-line hover:bg-faint/60 flex items-start gap-3 border p-3 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 ${
                             notification.readAt ? "bg-background" : "bg-faint/50"
@@ -53,7 +53,9 @@ export default function CommentNotificationList({
                         </span>
                         <span className="min-w-0 flex-1">
                             <span className="text-12 text-foreground block font-medium">
-                                {notification.commenter.displayName} commented on {notification.boardTitle}
+                                {notification.commenter.displayName}{" "}
+                                {notification.kind === "mention" ? "mentioned you in" : "commented on"}{" "}
+                                {notification.boardTitle}
                             </span>
                             <span className="text-muted-foreground text-11 mt-1 block truncate">
                                 {notification.excerpt}

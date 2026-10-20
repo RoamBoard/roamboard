@@ -10,7 +10,8 @@ adds persisted comment notifications alongside the existing friend-request notif
 ## Scope and recipients
 
 - A successfully posted comment creates one in-app notification for each eligible recipient, excluding its author.
-  Editing or deleting a comment does not create a notification. There is no email, push, or live update channel.
+  General edits or deletion do not create a notification. Newly added @mentions on edits follow the later
+  [mentions extension](board-comment-mentions.md). There is no email, push, or live update channel.
 - The Board owner is subscribed by default, including before anyone comments. The owner can turn the comment bell off
   and back on. Each new comment from another person notifies the owner while the bell is on.
 - Any signed-in viewer who can read a published Board can turn its comment bell on or off before commenting. Other
@@ -58,6 +59,7 @@ Example list item:
     "boardId": 42,
     "boardTitle": "Tokyo in three days",
     "commentId": 81,
+    "kind": "comment",
     "commenter": {
         "displayName": "Avery Lee",
         "username": "avery",
