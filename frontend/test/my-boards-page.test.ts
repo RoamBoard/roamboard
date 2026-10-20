@@ -63,6 +63,25 @@ function view(store: MyBoardsStore) {
 function html(store: MyBoardsStore) {
     return renderToStaticMarkup(createElement(MyBoardsContent, { state: store.getSnapshot(), actions: store }));
 }
+
+test("the production Boards page features ten loaded Boards while its library retains the full collection", async (t) => {
+    t.mock.method(globalThis, "fetch", async (input: string) => {
+        const url = new URL(input);
+        return Response.json(
+            url.search
+                ? { data: Array.from({ length: 12 }, (_, index) => summary(index + 1)), meta: { hasMore: false } }
+                : { data: document(Number(url.pathname.split("/").at(-1))) }
+        );
+    });
+    const store = createMyBoardsStore();
+    await store.load();
+    const markup = html(store);
+    const featured = markup.match(/<section\b[^>]*aria-labelledby="featured-boards-heading"[\s\S]*?<\/section>/)?.[0];
+    assert.ok(featured);
+    assert.equal((featured.match(/<article\b/g) ?? []).length, 10);
+    assert.match(featured, /01 \/ 10/);
+    assert.match(markup, /12 Boards/);
+});
 type ControlProps = {
     children?: ReactNode;
     id?: string;

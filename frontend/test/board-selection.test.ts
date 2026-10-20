@@ -693,7 +693,7 @@ function v4Cards(markup: string) {
     );
 }
 
-test("Continue opens the selected Board through its card, while other cards select and access stays permission-gated", () => {
+test("Continue opens the selected Board through its card, while other cards select first and editing stays permission-gated", () => {
     const owned = toSelectionBoard(summary(91, "published"), { ...document(91, "published"), visibility: "public" });
     const shared = toSelectionBoard(
         { ...summary(92, "published"), source: "shared" },
@@ -709,7 +709,8 @@ test("Continue opens the selected Board through its card, while other cards sele
     assert.match(cards[0], /aria-label="Edit Journey 91"/);
     assert.match(cards[0], /lucide-pencil/);
     assert.doesNotMatch(cards[0], /<button\b/);
-    assert.match(cards[1], /aria-label="Focus Journey 92"[^>]*aria-pressed="false"/);
+    assert.match(cards[1], /aria-label="Focus Journey 92"/);
+    assert.doesNotMatch(cards[1], /href="\/boards\/92"/);
     assert.match(cards[1], /tabindex="-1"/);
     assert.doesNotMatch(cards[1], /aria-label="(?:Public|Friends|Restricted access) —|aria-label="(?:Save|Unsave) /);
     assert.match(markup, /href="\/boards\/91\/edit"/);
@@ -744,8 +745,12 @@ test("summary-only Continue cards remain V4 without pretending that cover, owner
     );
     assert.equal(v4Cards(collection).length, 1);
     assert.match(collection, /aria-label="Focus Journey 94 from collection"/);
+    assert.doesNotMatch(collection, /href=/);
     assert.match(collection, /No cover photo/);
-    assert.doesNotMatch(collection, /aria-label="(?:Save|Unsave|Public|Friends|Restricted access) |href=|[\d,]+ saves/);
+    assert.doesNotMatch(
+        collection,
+        /aria-label="(?:Save|Unsave|Public|Friends|Restricted access) |href="\/boards\/94\/edit"|[\d,]+ saves/
+    );
     assert.doesNotMatch(collection, /Room for memories|by you|Destination not added/);
 });
 

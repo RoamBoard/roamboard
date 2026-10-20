@@ -1,12 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useRef, useState } from "react";
-import { animate, AnimatePresence, motion, useMotionValue, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import type { GalleryBoard } from "@/lib/my-boards";
 import { toEditorialPhotoBoardCard } from "@/lib/photo-board-card";
-import BoardCard from "./cards/BoardCard";
+import AccountPhotoBoardCard from "./cards/AccountPhotoBoardCard";
 
 export default function SpatialGallery({
     boards,
@@ -22,7 +21,9 @@ export default function SpatialGallery({
     );
     const selected = boards[selectedIndex];
     const reducedMotion = useReducedMotion();
-    const panX = useMotionValue(0);
+    const [dragProgress, setDragProgress] = useState(0);
+    const [dragging, setDragging] = useState(false);
+    const dragStep = useRef(312);
     const dragged = useRef(false);
     const gallery = useRef<HTMLDivElement>(null);
 
@@ -55,13 +56,13 @@ export default function SpatialGallery({
             ) : (
                 <h2
                     id="featured-boards-heading"
-                    className="font-display text-foreground/60 text-24 md:text-36 flex justify-between px-5 leading-none font-medium sm:px-12"
+                    className="font-display text-foreground/60 text-24 md:text-36 flex justify-center gap-3 px-5 leading-none font-medium sm:px-12"
                 >
                     <span>FEATURED</span>
                     <span>BOARDS</span>
                 </h2>
             )}
-            <div className={`border-line/50 mx-3 mt-6 sm:mx-10 ${saved ? "grid md:grid-cols-2 md:pt-28" : "border-x"}`}>
+            <div className={`mx-3 mt-6 sm:mx-10 ${saved ? "grid md:grid-cols-2 md:pt-28" : ""}`}>
                 <div className="min-w-0">
                     <div
                         role="region"
@@ -96,67 +97,99 @@ export default function SpatialGallery({
                                 );
                             }
                         }}
-                        className="@container relative overflow-hidden pt-10 outline-offset-[-2px] focus-visible:outline-1 md:pt-16"
+                        className="@container relative overflow-hidden pt-6 outline-offset-[-2px] focus-visible:outline-1"
                     >
                         <motion.div
-                            style={{ x: panX, touchAction: "pan-y" }}
+                            style={{ touchAction: "pan-y" }}
                             onPointerDown={() => {
                                 dragged.current = false;
+                                dragStep.current =
+                                    (gallery.current
+                                        ?.querySelector('[data-spatial-card="active"]')
+                                        ?.getBoundingClientRect().width ?? 400) * 0.78;
                             }}
                             onPan={(_, info) => {
                                 dragged.current = true;
-                                panX.set(Math.max(-120, Math.min(120, info.offset.x * 0.45)));
+                                setDragging(true);
+                                setDragProgress(info.offset.x / Math.max(1, dragStep.current));
                             }}
                             onPanEnd={(_, info) => {
                                 if (Math.abs(info.offset.x) > 40 || Math.abs(info.velocity.x) > 350) {
                                     gallery.current?.focus({ preventScroll: true });
-                                    select(selectedIndex + (info.offset.x < 0 ? 1 : -1));
+                                    const steps =
+                                        Math.round(info.offset.x / Math.max(1, dragStep.current)) ||
+                                        Math.sign(info.offset.x || info.velocity.x);
+                                    select(selectedIndex - steps);
                                 }
-                                void animate(
-                                    panX,
-                                    0,
-                                    reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 32 }
-                                );
+                                setDragProgress(0);
+                                setDragging(false);
                             }}
-                            className="relative h-[min(110cqw,430px)] min-h-[335px] cursor-grab select-none active:cursor-grabbing sm:h-[550px] lg:h-[630px]"
+                            onPointerCancel={() => {
+                                setDragProgress(0);
+                                setDragging(false);
+                            }}
+                            className="relative h-[calc(min(102.5cqw,500px)+1rem)] cursor-grab select-none active:cursor-grabbing sm:h-[calc(min(60cqw,500px)+1rem)]"
                         >
                             {boards.map((board, index) => {
                                 const half = Math.floor(boards.length / 2);
                                 const offset = ((index - selectedIndex + boards.length + half) % boards.length) - half;
-                                const distance = Math.abs(offset);
-                                const visible = distance <= 2;
+                                const relative =
+                                    ((((offset + dragProgress + boards.length / 2) % boards.length) + boards.length) %
+                                        boards.length) -
+                                    boards.length / 2;
+                                const distance = Math.abs(relative);
+                                const visible = distance <= 2.5;
+                                const active = index === selectedIndex;
                                 return (
                                     <motion.div
                                         key={board.collage.id}
                                         initial={false}
+                                        data-spatial-card={active ? "active" : "inactive"}
                                         animate={{
-                                            x: `${offset * 78}%`,
-                                            y: distance === 0 ? 0 : distance === 1 ? 44 : 92,
-                                            scale: distance === 0 ? 1 : distance === 1 ? 0.78 : 0.54,
-                                            opacity: distance === 0 ? 1 : distance === 1 ? 0.6 : visible ? 0.25 : 0
+                                            x: `${relative * 78}%`,
+                                            y: Math.min(92, distance * 44),
+                                            scale: Math.max(0.54, 1 - distance * 0.22),
+                                            opacity: Math.max(0, 1 - distance * 0.4)
                                         }}
                                         transition={
-                                            reducedMotion
+                                            reducedMotion || dragging
                                                 ? { duration: 0 }
                                                 : { type: "spring", stiffness: 170, damping: 26, mass: 0.85 }
                                         }
                                         style={{
-                                            zIndex: 10 - Math.min(distance, 9),
+                                            zIndex: 10 - Math.min(Math.round(distance), 9),
                                             pointerEvents: visible ? "auto" : "none"
                                         }}
                                         aria-hidden={!visible}
                                         inert={!visible}
-                                        className={`absolute top-0 left-1/2 ${saved ? "w-[min(400px,82cqw)]" : "w-[min(400px,82cqw)] sm:w-[min(400px,48cqw)]"} origin-center -translate-x-1/2 ${distance ? "hidden sm:block" : ""}`}
+                                        className={`absolute top-0 left-1/2 ${saved ? "w-[min(400px,82cqw)]" : "w-[min(400px,82cqw)] sm:w-[min(400px,48cqw)]"} origin-center -translate-x-1/2 ${!active && !dragging ? "hidden sm:block" : ""}`}
                                     >
-                                        <BoardCard
-                                            variant="photo"
+                                        <AccountPhotoBoardCard
+                                            tilt
+                                            showVisibility
                                             board={board.photo ?? toEditorialPhotoBoardCard(board.collage)}
                                             ownership={board.ownership}
-                                            details={distance === 0}
+                                            initialSaved={board.savedByMe}
+                                            hideCoverCredit
+                                            suppressHover={dragging}
+                                            hoverActions={
+                                                active && board.href
+                                                    ? {
+                                                          editHref:
+                                                              board.ownership === "owner" ? board.editHref : undefined,
+                                                          viewHref: board.href
+                                                      }
+                                                    : undefined
+                                            }
+                                            details={active}
                                             imageSizes="(max-width: 640px) 75vw, 400px"
                                             selection={{
-                                                selected: distance === 0,
-                                                tabIndex: distance === 0 ? 0 : -1,
+                                                selected: active,
+                                                viewHref: active ? board.href : undefined,
+                                                onNavigate: (event) => {
+                                                    if (dragged.current && event.detail !== 0) event.preventDefault();
+                                                },
+                                                tabIndex: active ? 0 : -1,
                                                 onSelect: (event) => {
                                                     if (!dragged.current || event.detail === 0) select(index);
                                                     else event.preventDefault();
@@ -169,8 +202,8 @@ export default function SpatialGallery({
                         </motion.div>
                     </div>
 
-                    <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 pb-8 sm:px-10">
-                        <div className="flex items-center justify-center gap-3">
+                    <div className="mx-auto flex justify-center px-4 py-2 sm:px-10">
+                        <div className="col-start-2 row-start-1 flex items-center justify-center gap-3">
                             <button
                                 type="button"
                                 aria-label={saved ? "Previous saved Board" : "Previous Board"}
@@ -178,9 +211,9 @@ export default function SpatialGallery({
                                 onClick={() => select(selectedIndex - 1)}
                                 className="hover:bg-faint grid size-11 cursor-pointer place-items-center focus-visible:outline-1 disabled:cursor-default disabled:opacity-25"
                             >
-                                <ArrowLeft size={24} strokeWidth={1.5} />
+                                <ArrowLeft size={28} strokeWidth={1.5} />
                             </button>
-                            <span className="text-10 text-muted-foreground tabular-nums">
+                            <span className="text-muted-foreground text-sm tabular-nums">
                                 {String(selectedIndex + 1).padStart(2, "0")} / {String(boards.length).padStart(2, "0")}
                             </span>
                             <button
@@ -190,26 +223,9 @@ export default function SpatialGallery({
                                 onClick={() => select(selectedIndex + 1)}
                                 className="hover:bg-faint grid size-11 cursor-pointer place-items-center focus-visible:outline-1 disabled:cursor-default disabled:opacity-25"
                             >
-                                <ArrowRight size={24} strokeWidth={1.5} />
+                                <ArrowRight size={28} strokeWidth={1.5} />
                             </button>
                         </div>
-                        <AnimatePresence mode="wait" initial={false}>
-                            <motion.p
-                                key={selected.collage.id}
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ duration: reducedMotion ? 0 : 0.12 }}
-                                className="text-12 text-muted-foreground"
-                            >
-                                {caption}
-                            </motion.p>
-                        </AnimatePresence>
-                        {selected.href && (
-                            <Link className="text-12 py-3 underline underline-offset-4" href={selected.href}>
-                                open Board ↗
-                            </Link>
-                        )}
                     </div>
                     <p className="sr-only" aria-live="polite" aria-atomic="true">
                         {selectedPhoto.title}, by {selectedPhoto.author}. {caption}. Board {selectedIndex + 1} of{" "}

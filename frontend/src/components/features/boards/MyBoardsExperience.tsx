@@ -202,7 +202,7 @@ export function MyBoardsContent({ state, actions }: { state: MyBoardsState; acti
             )}
             {!loading && matches.length > 0 && (
                 <>
-                    <SpatialGallery boards={matches.slice(0, 5)} />
+                    <SpatialGallery boards={matches.slice(0, 10)} />
                     <BoardLibrary
                         title="RECENTLY CREATED"
                         id="created-library"

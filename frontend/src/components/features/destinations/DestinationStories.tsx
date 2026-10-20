@@ -1,12 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useRef, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { ArrowLeft, ArrowRight, ArrowUpRight } from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { destinationPhotoUrl, type DestinationBoardSummary } from "@/lib/destination-guides";
-import DestinationPhotoCredit from "./DestinationPhotoCredit";
-import BoardCard from "@/components/features/boards/cards/BoardCard";
+import DestinationStoryCard from "./DestinationStoryCard";
 
 type Props = {
     name: string;
@@ -34,6 +32,9 @@ export function DestinationStories({
 }: Props) {
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const dragged = useRef(false);
+    const dragStep = useRef(320);
+    const [dragProgress, setDragProgress] = useState(0);
+    const [dragging, setDragging] = useState(false);
     const gallery = useRef<HTMLDivElement>(null);
     const reduced = useReducedMotion();
     const selected = Math.max(
@@ -135,15 +136,29 @@ export function DestinationStories({
                         style={{ containerType: "size", touchAction: "pan-y" }}
                         onPointerDown={() => {
                             dragged.current = false;
+                            dragStep.current =
+                                (gallery.current
+                                    ?.querySelector('[data-destination-card="active"]')
+                                    ?.getBoundingClientRect().width ?? 420) * 0.76;
                         }}
                         onPan={(_, info) => {
-                            if (Math.abs(info.offset.x) > 8) dragged.current = true;
+                            if (Math.abs(info.offset.x) > 8) {
+                                dragged.current = true;
+                                setDragging(true);
+                                setDragProgress(info.offset.x / Math.max(1, dragStep.current));
+                            }
                         }}
                         onPanEnd={(_, info) => {
                             if (Math.abs(info.offset.x) > 45 || Math.abs(info.velocity.x) > 350) {
                                 gallery.current?.focus({ preventScroll: true });
                                 select(selected + (info.offset.x < 0 ? 1 : -1));
                             }
+                            setDragging(false);
+                            setDragProgress(0);
+                        }}
+                        onPointerCancel={() => {
+                            setDragging(false);
+                            setDragProgress(0);
                         }}
                         className="relative min-h-0 flex-1 cursor-grab overflow-hidden active:cursor-grabbing"
                     >
@@ -157,28 +172,35 @@ export function DestinationStories({
                             const half = Math.floor(boards.length / 2);
                             const offset = ((index - selected + boards.length + half) % boards.length) - half;
                             const focused = offset === 0;
+                            const relative =
+                                ((((offset + dragProgress + boards.length / 2) % boards.length) + boards.length) %
+                                    boards.length) -
+                                boards.length / 2;
+                            const distance = Math.abs(relative);
                             return (
                                 <motion.div
                                     key={item.boardId}
+                                    data-destination-card={focused ? "active" : "inactive"}
                                     role="group"
                                     aria-roledescription="slide"
                                     aria-label={`${index + 1} of ${boards.length}: ${item.title}`}
                                     initial={false}
                                     animate={{
-                                        x: `${offset * 76}%`,
-                                        y: focused ? 0 : 28,
-                                        scale: focused ? 1 : 0.76,
+                                        x: `${relative * 76}%`,
+                                        y: Math.min(56, distance * 28),
+                                        scale: Math.max(0.52, 1 - distance * 0.24),
                                         rotate: 0,
-                                        opacity: focused ? 1 : 0.48
+                                        opacity: Math.max(0, 1 - distance * 0.52)
                                     }}
                                     transition={
-                                        reduced ? { duration: 0 } : { type: "spring", stiffness: 145, damping: 25 }
+                                        reduced || dragging
+                                            ? { duration: 0 }
+                                            : { type: "spring", stiffness: 145, damping: 25 }
                                     }
                                     style={{ zIndex: focused ? 10 : 1 }}
                                     className="absolute top-[3%] left-1/2 w-[min(420px,65cqh,82cqw)] origin-center -translate-x-1/2 select-none"
                                 >
-                                    <BoardCard
-                                        variant="photo"
+                                    <DestinationStoryCard
                                         board={{
                                             id: String(item.boardId),
                                             title: item.title,
@@ -202,9 +224,14 @@ export function DestinationStories({
                                                 : undefined
                                         }}
                                         details={focused}
+                                        suppressHover={dragging}
                                         imageSizes="(max-width: 768px) 75vw, 420px"
                                         selection={{
                                             selected: focused,
+                                            viewHref: `/boards/${item.boardId}`,
+                                            onNavigate: (event) => {
+                                                if (dragged.current && event.detail !== 0) event.preventDefault();
+                                            },
                                             tabIndex: focused ? 0 : -1,
                                             onSelect: (event) => {
                                                 if (!dragged.current || event.detail === 0) select(index);
@@ -216,8 +243,8 @@ export function DestinationStories({
                             );
                         })}
                     </motion.div>
-                    <div className="border-line relative z-20 flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t py-3">
-                        <div className="flex items-center gap-2">
+                    <div className="relative z-20 flex shrink-0 justify-center py-2">
+                        <div className="col-start-2 row-start-1 flex items-center justify-center gap-3">
                             <button
                                 type="button"
                                 aria-label="Previous slide"
@@ -225,9 +252,9 @@ export function DestinationStories({
                                 onClick={() => select(selected - 1)}
                                 className="hover:bg-faint grid size-11 place-items-center focus-visible:outline-2 disabled:opacity-30"
                             >
-                                <ArrowLeft size={24} strokeWidth={1.5} />
+                                <ArrowLeft size={28} strokeWidth={1.5} />
                             </button>
-                            <span className="text-muted-foreground shrink-0 text-[10px] whitespace-nowrap tabular-nums">
+                            <span className="text-muted-foreground shrink-0 text-sm whitespace-nowrap tabular-nums">
                                 {String(selected + 1).padStart(2, "0")} / {String(boards.length).padStart(2, "0")}
                             </span>
                             <button
@@ -237,29 +264,10 @@ export function DestinationStories({
                                 onClick={() => select(selected + 1)}
                                 className="hover:bg-faint grid size-11 place-items-center focus-visible:outline-2 disabled:opacity-30"
                             >
-                                <ArrowRight size={24} strokeWidth={1.5} />
+                                <ArrowRight size={28} strokeWidth={1.5} />
                             </button>
                         </div>
-                        <AnimatePresence mode="wait" initial={false}>
-                            <motion.p
-                                key={board.boardId}
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ duration: reduced ? 0 : 0.15 }}
-                                className="text-muted-foreground text-right text-xs"
-                            >
-                                {board.durationDays} days / {name}
-                            </motion.p>
-                        </AnimatePresence>
-                        <Link
-                            href={`/boards/${board.boardId}`}
-                            className="inline-flex min-h-11 items-center gap-2 text-xs underline underline-offset-4"
-                        >
-                            Open Board <ArrowUpRight size={15} />
-                        </Link>
                     </div>
-                    {board.images[0] ? <DestinationPhotoCredit {...board.images[0]} /> : null}
                     <p className="sr-only" aria-live="polite" aria-atomic="true">
                         {board.title}, {board.durationDays} days in {name}. Board {selected + 1} of {boards.length}.
                     </p>

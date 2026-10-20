@@ -195,12 +195,16 @@ test("Only the primary saved card exposes View and Remix; another card selects w
         assert.deepEqual(actions, { selections: 0, disclosures: 0 });
         const markup = renderToStaticMarkup(tree);
         assertSeparateLinks(markup);
-        assert.equal((markup.match(/href="\/boards\/91"/g) ?? []).length, 1);
+        assert.equal((markup.match(/href="\/boards\/91"/g) ?? []).length, 2);
         assert.equal((markup.match(/href="\/boards\/new\?remix=91"/g) ?? []).length, 1);
         assert.match(markup, /lucide-eye/);
         assert.match(markup, /lucide-plus/);
         assert.doesNotMatch(markup, /lucide-pencil|aria-label="Focus Saved journey 91"/);
-        assert.match(markup, /group-focus(?:-visible|-within)[^\s"]*:opacity-100/);
+        const revealed = actionNodes(PhotoBoardCardContent({ ...props, expanded: true }));
+        for (const label of ["View Saved journey 91", "Remix Saved journey 91"]) {
+            const visible = revealed.find((node) => node.props["aria-label"] === label);
+            assert.match(String(visible?.props.className), /opacity-100/);
+        }
         assert.match(markup, /\[@media\(hover:none\)\]:opacity-100/);
     }
 });
@@ -238,7 +242,7 @@ test("Saved gallery and collection promote chosen cards; View and Remix follow o
     assertSeparateLinks(gallery);
     assert.match(gallery, /href="\/boards\/91"/);
     assert.match(gallery, /href="\/boards\/new\?remix=91"/);
-    assert.doesNotMatch(gallery, /href="\/boards\/(?:92|93)"|href="\/boards\/new\?remix=(?:92|93)"/);
+    assert.doesNotMatch(gallery, /href="\/boards\/new\?remix=(?:92|93)"/);
     for (const boardId of [92, 93]) assert.ok(gallery.includes(`aria-label="Focus Saved journey ${boardId}"`));
     assert.deepEqual(selections, []);
     const previous = captured.nodes.find((node) => node.props["aria-label"] === "Previous Board");
@@ -251,7 +255,7 @@ test("Saved gallery and collection promote chosen cards; View and Remix follow o
     const promoted = renderToStaticMarkup(createElement(Probe));
     assert.match(promoted, /href="\/boards\/92"/);
     assert.match(promoted, /href="\/boards\/new\?remix=92"/);
-    assert.doesNotMatch(promoted, /href="\/boards\/91"|href="\/boards\/new\?remix=91"/);
+    assert.doesNotMatch(promoted, /href="\/boards\/new\?remix=91"/);
     const inactive = captured.nodes.find(
         (node) => (node.props.selection as { label?: string } | undefined)?.label === "Focus Saved journey 93"
     );
@@ -272,7 +276,7 @@ test("Saved gallery and collection promote chosen cards; View and Remix follow o
         return collectionTree.tree;
     }
     const collection = renderToStaticMarkup(createElement(CollectionProbe));
-    assert.doesNotMatch(collection, /href=|lucide-eye|lucide-plus|lucide-pencil/);
+    assert.doesNotMatch(collection, /lucide-eye|lucide-plus|lucide-pencil/);
     for (const boardId of [91, 92, 93])
         assert.ok(collection.includes(`aria-label="Focus Saved journey ${boardId} from collection"`));
     const card = actionNodes(collectionTree.tree).find(
@@ -344,7 +348,7 @@ test("Selecting an overflow saved Board promotes it into the real page gallery a
     assert.equal((gallery.props.selected as { summary: { boardId: number } }).summary.boardId, chosenId);
     assert.ok(promoted.markup.includes(`href="/boards/${chosenId}"`));
     assert.ok(promoted.markup.includes(`href="/boards/new?remix=${chosenId}"`));
-    assert.doesNotMatch(promoted.markup, /href="\/boards\/91"|href="\/boards\/new\?remix=91"/);
+    assert.doesNotMatch(promoted.markup, /href="\/boards\/new\?remix=91"/);
     const continued = presenter("continue")();
     const savedHeader = initial.nodes.find((node) => node.type === "header");
     const continueHeader = continued.nodes.find((node) => node.type === "header");

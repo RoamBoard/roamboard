@@ -98,12 +98,13 @@ This is a living project guide. Agents may and should update `AGENTS.md` when th
 ## Current integrated surfaces
 
 `/create/remix` uses the Continue gallery for the signed-in user's saved Boards, without search or filters.
-Only the primary card and its eye open `/boards/<boardId>`; its plus opens `/boards/new?remix=<boardId>`.
-Both actions appear on hover/focus and remain visible on touch devices. Other cards show no hover actions/details
-and move into the primary position when selected. A short intro explains template creation; count spacing matches Continue.
-The primary card shows a 48px profile photo with a small gap below it at the top left with the author's `@handle` to its right, sharing
-one profile link. Plus and eye sit centered as a pair below the details, preserving their gap. The canonical card adapter retains the Board-author photo's
-authorization query; missing/failed photos use the account icon. These profile actions remain remix-only.
+Focused published card backgrounds open `/boards/<boardId>`; secondary deck and collection cards select first. Arrows and swipe
+change the primary card. Its plus opens `/boards/new?remix=<boardId>` and its eye opens the Board view.
+Continue published cards expose pen + View; their backgrounds open View. Drafts retain their existing editor
+and require resolved edit permission. Actions appear on hover/focus and remain visible on touch devices.
+The primary card shares a 48px profile photo and linked `@handle` in both modes, retaining protected photo queries
+and the account-icon fallback. The hover layout reserves separate text, action and metadata areas so controls stay
+above the divider. Gallery arrows sit beneath the secondary deck, above the bottom divider (beneath the main card on mobile).
 The creator prepares independent photos and content through
 `POST /api/v1/boards/:boardId/remix-content`, deduplicates preparation within the mount and disables editing until
 ready, with retry on failure. Days/order/times and cover selections remain; calendar dates, original ownership,
@@ -287,13 +288,14 @@ The standard top-left BackLink returns to Create; Saved inspiration is removed, 
 at `/create`. On desktop viewports at least 1024px wide and 800px tall, the composition is vertically centered below
 the BackLink, fits the viewport and its Board area handles overflow; smaller/zoomed layouts retain page scrolling.
 The gallery has no Recently Updated heading, decorative footer text or separate Continue link. A selected card
-opens its existing editor only after edit permission resolves; its central pen appears on hover/focus and stays
-visible on touch devices. Unselected cards still select, and carousel arrows sit at the left below the cards.
+opens its published Board view, with independent pen and View controls on hover/focus and touch. Drafts keep
+opening their existing editor after edit permission resolves. Secondary published cards select first;
+carousel arrows beneath the deck and swipe change the selected Board.
 `board-selection-store.ts` clears cached documents on refresh, rejects stale responses,
 and checks fresh document identity and `canEditContent` before showing an editor link. Drafts reopen at
 `/boards/drafts/[boardId]`; published Boards reopen at `/boards/[boardId]/edit`, preserving ID, revision, and status.
 Production APIs cannot enumerate shared editable Boards. Shared-link lookup is deferred in the Continue UI;
-the existing store helper is not exposed by the page. No developer listing endpoint is used. The shared presentation uses a Motion V4 photographic focus gallery and a smaller V4 collection that promotes selected Boards into the same gallery, without duplicates. It retains spring rearrangement, mouse-only 3D tilt, keyboard selection, animated annotations and fresh-document editor gates. V4 selection controls share the card surface; inactive featured cards leave the tab order. Ownership comes from the owner-list scope or canonical management permission; shared edit access does not imply ownership.
+the existing store helper is not exposed by the page. No developer listing endpoint is used. The shared presentation uses a Motion V4 photographic focus gallery and a smaller V4 collection with direct published Board links and draft-preview selection, without duplicates. It retains spring rearrangement, mouse-only 3D tilt, keyboard selection, animated annotations and fresh-document editor gates. V4 selection controls share the card surface; inactive featured cards leave the tab order. Ownership comes from the owner-list scope or canonical management permission; shared edit access does not imply ownership.
 V1=`collage`, V2=`compact`, V3=`landscape`, and V4=`photo` retain their existing names and identifiers.
 V4 is the primary card throughout the migrated product. Continue, Drafts, creator preview, saved/owned lists, profile collections and Discover results are migrated; Featured Boards intentionally retain V3. Legacy variants remain available in the development gallery.
 The Remix page remains an unavailable state. The production account-saved Board list now exists, but this page
@@ -636,3 +638,13 @@ The Board editor offers owners a Delete Board text action below View saved Board
 Boards, including saved remix copies. It uses the existing owner-only DELETE endpoint and shared confirmation dialog,
 locks editing during confirmation, retains failures for retry, and returns to `/boards` after deletion. The endpoint
 removes Board children through database cascades and marks uploads for the existing unused-image cleanup.
+
+### Shared Board list hover controls
+
+Featured spatial galleries, the destination Board gallery and BoardLibrary reuse the photographic hover header with the author photo and `@handle`. Owners receive View, plus a pen when edit permission is available; other authors receive View and an independent saved-state bookmark. The bookmark uses the existing account save store and fills after a confirmed save; Remix keeps its template plus action. Secondary spatial/deck cards select first without navigating or exposing primary-only hover controls. Equal-card BoardLibrary items remain direct navigation. Owner galleries reuse their loaded documents; destination galleries load the selected Board through the existing document endpoint, retain summaries on failure and offer retry. Library arrows are centered below the cards and above the scroll indicator; spatial arrows are centered above the bottom divider. These list placements suppress standalone Unsplash cover credits so they cannot alter gallery geometry; other photo placements retain their credits.
+
+The featured My Boards gallery takes up to ten loaded Boards, keeps its 400px maximum card size, centers the Featured Boards heading and places navigation immediately below the shorter stage. Its former visible destination/day caption and Open Board footer link are removed. BoardLibrary cards have a 328px maximum width in 376px desktop slides. Focused published spatial/deck card backgrounds open the Board view, while inactive cards select first. Equal-card library cards open directly. View, Edit, Save and Remix controls remain independent.
+
+Board hover actions and the profile header share the same disclosure state as metadata; they no longer use independent group-hover opacity. Dragging suppresses hover content and native image/link dragging, while profile and action controls scale subtly on hover/focus with reduced-motion support. Spatial galleries interpolate card positions, scale and opacity while dragging. Continue/Remix deck cards follow the pointer and promote on release, suppressing drag-release navigation. Featured frames have no gray boundary; BoardLibrary preserves its boundary without per-card separators. Its 8px native range scrollbar supports pointer and keyboard input and continuous between-snap scrolling through the isolated Embla 8.6 adapter in `board-library-scroll.ts`; check this adapter when upgrading Embla. Active library arrows use foreground color. Interaction tests were authored alongside implementation; browser drag/hover verification and independent test review remain pending.
+
+The three Board browsing components opt into the shared `BoardCardTilt` presenter for the same subtle spring-based pointer tilt. It follows mouse position only, resets on pointer leave/press/cancel or drag suppression, and honors reduced motion. The former Continue-only tilt wrapper was removed to prevent nested transforms. Featured and destination galleries opt into visibility indicators for any known published visibility, regardless of ownership; unknown publication/access data remains unlabelled. Indicators reuse existing public/friends/restricted-access labels and icons and never grant edit permission.

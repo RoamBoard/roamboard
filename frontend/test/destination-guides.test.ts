@@ -318,7 +318,7 @@ test("destination photos remove small image caps while preserving Unsplash track
     }
 });
 
-test("the hero and closing photo request 3200px and a public Board cover requests 1200px with credits intact", () => {
+test("hero and closing photos retain credits while the 1200px Board cover omits its gallery credit", () => {
     const destination = guide();
     destination.boards[0].images = [destination.boards[0].images[1]];
     const markup = renderGuide(destination);
@@ -341,10 +341,10 @@ test("the hero and closing photo request 3200px and a public Board cover request
         assert.equal(image.searchParams.has("h"), false);
         assert.equal(image.searchParams.has("dpr"), false);
     }
-    for (const name of ["Photographer opening", "Photographer closing", "Ada Rail"]) {
+    for (const name of ["Photographer opening", "Photographer closing"]) {
         assert.ok(markup.includes(name));
     }
-    for (const source of ["opening", "closing", "activity"]) {
+    for (const source of ["opening", "closing"]) {
         assert.match(markup, new RegExp(`href="https://unsplash\\.com/photos/${source}(?:\\?|"|&)`));
     }
 });
@@ -767,18 +767,14 @@ test("the fixed public Boards chapter keeps every loaded Board reachable in its 
     const selections = Array.from(chapter.matchAll(/<button\b[^>]*aria-label="Select Tokyo public trip (\d+)"[^>]*>/g));
     assert.deepEqual(
         selections.map(([, number]) => Number(number)),
-        boards.map((_, index) => index + 1)
+        boards.slice(1).map((_, index) => index + 2)
     );
-    for (const [index, [button]] of selections.entries()) {
-        assert.match(button, index === 0 ? /aria-pressed="true"/ : /aria-pressed="false"/);
-        assert.match(button, index === 0 ? /tabindex="0"/ : /tabindex="-1"/);
+    for (const [button] of selections) {
+        assert.match(button, /tabindex="-1"/);
     }
     const links = Array.from(chapter.matchAll(/<a\b[^>]*href="\/boards\/(\d+)"[^>]*>/g));
-    assert.deepEqual(
-        links.map(([, id]) => Number(id)),
-        [900]
-    );
-    assert.match(chapter, /Open Board/);
+    assert.deepEqual([...new Set(links.map(([, id]) => Number(id)))], [boards[0].boardId]);
+    assert.doesNotMatch(chapter, />Open Board/);
     assert.match(chapter, /aria-label="Previous slide"/);
     assert.match(chapter, /aria-label="Next slide"/);
     for (const board of boards) assert.ok(chapter.includes(board.username));
@@ -786,13 +782,12 @@ test("the fixed public Boards chapter keeps every loaded Board reachable in its 
     assert.equal((markup.match(/\bdata-destination-chapter\b/g) ?? []).length, 4);
 });
 
-test("a public photo card credits its chosen external cover", () => {
+test("a public photo card retains its chosen external cover without a standalone credit", () => {
     const destination = guide();
     destination.boards[0].images = [destination.boards[0].images[1]];
     const markup = renderGuide(destination);
     assert.match(markup, /src="https:\/\/images\.unsplash\.com\/activity\.jpg\?/);
-    assert.match(markup, /Ada Rail/);
-    assert.match(markup, /href="https:\/\/unsplash\.com\/photos\/activity/);
+    assert.doesNotMatch(markup, /Ada Rail|href="https:\/\/unsplash\.com\/photos\/activity/);
 });
 
 test("missing article and photos retain a guide while a successful empty Board read has an empty state", () => {

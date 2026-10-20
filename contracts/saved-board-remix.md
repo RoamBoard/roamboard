@@ -2,16 +2,18 @@
 
 `/create/remix` lists the signed-in user's saved Boards using the Continue page gallery, without search,
 filters or placeholder content. Back remains available. The short introduction explains that a saved Board
-is a starting point for the user's own trip. Only the primary card has actions: its body and eye open
-`/boards/<boardId>`, and its plus opens `/boards/new?remix=<boardId>`. These actions appear on hover or keyboard
-focus and remain visible on touch devices. Other cards show no hover details or actions; clicking them moves
-them into the primary position, as do gallery arrows. The count uses the same spacing as Continue, reserving
-its filter-row space without showing filters. Continue retains its existing select/edit behavior.
+is a starting point for the user's own trip. The focused published card background opens `/boards/<boardId>`. Secondary deck and collection cards select first, without navigating; arrows and drag gestures also change the primary card. Only the primary card exposes hover
+actions: Remix retains plus + View, and Continue owners receive pen + View. The pen uses current edit permission;
+the eye and background use the published Board view. Per the user's decision, drafts keep opening their existing
+editor rather than acquiring a new read-only preview. Unresolved draft permissions do not grant an editor link.
+Actions appear on hover or keyboard focus and remain visible on touch devices. The count uses the same spacing
+as Continue, reserving its filter-row space without showing filters. Both galleries place arrows beneath the
+secondary deck and above the divider; small screens place controls beneath the main card.
 
-The primary card's hover header has a smaller author photo at the top left with the author's `@handle` beside
-it, together linking to `/profile/<handle>`. The plus and eye are centered as a pair below the details, preserving
-their existing gap. The photo uses the existing Board-author URL and its authorization query;
-missing or failed photos use the existing account icon while retaining the profile link.
+Both Continue and Remix primary cards share the same profile header and hover spacing. The author photo and
+`@handle` form one link to `/profile/<handle>`. The photo retains its Board authorization query;
+missing or failed photos use the account icon. The action row reserves room above the metadata divider,
+with description/tags clipped within their own text area so they cannot overlap buttons or totals.
 
 ## Preparation API
 
@@ -33,3 +35,11 @@ is unavailable. Provider failures keep the creator disabled with retry. Failed/a
 unattached uploads or expired intents, handled by the existing unused-image cleanup after its grace period.
 No new migration is required. Preparation is not idempotent; the frontend deduplicates in-flight preparation
 within one mounted creator. Reloading starts a fresh unsaved copy.
+
+## Shared browsing hover controls
+
+User decision: other-author cards in featured, destination and library browsing use bookmark + View, rather than the Remix plus. Saving uses the existing saved-Board API, confirms membership before filling the bookmark, supports unsaving, and retains visible error/sign-in feedback. The Remix picker keeps its plus + View actions. Owners see the shared profile header and View, plus a pen only with edit permission. Focused spatial/deck card backgrounds open their Board view; out-of-focus cards select first. Component 2 is an equal-card library, so every library card opens directly. Explicit controls retain their own destinations. No new backend endpoint or stored field is introduced. Destination summaries are enriched by the selected Board document for author photos, permissions, activity/save totals and saved membership; unavailable previews retain honest summary cards with retry. Standalone Unsplash cover credits are suppressed in these three gallery layouts.
+
+Hover controls use the same disclosure state as metadata, with subtle hover/focus scaling and reduced-motion support. Dragging suppresses all hover layers together; native image/link dragging is disabled. Featured cards update their positions, scale and opacity continuously with horizontal drag, then settle to the selected Board. Dragging a secondary Continue/Remix deck card moves it with the pointer and promotes it on release; drag-release clicks do not navigate. The equal-card library keeps its component boundary, removes per-card divider lines, and uses a thicker, keyboard-accessible draggable scrollbar. The scrollbar adapter targets Embla 8.6 distance scrolling so it moves continuously between snap positions.
+
+All three Board list components share the same mouse-only corner tilt, with drag/reset and reduced-motion handling. Component 1 displays the existing visibility indicator for a known access setting even on another author's Board, without inferring ownership or granting edit controls. API visibility values and access rules are unchanged.
