@@ -10,6 +10,8 @@ import { subscribeToFriendRequestUpdates, type FriendRequest } from "../src/lib/
 import { publishAccountUpdate, signInWithGoogle, type AuthUser } from "../src/lib/auth";
 import { resetMockStore } from "../src/data/mock-social";
 
+void globalThis.fetch;
+
 const mockRouter = {
     back: () => {},
     forward: () => {},

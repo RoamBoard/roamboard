@@ -1,5 +1,5 @@
 import Link from "next/link";
-import PhotoBoardCard from "@/components/features/boards/cards/PhotoBoardCard";
+import AccountPhotoBoardCard from "@/components/features/boards/cards/AccountPhotoBoardCard";
 import TagIcon from "@/components/ui/TagIcon";
 import { getBoardTag, boardTagHref, type BoardTagId } from "@/data/board-tags";
 import type { DiscoverBoard } from "@/data/discover-boards";
@@ -35,7 +35,17 @@ export function toDiscoverPhotoBoardCard(board: DiscoverBoard): PhotoBoardCardDa
 export default function DiscoverBoardCard({ board, activeTagId }: { board: DiscoverBoard; activeTagId?: BoardTagId }) {
     return (
         <div className="min-w-0">
-            <PhotoBoardCard board={toDiscoverPhotoBoardCard(board)} href={board.href} details />
+            <AccountPhotoBoardCard
+                tilt={Boolean(board.href)}
+                board={toDiscoverPhotoBoardCard(board)}
+                href={board.href}
+                ownership="other"
+                initialSaved={false}
+                showVisibility
+                hideCoverCredit
+                hoverActions={board.href ? { viewHref: board.href } : undefined}
+                details
+            />
             <ul aria-label="Explore Board tags" className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
                 {board.tags.map((id) => {
                     const tag = getBoardTag(id);
