@@ -126,6 +126,26 @@ test("detail validation rejects incomplete identities and caller supplied URLs b
     }
 });
 
+test("country details resolve a distant listing with its country scope before accepting its ID", async () => {
+    const country = { ...identity, name: "Japan", kind: "country" };
+    const server = app({
+        async places(input: unknown) {
+            assert.deepEqual(input, { ...country, country: "Japan", countryCode: "JPN" });
+            return [place];
+        },
+        async placeDetails(selected: unknown, _observe: unknown, kind: unknown) {
+            assert.deepEqual(selected, place);
+            assert.equal(kind, "country");
+            return { ...missingDetails, description: "Riverside streets in Japan." };
+        }
+    });
+    const response = await request(server)
+        .get("/api/v1/destinations/place-details")
+        .query({ ...country, placeId: place.id })
+        .expect(200);
+    assert.equal(response.body.data.description, "Riverside streets in Japan.");
+});
+
 test("an ID from another city's guide cannot obtain details", async () => {
     const server = app({
         placeDetails() {

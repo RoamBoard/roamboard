@@ -16,6 +16,88 @@ const page = (pageid: number, title: string, see: unknown[], extra = {}) => ({
     ...extra
 });
 
+test("country guides read ordered city markers across the country and ignore sights and invalid geometry", async (t) => {
+    const urls: URL[] = [];
+    t.mock.method(globalThis, "fetch", async (input: string | URL) => {
+        urls.push(new URL(String(input)));
+        return Response.json({
+            query: {
+                pages: [
+                    page(42, "Japan", [point("Kyoto temple", 36.5, 139)], {
+                        mapdata: [
+                            JSON.stringify({
+                                city: [
+                                    point('<a href="/wiki/Tokyo">Tokyo</a>', 35.6762, 139.6503),
+                                    point("Kyoto", 35.0116, 135.7681),
+                                    point("Tokyo", 35.7, 139.7),
+                                    point("Invalid", 91, 139),
+                                    {
+                                        ...point("Line"),
+                                        geometry: {
+                                            type: "LineString",
+                                            coordinates: [
+                                                [139, 35],
+                                                [140, 36]
+                                            ]
+                                        }
+                                    },
+                                    point(" ")
+                                ],
+                                see: [point("Kyoto temple", 36.5, 139)],
+                                eat: [point("Restaurant", 36.5, 139)]
+                            })
+                        ]
+                    })
+                ]
+            }
+        });
+    });
+    const selected = { name: "Japan", country: "Japan", countryCode: "JPN", latitude: 36.5, longitude: 139 };
+    assert.deepEqual(
+        (await fetchWikivoyageSights({ ...selected, kind: "country" })).map((sight) => sight.name),
+        ["Tokyo", "Kyoto"]
+    );
+    assert.equal(urls[0]?.searchParams.get("mpdgroups"), "city");
+    const cities = await fetchWikivoyageSights({ ...selected, kind: "country" });
+    assert.equal(cities[0]?.latitude, 35.6762);
+    assert.equal(cities[0]?.longitude, 139.6503);
+    assert.equal(cities[0]?.id, "wikivoyage:42:tokyo");
+    assert.deepEqual(
+        (await fetchWikivoyageSights(selected)).map((sight) => sight.name),
+        ["Kyoto temple"]
+    );
+    assert.equal(urls[2]?.searchParams.get("mpdgroups"), "see");
+});
+
+test("an empty country city group stays empty without reading country subpages", async (t) => {
+    const urls: URL[] = [];
+    t.mock.method(globalThis, "fetch", async (input: string | URL) => {
+        urls.push(new URL(String(input)));
+        return Response.json({
+            query: {
+                pages: [
+                    page(42, "Japan", [], {
+                        mapdata: [JSON.stringify({ city: [], see: [] })],
+                        links: [{ ns: 0, title: "Japan/District" }]
+                    })
+                ]
+            }
+        });
+    });
+    assert.deepEqual(
+        await fetchWikivoyageSights({
+            name: "Japan",
+            country: "Japan",
+            countryCode: "JPN",
+            latitude: 36.5,
+            longitude: 139,
+            kind: "country"
+        }),
+        []
+    );
+    assert.equal(urls.length, 1);
+});
+
 test("Wikivoyage sights retain guide order, strip listing markup and ignore other groups, malformed geometry and distant places", async (t) => {
     const urls: URL[] = [];
     const feedback: number[] = [];

@@ -7,6 +7,7 @@ import { destinationPhotoUrl, type DestinationBoardSummary } from "@/lib/destina
 import DestinationStoryCard from "./DestinationStoryCard";
 
 type Props = {
+    kind?: "country";
     name: string;
     countryCode: string;
     boards: DestinationBoardSummary[];
@@ -21,6 +22,7 @@ const apiOrigin = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 // Requests, pagination and retries remain owned by the destination guide hook.
 export function DestinationStories({
+    kind,
     name,
     countryCode,
     boards,
@@ -61,10 +63,11 @@ export function DestinationStories({
                     id="destination-boards-heading"
                     className="font-display mt-5 text-[clamp(2.7rem,min(4vw,8dvh),4.75rem)] leading-[0.95] tracking-[-0.055em] [overflow-wrap:anywhere]"
                 >
-                    Boards in and around {name}
+                    Boards {kind === "country" ? "across" : "in and around"} {name}
                 </h2>
                 <p className="text-muted-foreground mt-6 max-w-60 text-xs leading-6">
-                    Trips shared by travellers with activities near {name}. Newest updated first.
+                    Trips shared by travellers with activities {kind === "country" ? "in" : "near"} {name}. Newest
+                    updated first.
                 </p>
                 <div aria-live="polite" className="mt-4">
                     {error ? (
@@ -97,7 +100,7 @@ export function DestinationStories({
                         ? "Loading boards..."
                         : error
                           ? "Public boards are unavailable right now."
-                          : `No public Boards in and around ${name} yet.`}
+                          : `No public Boards ${kind === "country" ? "across" : "in and around"} ${name} yet.`}
                 </p>
             ) : (
                 <div

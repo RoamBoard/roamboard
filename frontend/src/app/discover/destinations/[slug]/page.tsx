@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import Link from "next/link";
 import BackLink from "@/components/ui/BackLink";
 import { notFound } from "next/navigation";
@@ -7,21 +8,38 @@ import DiscoverPhoto from "@/components/features/discover/DiscoverPhoto";
 import DiscoverBoardCard from "@/components/features/discover/DiscoverBoardCard";
 import { getDiscoverDestination } from "@/data/discover-destinations";
 import { getDiscoverBoardsByDestination } from "@/data/discover-boards";
-import { destinationRouteHref, getDestinationGuideInput } from "@/lib/destination-guides";
+import { destinationGuideHref, destinationRouteHref, getDestinationGuideInput } from "@/lib/destination-guides";
+import { findCountry } from "@/lib/countries";
+import { searchDestinations } from "@/lib/destinations";
 import DestinationGuide from "@/components/features/destinations/DestinationGuide";
 import { DestinationReady } from "@/components/features/destinations/DestinationTransitionProvider";
 import { destinationSelectionMatches, type DestinationSelectionParams } from "@/lib/destination-search";
 
 type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<DestinationSelectionParams> };
+const searchCountry = cache((name: string) => searchDestinations(name));
 
 async function resolveDestination({ params, searchParams }: Props) {
     // Next supplies an encoded path segment. Decode once; the shared serializer encodes the logical slug once.
     // Malformed escapes remain an actual route failure, rather than acknowledging an ambiguous identity.
     const slug = decodeURIComponent((await params).slug);
     const selection = (await searchParams) ?? {};
-    const guide = getDestinationGuideInput(slug, selection);
+    const selectedGuide = getDestinationGuideInput(slug, selection);
     const destination = getDiscoverDestination(slug);
-    // Cities carry their full identity. Country pages keep main's namesake checks.
+    const country = findCountry(destination?.countryCode ?? slug.replace(/-/g, " "));
+    const cleanCountry = country && Object.keys(selection).length === 0;
+    const countryResult =
+        !selectedGuide && cleanCountry
+            ? (await searchCountry(country.name)).find(
+                  (result) => result.placeType === "country" && result.countryCode === country.code
+              )
+            : undefined;
+    const countryHref = countryResult && destinationGuideHref(countryResult);
+    const guide =
+        selectedGuide ??
+        (countryHref
+            ? getDestinationGuideInput(slug, Object.fromEntries(new URL(countryHref, "http://localhost").searchParams))
+            : undefined);
+    // Selected guides carry their identity. Historical country links retain their namesake checks.
     if (!guide && (!destination || !destinationSelectionMatches(destination, "country", selection))) notFound();
     const href = destinationRouteHref(slug, selection);
     return { guide, destination, href };
@@ -32,7 +50,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     if (guide)
         return {
             title: `${guide.name} | Roamboard`,
-            description: `Explore ${guide.name}: a city introduction, photos and public travel boards.`
+            description: `Explore ${guide.name}: a destination introduction, photos and public travel boards.`
         };
     if (!destination) notFound();
     return { title: `${destination.name} | Roamboard`, description: destination.description };

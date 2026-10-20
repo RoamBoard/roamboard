@@ -46,6 +46,20 @@ async function routeReady(href: string, decodedSlug = false) {
     return ready;
 }
 
+test("country guide identity retains country scope and exactly-once encoding through route readiness", async () => {
+    const href = destinationGuideHref({
+        ...selectedCity("Côte d’Ivoire"),
+        placeType: "country",
+        country: "Côte d’Ivoire",
+        countryCode: "CIV",
+        latitude: 7.54,
+        longitude: -5.55
+    });
+    assert.ok(href);
+    assert.equal(new URL(href, "https://roamboard.test").searchParams.get("kind"), "country");
+    assert.equal(await routeReady(href), href);
+});
+
 test("actual destination routes release the selected overlay for raw and encoded accent, non-Latin and reserved path segments", async (t) => {
     t.mock.timers.enable({ apis: ["setTimeout"] });
     const store = createDestinationLoadingStore();

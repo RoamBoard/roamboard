@@ -32,6 +32,7 @@ export type DestinationContextRequest = z.infer<typeof destinationContextSchema>
 const guideCoordinate = z.string().trim().min(1).transform(Number).pipe(z.number().finite());
 export const destinationGuideSchema = z
     .object({
+        kind: z.literal("country").optional(),
         name: z.string().trim().min(1).max(100),
         country: z.string().refine(isCountryCode),
         latitude: guideCoordinate.pipe(z.number().min(-90).max(90)),

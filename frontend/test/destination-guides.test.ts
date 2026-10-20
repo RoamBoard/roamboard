@@ -413,7 +413,6 @@ test("city search links preserve full identities for any city and distinguish ci
     for (const destination of [
         city({ placeType: "poi" }),
         city({ placeType: "neighborhood" }),
-        city({ placeType: "country" }),
         city({ countryCode: null }),
         city({ countryCode: "JP" }),
         city({ latitude: Number.NaN })
@@ -427,7 +426,8 @@ test("city search links preserve full identities for any city and distinguish ci
     );
 });
 
-test("the real route opens any selected city, honors query identity over slug and retains three live legacy aliases", async () => {
+test("the real route opens any selected city, honors query identity over slug and retains three live legacy aliases", async (t) => {
+    replaceFetch(t, async () => Response.json({ data: [city({ name: "Japan", placeType: "country", city: null })] }));
     for (const slug of ["tokyo", "kyoto"]) {
         const params = Promise.resolve({ slug });
         const searchParams = Promise.resolve({
@@ -463,6 +463,79 @@ test("the real route opens any selected city, honors query identity over slug an
     await assert.rejects(
         DestinationRoute({ params: Promise.resolve({ slug: "not-a-destination" }), searchParams: Promise.resolve({}) }),
         /404/
+    );
+});
+
+test("country selections reuse the live guide and retain country identity through route and API pagination", async (t) => {
+    const japan = city({
+        name: "Japan",
+        address: "Japan",
+        country: "Japan",
+        placeType: "country",
+        city: null,
+        latitude: 36.5748441,
+        longitude: 139.2394179
+    });
+    const href = destinationGuideHref(japan);
+    assert.ok(href);
+    const url = new URL(href, "https://roamboard.example");
+    assert.equal(url.pathname, "/discover/destinations/japan");
+    assert.equal(url.searchParams.get("kind"), "country");
+    const selection = Object.fromEntries(url.searchParams);
+    const expected = {
+        name: "Japan",
+        country: "JPN",
+        latitude: 36.5748441,
+        longitude: 139.2394179,
+        kind: "country" as const
+    };
+    const input = getDestinationGuideInput("japan", selection);
+    assert.deepEqual(input, expected);
+    assert.ok(input);
+    replaceFetch(t, async (request) => {
+        const api = new URL(String(request));
+        assert.equal(api.pathname, "/api/v1/destinations/guide");
+        assert.equal(api.searchParams.get("kind"), "country");
+        assert.equal(api.searchParams.get("page"), "2");
+        return Response.json({ data: guide({ page: 2 }) });
+    });
+    assert.deepEqual(
+        routeInput(
+            await DestinationRoute({
+                params: Promise.resolve({ slug: "japan" }),
+                searchParams: Promise.resolve(selection)
+            })
+        ),
+        expected
+    );
+    assert.equal((await loadDestinationGuide(input, 2)).page, 2);
+    for (const kind of ["continent", ["country", "country"]]) {
+        assert.equal(getDestinationGuideInput("japan", { ...selection, kind }), undefined);
+    }
+    assert.equal(getDestinationGuideInput("kyoto", { kind: "country" }), undefined);
+    assert.equal(getDestinationGuideInput("japan", { kind: "country" }), undefined);
+});
+
+test("a clean country URL resolves the provider country identity into the shared guide", async (t) => {
+    replaceFetch(t, async (input) => {
+        const url = new URL(String(input));
+        assert.equal(url.pathname, "/api/v1/destinations/search");
+        assert.equal(url.searchParams.get("q"), "Japan");
+        return Response.json({
+            data: [city({ name: "Japan", placeType: "country", city: null, latitude: 36.5, longitude: 139 })]
+        });
+    });
+    assert.deepEqual(
+        routeInput(
+            await DestinationRoute({ params: Promise.resolve({ slug: "japan" }), searchParams: Promise.resolve({}) })
+        ),
+        {
+            name: "Japan",
+            country: "JPN",
+            latitude: 36.5,
+            longitude: 139,
+            kind: "country"
+        }
     );
 });
 

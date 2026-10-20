@@ -9,6 +9,7 @@ import type { DestinationGuideData, PlaceDetails } from "@/lib/destination-guide
 import BoardPhoto from "@/components/features/boards/BoardPhoto";
 import {
     placeBoardHref,
+    cityGuideHref,
     matchPlace,
     placeSourceUrl,
     loadPlaceDetails,
@@ -29,6 +30,11 @@ export default function DestinationPlaces({
     onRetry?: () => void;
     loading?: boolean;
 }) {
+    const isCountry = guide.destination.kind === "country";
+    const itemName = isCountry ? "city" : "sight";
+    const itemNames = isCountry ? "cities" : "sights";
+    const listName = isCountry ? "Cities" : "Places";
+    const mapName = isCountry ? "country" : "city";
     const [selected, setSelected] = useState<StartingPlace | null>(null);
     const [mobileView, setMobileView] = useState<"list" | "map">("list");
     const [page, setPage] = useState(0);
@@ -66,13 +72,19 @@ export default function DestinationPlaces({
             return point;
         });
     }, [places, selected, mapMatch]);
-    const sourceUrl = selected ? placeSourceUrl(selected) : undefined;
-    const guideSourceUrl = places[0] ? placeSourceUrl(places[0]) : undefined;
+    const listingSourceUrl = selected ? placeSourceUrl(selected) : undefined;
     const selectedInfo = placeInfo?.placeId === selected?.id ? placeInfo : null;
+    const sourceUrl =
+        selectedInfo?.data?.sourceUrl ??
+        (isCountry && listingSourceUrl ? `${listingSourceUrl.split("#")[0]}#Cities` : listingSourceUrl);
+    const firstSourceUrl = places[0] ? placeSourceUrl(places[0]) : undefined;
+    const guideSourceUrl = isCountry && firstSourceUrl ? `${firstSourceUrl.split("#")[0]}#Cities` : firstSourceUrl;
+    const selectedHref = selected ? (isCountry ? cityGuideHref(selected) : placeBoardHref(selected)) : undefined;
 
     useEffect(() => {
         if (!selected || !placeSourceUrl(selected)) return;
         const city = {
+            ...(guide.destination.kind ? { kind: guide.destination.kind } : {}),
             name: guide.destination.name,
             country: guide.destination.countryCode,
             latitude: guide.destination.latitude,
@@ -90,7 +102,10 @@ export default function DestinationPlaces({
             () => {
                 detailRequests.current.delete(selected.id);
                 if (requestState.active)
-                    setPlaceInfo({ placeId: selected.id, error: "This sight's details could not load." });
+                    setPlaceInfo({
+                        placeId: selected.id,
+                        error: `This ${itemName}'s details could not load.`
+                    });
             }
         );
         return () => {
@@ -98,8 +113,10 @@ export default function DestinationPlaces({
         };
     }, [
         selected,
+        itemName,
         guide.destination.name,
         guide.destination.countryCode,
+        guide.destination.kind,
         guide.destination.latitude,
         guide.destination.longitude,
         detailAttempt
@@ -111,7 +128,7 @@ export default function DestinationPlaces({
     }, [mobileView]);
 
     useEffect(() => {
-        if (!selected || !placeSourceUrl(selected)) return;
+        if (isCountry || !selected || !placeSourceUrl(selected)) return;
         // Match only the selected sight. Keep Mapbox coordinates out of Board links.
         const request = matches.current.get(selected.id) ?? matchPlace(selected);
         matches.current.set(selected.id, request);
@@ -137,7 +154,7 @@ export default function DestinationPlaces({
         return () => {
             requestState.active = false;
         };
-    }, [selected]);
+    }, [selected, isCountry]);
 
     useEffect(() => {
         // Show the city immediately, sharing the reservation during React's development effect replay.
@@ -150,12 +167,16 @@ export default function DestinationPlaces({
             })
             .catch(() => {
                 if (requestState.active)
-                    setMapError("The city map could not load. You can still start a Board from a sight.");
+                    setMapError(
+                        isCountry
+                            ? "The country map could not load. You can still open a city guide from the list."
+                            : "The city map could not load. You can still start a Board from a sight."
+                    );
             });
         return () => {
             requestState.active = false;
         };
-    }, [mapAttempt]);
+    }, [mapAttempt, isCountry]);
 
     function choose(place: StartingPlace) {
         setSelected(place);
@@ -168,7 +189,7 @@ export default function DestinationPlaces({
     return (
         <section
             id="destination-places"
-            aria-label={`Explore places in ${guide.destination.name}`}
+            aria-label={`Explore ${listName.toLowerCase()} in ${guide.destination.name}`}
             data-destination-selection
             data-destination-chapter
             tabIndex={-1}
@@ -177,7 +198,7 @@ export default function DestinationPlaces({
             <div
                 className="border-line flex shrink-0 gap-2 border-b px-6 md:hidden"
                 role="group"
-                aria-label="Place view"
+                aria-label={isCountry ? "City view" : "Place view"}
             >
                 <button
                     type="button"
@@ -185,7 +206,7 @@ export default function DestinationPlaces({
                     onClick={() => setMobileView("list")}
                     className="aria-pressed:border-foreground min-h-11 flex-1 border-b-2 border-transparent px-4 text-sm aria-pressed:font-semibold"
                 >
-                    Places
+                    {listName}
                 </button>
                 <button
                     type="button"
@@ -209,10 +230,10 @@ export default function DestinationPlaces({
                     id="destination-places-heading"
                     className="font-display mt-2 text-[clamp(1.75rem,4dvh,2.5rem)] leading-[1.1] font-semibold tracking-tight [@media(max-height:540px)]:mt-0 [@media(max-height:540px)]:text-2xl"
                 >
-                    Places to explore
+                    {`${listName} to explore`}
                 </h2>
                 <p className="text-muted-foreground mt-4 max-w-[34ch] text-sm leading-6 [@media(max-height:540px)]:hidden">
-                    Choose a sight to start planning.
+                    {isCountry ? "Choose a city to explore its guide." : "Choose a sight to start planning."}
                 </p>
                 {shown.length ? (
                     <ol
@@ -250,9 +271,9 @@ export default function DestinationPlaces({
                         <p>
                             {guide.unavailable.includes("places")
                                 ? loading
-                                    ? "Loading travel-guide sights..."
-                                    : "Travel-guide sights could not be loaded right now."
-                                : `No travel-guide sights are available for ${guide.destination.name} yet.`}
+                                    ? `Loading travel-guide ${itemNames}...`
+                                    : `Travel-guide ${itemNames} could not be loaded right now.`
+                                : `No travel-guide ${itemNames} are available for ${guide.destination.name} yet.`}
                         </p>
                         {guide.unavailable.includes("places") ? (
                             <button
@@ -261,7 +282,7 @@ export default function DestinationPlaces({
                                 disabled={loading}
                                 className="min-h-11 w-fit underline"
                             >
-                                Retry travel-guide sights
+                                Retry travel-guide {itemNames}
                             </button>
                         ) : null}
                     </div>
@@ -275,7 +296,7 @@ export default function DestinationPlaces({
                         <span>
                             {places.length
                                 ? `${currentPage * pageSize + 1}-${Math.min((currentPage + 1) * pageSize, places.length)} of ${places.length}`
-                                : "0 places"}
+                                : `0 ${listName.toLowerCase()}`}
                         </span>
                         {places.length > pageSize ? (
                             <span>
@@ -284,10 +305,13 @@ export default function DestinationPlaces({
                         ) : null}
                     </p>
                     {places.length > pageSize ? (
-                        <nav aria-label="Recommended places pages" className="grid grid-cols-2 gap-3">
+                        <nav
+                            aria-label={`Recommended ${listName.toLowerCase()} pages`}
+                            className="grid grid-cols-2 gap-3"
+                        >
                             <button
                                 type="button"
-                                aria-label="Previous places page"
+                                aria-label={`Previous ${listName.toLowerCase()} page`}
                                 disabled={currentPage === 0}
                                 onClick={() => setPage(currentPage - 1)}
                                 className="border-line hover:bg-faint flex min-h-12 items-center justify-center gap-2 rounded-sm border px-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-default disabled:opacity-30"
@@ -296,7 +320,7 @@ export default function DestinationPlaces({
                             </button>
                             <button
                                 type="button"
-                                aria-label="Next places page"
+                                aria-label={`Next ${listName.toLowerCase()} page`}
                                 disabled={(currentPage + 1) * pageSize >= places.length}
                                 onClick={() => setPage(currentPage + 1)}
                                 className="bg-foreground text-background flex min-h-12 items-center justify-center gap-2 rounded-sm px-3 text-sm font-semibold hover:opacity-85 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-default disabled:opacity-30"
@@ -310,7 +334,9 @@ export default function DestinationPlaces({
                     ) : null}
                 </div>
                 <p className="text-muted-foreground mt-2 shrink-0 text-[11px] leading-4">
-                    Selected in the city&apos;s travel guide.
+                    {isCountry
+                        ? "Cities listed in the country's travel guide."
+                        : "Selected in the city's travel guide."}
                     <br />
                     {guideSourceUrl ? (
                         <>
@@ -328,7 +354,7 @@ export default function DestinationPlaces({
             <section
                 ref={detail}
                 tabIndex={-1}
-                aria-label="Selected place and city map"
+                aria-label={isCountry ? "Selected city and country map" : "Selected place and city map"}
                 className={`border-line h-0 min-h-0 w-full flex-1 flex-col overflow-y-auto overscroll-y-contain border-r px-6 py-6 outline-none md:h-full md:w-auto md:min-w-0 md:px-8 md:py-8 [@media(max-height:540px)]:px-4 [@media(max-height:540px)]:py-3 ${mobileView === "map" ? "flex" : "hidden md:flex"}`}
             >
                 <div className="mb-4 flex shrink-0 items-center justify-between gap-4 [@media(max-height:540px)]:hidden">
@@ -337,12 +363,12 @@ export default function DestinationPlaces({
                         <span className="truncate">{selected?.city || guide.destination.name} map</span>
                     </p>
                     <p className="text-muted-foreground shrink-0 text-xs tabular-nums">
-                        {points.length} {points.length === 1 ? "place" : "places"}
+                        {points.length} {points.length === 1 ? (isCountry ? "city" : "place") : listName.toLowerCase()}
                     </p>
                 </div>
                 <div
                     className="border-line bg-faint relative min-h-52 flex-1 shrink-0 overflow-hidden rounded-lg border"
-                    aria-label="City map"
+                    aria-label={guide.destination.kind === "country" ? "Country map" : "City map"}
                 >
                     {token ? (
                         <InteractiveMap
@@ -350,6 +376,8 @@ export default function DestinationPlaces({
                             points={points}
                             routeGeometry={noRoute}
                             initialCenter={guide.destination}
+                            initialZoom={isCountry ? 4 : 11}
+                            selectedZoom={isCountry ? 6 : 14}
                             selectedPointId={selected?.id}
                             fillHeight
                             cooperativeGestures
@@ -361,7 +389,7 @@ export default function DestinationPlaces({
                     ) : (
                         <div className="grid h-full place-content-center gap-3 px-8 text-center text-sm">
                             <MapPin className="mx-auto" size={36} strokeWidth={1} />
-                            <p role="status">{mapError || "Loading city map..."}</p>
+                            <p role="status">{mapError || `Loading ${mapName} map...`}</p>
                             {mapError ? (
                                 <button
                                     type="button"
@@ -372,7 +400,7 @@ export default function DestinationPlaces({
                                     }}
                                     className="min-h-11 underline"
                                 >
-                                    Retry city map
+                                    Retry {mapName} map
                                 </button>
                             ) : null}
                         </div>
@@ -388,7 +416,9 @@ export default function DestinationPlaces({
                         </h3>
                         <p className="text-muted-foreground mt-2 line-clamp-2 max-w-[60ch] text-sm leading-6 [@media(max-height:540px)]:leading-5">
                             {selected?.address ||
-                                "Pick a sight from Places to explore, then start a Board from that place."}
+                                (isCountry
+                                    ? "Pick a city from Cities to explore, then open its guide."
+                                    : "Pick a sight from Places to explore, then start a Board from that place.")}
                         </p>
                         {selected && sourceUrl ? (
                             <div className="mt-3 grid grid-cols-[5rem_minmax(0,1fr)] items-start gap-3 md:grid-cols-[8rem_minmax(0,1fr)]">
@@ -435,10 +465,10 @@ export default function DestinationPlaces({
                                         role={!selectedInfo ? "status" : undefined}
                                     >
                                         {!selectedInfo
-                                            ? "Loading sight details..."
+                                            ? `Loading ${itemName} details...`
                                             : selectedInfo.error ||
                                               selectedInfo.data?.description ||
-                                              "No description is available for this sight."}
+                                              `No description is available for this ${itemName}.`}
                                     </p>
                                     {selectedInfo?.error || selectedInfo?.data?.unavailable.length ? (
                                         <button
@@ -450,7 +480,7 @@ export default function DestinationPlaces({
                                                 setDetailAttempt((value) => value + 1);
                                             }}
                                         >
-                                            Retry sight details
+                                            Retry {itemName} details
                                         </button>
                                     ) : null}
                                 </div>
@@ -465,22 +495,23 @@ export default function DestinationPlaces({
                                 <a href="https://creativecommons.org/licenses/by-sa/4.0/" className="underline">
                                     CC BY-SA 4.0
                                 </a>
-                                <span className="block" role="status">
-                                    {mapMatch && mapMatch.id === selected?.id
-                                        ? mapMatch.message
-                                        : "Finding this sight in Mapbox..."}
-                                </span>
+                                {!isCountry ? (
+                                    <span className="block" role="status">
+                                        {mapMatch && mapMatch.id === selected?.id
+                                            ? mapMatch.message
+                                            : "Finding this sight in Mapbox..."}
+                                    </span>
+                                ) : null}
                             </p>
                         ) : null}
                     </div>
-                    {selected ? (
+                    {selected && selectedHref ? (
                         <div>
-                            {/* Opening the creator only prefills an activity; it does not save a Board. */}
                             <Link
-                                href={placeBoardHref(selected)}
+                                href={selectedHref}
                                 className="bg-foreground text-background flex min-h-12 items-center justify-between gap-3 px-5 py-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-4"
                             >
-                                <span>Start a board from this place</span>
+                                <span>{isCountry ? `Explore ${selected.name}` : "Start a board from this place"}</span>
                                 <ArrowUpRight size={18} className="shrink-0" aria-hidden="true" />
                             </Link>
                         </div>

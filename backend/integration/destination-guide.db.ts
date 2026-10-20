@@ -109,6 +109,11 @@ test(
             );
             assert.equal(second.hasMore, false);
             assert.deepEqual(second.boards[0]?.activityTitles, ["Station walk", "Second station"]);
+            const country = await repository.listPublic({ ...query, name: "Norway", kind: "country", limit: 20 });
+            assert.deepEqual(
+                country.boards.filter((board) => board.username === userId).map((board) => board.boardId),
+                [base + 6, base + 2, base + 1, base]
+            );
             // A visibility change is observed on the next read, even with the same city and page.
             await client.query("UPDATE board SET visibility='collaborators' WHERE board_id=$1", [base + 2]);
             const changed = await repository.listPublic(query);

@@ -1,5 +1,5 @@
 import { findCountry } from "./countries";
-import type { DestinationGuideInput, PlaceDetails } from "./destination-guides";
+import { destinationGuideHref, type DestinationGuideInput, type PlaceDetails } from "./destination-guides";
 
 const apiOrigin = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
@@ -31,6 +31,16 @@ export type StartingPlace = {
     city: string;
     country: string;
 };
+
+export function cityGuideHref(place: StartingPlace): string | undefined {
+    return destinationGuideHref({
+        ...place,
+        placeType: "city",
+        countryCode: place.country,
+        city: place.name,
+        context: []
+    });
+}
 
 export function placeSourceUrl(place: Pick<StartingPlace, "id" | "name">): string | undefined {
     const pageId = /^wikivoyage:([1-9]\d*):/.exec(place.id)?.[1];

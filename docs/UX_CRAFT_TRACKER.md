@@ -3,18 +3,18 @@
 Living implementation status. Research: [original audit](UX_CRAFT_AUDIT.md) and
 [reassessment](UX_CRAFT_AUDIT_REFRESH.md). Historical reports and evidence remain unchanged.
 
-| Issue                                        | Status                               | Implementation reference         |
-| -------------------------------------------- | ------------------------------------ | -------------------------------- |
-| CRAFT-01 — Accented destination navigation   | Completed                            | [01](CRAFT_IMPLEMENTATION_01.md) |
-| REFRESH-01 — Board search state preservation | Completed                            | [01](CRAFT_IMPLEMENTATION_01.md) |
-| CRAFT-04 — Short-mobile introduction         | Completed                            | [02](CRAFT_IMPLEMENTATION_02.md) |
-| CRAFT-05 — Destination scroll ownership      | Completed                            | [02](CRAFT_IMPLEMENTATION_02.md) |
-| CRAFT-02 — Destination typography            | Completed                            | [03](CRAFT_IMPLEMENTATION_03.md) |
-| CRAFT-03 — Gallery composition               | Implemented — awaiting visual review | Implementation 04 below          |
+| Issue                                        | Status    | Implementation reference         |
+| -------------------------------------------- | --------- | -------------------------------- |
+| CRAFT-01 — Accented destination navigation   | Completed | [01](CRAFT_IMPLEMENTATION_01.md) |
+| REFRESH-01 — Board search state preservation | Completed | [01](CRAFT_IMPLEMENTATION_01.md) |
+| CRAFT-04 — Short-mobile introduction         | Completed | [02](CRAFT_IMPLEMENTATION_02.md) |
+| CRAFT-05 — Destination scroll ownership      | Completed | [02](CRAFT_IMPLEMENTATION_02.md) |
+| CRAFT-02 — Destination typography            | Completed | [03](CRAFT_IMPLEMENTATION_03.md) |
+| CRAFT-03 — Gallery composition               | Completed | Implementation 04 below          |
 
-## Implementation 04 — Destination fan, revised for visual review
+## Implementation 04 — Approved destination fan composition
 
-- **Status:** Implemented — awaiting visual review. The detached caption strip from the first draft was removed.
+- **Status:** Completed and visually approved by the user, together with Improvements 01–03.
 - **Changed:** destination cards now share one `galleryCover` composition in every selection state:
   the original 6.5cqw left inset, 10cqw title scale, full-card text width and flowing author beneath the title.
   The exposed-area inset/width, smaller background lettering and narrow-screen text hiding were removed.
@@ -35,5 +35,32 @@ Living implementation status. Research: [original audit](UX_CRAFT_AUDIT.md) and
   two-line/truncated and repeated `g/p/q/y` titles with flowing authors; descenders render completely.
   The fixture was removed. Tests were updated alongside implementation; independent test review remains
   outstanding. Screenshots are temporary and outside Git; historical audit evidence is unchanged.
-- **Follow-up:** `SpatialGallery` and `BoardSelectionGallery` have different geometry and were not changed.
-  User visual approval remains required before marking CRAFT-03 complete.
+- **Scope:** the approved CRAFT-03 correction is in `DestinationStories`; `SpatialGallery` and
+  `BoardSelectionGallery` have different geometry and were not changed. Future work must preserve the approved
+  physical-cover composition: content is positioned against the full card, and overlap may obscure it.
+
+### Final integration
+
+The latest `origin/main` country-destination work was integrated with a normal merge. Its backend,
+country lookup/cache, country-scope URLs, city list/details/navigation, map labels/zoom and Board copy
+were retained alongside the Craft readiness serializer and responsive scroll ownership. The approved
+gallery presenter is unchanged. Integration verification: 780 frontend tests, 219 backend tests,
+both TypeScript checks/builds, root formatting and frontend/backend lint pass. The frontend build ran
+in a temporary copy to preserve the running development server. Chrome verified the Sweden country
+guide, its city list/map selection and navigation to Stockholm. Existing historical evidence and the
+development-only typography review were retained; no new screenshot collection or experimental route remains.
+
+## Continuation priorities
+
+Follow the refresh audit's remaining order, reassessing each item against current `main` before implementation:
+
+1. **P0:** CRAFT-06/07 profile identity hierarchy; CRAFT-08 tablet editorial layout; CRAFT-09/R-06 functional contrast.
+2. **P1:** REFRESH-02 applied filter state; REFRESH-03/R-08 empty states; CRAFT-10/13 truthful controls;
+   REFRESH-04 gallery names; R-01 suggestion preview anchoring; CRAFT-11 informational tag styling.
+3. **P1, separate review:** CRAFT-12 upstream tag-data provenance/correction; then R-02/03 ordinary control feedback
+   and R-05 contextual mention feedback.
+4. **P2:** R-04 period underline; ready-destination waiting reduction (original I-09).
+5. **P3:** reproduce image recentering before proposing changes; optional photo motion only after separate review.
+
+No subsequent improvement has started. Historical audit recommendations about exposed background titles are
+superseded by the approved full-cover composition recorded above.

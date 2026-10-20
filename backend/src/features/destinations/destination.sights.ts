@@ -3,7 +3,7 @@ import { observeProviderResponse } from "../quotas/quota.feedback.js";
 import type { QuotaObserver } from "../quotas/quota.types.js";
 import type { MatchPlaceInput } from "./destination.schemas.js";
 import type { GuideDestination, GuidePlace } from "./destination.types.js";
-import { distanceKm } from "./destination.providers.js";
+import { distanceKm, guideNameMatches } from "./destination.providers.js";
 
 type Json = Record<string, unknown>;
 const object = (value: unknown): Json =>
@@ -34,19 +34,20 @@ const normalized = (value: string) =>
         .toLowerCase()
         .replace(/[^\p{L}\p{N}]/gu, "");
 
-// Read the travel guide's See map group, keeping editorial order rather than sorting by distance.
+// Countries use city markers; city guides use sights. Both keep the travel guide's order.
 export async function fetchWikivoyageSights(
     destination: GuideDestination,
     observe?: QuotaObserver,
     reserveAdditionalRequest?: () => Promise<void>
 ): Promise<GuidePlace[]> {
+    const group = destination.kind === "country" ? "city" : "see";
     async function read(params: Record<string, string>, additional = false): Promise<Json[]> {
         if (additional) await reserveAdditionalRequest?.();
         const url = new URL("https://en.wikivoyage.org/w/api.php");
         for (const [key, value] of Object.entries({
             action: "query",
             prop: "mapdata|links",
-            mpdgroups: "see",
+            mpdgroups: group,
             mpdlimit: "50",
             plnamespace: "0",
             pllimit: "500",
@@ -72,7 +73,7 @@ export async function fetchWikivoyageSights(
         for (const encoded of Array.isArray(page.mapdata) ? page.mapdata : []) {
             if (typeof encoded !== "string") continue;
             const data = object(JSON.parse(encoded));
-            for (const raw of Array.isArray(data.see) ? data.see : []) {
+            for (const raw of Array.isArray(data[group]) ? data[group] : []) {
                 const feature = object(raw),
                     geometry = object(feature.geometry),
                     properties = object(feature.properties);
@@ -88,13 +89,17 @@ export async function fetchWikivoyageSights(
                     longitude === undefined ||
                     Math.abs(latitude) > 90 ||
                     Math.abs(longitude) > 180 ||
-                    distanceKm(destination.latitude, destination.longitude, latitude, longitude) > 25
+                    (destination.kind !== "country" &&
+                        distanceKm(destination.latitude, destination.longitude, latitude, longitude) > 25)
                 )
                     continue;
                 result.push({
                     id: `wikivoyage:${page.pageid}:${name.normalize("NFC").toLowerCase()}`,
                     name,
-                    address: `${destination.name}, ${destination.country}`,
+                    address:
+                        destination.kind === "country"
+                            ? destination.country
+                            : `${destination.name}, ${destination.country}`,
                     latitude,
                     longitude,
                     provider: "wikivoyage"
@@ -105,12 +110,13 @@ export async function fetchWikivoyageSights(
     }
     const pages = await read({
         generator: "search",
-        gsrsearch: `${destination.name} ${destination.country}`,
+        gsrsearch: destination.kind === "country" ? destination.name : `${destination.name} ${destination.country}`,
         gsrnamespace: "0",
         gsrlimit: "5"
     });
     const eligible = pages.filter((page) => {
         const title = plain(page.title);
+        if (destination.kind === "country") return guideNameMatches(title, destination);
         return (
             normalized(title.replace(/\s*\([^)]*\)$/, "")) === normalized(destination.name) ||
             normalized(title) === normalized(`${destination.name} ${destination.country}`)
@@ -119,7 +125,7 @@ export async function fetchWikivoyageSights(
     const page = eligible.sort((a, b) => sights(b).length - sights(a).length)[0];
     if (!page) return [];
     const selected = sights(page);
-    if (!selected.length) {
+    if (!selected.length && destination.kind !== "country") {
         const title = plain(page.title);
         const districts = (Array.isArray(page.links) ? page.links : [])
             .map((link) => plain(object(link).title))
