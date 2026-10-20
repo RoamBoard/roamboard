@@ -148,6 +148,28 @@ function assertSeparateLinks(markup: string) {
     assert.equal(opened.value, false);
 }
 
+test("Remix shows known visibility on the selected saved Board and the secondary cards", () => {
+    const boards = (["public", "friends", "collaborators"] as const).map((visibility, index) => {
+        const boardId = 91 + index;
+        return toSelectionBoard(
+            { ...saved(boardId), updatedAt: saved(boardId).savedAt, source: "saved", status: "published" },
+            { ...document(), boardId, visibility }
+        );
+    });
+    const markup = renderToStaticMarkup(
+        createElement(BoardSelectionGallery, {
+            boards,
+            selected: boards[0],
+            mode: "remix",
+            onSelect() {},
+            onRetry() {}
+        })
+    );
+    for (const label of ["Public — anyone", "Friends — you", "Restricted access — you"])
+        assert.ok(markup.includes(`aria-label="${label}`));
+    assert.doesNotMatch(markup, /aria-label="Edit /);
+});
+
 test("Only the primary saved card exposes View and Remix; another card selects without navigating or disclosing details", () => {
     for (const selected of [true, false]) {
         const actions = { selections: 0, disclosures: 0 };

@@ -28,7 +28,7 @@ export default function SpatialGallery({
     const gallery = useRef<HTMLDivElement>(null);
 
     function select(index: number) {
-        const wrapped = (index + boards.length) % boards.length;
+        const wrapped = ((index % boards.length) + boards.length) % boards.length;
         if (!boards[wrapped]) return;
         setSelectedId(boards[wrapped].collage.id);
     }

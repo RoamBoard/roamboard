@@ -81,6 +81,46 @@ test("featured cards follow a drag continuously, suppress overlays/navigation, a
     assert.equal(selected.props.suppressHover, false);
 });
 
+for (const scenario of [
+    { name: "a long right drag", boardCount: 2, distance: 800, selectedIndex: 1 },
+    { name: "multiple rightward loops", boardCount: 2, distance: 2200, selectedIndex: 1 },
+    { name: "multiple leftward loops", boardCount: 2, distance: -2200, selectedIndex: 1 },
+    { name: "complete rightward loops", boardCount: 2, distance: 1872, selectedIndex: 0 },
+    { name: "a long right drag with one Board", boardCount: 1, distance: 2200, selectedIndex: 0 },
+    { name: "a long left drag with one Board", boardCount: 1, distance: -2200, selectedIndex: 0 }
+]) {
+    test(`featured gallery settles on the wrapped Board after ${scenario.name}`, (t) => {
+        const reset = hooks(t);
+        const boards = mockBoardCollections.created.slice(0, scenario.boardCount);
+        const render = () => {
+            reset();
+            return SpatialGallery({ boards });
+        };
+        const initial = render();
+        const region = find(initial, (node) => node.props["aria-roledescription"] === "carousel");
+        const galleryRef = region.props.ref as { current: unknown };
+        galleryRef.current = {
+            querySelector: () => ({ getBoundingClientRect: () => ({ width: 400 }) }),
+            focus: () => {}
+        };
+        const stage = find(initial, (node) => typeof node.props.onPanEnd === "function");
+        invoke(stage, "onPointerDown");
+        const info = { offset: { x: scenario.distance, y: 0 }, velocity: { x: 0, y: 0 } };
+        invoke(stage, "onPan", {}, info);
+        invoke(
+            find(render(), (node) => typeof node.props.onPanEnd === "function"),
+            "onPanEnd",
+            {},
+            info
+        );
+        const selected = find(render(), (node) =>
+            Boolean((node.props.selection as { selected?: boolean } | undefined)?.selected)
+        );
+        assert.equal((selected.props.board as { id: string }).id, boards[scenario.selectedIndex].collage.id);
+        assert.equal(selected.props.suppressHover, false, "Releasing the drag restores the selected card's details");
+    });
+}
+
 test("an inactive Continue deck card follows the pointer and is promoted on release instead of navigating", (t) => {
     const reset = hooks(t);
     const boards = [1, 2].map((boardId) =>

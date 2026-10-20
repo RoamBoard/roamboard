@@ -306,14 +306,18 @@ export function BoardLibraryCarousel({
                                 {children}
                             </CarouselContent>
                             {count > 0 && (
-                                <div className="flex items-center justify-center gap-3 pt-4">
+                                <div
+                                    role="group"
+                                    aria-label={`${title} navigation`}
+                                    className="mx-auto grid w-fit grid-cols-2 place-items-center gap-3 pt-4"
+                                >
                                     <CarouselPrevious
                                         aria-label={`Previous ${collectionName} Boards`}
-                                        className="text-foreground rounded-none border-0 [&>svg]:size-7"
+                                        className="text-foreground static rounded-none border-0 disabled:opacity-100! [&>svg]:size-7"
                                     />
                                     <CarouselNext
                                         aria-label={`Next ${collectionName} Boards`}
-                                        className="text-foreground rounded-none border-0 [&>svg]:size-7"
+                                        className="text-foreground static rounded-none border-0 disabled:opacity-100! [&>svg]:size-7"
                                     />
                                 </div>
                             )}

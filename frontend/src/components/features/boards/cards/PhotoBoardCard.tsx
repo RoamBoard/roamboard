@@ -9,6 +9,7 @@ import {
     Check,
     Eye,
     Globe2,
+    Info,
     LoaderCircle,
     LockKeyhole,
     Pencil,
@@ -641,6 +642,27 @@ export function PhotoBoardCardContent({
                         className={`absolute inset-0 z-10 cursor-pointer ${focus}`}
                     />
                 )}
+                {interactiveDetails &&
+                    ((href && hoverActions) || (selection?.selected && (selection.href || selection.viewHref))) && (
+                        <button
+                            type="button"
+                            data-board-disclosure=""
+                            data-board-selection=""
+                            aria-label={`${expanded ? "Hide" : "Show"} details for ${board.title}`}
+                            aria-expanded={expanded}
+                            aria-controls={detailsId}
+                            tabIndex={selection?.tabIndex}
+                            disabled={suppressHover}
+                            onPointerDownCapture={(event) => event.stopPropagation()}
+                            onClick={(event) => {
+                                event.stopPropagation();
+                                onExpandedChange(!expanded);
+                            }}
+                            className={`absolute right-[3%] bottom-[3%] z-20 hidden size-11 cursor-pointer place-items-center rounded-full bg-black/45 backdrop-blur-sm disabled:pointer-events-none [@media(hover:none)]:grid ${focus}`}
+                        >
+                            <Info aria-hidden="true" size={20} strokeWidth={1.5} />
+                        </button>
+                    )}
                 <span aria-hidden="true" className="pointer-events-none absolute inset-0 border border-[#565656]" />
             </BoardCardFrame>
             {board.image?.credit && !suppressCoverCredit && (

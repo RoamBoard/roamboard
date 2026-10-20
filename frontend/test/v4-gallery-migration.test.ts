@@ -100,7 +100,9 @@ test("recently created library retains real Board links and carousel affordances
     assert.match(markup, /href="\/boards\/62"/);
     assert.match(markup, /Restricted access — you and invited Board members/);
     assert.equal((markup.match(/aria-label="Board details"/g) ?? []).length, 2);
-    assert.doesNotMatch(markup, /aria-expanded=|>(?:Details|Close)(?:<|$)/);
+    assert.equal((markup.match(/aria-label="Show details for /g) ?? []).length, 2);
+    assert.equal((markup.match(/aria-expanded="false"/g) ?? []).length, 2);
+    assert.doesNotMatch(markup, />(?:Details|Close)(?:<|$)/);
     assert.equal(selectionButtons(markup).length, 0, "Library cards navigate rather than select");
     assert.match(markup, /aria-roledescription="carousel"/);
     assert.match(markup, /Previous recently created Boards/);

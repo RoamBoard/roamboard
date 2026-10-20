@@ -104,6 +104,7 @@ type EventControl = {
     href?: string;
     tabIndex?: number;
     "aria-expanded"?: boolean;
+    "aria-controls"?: string;
     "aria-pressed"?: boolean;
     "aria-label"?: string;
     "data-photo-board-expanded"?: boolean;
@@ -177,7 +178,7 @@ test("editable selections retain a separate native editor action and background 
     const markup = html({ selection });
     assert.equal((markup.match(/href="\/boards\/71\/edit"/g) ?? []).length, 2);
     assert.match(markup, /lucide-pencil/);
-    assert.doesNotMatch(markup, /<button\b/);
+    assert.match(markup, /aria-label="Show details for /);
     const unselected = html({ selection: { ...selection, selected: false, tabIndex: -1 } });
     assert.doesNotMatch(unselected, /href="\/boards\/71\/edit"|lucide-pencil/);
     assert.match(unselected, /aria-pressed="false"/);
@@ -515,6 +516,67 @@ test("drag-suppressed gallery clicks and inactive card selection do not open the
     control(inactive, (candidate) => candidate["aria-label"] === `Select ${board.title}`).onClick?.(clickEvent());
     assert.deepEqual(selections, [1]);
     assert.deepEqual(expandedStates, [], "Selecting a neighboring card must retain its existing gallery workflow");
+});
+
+test("browsing gallery cards keep direct touch navigation and offer an independent details toggle", () => {
+    for (const placement of ["library", "selected"] as const) {
+        const expandedStates: boolean[] = [];
+        const pointerType: NonNullable<CardProps["pointerType"]> = { current: "" };
+        const cardProps = props({
+            pointerType,
+            ...(placement === "library"
+                ? { href: "/boards/71", hoverActions: { viewHref: "/boards/71" } }
+                : {
+                      selection: {
+                          selected: true,
+                          viewHref: "/boards/71",
+                          onSelect: () => assert.fail("Details must not select the card")
+                      }
+                  }),
+            onExpandedChange: (expanded) => expandedStates.push(expanded)
+        });
+        const collapsed = PhotoBoardCardContent(cardProps);
+        control(collapsed, (candidate) => !!candidate.onPointerDownCapture).onPointerDownCapture?.({
+            pointerType: "touch",
+            stopPropagation: () => {}
+        });
+        const navigation = control(
+            placement === "library" ? renderedFrame(collapsed) : collapsed,
+            (candidate) => candidate.href === "/boards/71"
+        );
+        const touch = clickEvent();
+        navigation.onClick?.(touch);
+        assert.equal(touch.defaultPrevented, false, "The card background opens its Board on the first touch");
+        assert.deepEqual(expandedStates, []);
+        const show = control(collapsed, (candidate) => candidate["aria-label"] === `Show details for ${board.title}`);
+        assert.equal(show.type, "button");
+        assert.equal(show["aria-expanded"], false);
+        assert.equal(show["aria-controls"], "test-board-details");
+        show.onClick?.(clickEvent());
+        assert.deepEqual(expandedStates, [true]);
+        const expanded = PhotoBoardCardContent({ ...cardProps, expanded: true });
+        const markup = renderToStaticMarkup(expanded);
+        assert.match(markup, /id="test-board-details"[^>]*aria-label="Board details" aria-hidden="false"/);
+        assert.match(markup, /A quiet route along the waterfront\./);
+        assert.match(markup, /Architecture/);
+        assert.match(markup, /17 saves/);
+        const hide = control(expanded, (candidate) => candidate["aria-label"] === `Hide details for ${board.title}`);
+        assert.equal(hide["aria-expanded"], true);
+        hide.onClick?.(clickEvent());
+        assert.deepEqual(expandedStates, [true, false]);
+        assert.match(html({ ...cardProps, expanded: false }), /aria-label="Board details" aria-hidden="true"/);
+        assert.doesNotMatch(markup, /<a\b[^>]*>(?:(?!<\/a>)[\s\S])*<button\b/);
+    }
+});
+
+test("inactive gallery cards do not expose a touch details action", () => {
+    const markup = html({
+        details: false,
+        selection: { selected: false, viewHref: "/boards/71", onSelect() {}, tabIndex: -1 }
+    });
+    assert.doesNotMatch(markup, /aria-label="(?:Show|Hide) details for /);
+    assert.match(markup, /aria-label="Select /);
+    assert.doesNotMatch(markup, /href="\/boards\/71"/);
 });
 
 test("linked cards preview on the first touch and preserve navigation on the next touch", () => {
