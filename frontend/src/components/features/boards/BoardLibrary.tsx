@@ -28,6 +28,7 @@ type Props = {
     showStatus?: boolean;
     variant?: LibraryVariant;
     onSavedChange?: (boardId: string, saved: boolean) => void;
+    removeOnUnsave?: boolean;
 };
 
 export default function BoardLibrary({
@@ -42,7 +43,8 @@ export default function BoardLibrary({
     embedded = false,
     showStatus = false,
     variant = "default",
-    onSavedChange
+    onSavedChange,
+    removeOnUnsave = false
 }: Props) {
     const root = useRef<HTMLDivElement>(null);
     const interaction = useRef<{ hovered: string | null; focused: string | null }>({ hovered: null, focused: null });
@@ -109,7 +111,7 @@ export default function BoardLibrary({
                                         container?.querySelectorAll<HTMLElement>("[data-library-board]") ?? []
                                     );
                                     const slide = slides.find((item) => item.dataset.libraryBoard === board.compact.id);
-                                    if (!saved && slide?.contains(document.activeElement)) {
+                                    if (removeOnUnsave && !saved && slide?.contains(document.activeElement)) {
                                         const next = slides[index + 1] ?? slides[index - 1];
                                         const target =
                                             next?.querySelector<HTMLElement>("a[href], button:not([disabled])") ??

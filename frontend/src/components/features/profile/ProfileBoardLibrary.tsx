@@ -66,7 +66,7 @@ export default function ProfileBoardLibrary(props: ComponentProps<typeof BoardLi
                     </button>
                 </p>
             )}
-            {current && current.boards.length === 0 && limit < boards.length && (
+            {current && limit < boards.length && (
                 <button type="button" className="underline" onClick={() => setLimit((value) => value + PAGE_SIZE)}>
                     Load more Boards
                 </button>

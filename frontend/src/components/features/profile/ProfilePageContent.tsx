@@ -112,6 +112,7 @@ export function ProfileSavedBoardLibrary({
             variant="profile"
             boards={libraryBoards}
             onSavedChange={onSavedChange}
+            removeOnUnsave={ownCollection && Boolean(onSavedChange)}
         />
     );
 }
