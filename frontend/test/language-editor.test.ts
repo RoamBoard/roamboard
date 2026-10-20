@@ -4,7 +4,10 @@ import React, { Children, createElement, isValidElement, type ReactNode } from "
 import { renderToStaticMarkup } from "react-dom/server";
 import LanguageEditor, { rankLanguageChoices } from "@/components/features/settings/LanguageEditor";
 
-type ElementProps = Record<string, unknown>;
+type ElementProps = {
+    children?: ReactNode;
+    [key: string]: unknown;
+};
 
 function elements(node: ReactNode): Array<{ type: unknown; props: ElementProps }> {
     if (!isValidElement<ElementProps>(node)) return [];
