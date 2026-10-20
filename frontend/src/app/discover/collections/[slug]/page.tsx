@@ -54,6 +54,7 @@ export default async function CollectionPage({ params }: Props) {
                     <BoardCollectionGrid
                         context="category"
                         embedded
+                        showDivider={false}
                         category={{
                             title: `${collection.title} Boards`,
                             tags: collection.tagIds.flatMap((id) => {

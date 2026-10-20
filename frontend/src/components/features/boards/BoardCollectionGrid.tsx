@@ -68,10 +68,12 @@ const sorts = [
 export default function BoardCollectionGrid({
     context,
     embedded = false,
+    showDivider = true,
     category
 }: {
     context: CollectionContext;
     embedded?: boolean;
+    showDivider?: boolean;
     category?: { title: string; tags: readonly string[] };
 }) {
     const [account, setAccount] = useState<{ ready: boolean; user: AuthUser | null }>({ ready: false, user: null });
@@ -89,6 +91,7 @@ export default function BoardCollectionGrid({
             key={viewer}
             context={context}
             embedded={embedded}
+            showDivider={showDivider}
             category={category}
             account={account}
             store={store}
@@ -99,12 +102,14 @@ export default function BoardCollectionGrid({
 export function BoardCollectionGridContent({
     context,
     embedded = false,
+    showDivider = true,
     category,
     account,
     store
 }: {
     context: CollectionContext;
     embedded?: boolean;
+    showDivider?: boolean;
     category?: { title: string; tags: readonly string[] };
     account: { ready: boolean; user: AuthUser | null };
     store: ReturnType<typeof createDiscoveryStore>;
@@ -176,7 +181,7 @@ export function BoardCollectionGridContent({
     return (
         <section
             aria-labelledby={`collection-${context}-heading`}
-            className={`mx-auto w-full max-w-[1480px] min-w-0 ${embedded ? "border-line mt-12 border-t pt-8" : "px-5 py-10 sm:px-10"}`}
+            className={`mx-auto w-full max-w-[1480px] min-w-0 ${embedded ? `mt-12 pt-8 ${showDivider ? "border-line border-t" : ""}` : "px-5 py-10 sm:px-10"}`}
         >
             {!embedded && <BackLink fallbackHref="/boards" />}
             <Heading
