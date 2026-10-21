@@ -170,11 +170,16 @@ export function createImagesService(
                     throw new AppError(404, "Image not found", "NOT_FOUND");
                 }
             }
-            return provider.openVariant(
-                image.storageKey,
-                variant,
-                variant === "original" ? null : image.presentationEdit
-            );
+            try {
+                return await provider.openVariant(
+                    image.storageKey,
+                    variant,
+                    variant === "original" ? null : image.presentationEdit
+                );
+            } catch (error) {
+                if (variant !== "large") throw error;
+                return provider.openVariant(image.storageKey, "display", image.presentationEdit);
+            }
         },
         ...createImageCleanup(repository, provider)
     };

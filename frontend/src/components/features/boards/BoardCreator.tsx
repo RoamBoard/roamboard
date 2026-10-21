@@ -5,7 +5,7 @@ import BoardDestinationSearch from "./BoardDestinationSearch";
 import type { BoardDestinationDraft } from "@/types/board-creator";
 
 import { movePlannerPin, reorderPlannerPin } from "@/lib/board-planner";
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import BoardPreviewSection from "@/components/features/boards/BoardPreviewSection";
 import BoardPublishPanel from "@/components/features/boards/BoardPublishPanel";
@@ -88,6 +88,7 @@ export default function BoardCreator({
     const [destinationGeneration, setDestinationGeneration] = useState(0);
     const [destination, setDestination] = useState<BoardDestinationDraft | null>(null);
     const [description, setDescription] = useState("");
+    const [fillerImagesEnabled, setFillerImagesEnabled] = useState(false);
     const [previewAuthor, setPreviewAuthor] = useState("");
     const [images, setImages] = useState<BoardImageDraft[]>([]);
     const [selectedCoverImageId, setSelectedCoverImageId] = useState<number | null>(null);
@@ -183,6 +184,7 @@ export default function BoardCreator({
                 const restored = fromBoardDocument(board);
                 setSavedFingerprint(
                     boardEditorFingerprint({
+                        fillerImagesEnabled: board.fillerImagesEnabled ?? false,
                         destination: restored.destination,
                         title: board.title,
                         description: board.description ?? "",
@@ -198,6 +200,7 @@ export default function BoardCreator({
                     })
                 );
                 setSavedBoard(board);
+                setFillerImagesEnabled(board.fillerImagesEnabled ?? false);
                 setDestination(restored.destination);
                 setTitle(board.title);
                 setDescription(board.description ?? "");
@@ -249,20 +252,18 @@ export default function BoardCreator({
         ? selectedCoverImageId
         : (uploadedImages[0]?.uploadedImageId ?? null);
 
-    const payload = useMemo<BoardCreatorPayload>(
-        () => ({
-            destination,
-            title,
-            description,
-            status: "draft",
-            visibility,
-            coverImageId,
-            tags,
-            days,
-            images
-        }),
-        [coverImageId, days, description, destination, images, tags, title, visibility]
-    );
+    const payload: BoardCreatorPayload = {
+        fillerImagesEnabled,
+        destination,
+        title,
+        description,
+        status: "draft",
+        visibility,
+        coverImageId,
+        tags,
+        days,
+        images
+    };
 
     const activityPoints = JSON.stringify(
         days
@@ -852,6 +853,36 @@ export default function BoardCreator({
                         title="PUBLISH"
                         description="Save it for yourself, or share it if you feel like it."
                     />
+                    <div className="mb-8 max-w-lg">
+                        <label className="flex cursor-pointer items-start gap-3 text-sm">
+                            <input
+                                type="checkbox"
+                                checked={fillerImagesEnabled}
+                                disabled={editorDisabled}
+                                onChange={(event) => setFillerImagesEnabled(event.target.checked)}
+                                className="mt-1 size-4"
+                            />
+                            <span>
+                                Include destination illustrations
+                                <span className="text-muted-foreground mt-2 block text-xs">
+                                    Up to three credited destination photos, separate from your activity photos.
+                                </span>
+                            </span>
+                        </label>
+                        {new Set(uploadedImages.map((image) => image.uploadedImageId ?? image.id)).size < 3 ? (
+                            <p className="text-muted-foreground mt-4 text-xs">
+                                Bring your story to life by adding photos or enabling destination illustrations. You can
+                                also publish without photos.
+                            </p>
+                        ) : null}
+                        {savedBoard?.fillerImagesEnabled &&
+                        ["partial", "unavailable"].includes(savedBoard.fillerImageStatus ?? "") ? (
+                            <p role="status" className="mt-4 text-xs">
+                                Your Board was saved. Some destination illustrations are unavailable; a later save can
+                                try again.
+                            </p>
+                        ) : null}
+                    </div>
                     <div className="min-w-0 lg:-translate-x-[19.25%] lg:self-center">
                         <BoardPublishPanel
                             expectedStatus={expectedStatus}

@@ -22,6 +22,7 @@ type Props = {
     routeGeometry: Array<[number, number]>;
     onMapClick?: (latitude: number, longitude: number) => void;
     onPointClick?: (point: MapPoint) => void;
+    onError?: () => void;
     selectedPointId?: string;
     initialCenter?: { latitude: number; longitude: number };
     initialZoom?: number;
@@ -38,6 +39,7 @@ export default function InteractiveMap({
     routeGeometry,
     onMapClick,
     onPointClick,
+    onError,
     selectedPointId,
     initialCenter,
     initialZoom = 11,
@@ -52,6 +54,7 @@ export default function InteractiveMap({
     const markersRef = useRef<Marker[]>([]);
     const onMapClickRef = useRef(onMapClick);
     const onPointClickRef = useRef(onPointClick);
+    const onErrorRef = useRef(onError);
     const [mapError, setMapError] = useState("");
     const [mapReady, setMapReady] = useState(false);
     const initialLatitude = initialCenter?.latitude ?? 59.3293;
@@ -64,6 +67,9 @@ export default function InteractiveMap({
     useEffect(() => {
         onPointClickRef.current = onPointClick;
     }, [onPointClick]);
+    useEffect(() => {
+        onErrorRef.current = onError;
+    }, [onError]);
 
     useEffect(() => {
         if (!token || !containerRef.current) return;
@@ -104,7 +110,10 @@ export default function InteractiveMap({
             if (onMapClickRef.current) {
                 map.on("click", (event) => onMapClickRef.current?.(event.lngLat.lat, event.lngLat.lng));
             }
-            map.on("error", (event) => setMapError(event.error?.message ?? "The Mapbox map could not load."));
+            map.on("error", (event) => {
+                setMapError(event.error?.message ?? "The Mapbox map could not load.");
+                onErrorRef.current?.();
+            });
             mapRef.current = map;
         }, 0);
         return () => {

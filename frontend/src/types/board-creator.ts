@@ -78,6 +78,7 @@ export type BoardImageDraft = {
 export type BoardDestinationDraft = PinLocation & { kind: "city" | "region" | "country" };
 
 export type BoardCreatorPayload = {
+    fillerImagesEnabled?: boolean;
     destination?: BoardDestinationDraft | null;
     title: string;
     description: string;

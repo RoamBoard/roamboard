@@ -11,6 +11,10 @@ export interface BoardAccess {
 }
 
 export interface BoardDocument extends BoardWrite {
+    fillerImagesEnabled: boolean;
+    fillerImages: FillerImage[];
+    fillerImageStatus: "disabled" | "pending" | "ready" | "partial" | "unavailable";
+    commentCount: number;
     // Only public-facing author details belong in a Board response, not Google IDs or email addresses.
     author: {
         username: string;
@@ -28,6 +32,9 @@ export interface BoardDocument extends BoardWrite {
         imageId: number;
         url: string;
         thumbnailUrl: string;
+        largeUrl: string;
+        width?: number;
+        height?: number;
         capturedAt: string | null;
         position: number;
     }>;
@@ -61,6 +68,7 @@ export function canReadBoard(access: BoardAccess, userId: string | null): boolea
 }
 
 export interface BoardRepository {
+    getFillerPool(boardId: number): Promise<FillerPool | null>;
     listAccessible(
         userId: string,
         page: number,
@@ -80,9 +88,35 @@ export interface BoardRepository {
         userId: string,
         boardId: number | null,
         expectedRevision: number | null,
-        input: BoardWrite
+        input: BoardWrite,
+        fillerPool?: FillerPool
     ): Promise<BoardDocument>;
     deleteBoard(boardId: number, userId: string): Promise<boolean>;
+}
+
+export interface FillerImage {
+    provider: "unsplash";
+    providerImageId: string;
+    position: number;
+    url: string;
+    thumbnailUrl: string;
+    largeUrl: string;
+    width: number;
+    height: number;
+    alt: string;
+    photographer: string;
+    photographerUrl: string;
+    sourceUrl: string;
+}
+
+export interface FillerPool {
+    destinationKey: string;
+    images: FillerImage[];
+}
+
+export interface FillerProvider {
+    search(query: string): Promise<Array<{ id: string }>>;
+    select(id: string): Promise<Omit<FillerImage, "position">>;
 }
 
 export type PreparedBoardCopy = Pick<

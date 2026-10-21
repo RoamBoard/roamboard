@@ -81,6 +81,7 @@ function fakeComments(): { repository: CommentsRepository; records: CommentRecor
     const records: CommentRecord[] = [];
     let nextId = 1;
     const repository: CommentsRepository = {
+        count: async (boardId) => records.filter((row) => row.boardId === boardId).length,
         async list(boardId, cursor, limit) {
             return records
                 .filter((item) => item.boardId === boardId)
@@ -324,7 +325,7 @@ test("cursor pages are newest first, scoped to their Board and reject malformed 
         second.body.data.map((item: { commentId: number }) => item.commentId),
         [2, 1]
     );
-    assert.deepEqual(second.body.meta, { nextCursor: null, hasMore: false });
+    assert.deepEqual(second.body.meta, { nextCursor: null, hasMore: false, totalCount: 22 });
     for (const cursor of [
         "garbage",
         Buffer.from(JSON.stringify([2, "2026-10-19T12:00:00.000Z", 10])).toString("base64url")

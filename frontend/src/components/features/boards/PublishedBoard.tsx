@@ -1,44 +1,28 @@
 "use client";
 
 import Link from "next/link";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { motion } from "motion/react";
+import { ArrowDown, ArrowRight, Bookmark, MapPin } from "lucide-react";
 import BackLink from "@/components/ui/BackLink";
-import { useRef, useState } from "react";
-import ActivityDetailsDialog from "@/components/features/boards/ActivityDetailsDialog";
-import BoardComments from "@/components/features/boards/BoardComments";
-import BoardCopyEditor from "@/components/features/boards/BoardCopyEditor";
-import BoardDialog from "@/components/features/boards/BoardDialog";
-import BoardIcon from "@/components/features/boards/BoardIcon";
-import BoardPhoto from "@/components/features/boards/BoardPhoto";
-import ImageZoomDialog from "@/components/ui/ImageZoomDialog";
-import PublishedBoardDay from "@/components/features/boards/PublishedBoardDay";
-import useBoardPreview from "@/components/features/boards/useBoardPreview";
-import useBoardPhotos from "@/components/features/boards/useBoardPhotos";
-import { getBoardDays, getBoardPlaceNames } from "@/lib/board-presentation";
-import type { BoardActivity } from "@/types/board";
-import type { PublishedBoardData } from "@/types/published-board";
+import ActivityDetailsDialog from "./ActivityDetailsDialog";
+import BoardComments from "./BoardComments";
+import BoardPhoto from "./BoardPhoto";
+import StoryPhoto from "./StoryPhoto";
+import StoryGallery, { type StoryPlacement } from "./StoryGallery";
+import StoryMap from "./StoryMap";
+import useStoryScroll from "./useStoryScroll";
+import { getBoardDays } from "@/lib/board-presentation";
+import { loadMapboxMapSession } from "@/lib/providers";
 import { ProfileApiError, saveBoardBookmark, unsaveBoardBookmark } from "@/lib/profile";
 import { loadBoardDocument } from "@/lib/board-creator-api";
+import type { BoardActivity } from "@/types/board";
+import type { PublishedBoardData } from "@/types/published-board";
 
-const actionClasses =
-    "border-line hover:bg-faint inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 border px-5 py-2 text-14 focus-visible:outline-2 focus-visible:outline-offset-4";
-
-const numberLabel = (number: number) => String(number).padStart(2, "0");
-
-// Invited members can also read friends-only boards under the backend's access rules.
-const accessLabels = {
-    public: "Anyone",
-    friends: "Friends and invited members",
-    collaborators: "Invited members",
-    private: "Only you"
-};
-
-// The tag API has names but no icon field.
-function getTagIcon(tag: string) {
-    const name = tag.toLowerCase();
-    if (name.includes("nature")) return "leaf";
-    if (name.includes("romantic")) return "heart";
-    return "gem";
-}
+const countLabel = (count: number | undefined) =>
+    Number.isSafeInteger(count) && count! >= 0 ? new Intl.NumberFormat("en-US").format(count!) : "Unavailable";
+const actionClass =
+    "hover:bg-faint inline-flex min-h-11 cursor-pointer items-center gap-3 rounded-full px-5 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 disabled:opacity-50";
 
 export default function PublishedBoard({
     board,
@@ -47,24 +31,86 @@ export default function PublishedBoard({
     canEditContent = false,
     canManageBoard = false,
     savedByMe = false,
-    savedCount
+    savedCount,
+    commentCount,
+    fillerImages = []
 }: PublishedBoardData) {
-    const days = getBoardDays(board);
-    const places = getBoardPlaceNames(board);
-    const activityCount = board.items.filter((item) => item.type === "activity").length;
-    const automaticPhotos = useBoardPhotos(board, tagLabels);
-    const cover = board.coverImage?.url ? board.coverImage : automaticPhotos.photos.cover;
-    const coverLabel = automaticPhotos.slots.find((slot) => slot.id === "cover")?.label || board.title;
+    const days = useMemo(() => getBoardDays(board), [board]);
+    const {
+        track: trackRef,
+        viewport: viewportRef,
+        rail: railRef,
+        x,
+        desktop,
+        size,
+        chapter: currentChapter,
+        activityId,
+        jump
+    } = useStoryScroll(days.map((day) => day.number).join(","));
     const [selectedActivity, setSelectedActivity] = useState<BoardActivity | null>(null);
-    const [zoomedActivityPhotos, setZoomedActivityPhotos] = useState<BoardActivity | null>(null);
+    const [galleryIndex, setGalleryIndex] = useState<number | null>(null);
     const [bookmarked, setBookmarked] = useState(savedByMe);
-    const [currentSaveCount, setCurrentSaveCount] = useState(savedCount);
+    const [saveTotal, setSaveTotal] = useState(savedCount);
+    const [commentsTotal, setCommentsTotal] = useState(commentCount);
     const [bookmarkBusy, setBookmarkBusy] = useState(false);
     const bookmarkPending = useRef(false);
     const [bookmarkMessage, setBookmarkMessage] = useState("");
     const [signInToSave, setSignInToSave] = useState(false);
-    // Preview saves and copies only stay in this browser tab.
-    const preview = useBoardPreview(board, selectedActivity);
+    const [manualFilter, setManualFilter] = useState<number | "all" | null>(null);
+    const [focusedActivity, setFocusedActivity] = useState<string>();
+    const mapSession = useRef<ReturnType<typeof loadMapboxMapSession> | null>(null);
+    const session = useCallback(() => {
+        mapSession.current ??= loadMapboxMapSession().catch((error) => {
+            mapSession.current = null;
+            throw error;
+        });
+        return mapSession.current;
+    }, []);
+    const activities = days.flatMap((day) =>
+        day.items.filter((item): item is BoardActivity => item.type === "activity")
+    );
+    const activeDay = /^day-(\d+)$/.exec(currentChapter)?.[1];
+    const filter = manualFilter ?? (activeDay ? Number(activeDay) : "all");
+    const fillerPlacements = useMemo(() => {
+        const groups = days.flatMap((day) =>
+            day.items.filter((item) => item.type === "activity").map((item) => item.id)
+        );
+        const assignments = new Map<string, StoryPlacement[]>();
+        fillerImages.forEach((image, index) => {
+            const group =
+                groups[
+                    Math.min(groups.length - 1, Math.floor(((index + 1) * groups.length) / (fillerImages.length + 1)))
+                ];
+            const key = group ?? `empty-${days[0]?.number ?? 1}`;
+            assignments.set(key, [...(assignments.get(key) ?? []), { id: `filler-${index}`, image }]);
+        });
+        return assignments;
+    }, [days, fillerImages]);
+    const placements = useMemo<StoryPlacement[]>(
+        () => [
+            ...(board.coverImage ? [{ id: "cover", image: board.coverImage }] : []),
+            ...days.flatMap((day) => [
+                ...(fillerPlacements.get(`empty-${day.number}`) ?? []),
+                ...day.items.flatMap((item) =>
+                    item.type === "activity"
+                        ? [
+                              ...item.images.map((image, index) => ({ id: `activity-${item.id}-${index}`, image })),
+                              ...(fillerPlacements.get(item.id) ?? [])
+                          ]
+                        : []
+                )
+            ])
+        ],
+        [board.coverImage, days, fillerPlacements]
+    );
+    const openPhoto = (id: string) => {
+        const index = placements.findIndex((placement) => placement.id === id);
+        if (index >= 0) setGalleryIndex(index);
+    };
+    const focusLocation = (activity: BoardActivity) => {
+        setManualFilter(activity.dayNumber ?? 1);
+        setFocusedActivity(activity.id);
+    };
 
     async function toggleBookmark() {
         if (bookmarkPending.current) return;
@@ -81,254 +127,473 @@ export default function PublishedBoard({
             );
             try {
                 const current = await loadBoardDocument(Number(board.id));
-                setCurrentSaveCount(current.savedCount);
+                setSaveTotal(current.savedCount);
                 setBookmarked(Boolean(current.savedByMe));
             } catch {
-                // The save succeeded, but do not invent a total if its refresh fails.
-                setCurrentSaveCount(undefined);
+                setSaveTotal(undefined);
             }
-        } catch (caught) {
-            setSignInToSave(caught instanceof ProfileApiError && caught.status === 401);
-            setBookmarkMessage(caught instanceof Error ? caught.message : "The Board could not be saved.");
+        } catch (error) {
+            setSignInToSave(error instanceof ProfileApiError && error.status === 401);
+            setBookmarkMessage(error instanceof Error ? error.message : "The Board could not be saved.");
         } finally {
             bookmarkPending.current = false;
             setBookmarkBusy(false);
         }
     }
 
-    // Don't carry a previous activity's save message into this popup.
-    function handleOpenActivity(activity: BoardActivity) {
-        preview.clearFeedback();
-        setSelectedActivity(activity);
-    }
-
-    function handleCloseActivity() {
-        setSelectedActivity(null);
-    }
-
-    // Keep the popup open if copying fails, so the error stays visible.
-    function handleCopyActivity() {
-        if (preview.copyActivity()) handleCloseActivity();
-    }
-
-    const feedback = (
+    const saveAction = (
         <>
-            {preview.message && (
-                <p role="status" className="text-muted-foreground text-12 mt-3">
-                    {preview.message}
-                </p>
-            )}
-            {preview.error ? (
-                <p role="alert" className="text-14 mt-3">
-                    {preview.error}
-                </p>
+            {!canManageBoard ? (
+                <button
+                    type="button"
+                    onClick={toggleBookmark}
+                    disabled={bookmarkBusy}
+                    aria-label={bookmarked ? "Unsave Board" : "Save Board"}
+                    aria-pressed={bookmarked}
+                    className={actionClass}
+                >
+                    <Bookmark size={18} fill={bookmarked ? "currentColor" : "none"} />
+                    {bookmarkBusy ? "Saving…" : bookmarked ? "Unsave Board" : "Save Board"}
+                </button>
+            ) : null}
+            {canEditContent ? (
+                <Link href={`/boards/${board.id}/edit`} className={actionClass}>
+                    Edit Board <ArrowRight size={16} />
+                </Link>
             ) : null}
         </>
     );
+    const stats = (
+        <dl className="border-line flex flex-wrap gap-x-8 gap-y-4 border-y py-5 text-xs">
+            <div>
+                <dd className="font-display text-3xl">{days.length}</dd>
+                <dt>days</dt>
+            </div>
+            <div>
+                <dd className="font-display text-3xl">{activities.length}</dd>
+                <dt>activities</dt>
+            </div>
+            <div
+                aria-label={
+                    saveTotal === undefined
+                        ? "Save count unavailable"
+                        : `${saveTotal} ${saveTotal === 1 ? "save" : "saves"}`
+                }
+            >
+                <dd className="font-display text-3xl">{countLabel(saveTotal)}</dd>
+                <dt>saves</dt>
+            </div>
+            <div>
+                <dd className="font-display text-3xl">
+                    <a
+                        href="#comments"
+                        onClick={(event) => {
+                            event.preventDefault();
+                            jump("comments");
+                        }}
+                        className="underline decoration-1 underline-offset-4"
+                    >
+                        {countLabel(commentsTotal)}
+                    </a>
+                </dd>
+                <dt>comments</dt>
+            </div>
+        </dl>
+    );
+    const renderFillers = (key: string) =>
+        (fillerPlacements.get(key) ?? []).map((placement) => (
+            <div key={placement.id} className="max-w-full shrink-0 lg:w-max">
+                <p className="text-muted-foreground mb-3 text-[10px] tracking-[0.15em] uppercase">
+                    Destination illustration
+                </p>
+                <StoryPhoto image={placement.image} onOpen={() => openPhoto(placement.id)} />
+            </div>
+        ));
+    const map = (mapFilter: number | "all") => (
+        <StoryMap
+            days={days}
+            filter={mapFilter}
+            session={session}
+            activeId={focusedActivity ?? activityId}
+            onOpen={setSelectedActivity}
+        />
+    );
 
     return (
-        <>
-            <article className="break-words">
-                <header className="relative pb-12 text-center sm:pb-20">
-                    <BackLink fallbackHref="/boards" className="absolute top-6 left-4 z-10 sm:left-8" />
-                    <BoardPhoto
-                        image={cover}
-                        placeholderLabel={coverLabel}
-                        showCredit={!board.coverImage?.url}
-                        insetCredit
-                        preload
-                        zoomable
-                        className="mx-auto h-[16rem] w-[82%] rounded-b-[50%] sm:h-[25rem] lg:h-[29rem] lg:w-[80%]"
-                        sizes="80vw"
-                    />
-                    <div className="relative mx-auto -mt-7 w-fit">
-                        {/* Keep the avatar circle when there is no profile photo, so the name stays below the cover. */}
-                        <Link href={`/profile/${encodeURIComponent(author.id)}`} className="block hover:underline">
-                            <div
-                                role={author.photo ? undefined : "img"}
-                                aria-label={author.photo ? undefined : `Profile photo placeholder for ${author.name}`}
-                                className="border-background bg-faint mx-auto size-16 overflow-hidden rounded-full border-4"
-                            >
-                                <BoardPhoto image={author.photo} className="h-full w-full" sizes="64px" />
-                            </div>
-                            <p className="text-12 mt-2">{author.name}</p>
-                        </Link>
-                        <p className="text-muted-foreground text-10">presents</p>
-                    </div>
-                    <h1 className="font-display mx-auto mt-7 max-w-6xl px-5 text-[clamp(2.75rem,7vw,8rem)] leading-[0.95] font-bold tracking-tight break-words uppercase">
-                        {board.title}
-                    </h1>
-                    <p className="text-muted-foreground text-12 mt-4 px-5">Access: {accessLabels[board.visibility]}</p>
-                    {board.description ? (
-                        <p className="text-muted-foreground text-14 sm:text-16 mx-auto mt-9 max-w-lg px-5 leading-snug whitespace-pre-line">
-                            {board.description}
-                        </p>
-                    ) : null}
-                    {!canManageBoard && (
-                        <button
-                            type="button"
-                            onClick={toggleBookmark}
-                            disabled={bookmarkBusy}
-                            aria-label={bookmarked ? "Unsave Board" : "Save Board"}
-                            aria-pressed={bookmarked}
-                            className="hover:bg-faint text-14 mt-7 inline-flex min-h-11 cursor-pointer items-center justify-center gap-3 px-4 focus-visible:outline-2 focus-visible:outline-offset-4 disabled:cursor-wait disabled:opacity-60"
-                        >
-                            {bookmarkBusy
-                                ? bookmarked
-                                    ? "Removing…"
-                                    : "Saving…"
-                                : bookmarked
-                                  ? "Unsave Board"
-                                  : "Save Board"}
-                            <BoardIcon name="bookmark" className={`size-5 ${bookmarked ? "fill-current" : ""}`} />
-                        </button>
-                    )}
-                    <p
-                        role="status"
-                        className="text-muted-foreground text-16 mt-4 flex items-center justify-center gap-2 tabular-nums"
+        <article className="relative min-w-0 break-words">
+            <nav
+                aria-label="Story chapters"
+                className="border-line bg-background/95 sticky top-0 z-30 flex h-[52px] max-w-full items-center gap-1 overflow-x-auto border-b px-3 backdrop-blur-sm sm:px-6"
+            >
+                {[
+                    { id: "overview", title: "Overview" },
+                    ...days.map((day) => ({ id: `day-${day.number}`, title: `Day ${day.number}` })),
+                    { id: "ending", title: "Itinerary" },
+                    { id: "comments", title: "Comments" }
+                ].map((chapter) => (
+                    <a
+                        key={chapter.id}
+                        href={`#${chapter.id}`}
+                        aria-current={currentChapter === chapter.id ? "location" : undefined}
+                        onClick={(event) => {
+                            if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.button === 0) {
+                                event.preventDefault();
+                                jump(chapter.id);
+                            }
+                        }}
+                        className="hover:bg-faint aria-[current=location]:bg-foreground aria-[current=location]:text-background shrink-0 rounded-full px-4 py-2 text-xs transition-colors focus-visible:outline-2"
                     >
-                        <BoardIcon name="bookmark" className="size-4" />
-                        {currentSaveCount !== undefined &&
-                        Number.isSafeInteger(currentSaveCount) &&
-                        currentSaveCount >= 0
-                            ? `${new Intl.NumberFormat("en-US").format(currentSaveCount)} ${currentSaveCount === 1 ? "save" : "saves"}`
-                            : "Save count unavailable"}
-                    </p>
-                    {bookmarkMessage && (
-                        <p role="status" className="text-12 text-muted-foreground">
-                            {bookmarkMessage}{" "}
-                            {signInToSave && (
-                                <Link href="/login" className="underline">
-                                    Sign in
-                                </Link>
-                            )}
-                        </p>
-                    )}
-                    {/* Show feedback on the page when no popup is open. */}
-                    <div className="mx-auto max-w-md px-5">{selectedActivity || preview.draft ? null : feedback}</div>
-                    {canEditContent ? (
-                        <Link href={`/boards/${board.id}/edit`} className={`${actionClasses} mt-5`}>
-                            Edit Board
-                        </Link>
-                    ) : null}
-                    <dl className="border-line text-muted-foreground mx-auto mt-10 flex w-fit border-y px-8 py-6">
-                        <div className="border-line flex items-baseline gap-1 border-r pr-8">
-                            <dt className="text-12 order-2">days</dt>
-                            <dd className="text-36 leading-none">{numberLabel(days.length)}</dd>
-                        </div>
-                        <div className="flex items-baseline gap-1 pl-8">
-                            <dt className="text-12 order-2">{activityCount === 1 ? "activity" : "activities"}</dt>
-                            <dd className="text-36 leading-none">{numberLabel(activityCount)}</dd>
-                        </div>
-                    </dl>
-                    {/* Only show the first three tags. */}
-                    {tagLabels.length ? (
-                        <ul className="border-line text-muted-foreground text-12 mx-auto mt-8 flex w-fit max-w-[90%] flex-wrap justify-center gap-x-7 gap-y-4 border-b px-2 pb-8">
-                            {tagLabels.slice(0, 3).map((tag) => (
-                                <li key={tag} className="flex items-center gap-2">
-                                    <BoardIcon name={getTagIcon(tag)} className="size-6" />
-                                    {tag}
-                                </li>
-                            ))}
-                        </ul>
-                    ) : null}
-                    {places.length ? (
-                        <ul className="border-line text-muted-foreground text-14 mx-auto mt-7 w-fit max-w-[85%] space-y-2 border-b px-5 pb-7">
-                            {places.map((place, index) => (
-                                <li key={`${place}-${index}`}>{place}</li>
-                            ))}
-                        </ul>
-                    ) : null}
-                </header>
-                {days.length ? (
-                    days.map((day) => (
-                        <PublishedBoardDay
-                            key={day.number}
-                            day={day}
-                            onSelectActivity={handleOpenActivity}
-                            onZoomPhoto={setZoomedActivityPhotos}
-                            photos={{
-                                first: automaticPhotos.photos[`day-${day.number}-first`],
-                                second: automaticPhotos.photos[`day-${day.number}-second`]
-                            }}
-                            photoLabels={{
-                                first: automaticPhotos.slots.find((slot) => slot.id === `day-${day.number}-first`)
-                                    ?.label,
-                                second: automaticPhotos.slots.find((slot) => slot.id === `day-${day.number}-second`)
-                                    ?.label
-                            }}
-                        />
-                    ))
-                ) : (
-                    <p className="text-muted-foreground px-5 py-16 text-center">This board has no activities yet.</p>
-                )}
-                {!canManageBoard && (
-                    <footer className="border-line grid min-h-[42rem] grid-cols-1 gap-24 border-t px-5 py-10 sm:px-9 lg:gap-36 lg:py-12">
-                        <section>
-                            <p className="text-muted-foreground text-12">like this board?</p>
-                            <h2 className="font-display text-36 mt-1 font-bold uppercase">Make it yours</h2>
-                            <p className="text-muted-foreground text-14 mt-1 max-w-60">
-                                Create a preview copy in this tab and add your own ideas.
-                            </p>
-                            <button type="button" onClick={preview.copyBoard} className={`${actionClasses} mt-5`}>
-                                <BoardIcon name="copy" className="size-4" />
-                                Copy board preview
-                            </button>
-                        </section>
-                        <section
-                            aria-labelledby="board-author-heading"
-                            className="w-full max-w-lg min-w-0 self-end justify-self-end"
+                        {chapter.title}
+                    </a>
+                ))}
+            </nav>
+            <div ref={trackRef} style={desktop ? { height: size.travel + size.height } : undefined}>
+                <div
+                    ref={viewportRef}
+                    className={desktop ? "sticky top-[52px] overflow-clip" : "min-w-0"}
+                    style={desktop ? { height: size.height } : undefined}
+                >
+                    <motion.div
+                        ref={railRef}
+                        style={{ x }}
+                        className={desktop ? "relative flex h-full w-max" : "relative"}
+                    >
+                        <header
+                            id="overview"
+                            data-story-chapter
+                            tabIndex={-1}
+                            className={`border-line relative min-w-0 px-6 py-8 outline-none sm:px-12 ${desktop ? "flex h-full w-[var(--story-width)] shrink-0 items-center gap-10 pr-96" : "border-b"}`}
                         >
-                            <h2
-                                id="board-author-heading"
-                                className="font-display text-36 text-right leading-none font-bold uppercase"
-                            >
-                                About {author.name}
-                            </h2>
-                            <p className="text-muted-foreground text-12 mt-3 ml-auto max-w-60 text-right">
-                                Every board starts with a person. Here is the traveller behind this one.
-                            </p>
-                            <div className="mt-6 grid gap-5 sm:grid-cols-[1fr_1.1fr]">
-                                <div className="text-muted-foreground text-right">
-                                    <p className="text-14 leading-snug whitespace-pre-line">{author.bio}</p>
-                                </div>
-                                <BoardPhoto
-                                    image={author.photo}
-                                    placeholderLabel={`${author.name}'s profile photo`}
-                                    zoomable
-                                    className="aspect-[3/4] min-h-72"
+                            <div className="min-w-0 flex-1">
+                                <BackLink
+                                    fallbackHref="/boards"
+                                    className={desktop ? "absolute top-3 left-5" : "mb-8"}
                                 />
+                                <div className="mb-4 flex items-center gap-3">
+                                    <Link
+                                        href={`/profile/${encodeURIComponent(author.id)}`}
+                                        className="block w-fit shrink-0"
+                                    >
+                                        <div
+                                            role={author.photo ? undefined : "img"}
+                                            aria-label={
+                                                author.photo
+                                                    ? undefined
+                                                    : `Profile photo placeholder for ${author.name}`
+                                            }
+                                            className="bg-faint size-12 overflow-hidden rounded-full"
+                                        >
+                                            <BoardPhoto image={author.photo} className="size-full" sizes="48px" />
+                                        </div>
+                                    </Link>
+                                    <p className="text-muted-foreground text-[10px] tracking-[0.2em] uppercase">
+                                        A travel story by{" "}
+                                        <Link
+                                            href={`/profile/${encodeURIComponent(author.id)}`}
+                                            className="underline underline-offset-4"
+                                        >
+                                            @{author.name}
+                                        </Link>
+                                    </p>
+                                </div>
+                                <h1 className="font-display max-w-4xl text-[clamp(2.75rem,5vw,5.5rem)] leading-[0.95] font-bold tracking-tight uppercase">
+                                    {board.title}
+                                </h1>
+                                {board.description ? (
+                                    <p className="text-muted-foreground mt-6 max-w-lg text-sm leading-relaxed whitespace-pre-line">
+                                        {board.description}
+                                    </p>
+                                ) : null}
+                                <p className="text-muted-foreground mt-4 text-[10px]">
+                                    Access:{" "}
+                                    {board.visibility === "public"
+                                        ? "Anyone"
+                                        : board.visibility === "friends"
+                                          ? "Friends and invited members"
+                                          : board.visibility === "private"
+                                            ? "Only you"
+                                            : "Invited members"}
+                                </p>
+                                {tagLabels.length ? (
+                                    <ul className="mt-5 flex flex-wrap gap-2">
+                                        {tagLabels.map((tag) => (
+                                            <li
+                                                key={tag}
+                                                className="border-line rounded-full border px-3 py-1 text-[10px]"
+                                            >
+                                                {tag}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : null}
+                                <div className="mt-6">{stats}</div>
+                                <div className="mt-3 flex flex-wrap">{saveAction}</div>
+                                <p className="text-muted-foreground mt-7 flex items-center gap-3 text-xs">
+                                    <ArrowDown size={16} />
+                                    Scroll to explore {desktop ? <ArrowRight size={16} /> : null}
+                                </p>
                             </div>
-                        </section>
-                    </footer>
-                )}
-            </article>
-            <BoardComments boardId={board.id} />
-            {selectedActivity && (
+                            {board.coverImage ? (
+                                <div className={`mt-8 min-w-0 ${desktop ? "max-w-[32vw] flex-1" : ""}`}>
+                                    <StoryPhoto image={board.coverImage} eager onOpen={() => openPhoto("cover")} />
+                                </div>
+                            ) : null}
+                            {!desktop ? (
+                                <div className="mt-8">
+                                    <h2 className="mb-3 text-xs">The whole journey</h2>
+                                    {map("all")}
+                                </div>
+                            ) : null}
+                        </header>
+                        {days.map((day) => (
+                            <section
+                                key={day.number}
+                                id={`day-${day.number}`}
+                                aria-labelledby={`day-heading-${day.number}`}
+                                data-story-chapter
+                                tabIndex={-1}
+                                className={`border-line min-w-0 border-b px-6 py-9 outline-none sm:px-12 ${desktop ? "flex h-full min-w-[var(--story-width)] shrink-0 items-center gap-12 border-r border-b-0 pr-96" : ""}`}
+                            >
+                                <header className={`mb-8 shrink-0 ${desktop ? "w-64 self-start pt-8" : ""}`}>
+                                    <p className="text-muted-foreground mb-4 text-[10px] tracking-[0.2em] uppercase">
+                                        Chapter {String(day.number).padStart(2, "0")}
+                                    </p>
+                                    <h2
+                                        id={`day-heading-${day.number}`}
+                                        className="font-display text-6xl leading-none font-bold sm:text-7xl"
+                                    >
+                                        Day {day.number}
+                                    </h2>
+                                    {day.date ? (
+                                        <time className="text-muted-foreground mt-4 block text-xs" dateTime={day.date}>
+                                            {day.date}
+                                        </time>
+                                    ) : null}
+                                    {day.title && day.title !== `Day ${day.number}` ? (
+                                        <p className="mt-4 text-sm">{day.title}</p>
+                                    ) : null}
+                                    <p className="text-muted-foreground mt-4 text-xs">
+                                        {day.items.filter((item) => item.type === "activity").length} activities
+                                    </p>
+                                    {!desktop ? <div className="mt-6">{map(day.number)}</div> : null}
+                                </header>
+                                {day.items.length ? (
+                                    day.items.map((item, sequence) =>
+                                        item.type === "activity" ? (
+                                            <div
+                                                key={item.id}
+                                                data-story-activity={item.id}
+                                                className={desktop ? "flex shrink-0 items-center gap-10" : ""}
+                                            >
+                                                <div
+                                                    className={`border-line mb-8 min-w-0 border-t pt-5 ${desktop ? "w-72 shrink-0" : ""}`}
+                                                >
+                                                    <p className="text-muted-foreground mb-4 text-[10px] tracking-wider">
+                                                        {String(sequence + 1).padStart(2, "0")}
+                                                        {item.time ? ` / ${item.time}` : ""}
+                                                    </p>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setSelectedActivity(item)}
+                                                        className="group text-left focus-visible:outline-2 focus-visible:outline-offset-4"
+                                                    >
+                                                        <h3 className="font-display text-3xl leading-tight font-bold transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
+                                                            {item.title}
+                                                        </h3>
+                                                    </button>
+                                                    {item.description ? (
+                                                        <p className="text-muted-foreground mt-4 max-w-md text-sm leading-relaxed">
+                                                            {Array.from(item.description).slice(0, 120).join("")}
+                                                            {Array.from(item.description).length > 120 ? "…" : ""}
+                                                        </p>
+                                                    ) : null}
+                                                    {item.location ? (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => focusLocation(item)}
+                                                            className="text-muted-foreground mt-4 flex min-h-11 items-center gap-2 text-left text-xs underline underline-offset-4"
+                                                        >
+                                                            <MapPin size={14} className="shrink-0" />
+                                                            {item.location.name}
+                                                        </button>
+                                                    ) : null}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setSelectedActivity(item)}
+                                                        className="mt-3 inline-flex min-h-11 items-center gap-3 text-xs underline underline-offset-4"
+                                                    >
+                                                        Activity details <ArrowRight size={14} />
+                                                    </button>
+                                                </div>
+                                                <div
+                                                    className={
+                                                        desktop
+                                                            ? "flex shrink-0 items-center gap-8"
+                                                            : "mb-10 grid gap-6"
+                                                    }
+                                                >
+                                                    {item.images.map((image, index) => (
+                                                        <StoryPhoto
+                                                            key={`${image.id}-${index}`}
+                                                            image={image}
+                                                            onOpen={() => openPhoto(`activity-${item.id}-${index}`)}
+                                                        />
+                                                    ))}
+                                                </div>
+                                                {renderFillers(item.id)}
+                                            </div>
+                                        ) : null
+                                    )
+                                ) : (
+                                    <div className="text-muted-foreground max-w-sm text-sm leading-relaxed">
+                                        <p>A little room to wander.</p>
+                                        <p className="mt-3">
+                                            No activities are recorded for this day. Continue to the next chapter or
+                                            explore the journey map.
+                                        </p>
+                                    </div>
+                                )}
+                                {renderFillers(`empty-${day.number}`)}
+                            </section>
+                        ))}
+                    </motion.div>
+                    {desktop ? (
+                        <aside
+                            aria-label="Journey map"
+                            className="border-line bg-background/95 absolute right-5 bottom-5 z-10 w-[min(19rem,30%)] rounded-xl border p-3 shadow-sm backdrop-blur-sm"
+                        >
+                            <div className="mb-3 flex items-center justify-between gap-2">
+                                <label className="min-w-0 text-[10px]">
+                                    Map view
+                                    <select
+                                        aria-label="Map day filter"
+                                        value={filter}
+                                        onChange={(event) => {
+                                            setManualFilter(
+                                                event.target.value === "all" ? "all" : Number(event.target.value)
+                                            );
+                                            setFocusedActivity(undefined);
+                                        }}
+                                        className="border-line bg-background ml-2 max-w-28 border-b py-2 text-xs"
+                                    >
+                                        <option value="all">All days</option>
+                                        {days.map((day) => (
+                                            <option key={day.number} value={day.number}>
+                                                Day {day.number}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
+                                <button
+                                    type="button"
+                                    aria-pressed={manualFilter === null}
+                                    onClick={() => {
+                                        setManualFilter(null);
+                                        setFocusedActivity(undefined);
+                                    }}
+                                    className="min-h-10 text-[10px] underline underline-offset-4"
+                                >
+                                    Follow story
+                                </button>
+                            </div>
+                            {map(filter)}
+                            <p className="text-muted-foreground mt-2 text-[9px]">
+                                Day colors · activity numbers · Ctrl-scroll to zoom
+                            </p>
+                        </aside>
+                    ) : null}
+                </div>
+            </div>
+            <section id="ending" tabIndex={-1} className="border-line px-6 py-16 outline-none sm:px-12 sm:py-24">
+                <p className="text-muted-foreground text-[10px] tracking-[0.2em] uppercase">The journey, at a glance</p>
+                <h2 className="font-display mt-3 text-5xl font-bold sm:text-7xl">Every day. Every memory.</h2>
+                <div className="mt-10 max-w-3xl">{stats}</div>
+                <div className="mt-10 max-w-3xl">
+                    {days.map((day) => (
+                        <div key={day.number} className="border-line grid grid-cols-[5rem_1fr] gap-4 border-b py-5">
+                            <a
+                                href={`#day-${day.number}`}
+                                onClick={(event) => {
+                                    event.preventDefault();
+                                    jump(`day-${day.number}`);
+                                }}
+                                className="font-display text-xl underline decoration-1 underline-offset-4"
+                            >
+                                Day {day.number}
+                            </a>
+                            <ul className="space-y-3">
+                                {day.items
+                                    .filter((item): item is BoardActivity => item.type === "activity")
+                                    .map((item) => (
+                                        <li key={item.id}>
+                                            <button
+                                                type="button"
+                                                onClick={() => setSelectedActivity(item)}
+                                                className="min-h-9 text-left text-sm hover:underline"
+                                            >
+                                                {item.time ? (
+                                                    <span className="text-muted-foreground mr-4 text-xs">
+                                                        {item.time}
+                                                    </span>
+                                                ) : null}
+                                                {item.title}
+                                            </button>
+                                        </li>
+                                    ))}
+                                {!day.items.length ? (
+                                    <li className="text-muted-foreground text-xs">No recorded activities</li>
+                                ) : null}
+                            </ul>
+                        </div>
+                    ))}
+                </div>
+                <div className="mt-8 flex flex-wrap">{saveAction}</div>
+                {author.bio ? (
+                    <p className="text-muted-foreground mt-8 max-w-lg text-sm leading-relaxed">
+                        From{" "}
+                        <Link href={`/profile/${encodeURIComponent(author.id)}`} className="underline">
+                            @{author.name}
+                        </Link>{" "}
+                        — {author.bio}
+                    </p>
+                ) : null}
+            </section>
+            {bookmarkMessage ? (
+                <p role="status" className="px-6 pb-5 text-xs sm:px-12">
+                    {bookmarkMessage}
+                    {signInToSave ? (
+                        <>
+                            {" "}
+                            <Link
+                                href={`/login?returnTo=${encodeURIComponent(`/boards/${board.id}`)}`}
+                                className="underline"
+                            >
+                                Sign in
+                            </Link>
+                        </>
+                    ) : null}
+                </p>
+            ) : null}
+            <BoardComments boardId={board.id} onTotalChange={setCommentsTotal} />
+            {selectedActivity ? (
                 <ActivityDetailsDialog
                     activity={selectedActivity}
                     days={days}
-                    saved={preview.activitySaved}
-                    onClose={handleCloseActivity}
-                    onSave={preview.saveActivity}
-                    onCopy={handleCopyActivity}
-                >
-                    {feedback}
-                </ActivityDetailsDialog>
-            )}
-            {zoomedActivityPhotos && (
-                <ImageZoomDialog images={zoomedActivityPhotos.images} onClose={() => setZoomedActivityPhotos(null)} />
-            )}
-            {preview.draft ? (
-                <BoardDialog title="Make it yours" onClose={() => preview.setDraft(null)}>
-                    <BoardCopyEditor sourceBoardId={board.id} initialDraft={preview.draft} onSaved={preview.setDraft} />
-                    {preview.error ? (
-                        <p role="alert" className="text-14 mt-3">
-                            {preview.error}
-                        </p>
-                    ) : null}
-                </BoardDialog>
+                    onClose={() => setSelectedActivity(null)}
+                    onOpenPhoto={(activity, index) => openPhoto(`activity-${activity.id}-${index}`)}
+                    onFocusLocation={(activity) => {
+                        focusLocation(activity);
+                        setSelectedActivity(null);
+                    }}
+                />
             ) : null}
-        </>
+            {galleryIndex !== null ? (
+                <StoryGallery
+                    placements={placements}
+                    initialIndex={galleryIndex}
+                    onClose={() => setGalleryIndex(null)}
+                />
+            ) : null}
+        </article>
     );
 }

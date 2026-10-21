@@ -60,6 +60,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 
 export type BoardWriteRequest = {
+    fillerImagesEnabled?: boolean;
     destination?: {
         name: string;
         address: string | null;
@@ -115,6 +116,22 @@ export type BoardWriteRequest = {
 };
 
 export type BoardDocument = Omit<BoardWriteRequest, "days"> & {
+    fillerImages?: Array<{
+        provider: "unsplash";
+        providerImageId: string;
+        position: number;
+        url: string;
+        thumbnailUrl: string;
+        largeUrl: string;
+        width: number;
+        height: number;
+        alt: string;
+        photographer: string;
+        photographerUrl: string;
+        sourceUrl: string;
+    }>;
+    fillerImageStatus?: "disabled" | "pending" | "ready" | "partial" | "unavailable";
+    commentCount?: number;
     author: {
         username: string;
         bio: string;
@@ -131,6 +148,9 @@ export type BoardDocument = Omit<BoardWriteRequest, "days"> & {
         imageId: number;
         url: string;
         thumbnailUrl: string;
+        largeUrl?: string;
+        width?: number;
+        height?: number;
         capturedAt: string | null;
         position: number;
     }>;
@@ -215,6 +235,7 @@ export function toBoardWrite(
         throw new Error("An image has not finished uploading. Try again.");
     }
     return {
+        fillerImagesEnabled: draft.fillerImagesEnabled ?? false,
         destination: draft.destination
             ? {
                   name: draft.destination.name,
@@ -347,8 +368,8 @@ export function fromBoardDocument(board: PreparedBoardCopy): {
         source: "upload",
         url: new URL(image.url, apiOrigin).toString(),
         thumbnailUrl: new URL(image.thumbnailUrl, apiOrigin).toString(),
-        width: 0,
-        height: 0,
+        width: image.width ?? 0,
+        height: image.height ?? 0,
         capturedAt: image.capturedAt,
         latitude: null,
         longitude: null,

@@ -37,7 +37,7 @@ export function createImagesController(service: ImagesService): ImagesController
         content: async (_request, response, next) => {
             const { imageId } = response.locals.params as { imageId: number };
             const { variant, boardId, profileHandle } = response.locals.query as {
-                variant: "display" | "thumbnail" | "original";
+                variant: "display" | "thumbnail" | "large" | "original";
                 boardId?: number;
                 profileHandle?: string;
             };

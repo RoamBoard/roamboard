@@ -45,7 +45,10 @@ test(
                 "009_image_presentation.sql",
                 "010_guest_accounts.sql",
                 "011_board_published_at.sql",
-                "019_add_spoken_languages.sql"
+                "013_board_comments.sql",
+                "019_add_spoken_languages.sql",
+                "020_image_deletion.sql",
+                "021_board_story.sql"
             ]) {
                 await pool.query(await readFile(new URL(`../db/migrations/${name}`, import.meta.url), "utf8"));
             }
@@ -181,7 +184,9 @@ test(
                 [publicBoard.boardId]
             );
             assert.equal(publicProfile.stats.boardsCreated, 1);
-            assert.equal(publicProfile.destinations.length, 1);
+            // The profile map includes both the explicit destination and confirmed activity location.
+            assert.equal(publicProfile.destinations.length, 2);
+            assert.ok(publicProfile.destinations.every((place) => place.boardId === publicBoard.boardId));
             assert.equal(publicProfile.destinations[0]?.boardId, publicBoard.boardId);
             await assert.rejects(() => users.publicProfile("unknown", null), { code: "NOT_FOUND" });
             await pool.query(
@@ -201,8 +206,13 @@ test(
             assert.equal((await users.stats("owner")).continentsCovered, 1);
             assert.equal((await users.stats("owner")).boardsCreated, 3);
             assert.equal((await users.stats("owner")).photosUploaded, 0);
-            assert.equal((await users.mapDestinations("owner")).length, 3);
-            assert.equal((await users.mapDestinations("owner", true)).length, 3);
+            // Two map-visible Boards each have a destination and an activity location; collaborator-only Boards stay out.
+            assert.equal((await users.mapDestinations("owner")).length, 4);
+            assert.equal((await users.mapDestinations("owner", true)).length, 4);
+            assert.deepEqual(
+                new Set((await users.mapDestinations("owner")).map((place) => place.boardId)),
+                new Set([publicBoard.boardId, friendsBoard.boardId])
+            );
             assert.equal((await users.mapDestinations("owner"))[0]?.countryCode, "JPN");
             assert.equal(await users.saveBoard("stranger", publicBoard.boardId), true);
             assert.equal(await users.saveBoard("stranger", publicBoard.boardId), false);

@@ -4,6 +4,13 @@ These instructions apply to `backend/`. Follow the **feature-first layered struc
 
 ## Current state and sources of truth
 
+- The published Board story contract is implemented in source: Board-scoped optional destination illustrations,
+  comment totals and protected `large` upload delivery. Migration 021 was applied to shared development on 2026-10-21 after a verified backup; do not rerun it.
+  `npm run db:story` checks status; `-- --apply` verifies a backup and applies only 021. Do not generate imagery on
+  reads or copy filler opt-in/selections during remix. See `../contracts/board-overview-story.md` and
+  `BOARD_API_CONTRACT.md`. Isolated PostgreSQL tests cover persistence, commit races and access; browser UX review
+  remains pending.
+
 - `/boards` discovery uses dedicated search/suggestions, Featured, Recently Published, owned and saved summary feeds
   in `board-discovery/`; generic `/search` remains compatible. Search enforces recognized destination/activity-location
   eligibility, excludes own Boards, and uses curated weighted text matches. Featured defaults to rolling 30 days,

@@ -97,6 +97,22 @@ This is a living project guide. Agents may and should update `AGENTS.md` when th
 
 ## Current integrated surfaces
 
+`PublishedBoard` implements the agreed activity-led story at `/boards/[boardId]`: desktop scrolling drives continuous
+horizontal chapters into a vertical itinerary/comments ending; compact screens and reduced motion use vertical days.
+`useStoryScroll` owns measurement, hash navigation, stable chapter selection and scroll position. `StoryMap` reuses
+the existing map renderer, lazily loads one shared session per viewer and supports automatic day following plus
+manual day/All days filters on desktop. `StoryPhoto` contains full saved proportions, while `StoryGallery` wraps the shared `ImageZoomDialog` and browses
+stable story placements with on-demand large delivery, bounded neighbour warming, keyboard/touch controls and credits.
+Activity details retain full notes; enlarged photos never show notes. Unsupported preview Save/Copy actions are gone
+from this production viewer. Author photos stay outside the gallery.
+
+Creator opt-in is default-off, persists through save/hydration and stays off for remixes. A low-upload suggestion does
+not restrict eligibility; partial selections show non-blocking author feedback. New/edited activity notes validate
+250 Unicode code points with a counter, preserving unchanged longer legacy notes; backend validation stays 500.
+The backend requires migration 021 (applied to shared development on 2026-10-21) for persisted illustrations. Automated presenter, API and
+isolated PostgreSQL tests cover contract behavior; browser visual/interaction acceptance remains pending because no
+browser surface was connected during implementation.
+
 `BoardCollectionGrid` is the fourth Board list: component 2 photographic cards in a wider responsive grid, twenty
 results with URL-backed contextual search, sorting and numbered pagination. `/boards/collections/[context]` hosts
 View all destinations; Social embeds the friends collection directly. Source scopes preserve profile ownership,
@@ -596,24 +612,8 @@ inspector is no longer used by the page route. The profile page reads live accou
 
 Profile settings validate the existing backend rules before saving. A red error summary above Save Changes explains corrections and links to the affected fields; save failures retain the draft. Loading failures are separate from save errors. Pending saves disable editing and repeat submissions. A confirmed save opens the returned username's profile with an owner-only, dismissible confirmation. Leaving settings while a save is pending prevents its eventual response from redirecting the user back. Profile photos still save through their separate controls.
 
-`useBoardPhotos` fills decorative desktop photo spaces from a shared destination/country Unsplash pool, with
-location/tag fallback when a successful search returns too few photos. These illustrations are independent of
-activity photo matching. A missing user-selected header uses another distinct automatic photo. Existing headers and activity photos are retained; IDs and image URLs already used in
-the Board are excluded from automatic selection. `src/lib/board-photos.ts` shares queries through a bounded
-browser-tab cache and calls the existing credentialed, quota-managed backend Unsplash endpoint. Failed provider
-requests do not trigger automatic backup requests. Photo lookup never delays Board rendering or writes to the
-Board document. Missing results and image-load errors retain a gray location-name placeholder in automatic photo
-spaces. Automatic photos have a small credit line on the image, with
-links to the photographer and Unsplash.
-
-`src/lib/board-preview.ts` uses tab-local session storage for preview bookmarks,
-saved activities, and editable copies. These actions do not write to the backend
-or represent account-owned resources.
-
-`PublishedBoard` owns the selected activity and its open/close handlers.
-`PublishedBoardDay` renders the timeline and cards, `ActivityDetailsDialog`
-renders the selected activity, and `useBoardPreview` manages preview save/copy
-state.
+The old `useBoardPhotos`, `PublishedBoardDay` and browser-preview copy helpers remain as legacy utilities; the
+production published viewer above no longer uses automatic read-time illustrations or preview Save/Copy actions.
 
 ### Independent frontend and API testing
 
@@ -674,9 +674,8 @@ through the existing persisted photo editor. BoardPhotoStrip supplies arrow navi
 Thumbnail lists lazy-load with asynchronous decoding. Creator photo reviews use thumbnail delivery; the two V4 covers use display delivery. Activity cards avoid
 Motion layout measurements, the sticky chapter bar has an opaque background, and Smart Create uses one combined
 SVG circuit mask instead of 78 masks. Browser performance measurements remain pending.
-Decorative published Board spaces use a shared destination/country Unsplash search pool of up to 20 photos, selecting
-distinct candidates randomly per resolution. They show photographer/Unsplash credit, never attach themselves to
-activities, and leave placeholders on failure. Strict place matching still applies to actual activity photos.
+Published Board destination illustrations now use the persisted, explicit opt-in pool described above. Strict
+place matching still applies independently to actual activity photos.
 
 The Board editor offers owners a Delete Board text action below View saved Board for persisted drafts and published
 Boards, including saved remix copies. It uses the existing owner-only DELETE endpoint and shared confirmation dialog,

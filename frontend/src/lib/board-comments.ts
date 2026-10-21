@@ -12,7 +12,7 @@ export type BoardComment = {
 
 export type BoardCommentPage = {
     data: BoardComment[];
-    meta: { nextCursor: string | null; hasMore: boolean };
+    meta: { nextCursor: string | null; hasMore: boolean; totalCount?: number };
 };
 
 export const boardCommentLimit = 2000;

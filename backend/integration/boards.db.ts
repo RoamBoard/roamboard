@@ -48,7 +48,9 @@ test(
                     "009_image_presentation.sql",
                     "010_guest_accounts.sql",
                     "011_board_published_at.sql",
-                    "020_image_deletion.sql"
+                    "013_board_comments.sql",
+                    "020_image_deletion.sql",
+                    "021_board_story.sql"
                 ]) {
                     const sql = await readFile(new URL(`../db/migrations/${name}`, import.meta.url), "utf8");
                     await migrationClient.query(sql);

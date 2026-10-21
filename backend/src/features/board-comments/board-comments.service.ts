@@ -60,12 +60,15 @@ export function createCommentsService(boards: BoardRepository, comments: Comment
         async list(boardId: number, userId: string | null, cursorValue?: string) {
             const board = await accessibleBoard(boardId, userId);
             const cursor = parseCursor(cursorValue, boardId);
-            const rows = await comments.list(boardId, cursor, pageSize + 1);
+            const [rows, totalCount] = await Promise.all([
+                comments.list(boardId, cursor, pageSize + 1),
+                comments.count(boardId)
+            ]);
             const hasMore = rows.length > pageSize;
             const page = rows.slice(0, pageSize);
             return {
                 data: page.map((row) => present(row, userId, board.ownerUserId)),
-                meta: { nextCursor: hasMore ? encodeCursor(page[page.length - 1]!) : null, hasMore }
+                meta: { totalCount, nextCursor: hasMore ? encodeCursor(page[page.length - 1]!) : null, hasMore }
             };
         },
         async create(boardId: number, userId: string, body: string) {

@@ -1,3 +1,4 @@
+import { createFillerProvider } from "./features/boards/boards.fillers.js";
 import { createSmartCreateModule } from "./features/smart-create/smart-create.module.js";
 import type { SmartCreateResolver } from "./features/smart-create/smart-create.service.js";
 import type { ImageCleanup } from "./features/images/images.cleanup.js";
@@ -17,7 +18,7 @@ import { createCommentsModule } from "./features/board-comments/board-comments.m
 import type { CommentsRepository } from "./features/board-comments/board-comments.types.js";
 import { createNotificationsModule } from "./features/board-comment-notifications/notifications.module.js";
 import type { NotificationsRepository } from "./features/board-comment-notifications/notifications.types.js";
-import type { BoardRepository } from "./features/boards/boards.types.js";
+import type { BoardRepository, FillerProvider } from "./features/boards/boards.types.js";
 import { createImagesModule } from "./features/images/images.module.js";
 import type { ImageProvider, ImagesRepository } from "./features/images/images.types.js";
 import { errorHandler } from "./middleware/error-handler.js";
@@ -38,6 +39,7 @@ import type { SavedPlacesRepository } from "./features/saved-places/saved-places
 
 export interface AppOptions extends AuthModuleOptions {
     cleanupImages?: ImageCleanup;
+    fillerProvider?: FillerProvider;
     discoveryRepository?: DiscoveryRepository;
     smartCreateResolver?: SmartCreateResolver;
     libraryRepository?: LibraryRepository;
@@ -104,7 +106,13 @@ export function createApp(options: AppOptions = {}): Express {
         quota
     );
     const cleanupImages = options.cleanupImages ?? images.service.cleanupRequested;
-    const boards = createBoardsModule(attachUser, boardRepository, images.service.copyForBoard, cleanupImages);
+    const boards = createBoardsModule(
+        attachUser,
+        boardRepository,
+        images.service.copyForBoard,
+        cleanupImages,
+        options.fillerProvider ?? createFillerProvider(quota, (query) => providers.service.unsplashSearch(query, 20))
+    );
     const users = createUsersModule(
         attachUser,
         images.repository,

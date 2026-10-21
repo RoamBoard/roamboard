@@ -32,6 +32,9 @@ export default function ImageZoomDialog({ images, initialIndex = 0, onClose }: P
     );
     const dragStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
     const hasMoved = useRef(false);
+    const swipeStart = useRef<{ x: number; y: number } | null>(null);
+    const [loadedLarge, setLoadedLarge] = useState<string | null>(null);
+    const [failedDisplay, setFailedDisplay] = useState<string | null>(null);
 
     useEffect(() => {
         if (typeof window === "undefined" || !window.matchMedia) return;
@@ -43,6 +46,21 @@ export default function ImageZoomDialog({ images, initialIndex = 0, onClose }: P
 
     const currentImage = images[currentIndex] || images[0];
     const hasMultiple = images.length > 1;
+    const largeUrl = currentImage?.largeUrl || currentImage?.url;
+
+    useEffect(() => {
+        if (!largeUrl || loadedLarge !== largeUrl || images.length < 2) return;
+        const neighbours = [-1, 1].map((offset) => {
+            const image = images[(currentIndex + offset + images.length) % images.length];
+            const preload = new window.Image();
+            preload.src = image.largeUrl || image.url;
+            return preload;
+        });
+        return () =>
+            neighbours.forEach((image) => {
+                image.src = "";
+            });
+    }, [currentIndex, images, largeUrl, loadedLarge]);
 
     // Reset zoom and pan when switching to another image
     const handleSwitchImage = useCallback((newIndex: number) => {
@@ -100,7 +118,10 @@ export default function ImageZoomDialog({ images, initialIndex = 0, onClose }: P
     // Pointer events for panning when zoomed in
     const handlePointerDown = (e: React.PointerEvent) => {
         hasMoved.current = false;
-        if (scale <= 1) return;
+        if (scale <= 1) {
+            if (e.pointerType === "touch") swipeStart.current = { x: e.clientX, y: e.clientY };
+            return;
+        }
         e.preventDefault();
         setIsDragging(true);
         dragStart.current = {
@@ -113,6 +134,7 @@ export default function ImageZoomDialog({ images, initialIndex = 0, onClose }: P
     };
 
     const handlePointerMove = (e: React.PointerEvent) => {
+        if (swipeStart.current && Math.abs(e.clientX - swipeStart.current.x) > 8) hasMoved.current = true;
         if (!isDragging || scale <= 1) return;
         const dx = e.clientX - dragStart.current.x;
         const dy = e.clientY - dragStart.current.y;
@@ -126,6 +148,18 @@ export default function ImageZoomDialog({ images, initialIndex = 0, onClose }: P
     };
 
     const handlePointerUp = (e: React.PointerEvent) => {
+        const start = swipeStart.current;
+        swipeStart.current = null;
+        if (
+            start &&
+            scale <= 1 &&
+            Math.abs(e.clientX - start.x) > 48 &&
+            Math.abs(e.clientX - start.x) > Math.abs(e.clientY - start.y)
+        ) {
+            if (e.clientX > start.x) goToPrev();
+            else goToNext();
+            hasMoved.current = true;
+        }
         if (isDragging) {
             setIsDragging(false);
             try {
@@ -137,6 +171,7 @@ export default function ImageZoomDialog({ images, initialIndex = 0, onClose }: P
     };
 
     const handlePointerCancel = (e: React.PointerEvent) => {
+        swipeStart.current = null;
         if (isDragging) {
             setIsDragging(false);
             try {
@@ -327,14 +362,40 @@ export default function ImageZoomDialog({ images, initialIndex = 0, onClose }: P
                     }`}
                 >
                     <Photo
+                        key={currentImage.url}
                         src={currentImage.url}
                         alt={currentImage.alt}
                         fill
                         sizes="95vw"
                         priority
-                        className="pointer-events-none object-contain select-none"
+                        className="pointer-events-none object-scale-down select-none"
+                        style={{ opacity: largeUrl !== currentImage.url && loadedLarge === largeUrl ? 0 : 1 }}
+                        onLoad={() => {
+                            if (largeUrl === currentImage.url) setLoadedLarge(largeUrl);
+                        }}
+                        onError={() => setFailedDisplay(currentImage.url)}
                         unoptimized
                     />
+                    {largeUrl && largeUrl !== currentImage.url ? (
+                        <Photo
+                            key={largeUrl}
+                            src={largeUrl}
+                            alt={currentImage.alt}
+                            fill
+                            sizes="95vw"
+                            priority
+                            unoptimized
+                            className="pointer-events-none object-scale-down select-none"
+                            style={{ opacity: loadedLarge === largeUrl ? 1 : 0 }}
+                            onLoad={() => setLoadedLarge(largeUrl)}
+                            onError={() => setLoadedLarge(null)}
+                        />
+                    ) : null}
+                    {failedDisplay === currentImage.url && loadedLarge !== largeUrl ? (
+                        <p role="status" className="text-sm text-white/70">
+                            This photo is unavailable.
+                        </p>
+                    ) : null}
                 </div>
 
                 {/* Left/Right Carousel Controls */}

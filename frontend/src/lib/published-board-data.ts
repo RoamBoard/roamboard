@@ -34,6 +34,9 @@ export function toPublishedBoardData(document: BoardDocument): PublishedBoardDat
             {
                 id: String(image.imageId),
                 url: imageUrl(image.url),
+                largeUrl: image.largeUrl ? imageUrl(image.largeUrl) : undefined,
+                width: image.width,
+                height: image.height,
                 alt: `Photo from ${document.title}`,
                 source: "upload"
             }
@@ -148,6 +151,14 @@ export function toPublishedBoardData(document: BoardDocument): PublishedBoardDat
         canEditContent: document.permissions.canEditContent,
         canManageBoard: document.permissions.canManageBoard,
         savedByMe: Boolean(document.savedByMe),
-        savedCount: document.savedCount
+        savedCount: document.savedCount,
+        commentCount: document.commentCount,
+        fillerImages: document.fillerImagesEnabled
+            ? (document.fillerImages ?? []).map((image) => ({
+                  ...image,
+                  id: `filler-${image.providerImageId}`,
+                  source: "application" as const
+              }))
+            : []
     };
 }

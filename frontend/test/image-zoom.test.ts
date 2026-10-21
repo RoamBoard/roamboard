@@ -5,6 +5,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import ImageZoomDialog from "../src/components/ui/ImageZoomDialog";
 import BoardPhoto, { creditLink } from "../src/components/features/boards/BoardPhoto";
 import ActivityDetailsDialog from "../src/components/features/boards/ActivityDetailsDialog";
+import StoryPhoto from "../src/components/features/boards/StoryPhoto";
+import StoryGallery from "../src/components/features/boards/StoryGallery";
 import type { BoardActivity, BoardImage } from "../src/types/board";
 
 type Props = { children?: ReactNode; [name: string]: unknown };
@@ -70,7 +72,13 @@ function mountZoomDialog(
     options: { prefersReducedMotion?: boolean } = {}
 ) {
     const winListeners = new Map<string, Set<(e: unknown) => void>>();
+    const preloadRequests: string[] = [];
     const winState = {
+        Image: class {
+            set src(value: string) {
+                if (value) preloadRequests.push(value);
+            }
+        },
         addEventListener: (type: string, listener: (e: unknown) => void) => {
             if (!winListeners.has(type)) winListeners.set(type, new Set());
             winListeners.get(type)!.add(listener);
@@ -173,6 +181,7 @@ function mountZoomDialog(
             return elements(holder.tree);
         },
         render: runRender,
+        preloadRequests,
         unmount,
         emitKeyDown: (keyOrEvent: string | { key: string; shiftKey?: boolean }) => {
             const ev =
@@ -237,23 +246,33 @@ test("BoardPhoto with zoomable and onZoom invokes callback when clicked", () => 
     assert.deepEqual(events, ["zoomed", "zoomed", "zoomed"]);
 });
 
-test("ActivityDetailsDialog renders zoomable activity photos", () => {
-    const { markup } = capture(() =>
+test("activity detail photos open their placement in the shared Board gallery and locations focus the map", () => {
+    const photoRequests: Array<{ activity: BoardActivity; index: number }> = [];
+    const locationRequests: BoardActivity[] = [];
+    const { markup, nodes } = capture(() =>
         ActivityDetailsDialog({
             activity: testActivity,
             days: [{ number: 1, title: "Day 1", items: [testActivity] }],
-            saved: false,
             onClose: noop,
-            onSave: noop,
-            onCopy: noop,
-            children: null
+            onOpenPhoto: (activity, index) => photoRequests.push({ activity, index }),
+            onFocusLocation: (activity) => locationRequests.push(activity)
         })
     );
-    assert.ok(markup.includes("Enlarge photo: Mountain sunrise"));
-    assert.ok(markup.includes("Enlarge photo: Alpine lake"));
+    assert.match(markup, /aria-label="Enlarge (?:photo: )?Mountain sunrise"/);
+    assert.match(markup, /aria-label="Enlarge (?:photo: )?Alpine lake"/);
     assert.ok(markup.includes("Photo by"));
     assert.ok(markup.includes("Jane Doe"));
     assert.ok(markup.includes("Alpine lake"));
+    assert.ok(markup.includes(testActivity.description));
+    assert.doesNotMatch(markup, /Save activity preview|Copy activity preview/);
+    const photos = nodes.filter((node) => node.type === StoryPhoto);
+    assert.equal(photos.length, 2);
+    (photos[1].props.onOpen as () => void)();
+    assert.deepEqual(photoRequests, [{ activity: testActivity, index: 1 }]);
+    const location = nodes.find((node) => node.type === "button" && node.props.children === "Mount Rainier");
+    assert.ok(location);
+    (location.props.onClick as () => void)();
+    assert.deepEqual(locationRequests, [testActivity]);
 });
 
 test("ImageZoomDialog displays enlarged photo with controls, counter, and attribution", (context) => {
@@ -389,5 +408,127 @@ test("ImageZoomDialog disables zoom transition when reduced motion is preferred"
         typeof animatedBox.props.className === "string" &&
             !animatedBox.props.className.includes("motion-safe:transition-transform"),
         "Image container must omit transition-transform when reduced motion is preferred"
+    );
+});
+
+test("the story gallery forwards every ordered placement and the clicked index into the shared zoom dialog", () => {
+    const placements = [
+        { id: "cover", image: testImages[0] },
+        { id: "activity-cover-reuse", image: testImages[0] },
+        { id: "activity-second-photo", image: testImages[1] }
+    ];
+    const closed: boolean[] = [];
+    const { nodes } = capture(() => StoryGallery({ placements, initialIndex: 1, onClose: () => closed.push(true) }));
+    const zoom = nodes.find((node) => node.type === ImageZoomDialog);
+    assert.ok(zoom);
+    assert.deepEqual(zoom.props.images, [testImages[0], testImages[0], testImages[1]]);
+    assert.equal(zoom.props.initialIndex, 1);
+    (zoom.props.onClose as () => void)();
+    assert.deepEqual(closed, [true]);
+});
+
+const largeImages: BoardImage[] = [0, 1, 2, 3].map((index) => ({
+    ...testImages[index % 2],
+    id: `large-photo-${index}`,
+    url: `https://images.unsplash.com/gallery-${index}?w=1600`,
+    largeUrl: `https://images.unsplash.com/gallery-${index}?w=4096`
+}));
+
+test("large-image failure preserves the working display image, gallery position and attribution", (context) => {
+    const harness = mountZoomDialog(context, { images: largeImages, initialIndex: 1, onClose: noop });
+    const display = harness.nodes.find((node) => node.props.src === largeImages[1].url);
+    const large = harness.nodes.find((node) => node.props.src === largeImages[1].largeUrl);
+    assert.ok(display);
+    assert.ok(large);
+    assert.equal((display.props.style as { opacity: number }).opacity, 1);
+    assert.equal((large.props.style as { opacity: number }).opacity, 0);
+    assert.deepEqual(harness.preloadRequests, [], "Do not warm unrelated photos before the selected large photo loads");
+    (large.props.onError as () => void)();
+    harness.render();
+    const fallback = harness.nodes.find((node) => node.props.src === largeImages[1].url);
+    assert.equal((fallback?.props.style as { opacity: number }).opacity, 1);
+    assert.ok(harness.nodes.some((node) => node.props.children === "2 / 4"));
+    assert.ok(harness.nodes.some((node) => node.props.children === "John Smith"));
+    assert.deepEqual(harness.preloadRequests, []);
+});
+
+test("large photos load on demand and warm only their two immediate neighbours after loading", (context) => {
+    const harness = mountZoomDialog(context, { images: largeImages, initialIndex: 0, onClose: noop });
+    const sources = () =>
+        harness.nodes.filter((node) => typeof node.props.src === "string").map((node) => node.props.src);
+    assert.deepEqual(sources(), [largeImages[0].url, largeImages[0].largeUrl]);
+    assert.deepEqual(harness.preloadRequests, []);
+    const selected = harness.nodes.find((node) => node.props.src === largeImages[0].largeUrl);
+    assert.ok(selected);
+    (selected.props.onLoad as () => void)();
+    harness.render();
+    assert.deepEqual(harness.preloadRequests, [largeImages[3].largeUrl, largeImages[1].largeUrl]);
+    const upgraded = harness.nodes.find((node) => node.props.src === largeImages[0].largeUrl);
+    assert.equal((upgraded?.props.style as { opacity: number }).opacity, 1);
+    harness.emitKeyDown("ArrowRight");
+    harness.render();
+    assert.deepEqual(sources(), [largeImages[1].url, largeImages[1].largeUrl]);
+    assert.equal(harness.preloadRequests.length, 2, "The next photo must load before another neighbour pair is warmed");
+    const fallback = harness.nodes.find((node) => node.props.src === largeImages[1].url);
+    assert.equal((fallback?.props.style as { opacity: number }).opacity, 1);
+});
+
+test("touch swipes navigate photos while vertical gestures, small motions and zoomed panning preserve the photo", (context) => {
+    const harness = mountZoomDialog(context, { images: testImages, initialIndex: 0, onClose: noop });
+    const target = { setPointerCapture: noop, releasePointerCapture: noop };
+    const pointer = (x: number, y: number) => ({
+        pointerType: "touch",
+        pointerId: 1,
+        clientX: x,
+        clientY: y,
+        preventDefault: noop,
+        currentTarget: target
+    });
+    const stage = () => {
+        const found = harness.nodes.find((node) => node.type === "main");
+        assert.ok(found);
+        return found;
+    };
+    const swipe = (from: [number, number], to: [number, number]) => {
+        const current = stage();
+        (current.props.onPointerDown as (event: ReturnType<typeof pointer>) => void)(pointer(...from));
+        (current.props.onPointerMove as (event: ReturnType<typeof pointer>) => void)(pointer(...to));
+        (current.props.onPointerUp as (event: ReturnType<typeof pointer>) => void)(pointer(...to));
+        (current.props.onClick as () => void)();
+        harness.render();
+    };
+    swipe([150, 100], [60, 105]);
+    assert.ok(harness.nodes.some((node) => node.props.children === "2 / 2"));
+    assert.ok(
+        harness.nodes.some((node) => node.props.children === "100%"),
+        "A swipe must not also zoom the photo"
+    );
+    swipe([60, 100], [150, 105]);
+    assert.ok(harness.nodes.some((node) => node.props.children === "1 / 2"));
+    const vertical = stage();
+    (vertical.props.onPointerDown as (event: ReturnType<typeof pointer>) => void)(pointer(60, 100));
+    (vertical.props.onPointerUp as (event: ReturnType<typeof pointer>) => void)(pointer(65, 200));
+    harness.render();
+    assert.ok(harness.nodes.some((node) => node.props.children === "1 / 2"));
+    const small = stage();
+    (small.props.onPointerDown as (event: ReturnType<typeof pointer>) => void)(pointer(60, 100));
+    (small.props.onPointerUp as (event: ReturnType<typeof pointer>) => void)(pointer(80, 105));
+    harness.render();
+    assert.ok(harness.nodes.some((node) => node.props.children === "1 / 2"));
+    harness.emitKeyDown("+");
+    harness.render();
+    const down = stage();
+    (down.props.onPointerDown as (event: ReturnType<typeof pointer>) => void)(pointer(150, 100));
+    harness.render();
+    const dragging = stage();
+    (dragging.props.onPointerMove as (event: ReturnType<typeof pointer>) => void)(pointer(60, 105));
+    (dragging.props.onPointerUp as (event: ReturnType<typeof pointer>) => void)(pointer(60, 105));
+    harness.render();
+    assert.ok(harness.nodes.some((node) => node.props.children === "1 / 2"));
+    assert.ok(harness.nodes.some((node) => node.props.children === "150%"));
+    assert.ok(
+        harness.nodes.some((node) =>
+            String((node.props.style as { transform?: string })?.transform).includes("translate(-90px, 5px)")
+        )
     );
 });

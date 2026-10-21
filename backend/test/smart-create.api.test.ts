@@ -963,6 +963,7 @@ test("missing or malformed EXIF never invents dates or valid GPS coordinates", (
 test("the Board API accepts photos from repeated batches and enforces the 31-day limit", async () => {
     const saved: BoardDocument[] = [];
     const boardRepository: BoardRepository = {
+        getFillerPool: async () => null,
         async listAccessible() {
             return { items: [], hasMore: false };
         },
@@ -989,6 +990,10 @@ test("the Board API accepts photos from repeated batches and enforces the 31-day
         },
         async saveBoard(_userId, _boardId, _revision, input) {
             const document: BoardDocument = {
+                fillerImagesEnabled: false,
+                fillerImages: [],
+                fillerImageStatus: "disabled",
+                commentCount: 0,
                 ...input,
                 boardId: 1,
                 revision: 1,

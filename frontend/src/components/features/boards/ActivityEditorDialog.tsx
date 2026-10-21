@@ -1,6 +1,8 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
+import { activityNoteError, activityNoteLength } from "@/lib/activity-note";
+
 import { useEffect, useId, useRef, useState } from "react";
 
 import PhotoEditorDialog from "@/components/images/PhotoEditorDialog";
@@ -706,7 +708,6 @@ export default function ActivityEditorDialog({
                                 Notes
                                 <textarea
                                     disabled={uploading || refreshing}
-                                    maxLength={500}
                                     rows={4}
                                     value={draft.description}
                                     onChange={(event) =>
@@ -718,6 +719,14 @@ export default function ActivityEditorDialog({
                                     className="border-line text-14 text-foreground mt-2 w-full resize-y border bg-transparent p-3 outline-none"
                                 />
                             </label>
+                            <p className="text-muted-foreground mt-2 text-xs">
+                                {activityNoteLength(draft.description)} / 250 characters
+                            </p>
+                            {activityNoteError(draft.description, pin.description) ? (
+                                <p role="alert" className="mt-2 text-xs">
+                                    {activityNoteError(draft.description, pin.description)}
+                                </p>
+                            ) : null}
                             {placement ? (
                                 <section className="border-line mt-6 border-t pt-4" aria-label="Arrange activity">
                                     <label className="text-muted-foreground block text-xs">
@@ -782,8 +791,14 @@ export default function ActivityEditorDialog({
                                 )}
                                 <button
                                     type="button"
-                                    disabled={uploading || refreshing || (photoSearching && !hasUpload)}
+                                    disabled={
+                                        uploading ||
+                                        refreshing ||
+                                        (photoSearching && !hasUpload) ||
+                                        Boolean(activityNoteError(draft.description, pin.description))
+                                    }
                                     onClick={() => {
+                                        if (activityNoteError(draft.description, pin.description)) return;
                                         if (draft.location && draft.title.trim()) {
                                             if (placeChanged)
                                                 activityImages
@@ -795,7 +810,10 @@ export default function ActivityEditorDialog({
                                                 coverImageId:
                                                     matchedAutomaticImage && !hasUpload ? null : draft.coverImageId,
                                                 title: draft.title.trim(),
-                                                description: draft.description.trim()
+                                                description:
+                                                    draft.description === pin.description
+                                                        ? pin.description
+                                                        : draft.description.trim()
                                             });
                                             onClose();
                                         } else {

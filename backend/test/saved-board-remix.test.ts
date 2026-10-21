@@ -20,6 +20,10 @@ import type {
 
 function source(): BoardDocument {
     return {
+        fillerImagesEnabled: false,
+        fillerImages: [],
+        fillerImageStatus: "disabled",
+        commentCount: 0,
         boardId: 91,
         revision: 7,
         status: "published",
@@ -50,6 +54,7 @@ function source(): BoardDocument {
             position,
             url: `/original/${imageId}`,
             thumbnailUrl: `/original/${imageId}/thumb`,
+            largeUrl: `/original/${imageId}/large`,
             capturedAt: null
         })),
         createdAt: "2026-10-01T12:00:00Z",
@@ -87,6 +92,7 @@ function source(): BoardDocument {
 function repository(board: BoardDocument | null, readable = true) {
     const calls: string[] = [];
     const value: BoardRepository = {
+        getFillerPool: async () => null,
         async listAccessible() {
             return { items: [], hasMore: false };
         },

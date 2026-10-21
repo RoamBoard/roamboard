@@ -1,3 +1,6 @@
+import { destinationKey } from "./boards.fillers.js";
+import type { FillerPool, FillerImage } from "./boards.types.js";
+import type { ImagePresentationEdit } from "../images/images.schemas.js";
 import type { PoolClient } from "pg";
 
 import { getPool } from "../../db.js";
@@ -13,6 +16,7 @@ import {
 } from "./boards.types.js";
 
 interface BoardRow {
+    filler_images_enabled: boolean;
     board_id: number;
     owner_user_id: string;
     title: string;
@@ -40,8 +44,19 @@ interface LocationRow {
     external_place_id: string | null;
 }
 
-function imagePath(id: number, variant: "display" | "thumbnail"): string {
+function imagePath(id: number, variant: "display" | "thumbnail" | "large"): string {
     return `/api/v1/images/${id}/content?variant=${variant}`;
+}
+
+function presentationDimensions(width: number | null, height: number | null, edit: ImagePresentationEdit | null) {
+    if (!width || !height) return {};
+    const croppedWidth = width * (edit?.width ?? 1);
+    const croppedHeight = height * (edit?.height ?? 1);
+    const scale = edit ? Math.min(1, edit.outputWidth / croppedWidth, edit.outputHeight / croppedHeight) : 1;
+    return {
+        width: Math.max(1, Math.round(croppedWidth * scale)),
+        height: Math.max(1, Math.round(croppedHeight * scale))
+    };
 }
 
 function keyForLocation(location: BoardLocationWrite): string {
@@ -305,6 +320,35 @@ async function writeChildren(client: PoolClient, boardId: number, userId: string
     ]);
 }
 
+async function readFillerPool(client: Pick<PoolClient, "query">, boardId: number): Promise<FillerPool | null> {
+    const result = await client.query<FillerImage & { destinationKey: string }>(
+        `SELECT destination_key AS "destinationKey", 'unsplash' AS provider, provider_image_id AS "providerImageId",
+         position, url, thumbnail_url AS "thumbnailUrl", large_url AS "largeUrl", width, height, alt, photographer,
+         photographer_url AS "photographerUrl", source_url AS "sourceUrl"
+         FROM board_filler_image WHERE board_id=$1 ORDER BY position`,
+        [boardId]
+    );
+    return result.rows.length
+        ? {
+              destinationKey: result.rows[0]!.destinationKey,
+              images: result.rows.map((row) => ({
+                  provider: row.provider,
+                  providerImageId: row.providerImageId,
+                  position: row.position,
+                  url: row.url,
+                  thumbnailUrl: row.thumbnailUrl,
+                  largeUrl: row.largeUrl,
+                  width: row.width,
+                  height: row.height,
+                  alt: row.alt,
+                  photographer: row.photographer,
+                  photographerUrl: row.photographerUrl,
+                  sourceUrl: row.sourceUrl
+              }))
+          }
+        : null;
+}
+
 async function readBoardDocument(
     client: PoolClient,
     boardId: number,
@@ -413,8 +457,17 @@ async function readBoardDocument(
          WHERE a.board_id = $1 ORDER BY a.day_number, a.position, a.activity_id`,
         [boardId]
     );
-    const imageResult = await client.query<{ uploaded_image_id: number; position: number; captured_at: Date | null }>(
-        `SELECT bi.uploaded_image_id, bi.position, i.captured_at
+    const imageResult = await client.query<{
+        uploaded_image_id: number;
+        position: number;
+        captured_at: Date | null;
+        presentation_revision: number;
+        width: number | null;
+        height: number | null;
+        presentation_edit: ImagePresentationEdit | null;
+    }>(
+        `SELECT bi.uploaded_image_id, bi.position, i.captured_at, i.presentation_revision,
+         i.width, i.height, i.presentation_edit
          FROM board_image bi JOIN uploaded_image i ON i.uploaded_image_id = bi.uploaded_image_id
          WHERE bi.board_id = $1 ORDER BY bi.position`,
         [boardId]
@@ -480,7 +533,28 @@ async function readBoardDocument(
          FROM saved_boards WHERE board_id=$1`,
         [boardId, userId, board.owner_user_id]
     );
+    const pool = board.filler_images_enabled ? await readFillerPool(client, boardId) : null;
+    const fillers = pool?.destinationKey === destinationKey(destination) ? pool.images : [];
+    const total =
+        board.status === "published"
+            ? await client.query<{ count: number }>(
+                  "SELECT COUNT(*)::int AS count FROM board_comment WHERE board_id=$1",
+                  [boardId]
+              )
+            : null;
     return {
+        fillerImagesEnabled: Boolean(board.filler_images_enabled),
+        fillerImages: fillers,
+        fillerImageStatus: !board.filler_images_enabled
+            ? "disabled"
+            : board.status === "draft"
+              ? "pending"
+              : fillers.length === 3
+                ? "ready"
+                : fillers.length
+                  ? "partial"
+                  : "unavailable",
+        commentCount: total?.rows[0]?.count ?? 0,
         author: {
             username: board.author_username,
             bio: board.author_bio ?? "",
@@ -508,8 +582,10 @@ async function readBoardDocument(
         imageIds: imageResult.rows.map((row) => row.uploaded_image_id),
         images: imageResult.rows.map((row) => ({
             imageId: row.uploaded_image_id,
-            url: imagePath(row.uploaded_image_id, "display"),
-            thumbnailUrl: imagePath(row.uploaded_image_id, "thumbnail"),
+            url: `${imagePath(row.uploaded_image_id, "display")}&v=${row.presentation_revision}`,
+            thumbnailUrl: `${imagePath(row.uploaded_image_id, "thumbnail")}&v=${row.presentation_revision}`,
+            largeUrl: `${imagePath(row.uploaded_image_id, "large")}&v=${row.presentation_revision}`,
+            ...presentationDimensions(row.width, row.height, row.presentation_edit),
             capturedAt: row.captured_at?.toISOString() ?? null,
             position: row.position
         })),
@@ -522,6 +598,7 @@ async function readBoardDocument(
 
 export function createBoardsRepository(): BoardRepository {
     return {
+        getFillerPool: (boardId) => readFillerPool(getPool(), boardId),
         async listAccessible(userId, page, limit) {
             const result = await getPool().query<BoardRow>(
                 `SELECT b.* FROM board b WHERE b.owner_user_id=$1 OR (b.status='published' AND (
@@ -652,7 +729,7 @@ export function createBoardsRepository(): BoardRepository {
                 hasMore: result.rows.length > limit
             };
         },
-        async saveBoard(userId, boardId, expectedRevision, input) {
+        async saveBoard(userId, boardId, expectedRevision, input, fillerPool) {
             const client = await getPool().connect();
             try {
                 await client.query("BEGIN");
@@ -715,7 +792,34 @@ export function createBoardsRepository(): BoardRepository {
                         ]
                     );
                 }
+                await client.query(
+                    "UPDATE board SET filler_images_enabled=COALESCE($1, filler_images_enabled) WHERE board_id=$2",
+                    [input.fillerImagesEnabled ?? null, savedId]
+                );
                 await writeChildren(client, savedId, userId, input);
+                if (fillerPool !== undefined) {
+                    await client.query("DELETE FROM board_filler_image WHERE board_id=$1", [savedId]);
+                    for (const image of fillerPool.images)
+                        await client.query(
+                            `INSERT INTO board_filler_image (board_id,destination_key,position,provider_image_id,url,thumbnail_url,large_url,width,height,alt,photographer,photographer_url,source_url)
+                         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+                            [
+                                savedId,
+                                fillerPool.destinationKey,
+                                image.position,
+                                image.providerImageId,
+                                image.url,
+                                image.thumbnailUrl,
+                                image.largeUrl,
+                                image.width,
+                                image.height,
+                                image.alt,
+                                image.photographer,
+                                image.photographerUrl,
+                                image.sourceUrl
+                            ]
+                        );
+                }
                 const document = await readBoardDocument(client, savedId, userId);
                 if (!document) throw new Error("Saved Board could not be read");
                 await client.query("COMMIT");

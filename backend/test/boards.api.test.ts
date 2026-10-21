@@ -70,6 +70,7 @@ function fakeBoards(memberRole: "editor" | "viewer" | null = null): BoardReposit
     let nextDayId = 10;
     let nextActivityId = 100;
     return {
+        getFillerPool: async () => null,
         async listAccessible() {
             return { items: [], hasMore: false };
         },
@@ -162,6 +163,10 @@ function fakeBoards(memberRole: "editor" | "viewer" | null = null): BoardReposit
                 }))
             }));
             const board: BoardDocument = {
+                fillerImagesEnabled: false,
+                fillerImages: [],
+                fillerImageStatus: "disabled",
+                commentCount: 0,
                 ...structuredClone(input),
                 days,
                 boardId: id,
