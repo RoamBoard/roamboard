@@ -102,10 +102,12 @@ export default function FriendsPageContent({
         const readId = ++readVersionRef.current;
         setLoading(true);
         setError(null);
+        setLoginRequired(false);
         try {
             const data = await loadFriends(handle ?? undefined);
             if (readId === readVersionRef.current) {
                 setError(null);
+                setLoginRequired(false);
                 setFriends(filterFriends(data, readId));
             }
         } catch (err) {
@@ -131,6 +133,7 @@ export default function FriendsPageContent({
             .then((data) => {
                 if (tracker.active && readId === readVersionRef.current) {
                     setError(null);
+                    setLoginRequired(false);
                     setFriends(filterFriends(data, readId));
                 }
             })

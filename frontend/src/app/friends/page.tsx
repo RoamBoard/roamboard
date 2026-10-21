@@ -42,7 +42,7 @@ export default async function FriendsPage({
             <Suspense
                 fallback={<div className="text-muted-foreground p-12 text-center text-sm">Loading travel pals…</div>}
             >
-                <FriendsPageContent handle={handle} />
+                <FriendsPageContent key={handle ?? ""} handle={handle} />
             </Suspense>
         </AppShell>
     );
