@@ -163,7 +163,8 @@
     animation: toast-progress 6s linear forwards;
 }
 
-.group:hover .animate-toast-progress {
+.group:hover .animate-toast-progress,
+.group:focus-within .animate-toast-progress {
     animation-play-state: paused;
 }
 

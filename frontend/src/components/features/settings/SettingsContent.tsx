@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { listBoardTags } from "@/lib/board-creator-api";
 import { loadLanguages, loadProfile, ProfileApiError, updateProfile, type UserProfile } from "@/lib/profile";
 import {
@@ -52,17 +51,20 @@ function latestProfile(current: UserProfile | null, received: UserProfile) {
 }
 
 export default function SettingsContent() {
-    const router = useRouter();
     const [activeTab, setActiveTab] = useState<Tab>("PROFILE");
     const [saved, setSaved] = useState<UserProfile | null>(null);
     const [draft, setDraft] = useState<UserProfile | null>(null);
     const [languages, setLanguages] = useState<string[]>([]);
     const [allowedTags, setAllowedTags] = useState<string[]>([]);
     const [theme, setTheme] = useState<"light" | "dark">("light");
+    const [lastSaved, setLastSaved] = useState<UserProfile | null>(null);
+    const [showSaveToast, setShowSaveToast] = useState(false);
+    const [toastKey, setToastKey] = useState(0);
     const [saveError, setSaveError] = useState<ProfileSaveError | null>(null);
-    const [saveComplete, setSaveComplete] = useState(false);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [undoing, setUndoing] = useState(false);
+    const [undoFailed, setUndoFailed] = useState(false);
     const writeInProgress = useRef(false);
     const mounted = useRef(false);
     const [error, setError] = useState("");
@@ -107,7 +109,9 @@ export default function SettingsContent() {
         setLoading(true);
         setError("");
         setSaveError(null);
-        setSaveComplete(false);
+        setShowSaveToast(false);
+        setLastSaved(null);
+        setUndoFailed(false);
         setSaved(null);
         setDraft(null);
         setRetry((value) => value + 1);
@@ -115,7 +119,10 @@ export default function SettingsContent() {
 
     const isDirty = Boolean(saved && draft && JSON.stringify(editable(saved)) !== JSON.stringify(editable(draft)));
     function change(field: ProfileSettingsField, value: string | string[] | null) {
-        if (writeInProgress.current || saveComplete || !draft) return;
+        if (writeInProgress.current || !draft) return;
+        setShowSaveToast(false);
+        setLastSaved(null);
+        setUndoFailed(false);
         setDraft((current) => (current ? { ...current, [field]: value } : current));
         if (saveError?.fields?.[field]) {
             const remaining = { ...saveError.fields };
@@ -155,7 +162,7 @@ export default function SettingsContent() {
 
     async function save(event?: FormEvent) {
         event?.preventDefault();
-        if (!draft || !saved || writeInProgress.current || saveComplete || !isDirty) return;
+        if (!draft || !saved || writeInProgress.current || !isDirty) return;
         const username = draft.username.trim().toLowerCase();
         const fields = validateProfileSettings(draft, languages, allowedTags);
         if (Object.keys(fields).length) {
@@ -164,7 +171,10 @@ export default function SettingsContent() {
         }
         if (!beginWrite()) return;
         setSaveError(null);
+        setShowSaveToast(false);
+        setUndoFailed(false);
         try {
+            const previous = saved;
             const next = await updateProfile({
                 ...editable(draft),
                 revision: saved.revision,
@@ -174,13 +184,14 @@ export default function SettingsContent() {
                 interests: draft.interests
             });
             if (!mounted.current) return;
+            setLastSaved(previous);
             setSaved((current) => latestProfile(current, next));
             setDraft((current) => {
                 if (!current || current.revision > next.revision) return current;
                 return current === draft ? next : { ...current, revision: next.revision };
             });
-            setSaveComplete(true);
-            router.push(`/profile/${encodeURIComponent(next.username)}?updated=1`);
+            setToastKey((value) => value + 1);
+            setShowSaveToast(true);
         } catch (caught) {
             if (mounted.current) setSaveError(profileSaveError(caught));
         } finally {
@@ -188,7 +199,53 @@ export default function SettingsContent() {
         }
     }
 
+    async function undo() {
+        if (!lastSaved || !saved || !beginWrite() || undoing) return;
+        setUndoing(true);
+        const profileToRestore = lastSaved;
+        const draftBeforeUndo = draft;
+        setSaveError(null);
+        try {
+            const restored = await updateProfile({
+                ...editable(profileToRestore),
+                revision: saved.revision,
+                username: profileToRestore.username,
+                location: profileToRestore.location?.trim() || null,
+                occupation: profileToRestore.occupation?.trim() || null,
+                interests: profileToRestore.interests
+            });
+            if (!mounted.current) return;
+            setSaved((current) => latestProfile(current, restored));
+            setDraft((current) => {
+                if (!current || current.revision > restored.revision) return current;
+                return current === draftBeforeUndo ? restored : { ...current, revision: restored.revision };
+            });
+            setLastSaved(null);
+            setShowSaveToast(false);
+            setUndoFailed(false);
+        } catch (caught) {
+            if (mounted.current) {
+                setSaveError(profileSaveError(caught));
+                setShowSaveToast(false);
+                setUndoFailed(true);
+                // Preserve lastSaved so the user can retry undoing.
+            }
+        } finally {
+            if (mounted.current) setUndoing(false);
+            endWrite();
+        }
+    }
+
+    function handleDismissToast() {
+        setShowSaveToast(false);
+        setLastSaved(null);
+        setUndoFailed(false);
+    }
+
     function onPictureChange(profile: UserProfile) {
+        setShowSaveToast(false);
+        setLastSaved(null);
+        setUndoFailed(false);
         setSaved((current) => latestProfile(current, profile));
         setDraft((current) =>
             current && current.revision > profile.revision
@@ -242,7 +299,7 @@ export default function SettingsContent() {
             )}
             {!loading && draft && saved && (
                 <form noValidate onSubmit={(event) => void save(event)} className="space-y-8" aria-busy={saving}>
-                    <fieldset disabled={saving || saveComplete} className="min-w-0 space-y-8">
+                    <fieldset disabled={saving} className="min-w-0 space-y-8">
                         {activeTab === "PROFILE" && (
                             <div className="space-y-6">
                                 <ProfileAvatarEditor
@@ -350,15 +407,24 @@ export default function SettingsContent() {
                     <SettingsSaveBar
                         isDirty={isDirty}
                         onReset={() => {
-                            if (writeInProgress.current || saveComplete) return;
+                            if (writeInProgress.current) return;
                             setDraft(saved);
                             setSaveError(null);
+                            setShowSaveToast(false);
+                            setLastSaved(null);
+                            setUndoFailed(false);
                         }}
                         saving={saving}
-                        saved={saveComplete}
+                        undoing={undoing}
                         error={saveError}
                         onFocusField={focusField}
                         onReload={reload}
+                        showToast={showSaveToast && !isDirty}
+                        onDismissToast={handleDismissToast}
+                        onUndo={() => void undo()}
+                        canUndo={Boolean(lastSaved) && !saving && !undoing}
+                        canRetryUndo={undoFailed && Boolean(lastSaved) && !saving && !undoing}
+                        toastKey={toastKey}
                     />
                 </form>
             )}
