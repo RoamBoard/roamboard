@@ -17,6 +17,7 @@ import ViewAllBoards from "./ViewAllBoards";
 import { scrollBoardLibrary } from "@/lib/board-library-scroll";
 
 type Props = {
+    totalCount?: number;
     viewAllHref?: string;
     boards: readonly Pick<GalleryBoard, "compact" | "photo" | "ownership" | "href" | "editHref" | "savedByMe">[];
     id?: string;
@@ -33,11 +34,9 @@ type Props = {
 };
 
 export default function BoardLibrary({
-    boards,
+    boards: allBoards,
+    totalCount = allBoards.length,
     viewAllHref,
-    hasMore = false,
-    loadingMore = false,
-    onLoadMore,
     id = "board-library",
     title = "YOUR COLLECTION",
     description,
@@ -47,6 +46,7 @@ export default function BoardLibrary({
     onSavedChange,
     removeOnUnsave = false
 }: Props) {
+    const boards = allBoards.slice(0, 10);
     const root = useRef<HTMLDivElement>(null);
     const interaction = useRef<{ hovered: string | null; focused: string | null }>({ hovered: null, focused: null });
     return (
@@ -54,12 +54,10 @@ export default function BoardLibrary({
             <BoardLibraryCarousel
                 viewAllHref={viewAllHref}
                 count={boards.length}
+                totalCount={totalCount}
                 id={id}
                 title={title}
                 description={description}
-                hasMore={hasMore}
-                loadingMore={loadingMore}
-                onLoadMore={onLoadMore}
                 embedded={embedded}
                 variant={variant}
                 emptyMessage={variant === "profile" ? "" : undefined}
@@ -150,6 +148,7 @@ export function BoardLibraryCarousel({
     children,
     viewAllHref,
     count,
+    totalCount = count,
     id,
     title,
     description,
@@ -166,6 +165,7 @@ export function BoardLibraryCarousel({
 > & {
     children: ReactNode;
     count: number;
+    totalCount?: number;
     id: string;
     title: string;
     variant?: LibraryVariant;
@@ -373,7 +373,7 @@ export function BoardLibraryCarousel({
                         <p className="text-10 text-foreground/65 mt-4 px-5 text-center" role="status">
                             {loadingMore
                                 ? "Loading more Boards…"
-                                : `${count} ${count === 1 ? "Board" : "Boards"} · drag, swipe or scroll to explore`}
+                                : `${totalCount} ${totalCount === 1 ? "Board" : "Boards"} · drag, swipe or scroll to explore`}
                         </p>
                     )}
                 </Carousel>

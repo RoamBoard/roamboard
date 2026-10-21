@@ -216,6 +216,118 @@ test(
                     ).length,
                     1
                 );
+                // Exercise the production SQL, including OR tags and destination activity matching.
+                await client.query("INSERT INTO activity_type(type) VALUES('discovery-test')");
+                await client.query(
+                    "INSERT INTO tag(tag_name) VALUES('Foodie'),('Street Food'),('Culture') ON CONFLICT (tag_name) DO NOTHING"
+                );
+                const fixtures = [
+                    {
+                        title: "either-food",
+                        tags: ["Foodie"],
+                        country: "THA",
+                        latitude: 13.7,
+                        visibility: "public",
+                        status: "published"
+                    },
+                    {
+                        title: "either-street",
+                        tags: ["Street Food"],
+                        country: "TH",
+                        latitude: 13.71,
+                        visibility: "public",
+                        status: "published"
+                    },
+                    {
+                        title: "both-tags",
+                        tags: ["Foodie", "Street Food"],
+                        country: "Thailand",
+                        latitude: 13.72,
+                        visibility: "public",
+                        status: "published"
+                    },
+                    {
+                        title: "distant",
+                        tags: ["Culture"],
+                        country: "THA",
+                        latitude: 18.8,
+                        visibility: "public",
+                        status: "published"
+                    },
+                    {
+                        title: "wrong-country",
+                        tags: [],
+                        country: "SWE",
+                        latitude: 13.7,
+                        visibility: "public",
+                        status: "published"
+                    },
+                    {
+                        title: "private",
+                        tags: [],
+                        country: "THA",
+                        latitude: 13.7,
+                        visibility: "friends",
+                        status: "published"
+                    },
+                    { title: "draft", tags: [], country: "THA", latitude: 13.7, visibility: "public", status: "draft" }
+                ];
+                const ids = new Map<string, number>();
+                for (const fixture of fixtures) {
+                    const board = await client.query<{ board_id: number }>(
+                        "INSERT INTO board(owner_user_id,title,status,visibility) VALUES('owner',$1,$2,$3) RETURNING board_id",
+                        [fixture.title, fixture.status, fixture.visibility]
+                    );
+                    const boardId = board.rows[0]!.board_id;
+                    ids.set(fixture.title, boardId);
+                    const location = await client.query<{ location_id: number }>(
+                        "INSERT INTO location(name,country,latitude,longitude) VALUES($1,$2,$3,100.5) RETURNING location_id",
+                        [fixture.title, fixture.country, fixture.latitude]
+                    );
+                    const day = await client.query<{ day_id: number }>(
+                        "INSERT INTO board_day(board_id,day_number) VALUES($1,1) RETURNING day_id",
+                        [boardId]
+                    );
+                    await client.query(
+                        "INSERT INTO activity(board_id,day_id,day_number,position,title,type,location_id) VALUES($1,$2,1,0,'Visit','discovery-test',$3)",
+                        [boardId, day.rows[0]!.day_id, location.rows[0]!.location_id]
+                    );
+                    for (const tag of fixture.tags)
+                        await client.query(
+                            "INSERT INTO board_tag(board_id,tag_id) SELECT $1,tag_id FROM tag WHERE tag_name=$2",
+                            [boardId, tag]
+                        );
+                }
+                const expected = (...titles: string[]) => titles.map((title) => ids.get(title)!).sort((a, b) => a - b);
+                const category = await repository.candidates(null, "discovery", undefined, {
+                    ...collection,
+                    context: "category",
+                    tags: ["foodie", "Street Food"]
+                });
+                assert.deepEqual(
+                    category.map((board) => board.boardId),
+                    expected("either-food", "either-street", "both-tags")
+                );
+                const country = await repository.candidates("owner", "discovery", undefined, {
+                    ...collection,
+                    context: "destination",
+                    country: "THA"
+                });
+                assert.deepEqual(
+                    country.map((board) => board.boardId),
+                    expected("either-food", "either-street", "both-tags", "distant")
+                );
+                const nearby = await repository.candidates("owner", "discovery", undefined, {
+                    ...collection,
+                    context: "destination",
+                    country: "THA",
+                    latitude: 13.7,
+                    longitude: 100.5
+                });
+                assert.deepEqual(
+                    nearby.map((board) => board.boardId),
+                    expected("either-food", "either-street", "both-tags")
+                );
             } finally {
                 await client.end();
             }

@@ -4,12 +4,11 @@ import { useEffect, useMemo, useRef, useState, type ComponentProps } from "react
 import BoardLibrary from "@/components/features/boards/BoardLibrary";
 import { loadProfileLibraryBoards, type ProfileLibraryBoard } from "@/lib/profile-board-library";
 
-const PAGE_SIZE = 6;
+const PAGE_SIZE = 10;
 
 export default function ProfileBoardLibrary(props: ComponentProps<typeof BoardLibrary>) {
     const { boards } = props;
-    const [limit, setLimit] = useState(PAGE_SIZE);
-    const visible = useMemo(() => boards.slice(0, limit), [boards, limit]);
+    const visible = useMemo(() => boards.slice(0, PAGE_SIZE), [boards]);
     const cache = useRef(new Map<ProfileLibraryBoard, ProfileLibraryBoard | null>());
     const [result, setResult] = useState<{
         source: typeof visible;
@@ -66,20 +65,7 @@ export default function ProfileBoardLibrary(props: ComponentProps<typeof BoardLi
                     </button>
                 </p>
             )}
-            {current && limit < boards.length && (
-                <button type="button" className="underline" onClick={() => setLimit((value) => value + PAGE_SIZE)}>
-                    Load more Boards
-                </button>
-            )}
-            <BoardLibrary
-                {...props}
-                boards={displayed}
-                hasMore={limit < boards.length}
-                loadingMore={!current}
-                onLoadMore={async () => {
-                    setLimit((value) => value + PAGE_SIZE);
-                }}
-            />
+            <BoardLibrary {...props} boards={displayed} totalCount={props.totalCount ?? boards.length} />
         </>
     );
 }

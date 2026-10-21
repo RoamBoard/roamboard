@@ -318,13 +318,7 @@ test("account switching invalidates suggestions and all personal collections, ig
     assert.ok(visibleBoardIds(page.render()).includes("903"));
     page.invoke(page.input().node, "onChange", { target: { value: "Stockholm coast" } });
     await page.advance();
-    for (const id of ["mine", "saved"]) {
-        const collection = page
-            .render()
-            .find(({ node }) => node.props.id === id && typeof node.props.onLoadMore === "function");
-        assert.ok(collection);
-        page.invoke(collection.node, "onLoadMore");
-    }
+    window.dispatchEvent(new Event("focus"));
     const oldRequests = [...page.requests];
     for (const path of ["/boards/search/suggestions", "/boards/mine", "/boards/saved"]) {
         assert.ok(

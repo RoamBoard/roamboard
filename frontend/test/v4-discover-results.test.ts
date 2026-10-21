@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createElement } from "react";
+import { Children, createElement, isValidElement, type ReactNode } from "react";
+import RoamFlowGallery from "../src/components/features/discover/roamflow/RoamFlowGallery";
+import DestinationStoryCard from "../src/components/features/destinations/DestinationStoryCard";
 import { renderToStaticMarkup } from "react-dom/server";
 import DiscoverBoardCard, { toDiscoverPhotoBoardCard } from "../src/components/features/discover/DiscoverBoardCard";
 import { boardTags } from "../src/data/board-tags";
@@ -183,7 +185,10 @@ test("Featured displays real Board actions and preserves an honest missing-cover
         assert.ok(html.includes(`href="/boards/${id}"`));
         assert.ok(html.includes(`Published Board ${id}`));
         assert.ok(html.includes(`aria-label="View Published Board ${id}"`));
-        assert.ok(html.includes(`aria-label="Save Published Board ${id}"`));
+        assert.ok(
+            !html.includes(`aria-label="Save Published Board ${id}"`),
+            "Unknown viewer ownership must not expose a bookmark"
+        );
     }
     assert.match(html, /No cover photo/);
     assert.doesNotMatch(html, /<img\b|sample|Sample traveller/);
@@ -207,4 +212,25 @@ test("Discover V4 metadata uses supplied destinations and catalog tag names with
     assert.equal(data.visibility, undefined);
     assert.equal(data.status, undefined);
     assert.equal(data.durationDays, undefined);
+});
+
+test("Discover Featured and RoamFlow both resolve viewer permissions instead of assuming another author", () => {
+    const source = publicDiscover.fromDiscoveryCard(discoveryCard(741));
+    function cards(node: ReactNode): Array<Record<string, unknown>> {
+        if (!isValidElement<{ children?: ReactNode }>(node)) return [];
+        return node.type === DestinationStoryCard ? [node.props] : Children.toArray(node.props.children).flatMap(cards);
+    }
+    const featured = cards(FeaturedBoards({ boards: [source], available: true }));
+    const captured: { tree?: ReactNode } = {};
+    function Probe() {
+        captured.tree = RoamFlowGallery({ boards: [{ ...toDiscoverPhotoBoardCard(source), href: source.href }] });
+        return captured.tree;
+    }
+    const markup = renderToStaticMarkup(createElement(Probe));
+    for (const presenters of [featured, cards(captured.tree)]) {
+        assert.equal(presenters.length, 1);
+        assert.equal(presenters[0].href, "/boards/741");
+        assert.equal(presenters[0].ownership, undefined);
+    }
+    assert.doesNotMatch(markup, /aria-label="(?:Save |Unsave )/);
 });

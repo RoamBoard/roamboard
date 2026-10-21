@@ -1,5 +1,15 @@
 export type CollectionContext =
-    "mine" | "saved" | "friends" | "profile" | "profile-saved" | "map" | "category" | "recent" | "featured" | "samples";
+    | "mine"
+    | "saved"
+    | "friends"
+    | "profile"
+    | "profile-saved"
+    | "map"
+    | "category"
+    | "destination"
+    | "recent"
+    | "featured"
+    | "samples";
 export type CollectionSource = { context: CollectionContext; params?: Record<string, string> };
 export const collectionTitles: Record<CollectionContext, string> = {
     mine: "My Boards",
@@ -9,6 +19,7 @@ export const collectionTitles: Record<CollectionContext, string> = {
     "profile-saved": "Currently inspired by",
     map: "Boards in this destination",
     category: "Category Boards",
+    destination: "Destination Boards",
     recent: "Recently published",
     featured: "Featured Boards",
     samples: "Discover samples"

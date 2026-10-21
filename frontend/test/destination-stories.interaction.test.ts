@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test, { type TestContext } from "node:test";
 import React, { Children, isValidElement, type ComponentProps, type ReactElement, type ReactNode } from "react";
+import SpatialGallery from "../src/components/features/boards/SpatialGallery";
 import DestinationStoryCard from "../src/components/features/destinations/DestinationStoryCard";
 import { BoardCardPhoto } from "../src/components/features/boards/cards/BoardCardParts";
 import { DestinationStories } from "../src/components/features/destinations/DestinationStories";
@@ -54,7 +55,14 @@ function galleryHarness(t: TestContext, changes: Partial<Props> = {}) {
         props,
         render() {
             cursor.value = 0;
-            return DestinationStories(props);
+            const tree = DestinationStories(props);
+            function expand(node: ReactNode): ReactNode {
+                if (!isValidElement<{ children?: ReactNode }>(node)) return node;
+                if (node.type === SpatialGallery)
+                    return SpatialGallery(node.props as ComponentProps<typeof SpatialGallery>);
+                return React.cloneElement(node, {}, ...Children.toArray(node.props.children).map(expand));
+            }
+            return expand(tree);
         }
     };
 }
@@ -119,12 +127,12 @@ test("destination spatial gallery arrows, Home and End select real Boards withou
     );
     assert.ok(link, "The card background keeps the canonical Board view URL");
     invoke(
-        find(gallery.render(), (node) => node.props["aria-label"] === "Next slide"),
+        find(gallery.render(), (node) => node.props["aria-label"] === "Next Board"),
         "onClick"
     );
     assert.equal(selected(gallery.render()), 102);
     invoke(
-        find(gallery.render(), (node) => node.props["aria-label"] === "Previous slide"),
+        find(gallery.render(), (node) => node.props["aria-label"] === "Previous Board"),
         "onClick"
     );
     assert.equal(selected(gallery.render()), 101);
@@ -189,59 +197,30 @@ test("gallery pans select at distance or velocity thresholds and suppress the re
     assert.equal(selected(gallery.render()), 101);
 });
 
-test("drag progress follows the visible neighbour spacing when the stage constrains full covers", (t) => {
-    const gallery = galleryHarness(t);
-    const region = find(gallery.render(), (node) => node.props["aria-roledescription"] === "carousel");
-    const stage = { width: 500 };
-    (region.props.ref as { current: unknown }).current = {
-        querySelector: () => ({ getBoundingClientRect: () => ({ width: 420 }) }),
-        firstElementChild: { getBoundingClientRect: () => stage }
-    };
-    const progress = () => {
-        const surface = find(gallery.render(), (node) => typeof node.props.onPanEnd === "function");
-        invoke(surface, "onPointerDown");
-        invoke(surface, "onPan", {}, { offset: { x: -44.7, y: 0 } });
-        const active = find(gallery.render(), (node) => node.props["data-destination-card"] === "active");
-        const x = (active.props.animate as { x: string }).x;
-        return Number(x.match(/^calc\(([-\d.]+)/)?.[1]);
-    };
-    assert.ok(Math.abs(progress() + 0.5) < 0.001, "A half-gap drag should move covers halfway in a constrained stage");
-    stage.width = 1200;
-    assert.ok(Math.abs(progress() + 44.7 / 319.2) < 0.001, "Roomy stages should retain the original drag spacing");
-    assert.equal(selected(gallery.render()), 101, "A partial drag must not prematurely change selection");
-});
-
-test("pagination and retry controls call the parent handlers while retaining loaded cards and disabling pending controls", (t) => {
+test("previews stop at ten and replace pagination with View all while preserving retry", (t) => {
     const calls = { load: 0, retry: 0 };
-    const gallery = galleryHarness(t, { hasMore: true, onLoadMore: () => calls.load++, onRetry: () => calls.retry++ });
-    const load = find(
-        gallery.render(),
-        (node) => node.type === "button" && node.props.onClick === gallery.props.onLoadMore
-    );
-    invoke(load, "onClick");
-    assert.equal(calls.load, 1);
-    gallery.props.loadingMore = true;
+    const gallery = galleryHarness(t, {
+        boards: Array.from({ length: 14 }, (_, i) => summary(101 + i)),
+        hasMore: true,
+        onLoadMore: () => calls.load++,
+        onRetry: () => calls.retry++
+    });
+    assert.equal(nodes(gallery.render()).filter((node) => node.type === DestinationStoryCard).length, 10);
     assert.equal(
-        find(gallery.render(), (node) => node.type === "button" && node.props.onClick === gallery.props.onLoadMore)
-            .props.disabled,
-        true
+        nodes(gallery.render()).some(
+            (node) => node.type === "button" && node.props.onClick === gallery.props.onLoadMore
+        ),
+        false
     );
-    assert.equal(selected(gallery.render()), 101);
-    gallery.props.error = "Next page unavailable";
-    gallery.props.loadingMore = false;
-    const retry = find(
-        gallery.render(),
-        (node) => node.type === "button" && node.props.onClick === gallery.props.onRetry
+    keyboard(gallery.render(), "End");
+    assert.equal(selected(gallery.render()), 110);
+    gallery.props.error = "Public boards unavailable";
+    invoke(
+        find(gallery.render(), (node) => node.type === "button" && node.props.onClick === gallery.props.onRetry),
+        "onClick"
     );
-    invoke(retry, "onClick");
-    assert.equal(calls.retry, 1);
-    assert.equal(selected(gallery.render()), 101);
-    gallery.props.loadingMore = true;
-    assert.equal(
-        find(gallery.render(), (node) => node.type === "button" && node.props.onClick === gallery.props.onRetry).props
-            .disabled,
-        true
-    );
+    assert.deepEqual(calls, { load: 0, retry: 1 });
+    assert.equal(selected(gallery.render()), 110);
 });
 
 test("direct public Board cover delivery preserves the image error callback and crop presentation", () => {
@@ -283,21 +262,18 @@ test("destination fan keeps identifying text inside every card with consistent f
     const gallery = galleryHarness(t);
     for (const id of [101, 102, 103]) {
         const card = story(gallery.render(), id);
-        assert.equal(card.props.galleryCover, true);
+        assert.equal(card.props.galleryCover, undefined);
         assert.equal((card.props.board as { title: string }).title, `Journey ${id}`);
         assert.equal((card.props.board as { author: string }).author, `traveller_${id}`);
-        const offset = (card.props.board as { labelOffset: number }).labelOffset;
-        assert.ok(offset > 0 && offset < 40.75, "Only this placement should move the country watermark left");
-        assert.equal(offset, (story(gallery.render(), 101).props.board as { labelOffset: number }).labelOffset);
     }
     assert.equal(
         nodes(gallery.render()).filter((node) => node.props["aria-label"] === "Neighbouring Boards").length,
         0
     );
     keyboard(gallery.render(), "ArrowRight");
-    assert.equal(story(gallery.render(), 102).props.galleryCover, true);
+    assert.equal(story(gallery.render(), 102).props.galleryCover, undefined);
     assert.equal(story(gallery.render(), 102).props.details, true);
-    assert.equal(story(gallery.render(), 101).props.galleryCover, true);
+    assert.equal(story(gallery.render(), 101).props.galleryCover, undefined);
     assert.equal((story(gallery.render(), 102).props.selection as { viewHref: string }).viewHref, "/boards/102");
 });
 
@@ -306,14 +282,14 @@ test("dragging and cancellation preserve in-card identity and selected presentat
     const surface = find(gallery.render(), (node) => typeof node.props.onPanEnd === "function");
     invoke(surface, "onPointerDown");
     invoke(surface, "onPan", {}, { offset: { x: -25, y: 0 }, velocity: { x: 0, y: 0 } });
-    assert.equal(story(gallery.render(), 101).props.galleryCover, true);
+    assert.equal(story(gallery.render(), 101).props.galleryCover, undefined);
     assert.equal(story(gallery.render(), 101).props.suppressHover, true);
-    assert.equal(story(gallery.render(), 102).props.galleryCover, true);
+    assert.equal(story(gallery.render(), 102).props.galleryCover, undefined);
     invoke(
         find(gallery.render(), (node) => typeof node.props.onPointerCancel === "function"),
         "onPointerCancel"
     );
-    assert.equal(story(gallery.render(), 101).props.galleryCover, true);
+    assert.equal(story(gallery.render(), 101).props.galleryCover, undefined);
     assert.equal(story(gallery.render(), 101).props.suppressHover, false);
     const selection = story(gallery.render(), 101).props.selection as { onNavigate: (event: unknown) => void };
     const prevented = { value: false };
@@ -324,4 +300,32 @@ test("dragging and cancellation preserve in-card identity and selected presentat
         }
     });
     assert.equal(prevented.value, true);
+});
+
+test("five visible covers overlap their neighbours and put the selected Board in front", (t) => {
+    const gallery = galleryHarness(t, { boards: Array.from({ length: 10 }, (_, index) => summary(101 + index)) });
+    const covers = nodes(gallery.render()).filter(
+        (node) => node.props["data-spatial-card"] && !node.props["aria-hidden"]
+    );
+    assert.equal(covers.length, 5);
+    const positions = covers
+        .map((node) => {
+            const animation = node.props.animate as { x: string; scale: number };
+            return {
+                x: parseFloat(animation.x),
+                halfWidth: animation.scale * 50,
+                z: (node.props.style as { zIndex: number }).zIndex
+            };
+        })
+        .sort((a, b) => a.x - b.x);
+    for (const [index, cover] of positions.entries()) {
+        const next = positions[index + 1];
+        if (next)
+            assert.ok(
+                cover.x + cover.halfWidth > next.x - next.halfWidth,
+                "Adjacent covers should overlap without a gap"
+            );
+    }
+    assert.ok(positions[2].z > positions[1].z && positions[1].z > positions[0].z);
+    assert.ok(positions[2].z > positions[3].z && positions[3].z > positions[4].z);
 });

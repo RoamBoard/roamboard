@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
 import Image, { LibraryCredit } from "@/components/images/LibraryImage";
 import { getDestinationPage, type AtlasImage } from "@/data/destination-atlas";
@@ -97,14 +97,22 @@ export default function DestinationLoading({
     onRetry: () => void;
     onRevealed: () => void;
 }) {
+    const dialog = useRef<HTMLDivElement>(null);
     const photos = reduced ? [] : destinationPhotos(state.href).slice(0, mobile ? 2 : 3);
     const revealing = state.phase === "revealing";
+
+    useEffect(() => {
+        if (state.phase !== "error") dialog.current?.focus({ preventScroll: true });
+    }, [state.phase]);
+
     return (
         <motion.div
+            ref={dialog}
             role="dialog"
             aria-modal="true"
             aria-label={`Opening ${state.name}`}
-            className="font-body text-foreground fixed inset-0 z-[60]"
+            tabIndex={-1}
+            className="font-body text-foreground fixed inset-0 z-[60] outline-none"
             initial={{ opacity: 1 }}
             animate={{ opacity: revealing ? 0 : 1 }}
             transition={{ duration: reduced ? 0 : 0.65, ease: [0.4, 0, 0.2, 1] }}
@@ -120,7 +128,10 @@ export default function DestinationLoading({
                     const controls = Array.from(
                         event.currentTarget.querySelectorAll<HTMLElement>("button, summary, details[open] a")
                     );
-                    if (event.shiftKey && document.activeElement === controls[0]) {
+                    if (
+                        event.shiftKey &&
+                        (document.activeElement === controls[0] || document.activeElement === event.currentTarget)
+                    ) {
                         event.preventDefault();
                         controls.at(-1)?.focus();
                     } else if (!event.shiftKey && document.activeElement === controls.at(-1)) {
@@ -203,7 +214,6 @@ export default function DestinationLoading({
                     {state.phase === "error" ? "Destination loading failed." : `Preparing ${state.name}.`}
                 </p>
                 <button
-                    autoFocus={state.phase !== "error"}
                     type="button"
                     onClick={onCancel}
                     className="text-muted-foreground hover:text-foreground bg-background/80 focus-visible:outline-foreground absolute top-4 right-4 z-10 min-h-11 rounded-sm px-4 text-xs underline-offset-4 backdrop-blur-sm hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 md:top-6 md:right-8"

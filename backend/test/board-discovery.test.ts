@@ -135,10 +135,16 @@ function harness(items: DiscoveryCandidate[] = []) {
         memberRole: null,
         isFriend: false
     };
-    const calls: { days?: number; starts: number; finishes: number } = { starts: 0, finishes: 0 };
+    const calls: {
+        context?: Parameters<DiscoveryRepository["candidates"]>[3];
+        days?: number;
+        starts: number;
+        finishes: number;
+    } = { starts: 0, finishes: 0 };
     const token = "73fb6c5e-6b43-4699-b753-c092306cd935";
     const repository: DiscoveryRepository = {
-        async candidates(_userId, _scope, days) {
+        async candidates(_userId, _scope, days, context) {
+            calls.context = context;
             calls.days = days;
             return structuredClone(items);
         },
@@ -292,4 +298,40 @@ test("collection HTTP paginates all matches, sorts, validates contexts, and prot
     const empty = await request(app).get("/api/v1/boards/collections/recent?q=unmatched");
     assert.deepEqual(empty.body.data.items, []);
     assert.equal(empty.body.data.total, 0);
+});
+
+test("category collections accept bounded OR tags without allowing scope changes or ambiguous tags", async () => {
+    const { app, calls } = harness();
+    const response = await request(app).get("/api/v1/boards/collections/category?tags=Foodie&tags=Street%20Food");
+    assert.equal(response.status, 200);
+    assert.deepEqual(calls.context?.tags, ["Foodie", "Street Food"]);
+    for (const path of [
+        "recent?tags=Foodie",
+        "category?tags=",
+        "category?tag=Foodie&tags=Culture",
+        "category?" + Array.from({ length: 21 }, (_, i) => "tags=tag" + i).join("&")
+    ]) {
+        assert.equal((await request(app).get("/api/v1/boards/collections/" + path)).status, 400, path);
+    }
+});
+
+test("destination collection reads are public and require a country or complete coordinate pair", async () => {
+    const { app, calls } = harness();
+    assert.equal((await request(app).get("/api/v1/boards/collections/destination?country=THA")).status, 200);
+    assert.equal(calls.context?.country, "THA");
+    assert.equal(
+        (await request(app).get("/api/v1/boards/collections/destination?country=THA&latitude=13.7&longitude=100.5"))
+            .status,
+        200
+    );
+    assert.equal(calls.context?.latitude, 13.7);
+    for (const query of [
+        "",
+        "latitude=13.7",
+        "latitude=13.7&longitude=100.5",
+        "country=THA&collection=saved",
+        "country=THA&handle=someone"
+    ]) {
+        assert.equal((await request(app).get("/api/v1/boards/collections/destination?" + query)).status, 400, query);
+    }
 });

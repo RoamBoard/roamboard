@@ -54,7 +54,16 @@ export interface DiscoveryRepository {
 }
 
 export type CollectionContext =
-    "mine" | "saved" | "friends" | "profile" | "profile-saved" | "map" | "category" | "recent" | "featured";
+    | "mine"
+    | "saved"
+    | "friends"
+    | "profile"
+    | "profile-saved"
+    | "map"
+    | "category"
+    | "destination"
+    | "recent"
+    | "featured";
 export type CollectionQuery = GeographicSelections & {
     q?: string;
     sort?:
@@ -69,6 +78,7 @@ export type CollectionQuery = GeographicSelections & {
     limit: number;
     handle?: string;
     tag?: string;
+    tags?: string[];
     period?: "week" | "month";
     country?: string;
     longitude?: number;

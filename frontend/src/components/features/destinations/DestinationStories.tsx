@@ -1,15 +1,18 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { motion, useReducedMotion } from "motion/react";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import SpatialGallery from "../boards/SpatialGallery";
+import ViewAllBoards from "../boards/ViewAllBoards";
+import { collectionHref } from "@/lib/board-collections";
+import type { GalleryBoard } from "@/lib/my-boards";
+import type { PhotoBoardCardData } from "@/types/board-card";
 import { destinationPhotoUrl, type DestinationBoardSummary } from "@/lib/destination-guides";
-import DestinationStoryCard from "./DestinationStoryCard";
 
 type Props = {
     kind?: "country";
     name: string;
     countryCode: string;
+    latitude?: number;
+    longitude?: number;
     boards: DestinationBoardSummary[];
     hasMore?: boolean;
     onLoadMore?: () => void;
@@ -25,29 +28,55 @@ export function DestinationStories({
     kind,
     name,
     countryCode,
+    latitude,
+    longitude,
     boards,
-    hasMore,
-    onLoadMore,
     loadingMore,
     error,
     onRetry
 }: Props) {
-    const [selectedId, setSelectedId] = useState<number | null>(null);
-    const dragged = useRef(false);
-    const dragStep = useRef(320);
-    const [dragProgress, setDragProgress] = useState(0);
-    const [dragging, setDragging] = useState(false);
-    const gallery = useRef<HTMLDivElement>(null);
-    const reduced = useReducedMotion();
-    const selected = Math.max(
-        0,
-        boards.findIndex((item) => item.boardId === selectedId)
-    );
-    const board = boards[selected];
-
-    function select(index: number) {
-        if (boards.length) setSelectedId(boards[(index + boards.length) % boards.length].boardId);
-    }
+    const preview: GalleryBoard[] = boards.slice(0, 10).map((item) => {
+        const image = item.images[0];
+        const photo: PhotoBoardCardData = {
+            id: String(item.boardId),
+            title: item.title,
+            author: item.username,
+            destination: name,
+            destinationLabel: countryCode,
+            description: item.description ?? undefined,
+            tags: item.tags,
+            durationDays: item.durationDays,
+            status: "published",
+            visibility: "public",
+            image: image
+                ? {
+                      src: destinationPhotoUrl(new URL(image.url, apiOrigin).toString(), 1200),
+                      alt: image.alt || item.title,
+                      unoptimized: true
+                  }
+                : undefined
+        };
+        return {
+            photo,
+            compact: { ...photo, image: photo.image ?? { src: "", alt: "" } },
+            collage: {
+                ...photo,
+                images: photo.image ? [photo.image] : [],
+                durationDays: item.durationDays,
+                description: item.description ?? "",
+                themes: item.tags,
+                highlights: []
+            },
+            href: `/boards/${item.boardId}`
+        };
+    });
+    const viewAllHref = collectionHref("destination", {
+        country: countryCode,
+        ...(kind === "country" || latitude === undefined || longitude === undefined
+            ? {}
+            : { latitude: String(latitude), longitude: String(longitude) }),
+        sort: "updated-desc"
+    });
 
     return (
         <section
@@ -69,6 +98,9 @@ export function DestinationStories({
                     Trips shared by travellers with activities {kind === "country" ? "in" : "near"} {name}. Newest
                     updated first.
                 </p>
+                <div className="mt-4">
+                    <ViewAllBoards href={viewAllHref} />
+                </div>
                 <div aria-live="polite" className="mt-4">
                     {error ? (
                         <div role="alert" className="text-sm">
@@ -82,19 +114,10 @@ export function DestinationStories({
                                 Retry public boards
                             </button>
                         </div>
-                    ) : hasMore ? (
-                        <button
-                            type="button"
-                            onClick={onLoadMore}
-                            disabled={loadingMore}
-                            className="min-h-11 border border-[var(--atlas-line)] px-5 text-xs disabled:opacity-50"
-                        >
-                            {loadingMore ? "Loading boards..." : "Load more boards"}
-                        </button>
                     ) : null}
                 </div>
             </div>
-            {!board ? (
+            {!preview.length ? (
                 <p role="status" className="text-muted-foreground py-16 text-sm">
                     {loadingMore
                         ? "Loading boards..."
@@ -103,189 +126,8 @@ export function DestinationStories({
                           : `No public Boards ${kind === "country" ? "across" : "in and around"} ${name} yet.`}
                 </p>
             ) : (
-                <div
-                    role="region"
-                    ref={gallery}
-                    aria-roledescription="carousel"
-                    aria-label={`${name} public Boards`}
-                    tabIndex={0}
-                    onKeyDown={(event) => {
-                        if (
-                            event.target !== event.currentTarget &&
-                            !(event.target instanceof Element && event.target.closest("[data-board-selection]"))
-                        )
-                            return;
-                        if (
-                            event.key === "ArrowLeft" ||
-                            event.key === "ArrowRight" ||
-                            event.key === "Home" ||
-                            event.key === "End"
-                        ) {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            event.currentTarget.focus({ preventScroll: true });
-                            select(
-                                event.key === "Home"
-                                    ? 0
-                                    : event.key === "End"
-                                      ? boards.length - 1
-                                      : selected + (event.key === "ArrowLeft" ? -1 : 1)
-                            );
-                        }
-                    }}
-                    className="relative mt-7 flex min-h-[440px] min-w-0 flex-1 flex-col focus-visible:outline-2 focus-visible:outline-offset-2 md:mt-0 md:min-h-[380px]"
-                >
-                    <motion.div
-                        style={{ containerType: "size", touchAction: "pan-y" }}
-                        onPointerDown={() => {
-                            dragged.current = false;
-                            const cardWidth =
-                                gallery.current
-                                    ?.querySelector('[data-destination-card="active"]')
-                                    ?.getBoundingClientRect().width ?? 420;
-                            const stageWidth = gallery.current?.firstElementChild?.getBoundingClientRect().width;
-                            dragStep.current = Math.max(
-                                1,
-                                Math.min(
-                                    cardWidth * 0.76,
-                                    stageWidth ? (stageWidth - cardWidth * 0.76) / 2 - 1 : Infinity
-                                )
-                            );
-                        }}
-                        onPan={(_, info) => {
-                            if (Math.abs(info.offset.x) > 8) {
-                                dragged.current = true;
-                                setDragging(true);
-                                setDragProgress(info.offset.x / Math.max(1, dragStep.current));
-                            }
-                        }}
-                        onPanEnd={(_, info) => {
-                            if (Math.abs(info.offset.x) > 45 || Math.abs(info.velocity.x) > 350) {
-                                gallery.current?.focus({ preventScroll: true });
-                                select(selected + (info.offset.x < 0 ? 1 : -1));
-                            }
-                            setDragging(false);
-                            setDragProgress(0);
-                        }}
-                        onPointerCancel={() => {
-                            setDragging(false);
-                            setDragProgress(0);
-                        }}
-                        className="relative min-h-0 flex-1 cursor-grab overflow-hidden active:cursor-grabbing"
-                    >
-                        <span
-                            aria-hidden="true"
-                            className="font-display text-foreground/[0.018] pointer-events-none absolute right-0 bottom-6 text-[clamp(8rem,24vw,24rem)] leading-none tracking-tighter"
-                        >
-                            {countryCode}
-                        </span>
-                        {boards.map((item, index) => {
-                            const half = Math.floor(boards.length / 2);
-                            const offset = ((index - selected + boards.length + half) % boards.length) - half;
-                            const focused = offset === 0;
-                            const relative =
-                                ((((offset + dragProgress + boards.length / 2) % boards.length) + boards.length) %
-                                    boards.length) -
-                                boards.length / 2;
-                            const distance = Math.abs(relative);
-                            return (
-                                <motion.div
-                                    key={item.boardId}
-                                    data-destination-card={focused ? "active" : "inactive"}
-                                    role="group"
-                                    aria-roledescription="slide"
-                                    aria-label={`${index + 1} of ${boards.length}: ${item.title}`}
-                                    initial={false}
-                                    animate={{
-                                        // Keep the immediate neighbours' complete outer edges inside the stage.
-                                        // Their contents still use the full cover, naturally obscured by the front card.
-                                        x: `calc(${relative} * min(76%, max(0px, calc(50cqw - 38% - 1px))))`,
-                                        y: Math.min(56, distance * 28),
-                                        scale: Math.max(0.52, 1 - distance * 0.24),
-                                        rotate: 0,
-                                        opacity: Math.max(0, 1 - distance * 0.52)
-                                    }}
-                                    transition={
-                                        reduced || dragging
-                                            ? { duration: 0 }
-                                            : { type: "spring", stiffness: 145, damping: 25 }
-                                    }
-                                    style={{ zIndex: focused ? 10 : 1 }}
-                                    className="absolute top-[3%] left-1/2 w-[min(420px,65cqh,82cqw)] origin-center -translate-x-1/2 select-none"
-                                >
-                                    <DestinationStoryCard
-                                        board={{
-                                            id: String(item.boardId),
-                                            title: item.title,
-                                            author: item.username,
-                                            destination: name,
-                                            destinationLabel: countryCode,
-                                            labelOffset: 35,
-                                            description: item.description ?? undefined,
-                                            tags: item.tags,
-                                            durationDays: item.durationDays,
-                                            status: "published",
-                                            visibility: "public",
-                                            image: item.images[0]
-                                                ? {
-                                                      src: destinationPhotoUrl(
-                                                          new URL(item.images[0].url, apiOrigin).toString(),
-                                                          1200
-                                                      ),
-                                                      alt: item.images[0].alt || item.title,
-                                                      unoptimized: true
-                                                  }
-                                                : undefined
-                                        }}
-                                        details={focused}
-                                        galleryCover
-                                        suppressHover={dragging}
-                                        imageSizes="(max-width: 768px) 75vw, 420px"
-                                        selection={{
-                                            selected: focused,
-                                            viewHref: `/boards/${item.boardId}`,
-                                            onNavigate: (event) => {
-                                                if (dragged.current && event.detail !== 0) event.preventDefault();
-                                            },
-                                            tabIndex: focused ? 0 : -1,
-                                            onSelect: (event) => {
-                                                if (!dragged.current || event.detail === 0) select(index);
-                                                else event.preventDefault();
-                                            }
-                                        }}
-                                    />
-                                </motion.div>
-                            );
-                        })}
-                    </motion.div>
-                    <div className="relative z-20 flex shrink-0 justify-center py-2">
-                        <div className="col-start-2 row-start-1 flex items-center justify-center gap-3">
-                            <button
-                                type="button"
-                                aria-label="Previous slide"
-                                disabled={boards.length < 2}
-                                onClick={() => select(selected - 1)}
-                                className="hover:bg-faint grid size-11 place-items-center focus-visible:outline-2 disabled:opacity-30"
-                            >
-                                <ArrowLeft size={28} strokeWidth={1.5} />
-                            </button>
-                            <span className="text-muted-foreground shrink-0 text-sm whitespace-nowrap tabular-nums">
-                                {String(selected + 1).padStart(2, "0")} / {String(boards.length).padStart(2, "0")}
-                            </span>
-                            <button
-                                type="button"
-                                aria-label="Next slide"
-                                disabled={boards.length < 2}
-                                onClick={() => select(selected + 1)}
-                                className="hover:bg-faint grid size-11 place-items-center focus-visible:outline-2 disabled:opacity-30"
-                            >
-                                <ArrowRight size={28} strokeWidth={1.5} />
-                            </button>
-                        </div>
-                    </div>
-                    <p className="sr-only" aria-live="polite" aria-atomic="true">
-                        {board.title}, {board.durationDays} days in {name}. Board {selected + 1} of {boards.length}.
-                    </p>
+                <div className="mt-7 w-full min-w-0 flex-1 self-center md:mt-0 md:w-auto">
+                    <SpatialGallery boards={preview} ariaLabel={`${name} public Boards`} embedded resolveDetails />
                 </div>
             )}
         </section>

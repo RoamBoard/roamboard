@@ -17,9 +17,10 @@ export default function SavedBoardGrid({
     onUnsave: (boardId: number) => void;
 }) {
     const reduced = useReducedMotion();
+    const visibleBoards = presentation === "library" ? boards.slice(0, 10) : boards;
     const items = (
         <AnimatePresence initial={false}>
-            {boards.map((board, index) => (
+            {visibleBoards.map((board, index) => (
                 <SavedBoardItem
                     key={board.boardId}
                     board={board}
@@ -27,7 +28,7 @@ export default function SavedBoardGrid({
                     onUnsave={onUnsave}
                     library={presentation === "library"}
                     index={index}
-                    count={boards.length}
+                    count={visibleBoards.length}
                 />
             ))}
         </AnimatePresence>
