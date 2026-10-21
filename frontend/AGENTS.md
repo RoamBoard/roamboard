@@ -573,11 +573,11 @@ including named placeholders for missing covers, and fetches further pages from 
 
 ### RoamFlow layout
 
-Discover's RoamFlow section reuses `PhotoBoardCard` (V4) in responsive CSS Grid groups of seven with equal-sized cards and staggered vertical positions.
+Discover's RoamFlow section reuses `PhotoBoardCard` (V4) in one responsive CSS Grid with equal-sized cards and repeating staggered positions. It renders one continuous ordered list without interstitial headings.
 `src/data/roamflow-boards.ts` retains fictional fixtures for tests and explicit demos; production uses the live loader in
 `src/lib/roamflow.ts`. `useRoamFlow` handles request guards, cancellation,
-deduplication, retry, and cursor progress. Automatic loading pauses after two pages until the user continues;
-the skip link cancels pending loading and keeps the existing Discover footer reachable.
+deduplication, retry, and cursor progress. A sentinel starts loading ahead of the viewport until the API reports no more Boards. Appending a page runs as a React transition; the gallery and its individual cards are memoized so loading status and appended pages do not rerender existing cards. Failed loads show a retry control, and requests are canceled on unmount.
+On desktop, `DiscoverExperience` updates the sticky track height directly from `ResizeObserver`; incoming Board pages do not rerender the whole Discover experience just to extend its scroll track.
 
 Cards reserve their 4:5 geometry, lazy-load images, and use CSS content visibility to avoid offscreen rendering.
 This is not DOM virtualization: the mounted collection grows as pages are loaded. Reassess a windowed virtualizer

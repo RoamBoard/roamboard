@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import { appendRoamFlowBoards, type RoamFlowPage, type RoamFlowSource } from "@/lib/roamflow";
 
 export function useRoamFlow(initialPage: RoamFlowPage, source: RoamFlowSource) {
@@ -11,13 +11,10 @@ export function useRoamFlow(initialPage: RoamFlowPage, source: RoamFlowSource) {
     });
     const request = useRef<AbortController | null>(null);
 
-    const cancel = useCallback(() => {
-        request.current?.abort();
-        request.current = null;
-        setFeed((current) => (current.status === "loading" ? { ...current, status: "idle" } : current));
-    }, []);
-
     useEffect(() => () => request.current?.abort(), []);
+    useEffect(() => {
+        if (feed.status !== "loading") request.current = null;
+    }, [feed.status]);
 
     const loadMore = useCallback(async () => {
         if (request.current || feed.nextCursor === null) return;
@@ -29,17 +26,21 @@ export function useRoamFlow(initialPage: RoamFlowPage, source: RoamFlowSource) {
             if (controller.signal.aborted) return;
             // A stalled cursor must not cause an observer/request loop.
             if (page.nextCursor === feed.nextCursor) throw new Error("RoamFlow cursor did not advance");
-            setFeed((current) => ({
-                boards: appendRoamFlowBoards(current.boards, page.boards),
-                nextCursor: page.nextCursor,
-                status: "idle"
-            }));
+            startTransition(() => {
+                setFeed((current) =>
+                    controller.signal.aborted
+                        ? current
+                        : {
+                              boards: appendRoamFlowBoards(current.boards, page.boards),
+                              nextCursor: page.nextCursor,
+                              status: "idle"
+                          }
+                );
+            });
         } catch {
             if (!controller.signal.aborted) setFeed((current) => ({ ...current, status: "error" }));
-        } finally {
-            if (request.current === controller) request.current = null;
         }
     }, [feed.nextCursor, source]);
 
-    return { ...feed, loadMore, cancel };
+    return { ...feed, loadMore };
 }
