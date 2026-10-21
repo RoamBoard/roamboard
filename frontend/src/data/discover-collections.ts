@@ -96,115 +96,112 @@ export const discoverCollections: readonly DiscoverCollection[] = [
     },
     moodCollection(
         "take-the-long-way",
-        "Take the Long Way",
-        "Scenic detours, open roads, and places worth stopping for.",
+        "Road Trip Stops",
+        "Places worth pulling over for on a long drive.",
         ["scenic-routes", "road-trips"],
         0
     ),
     moodCollection(
         "no-fixed-plans",
-        "No Fixed Plans",
-        "Unexpected turns, hidden corners, and room for a little adventure.",
+        "An Unplanned Weekend",
+        "Ideas for a weekend you haven't filled in yet.",
         ["adventure", "hidden-gems"],
         0
     ),
     moodCollection(
         "out-of-office",
-        "Out of Office",
-        "A change of scene and a weekend with nothing on the agenda.",
+        "A Few Days Away",
+        "Somewhere to go when you have a couple of days off.",
         ["weekend-escapes", "relax"],
         0
     ),
     moodCollection(
         "stay-out-late",
-        "Stay Out Late",
-        "Bright city nights and places that come alive after dark.",
+        "After Dark",
+        "Bars and neighborhoods that stay busy late.",
         ["nightlife", "city-life"],
         1
     ),
     moodCollection(
         "follow-the-music",
-        "Follow the Music",
-        "Local culture, late-night gatherings, and evenings with a rhythm of their own.",
+        "Live Music",
+        "Places to catch a show while you're in town.",
         ["nightlife", "culture"],
         1
     ),
     moodCollection(
         "one-more-drink",
-        "One More Drink",
-        "Unhurried dinners, lively bars, and an evening worth extending.",
+        "Drinks After Dinner",
+        "A bar to head to when dinner is over.",
         ["wine-and-dine", "nightlife"],
         1
     ),
     moodCollection(
         "coffee-first",
-        "Coffee First",
-        "Neighborhood cafés and mornings best started slowly.",
+        "Coffee and a Walk",
+        "Coffee shops and nearby streets to wander.",
         ["cafe-hopping", "slow-mornings"],
         2
     ),
     moodCollection(
         "a-table-for-two",
-        "A Table for Two",
-        "Good food, candlelit evenings, and a little time together.",
+        "Dinner for Two",
+        "Restaurants for a long dinner together.",
         ["romantic", "wine-and-dine"],
         2
     ),
     moodCollection(
         "taste-the-streets",
-        "Taste the Streets",
-        "Market stalls, local favorites, and discoveries made one bite at a time.",
+        "Street Food",
+        "Markets, stalls, and good things to eat on the go.",
         ["street-food", "foodie"],
         2
     ),
     moodCollection(
         "follow-the-sea",
-        "Follow the Sea",
-        "Salt air, coastal paths, and days spent beside the water.",
+        "Coastal Walks",
+        "Beaches, harbors, and paths beside the water.",
         ["by-the-water", "beach-days"],
         3
     ),
     moodCollection(
         "chase-the-last-light",
-        "Chase the Last Light",
-        "Golden-hour walks, wide horizons, and somewhere to watch the sun go down.",
+        "Sunset Spots",
+        "Places to stop and watch the sun go down.",
         ["sunsets", "scenic-routes"],
         3
     ),
     moodCollection(
         "island-time",
-        "Island Time",
-        "Slow island days and a new stretch of shoreline to explore.",
+        "Island Hopping",
+        "Island towns, beaches, and time on the water.",
         ["island-hopping", "beach-days"],
         3
     ),
     moodCollection(
         "into-the-trees",
-        "Into the Trees",
-        "Forest paths, fresh air, and a night beneath the canopy.",
+        "Forest Trails",
+        "Wooded walks and places to camp nearby.",
         ["nature", "camping"],
         4
     ),
     moodCollection(
         "above-the-clouds",
-        "Above the Clouds",
-        "Mountain trails, sweeping views, and a little perspective.",
+        "Mountain Hikes",
+        "Trails, viewpoints, and the climb to get there.",
         ["mountains", "hiking"],
         4
     ),
     moodCollection(
         "far-from-everything",
-        "Far from Everything",
-        "Quiet corners, open landscapes, and time away from the noise.",
+        "Off-Grid Stays",
+        "Cabins and quiet places away from the crowds.",
         ["off-the-grid", "nature"],
         4
     )
 ];
 
 export const discoverBentoCollections = discoverCollections.filter((collection) => collection.moodRow === undefined);
-export const discoverMoodRows = Array.from({ length: 5 }, (_, row) =>
-    discoverCollections.filter((collection) => collection.moodRow === row)
-);
 
 if (
     new Set(discoverCollections.map((collection) => collection.slug)).size !== discoverCollections.length ||
