@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function CollectionPage({ params }: Props) {
     const collection = getDiscoverCollection((await params).slug);
     if (!collection) notFound();
-    const discoverHref = collection.moodRow === undefined ? "/discover#discover-feed" : "/discover#discover-search";
+    const discoverHref = collection.moodRow === undefined ? "/discover#discover-feed" : "/discover#discover-tags";
 
     return (
         <AppShell activeHref="/discover" discover={{ collapsed: true }}>

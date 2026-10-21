@@ -1,7 +1,6 @@
 import { LibraryCredit } from "@/components/images/LibraryImage";
 import DiscoverPhoto from "./DiscoverPhoto";
 import VibeGrid from "./VibeGrid";
-import DiscoverSearch from "./DiscoverSearch";
 import DiscoverTagMarquees from "./DiscoverTagMarquees";
 import FeaturedBoards from "./FeaturedBoards";
 import RoamFlow from "./roamflow/RoamFlow";
@@ -185,7 +184,6 @@ export function DiscoverFeed({
                         ))}
                     </div>
                 </section>
-                <DiscoverSearch />
                 <section aria-labelledby="trending-title" className="@container/bento mt-20 md:mt-24">
                     <h2 id="trending-title" className={heading}>
                         TRENDING DESTINATIONS
