@@ -24,6 +24,12 @@ export function createUsersRouter(
     const router = Router();
     router.get("/by-handle/:handle", validateParams(publicProfileParamsSchema), attachUser, controller.publicRead);
     router.get(
+        "/by-handle/:handle/friends",
+        validateParams(publicProfileParamsSchema),
+        attachUser,
+        controller.publicFriends
+    );
+    router.get(
         "/by-handle/:handle/saved-map-destinations",
         validateParams(publicProfileParamsSchema),
         attachUser,

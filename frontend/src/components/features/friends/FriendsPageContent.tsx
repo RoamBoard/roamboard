@@ -7,7 +7,7 @@ import { Search, UserRound, Plus, LayoutGrid, List, X, ArrowRight, UserMinus } f
 import BackLink from "@/components/ui/BackLink";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import FindFriendsDialog from "@/components/features/social/FindFriendsDialog";
-import { loadFriends, removeFriend, ProfileApiError, type FriendUser } from "@/lib/profile";
+import { loadFriends, loadPublicProfile, removeFriend, ProfileApiError, type FriendUser } from "@/lib/profile";
 
 type SortOption = "name-asc" | "name-desc" | "recent";
 type ViewMode = "grid" | "list";
@@ -17,6 +17,8 @@ export type FriendsPageContentProps = {
     initialLoading?: boolean;
     initialError?: string | null;
     initialConfirmUnfriendTarget?: FriendUser | null;
+    handle?: string | null;
+    targetDisplayName?: string | null;
 };
 
 function requiresLogin(error: unknown): boolean {
@@ -46,7 +48,9 @@ export default function FriendsPageContent({
     initialFriends,
     initialLoading,
     initialError = null,
-    initialConfirmUnfriendTarget = null
+    initialConfirmUnfriendTarget = null,
+    handle = null,
+    targetDisplayName = null
 }: FriendsPageContentProps = {}) {
     const searchInputId = useId();
     const sortSelectId = useId();
@@ -58,6 +62,7 @@ export default function FriendsPageContent({
     const [loading, setLoading] = useState(initialLoading ?? (!initialFriends && !initialError));
     const [error, setError] = useState<string | null>(initialError);
     const [loginRequired, setLoginRequired] = useState(false);
+    const [profileName, setProfileName] = useState<string | null>(targetDisplayName ?? null);
 
     const [searchQuery, setSearchQuery] = useState("");
     const [sortOption, setSortOption] = useState<SortOption>("name-asc");
@@ -67,6 +72,25 @@ export default function FriendsPageContent({
     const [confirmUnfriendTarget, setConfirmUnfriendTarget] = useState<FriendUser | null>(initialConfirmUnfriendTarget);
     const [unfriendLoading, setUnfriendLoading] = useState(false);
     const [unfriendError, setUnfriendError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!handle || targetDisplayName) return;
+        const tracker = { active: true };
+        void loadPublicProfile(handle)
+            .then((view) => {
+                if (tracker.active) {
+                    setProfileName(view.profile.displayName || view.profile.username);
+                }
+            })
+            .catch(() => {
+                if (tracker.active) {
+                    setProfileName(handle);
+                }
+            });
+        return () => {
+            tracker.active = false;
+        };
+    }, [handle, targetDisplayName]);
 
     const filterFriends = (data: FriendUser[], readId: number) =>
         data.filter((f) => {
@@ -79,7 +103,7 @@ export default function FriendsPageContent({
         setLoading(true);
         setError(null);
         try {
-            const data = await loadFriends();
+            const data = await loadFriends(handle ?? undefined);
             if (readId === readVersionRef.current) {
                 setError(null);
                 setFriends(filterFriends(data, readId));
@@ -103,7 +127,7 @@ export default function FriendsPageContent({
         if (initialFriends || initialError) return;
         const readId = ++readVersionRef.current;
         const tracker = { active: true };
-        void loadFriends()
+        void loadFriends(handle ?? undefined)
             .then((data) => {
                 if (tracker.active && readId === readVersionRef.current) {
                     setError(null);
@@ -126,7 +150,7 @@ export default function FriendsPageContent({
         return () => {
             tracker.active = false;
         };
-    }, [initialFriends, initialError]);
+    }, [initialFriends, initialError, handle]);
 
     const filteredAndSortedFriends = useMemo(() => {
         const query = searchQuery.trim().toLowerCase().replace(/^@+/, "");
@@ -186,7 +210,10 @@ export default function FriendsPageContent({
         return (
             <div className="relative h-full w-full overflow-y-auto px-4 pt-6 pb-20 sm:px-8 sm:pt-8 md:px-12 md:pt-10 lg:px-16">
                 <div className="mx-auto w-full max-w-5xl">
-                    <BackLink fallbackHref="/social" className="mb-6" />
+                    <BackLink
+                        fallbackHref={handle ? `/profile/${encodeURIComponent(handle)}` : "/social"}
+                        className="mb-6"
+                    />
                     <h1 className="font-display text-48 sm:text-60 text-foreground mt-1 mb-8 font-bold tracking-tight uppercase">
                         FRIENDS
                     </h1>
@@ -210,26 +237,33 @@ export default function FriendsPageContent({
         <div className="relative h-full w-full overflow-hidden">
             <div className="h-full w-full overflow-y-auto px-4 pt-6 pb-20 sm:px-8 sm:pt-8 md:px-12 md:pt-10 lg:px-16">
                 <div className="mx-auto w-full max-w-5xl pb-20">
-                    <BackLink fallbackHref="/social" className="mb-6" />
+                    <BackLink
+                        fallbackHref={handle ? `/profile/${encodeURIComponent(handle)}` : "/social"}
+                        className="mb-6"
+                    />
 
                     {/* Page Header */}
                     <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                         <div>
                             <h1 className="font-display text-36 sm:text-48 text-foreground font-bold tracking-tight">
-                                my friends {!loading && `(${friends.length})`}
+                                {handle
+                                    ? `${profileName || targetDisplayName || `@${handle}`}'s friends ${!loading ? `(${friends.length})` : ""}`
+                                    : `my friends ${!loading ? `(${friends.length})` : ""}`}
                             </h1>
                             <p className="text-14 text-muted-foreground mt-1 font-medium">
-                                fellow travelers you&apos;re connected with
+                                {handle ? `travelers @${handle} is connected with` : "travelers you're connected with"}
                             </p>
                         </div>
                         <div className="flex items-center gap-3">
-                            <button
-                                type="button"
-                                onClick={() => setSearchOpen(true)}
-                                className="bg-foreground text-background font-body text-12 inline-flex cursor-pointer items-center gap-1.5 rounded-[2px] px-4 py-2 font-medium transition-opacity hover:opacity-90"
-                            >
-                                <Plus size={14} strokeWidth={2} /> Find Friends
-                            </button>
+                            {!handle && (
+                                <button
+                                    type="button"
+                                    onClick={() => setSearchOpen(true)}
+                                    className="bg-foreground text-background font-body text-12 inline-flex cursor-pointer items-center gap-1.5 rounded-[2px] px-4 py-2 font-medium transition-opacity hover:opacity-90"
+                                >
+                                    <Plus size={14} strokeWidth={2} /> Find Friends
+                                </button>
+                            )}
 
                             {/* View Mode Toggle */}
                             <div
@@ -353,16 +387,19 @@ export default function FriendsPageContent({
                             </div>
                             <h2 className="font-display text-20 text-foreground font-bold">No travel pals yet</h2>
                             <p className="text-14 text-muted-foreground mx-auto mt-2 max-w-md font-medium">
-                                Connect with other travelers on Roamboard to view their shared boards, follow their
-                                adventures, and plan trips together.
+                                {handle
+                                    ? `@${handle} hasn't connected with any travel pals yet.`
+                                    : "Connect with other travelers on Roamboard to view their shared boards, follow their adventures, and plan trips together."}
                             </p>
-                            <button
-                                type="button"
-                                onClick={() => setSearchOpen(true)}
-                                className="bg-foreground text-background font-body text-12 mt-6 inline-flex cursor-pointer items-center gap-1.5 rounded-[2px] px-5 py-2.5 font-medium transition-opacity hover:opacity-90"
-                            >
-                                <Plus size={14} strokeWidth={2} /> Find Friends
-                            </button>
+                            {!handle && (
+                                <button
+                                    type="button"
+                                    onClick={() => setSearchOpen(true)}
+                                    className="bg-foreground text-background font-body text-12 mt-6 inline-flex cursor-pointer items-center gap-1.5 rounded-[2px] px-5 py-2.5 font-medium transition-opacity hover:opacity-90"
+                                >
+                                    <Plus size={14} strokeWidth={2} /> Find Friends
+                                </button>
+                            )}
                         </div>
                     ) : filteredAndSortedFriends.length === 0 ? (
                         <div className="border-line bg-background rounded-[2px] border p-10 text-center">
@@ -397,15 +434,17 @@ export default function FriendsPageContent({
                                             >
                                                 <FriendAvatar friend={friend} size={56} />
                                             </Link>
-                                            <button
-                                                type="button"
-                                                onClick={() => setConfirmUnfriendTarget(friend)}
-                                                aria-label={`Unfriend ${friend.displayName}`}
-                                                title={`Unfriend ${friend.displayName}`}
-                                                className="text-muted-foreground font-body cursor-pointer rounded-[2px] border border-transparent p-1.5 transition-colors hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-500"
-                                            >
-                                                <UserMinus size={16} strokeWidth={1.5} />
-                                            </button>
+                                            {!handle && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setConfirmUnfriendTarget(friend)}
+                                                    aria-label={`Unfriend ${friend.displayName}`}
+                                                    title={`Unfriend ${friend.displayName}`}
+                                                    className="text-muted-foreground font-body cursor-pointer rounded-[2px] border border-transparent p-1.5 transition-colors hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-500"
+                                                >
+                                                    <UserMinus size={16} strokeWidth={1.5} />
+                                                </button>
+                                            )}
                                         </div>
 
                                         <div className="mt-3 min-w-0">
@@ -488,14 +527,16 @@ export default function FriendsPageContent({
                                         >
                                             profile &amp; boards <ArrowRight size={12} strokeWidth={1.5} />
                                         </Link>
-                                        <button
-                                            type="button"
-                                            onClick={() => setConfirmUnfriendTarget(friend)}
-                                            aria-label={`Unfriend ${friend.displayName}`}
-                                            className="text-12 text-muted-foreground cursor-pointer rounded-[2px] border border-transparent px-2.5 py-1.5 font-medium transition-colors hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-500"
-                                        >
-                                            unfriend
-                                        </button>
+                                        {!handle && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setConfirmUnfriendTarget(friend)}
+                                                aria-label={`Unfriend ${friend.displayName}`}
+                                                className="text-12 text-muted-foreground cursor-pointer rounded-[2px] border border-transparent px-2.5 py-1.5 font-medium transition-colors hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-500"
+                                            >
+                                                unfriend
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             ))}

@@ -598,3 +598,87 @@ test("FriendsPageContent ignores failure from superseded read when newer read su
         "Error from older superseded read must not be displayed"
     );
 });
+
+test("FriendsPageContent renders other user's friends with custom title and hides owner controls (find friends, unfriend)", () => {
+    const harness = createStatefulHarness({
+        initialFriends: sampleFriends,
+        handle: "alice",
+        targetDisplayName: "Alice Wonder"
+    });
+    const gridRender = harness.render();
+
+    assert.match(
+        gridRender.markup,
+        /Alice Wonder(&#x27;|')s friends \(3\)/,
+        "Header should display other user's friends title"
+    );
+    assert.ok(
+        gridRender.markup.includes("travelers @alice is connected with"),
+        "Subtitle should indicate travelers of target user"
+    );
+
+    // Verify Find Friends button is NOT rendered
+    assert.ok(
+        !gridRender.markup.includes("Find Friends"),
+        "Find Friends button must not be present when viewing another user's friends"
+    );
+
+    // Verify unfriend button is NOT rendered in grid view
+    const unfriendBtnsGrid = gridRender.nodes.filter(
+        (n) => typeof n.props["aria-label"] === "string" && n.props["aria-label"].startsWith("Unfriend")
+    );
+    assert.equal(unfriendBtnsGrid.length, 0, "Unfriend button must not be present in grid view for other user");
+
+    // Switch to list view
+    const listBtn = gridRender.nodes.find((n) => n.type === "button" && n.props["aria-label"] === "List view");
+    assert.ok(listBtn);
+    listBtn.props.onClick?.();
+
+    const listRender = harness.render();
+    const unfriendBtnsList = listRender.nodes.filter(
+        (n) => typeof n.props["aria-label"] === "string" && n.props["aria-label"].startsWith("Unfriend")
+    );
+    assert.equal(unfriendBtnsList.length, 0, "Unfriend button must not be present in list view for other user");
+});
+
+test("FriendsPageContent renders empty state for other user's friends without Find Friends button", () => {
+    const harness = createStatefulHarness({
+        initialFriends: [],
+        handle: "bob"
+    });
+    const render = harness.render();
+
+    assert.match(
+        render.markup,
+        /@bob hasn(&#x27;|')t connected with any travel pals yet\./,
+        "Empty state should mention the target handle"
+    );
+    assert.ok(
+        !render.markup.includes("Find Friends"),
+        "Find Friends button must not be present in empty state for other user"
+    );
+});
+
+test("FriendsPageContent retry fetches other user's friends from /api/v1/users/by-handle/:handle/friends", async (context) => {
+    const calls: Array<{ url: string }> = [];
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+        calls.push({ url: String(input) });
+        return Response.json({ data: sampleFriends }, { headers: { "content-type": "application/json" } });
+    });
+
+    const harness = createStatefulHarness({
+        initialFriends: [],
+        initialError: "Failed to load travel pals.",
+        handle: "chloe"
+    });
+    const initial = harness.render();
+    const retryBtn = initial.nodes.find((n) => n.type === "button" && n.props.children === "Retry");
+    assert.ok(retryBtn, "Expected Retry button");
+
+    await (retryBtn.props as { onClick: () => Promise<void> }).onClick();
+
+    assert.ok(
+        calls.some((c) => c.url.includes("/api/v1/users/by-handle/chloe/friends")),
+        "Must fetch friends from by-handle endpoint for the specified user"
+    );
+});

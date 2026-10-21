@@ -3,11 +3,19 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { UserRound } from "lucide-react";
 import ViewAllBoards from "@/components/features/boards/ViewAllBoards";
-import { loadProfile, loadPublicProfile, ProfileApiError, type PublicProfileView } from "@/lib/profile";
+import {
+    loadFriends,
+    loadProfile,
+    loadPublicProfile,
+    ProfileApiError,
+    type PublicProfileView,
+    type FriendUser
+} from "@/lib/profile";
 import ProfileHero from "./ProfileHero";
 import ProfileIdentityText from "./ProfileIdentityText";
-import ProfilePageContent, { LiveBoardLibrary, ProfileSavedBoardLibrary } from "./ProfilePageContent";
+import ProfilePageContent, { FriendAvatar, LiveBoardLibrary, ProfileSavedBoardLibrary } from "./ProfilePageContent";
 import TravelMapSection from "./TravelMapSection";
 import VisitedWorldMap from "./VisitedWorldMap";
 
@@ -137,7 +145,133 @@ export default function HandleProfileContent({
     return <VisitorProfileContent key={handle} view={view} />;
 }
 
-export function VisitorProfileContent({ view }: { view: PublicProfileView }) {
+export type VisitorProfileContentProps = {
+    view: PublicProfileView;
+    initialFriends?: FriendUser[];
+    initialFriendsLoading?: boolean;
+    initialFriendsError?: string | null;
+};
+
+export function VisitorFriendsSection({
+    view,
+    initialFriends,
+    initialFriendsLoading,
+    initialFriendsError = null
+}: VisitorProfileContentProps) {
+    const [friends, setFriends] = useState<FriendUser[]>(initialFriends ?? []);
+    const [friendsLoading, setFriendsLoading] = useState(
+        initialFriendsLoading ?? (!initialFriends && !initialFriendsError)
+    );
+    const [friendsError, setFriendsError] = useState<string | null>(initialFriendsError);
+    const [retryFriends, setRetryFriends] = useState(0);
+
+    useEffect(() => {
+        if (initialFriends || initialFriendsError) return;
+        const request = { active: true };
+        void loadFriends(view.profile.username)
+            .then((data) => {
+                if (request.active) {
+                    setFriends(data);
+                    setFriendsLoading(false);
+                }
+            })
+            .catch(() => {
+                if (request.active) {
+                    setFriendsError("Travel pals could not be loaded.");
+                    setFriendsLoading(false);
+                }
+            });
+        return () => {
+            request.active = false;
+        };
+    }, [view.profile.username, retryFriends, initialFriends, initialFriendsError]);
+
+    const friendsTitle = view.profile.displayName || `@${view.profile.username}`;
+
+    return (
+        <section aria-label={`${friendsTitle}'s friends`} className="border-line mt-12 border-t pt-8">
+            <div className="mb-4 flex items-end justify-between">
+                <div>
+                    <h3 className="font-display text-20 sm:text-22 text-foreground font-bold">
+                        {`${friendsTitle}'s friends${!friendsLoading ? ` (${friends.length})` : ""}`}
+                    </h3>
+                    <p className="text-12 text-muted-foreground mt-2 font-medium">
+                        travelers they&apos;re connected with
+                    </p>
+                </div>
+                <Link
+                    href={`/friends?handle=${encodeURIComponent(view.profile.username)}`}
+                    className="text-12 text-muted-foreground hover:text-foreground hover:underline"
+                >
+                    view all ({friends.length}) →
+                </Link>
+            </div>
+
+            {friendsLoading && friends.length === 0 ? (
+                <div className="border-line bg-background rounded-[2px] border p-8 text-center">
+                    <p className="text-12 text-muted-foreground font-body">Loading travel pals…</p>
+                </div>
+            ) : friendsError ? (
+                <div
+                    role="alert"
+                    className="border-line bg-background text-12 text-muted-foreground rounded-[2px] border p-8 text-center font-medium"
+                >
+                    <p className="mb-2 text-red-500">{friendsError}</p>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setFriendsError(null);
+                            setFriendsLoading(true);
+                            setRetryFriends((r) => r + 1);
+                        }}
+                        className="text-foreground cursor-pointer font-medium underline underline-offset-4 hover:opacity-80"
+                    >
+                        Retry
+                    </button>
+                </div>
+            ) : friends.length === 0 ? (
+                <div className="border-line bg-background rounded-[2px] border p-8 text-center sm:p-10">
+                    <div className="bg-muted text-muted-foreground mx-auto mb-3 flex size-12 items-center justify-center rounded-full">
+                        <UserRound size={22} strokeWidth={1.5} />
+                    </div>
+                    <h4 className="font-display text-18 text-foreground font-bold">No travel pals yet</h4>
+                    <p className="text-12 text-muted-foreground mx-auto mt-1.5 max-w-sm font-medium">
+                        {view.profile.displayName || `@${view.profile.username}`} hasn&apos;t connected with any travel
+                        pals yet.
+                    </p>
+                </div>
+            ) : (
+                <div className="flex items-start gap-6 overflow-x-auto overscroll-contain pt-1 pb-3">
+                    {friends.map((friend) => (
+                        <div key={friend.userId} className="group flex w-20 shrink-0 flex-col items-center text-center">
+                            <Link
+                                href={`/profile/${encodeURIComponent(friend.username)}`}
+                                className="flex w-full flex-col items-center text-center"
+                            >
+                                <div className="border-line bg-muted relative mb-2 flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-full border transition-transform duration-150 group-hover:scale-105">
+                                    <FriendAvatar friend={friend} />
+                                </div>
+                                <span className="text-12 text-foreground w-full truncate font-medium group-hover:underline">
+                                    {friend.displayName}
+                                </span>
+                                <span className="text-10 text-muted-foreground w-full truncate">
+                                    @{friend.username}
+                                </span>
+                            </Link>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </section>
+    );
+}
+
+export function VisitorProfileContent({
+    view,
+    initialFriends,
+    initialFriendsLoading,
+    initialFriendsError
+}: VisitorProfileContentProps) {
     return (
         <div className="mx-auto w-full max-w-6xl pb-20">
             <header className="@container mb-8">
@@ -154,6 +288,12 @@ export function VisitorProfileContent({ view }: { view: PublicProfileView }) {
                     stats={view.stats}
                     isOwner={false}
                     friendshipStatus={view.friendshipStatus}
+                />
+                <VisitorFriendsSection
+                    view={view}
+                    initialFriends={initialFriends}
+                    initialFriendsLoading={initialFriendsLoading}
+                    initialFriendsError={initialFriendsError}
                 />
                 <section aria-label="Currently inspired by" className="border-line mt-12 border-t pt-8">
                     <div className="flex items-center justify-between gap-4">
