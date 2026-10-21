@@ -67,7 +67,7 @@ export default function DiscoverSearch() {
         router.push(href);
     }
     return (
-        <section aria-label="Search Discover" className="mt-12 max-w-5xl md:mt-16">
+        <section id="discover-search" aria-label="Search Discover" className="mt-12 max-w-5xl scroll-mt-8 md:mt-16">
             <Command
                 label="Find a vibe, collection, or destination"
                 filter={(value, search, keywords = []) => {

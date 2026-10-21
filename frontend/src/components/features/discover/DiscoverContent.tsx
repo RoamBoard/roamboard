@@ -2,7 +2,7 @@ import { LibraryCredit } from "@/components/images/LibraryImage";
 import DiscoverPhoto from "./DiscoverPhoto";
 import VibeGrid from "./VibeGrid";
 import DiscoverSearch from "./DiscoverSearch";
-import DiscoverMoodMarquees from "./DiscoverMoodMarquees";
+import DiscoverTagMarquees from "./DiscoverTagMarquees";
 import FeaturedBoards from "./FeaturedBoards";
 import RoamFlow from "./roamflow/RoamFlow";
 import { roamFlowPageSize } from "@/lib/roamflow";
@@ -217,7 +217,7 @@ export function DiscoverFeed({
                         ))}
                     </div>
                 </section>
-                <DiscoverMoodMarquees />
+                <DiscoverTagMarquees />
                 <FeaturedBoards boards={featured} available={featuredAvailable} />
             </div>
             <div className="h-32 bg-gradient-to-b from-transparent to-black" />
