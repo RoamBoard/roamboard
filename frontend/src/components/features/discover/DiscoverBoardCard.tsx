@@ -1,5 +1,5 @@
 import Link from "next/link";
-import AccountPhotoBoardCard from "@/components/features/boards/cards/AccountPhotoBoardCard";
+import DestinationStoryCard from "@/components/features/destinations/DestinationStoryCard";
 import TagIcon from "@/components/ui/TagIcon";
 import { getBoardTag, boardTagHref, type BoardTagId } from "@/data/board-tags";
 import type { DiscoverBoard } from "@/data/discover-boards";
@@ -35,12 +35,10 @@ export function toDiscoverPhotoBoardCard(board: DiscoverBoard): PhotoBoardCardDa
 export default function DiscoverBoardCard({ board, activeTagId }: { board: DiscoverBoard; activeTagId?: BoardTagId }) {
     return (
         <div className="min-w-0">
-            <AccountPhotoBoardCard
+            <DestinationStoryCard
                 tilt={Boolean(board.href)}
                 board={toDiscoverPhotoBoardCard(board)}
                 href={board.href}
-                ownership="other"
-                initialSaved={false}
                 showVisibility
                 hideCoverCredit
                 hoverActions={board.href ? { viewHref: board.href } : undefined}

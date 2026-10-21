@@ -106,7 +106,7 @@ export function BoardsDiscoveryContent({
                 <Fragment key={viewerKey}>
                     <Featured period="month" />
 
-                    <DiscoveryCollection title="RECENTLY PUBLISHED" id="recent" path="/boards/recent" limit={20} />
+                    <DiscoveryCollection title="RECENTLY PUBLISHED" id="recent" path="/boards/recent" limit={10} />
                     {account.ready && account.user ? (
                         <>
                             <DiscoveryCollection
@@ -459,11 +459,9 @@ export function DiscoveryCollectionContent({
                               ? "Your saved Boards"
                               : undefined
                     }
-                    boards={(state.data?.items ?? []).map(discoveryGallery)}
+                    boards={(state.data?.items ?? []).slice(0, 10).map(discoveryGallery)}
+                    totalCount={state.data?.total}
                     removeOnUnsave={source === "saved"}
-                    hasMore={Boolean(state.data?.hasMore && !state.error)}
-                    loadingMore={state.loading}
-                    onLoadMore={() => store.load(`${path}?page=${(state.data?.page ?? 1) + 1}&limit=${limit}`, true)}
                     onSavedChange={
                         source === "saved"
                             ? (boardId, saved) => {
@@ -481,20 +479,6 @@ export function DiscoveryCollectionContent({
                 />
             </div>
             <Feedback state={state} retry={retry} />
-            {state.data?.hasMore && (
-                <div className="mt-8 text-center">
-                    <button
-                        type="button"
-                        className={action}
-                        disabled={state.loading}
-                        onClick={() =>
-                            void store.load(`${path}?page=${(state.data?.page ?? 1) + 1}&limit=${limit}`, true)
-                        }
-                    >
-                        Load more
-                    </button>
-                </div>
-            )}
         </section>
     );
 }

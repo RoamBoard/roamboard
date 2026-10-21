@@ -330,3 +330,16 @@ Technical decisions finalized under delegation: routes and context parameters ab
 The user delegated these technical choices and authorized implementation on 2026-10-20; no further approval is required within this scope.
 
 Geographic control refinement approved on 2026-10-20: country rows show local MIT-licensed flag-icons SVGs, country names and right-aligned ISO alpha-3 country codes. Continent selections use title-case names. Only one menu opens at a time; outside pointer/focus and Escape dismiss it. Both menu panels share the same height and align directly below their trigger. Arrow navigation moves focus and scrolls only within the option list. No raster assets or image-library entries are introduced.
+
+## Preview and Discover collection integration (2026-10-21)
+
+Preview libraries and spatial galleries render at most ten Boards and use View all instead of appending pages.
+The library footer displays the API total independently of those ten cards. Discover collection pages embed the same
+account-aware twenty-result grid, preserving search, sorting, country/continent filters and numbered pagination.
+The category query accepts either a single `tag` or repeated `tags` (up to twenty distinct names), matched with OR
+semantics before search and pagination. A Discover collection supplies its fixed catalog tag names on every request.
+Owners receive Edit/View; other authors receive bookmark/View through the shared account card.
+
+The additional `destination` context requires `country` and accepts an optional complete `latitude`/`longitude`
+pair. It includes public published Boards with an activity in that country, within 25 km when coordinates are supplied,
+matching the destination guide's geographic scope and country aliases. Destination View all defaults to recently updated.

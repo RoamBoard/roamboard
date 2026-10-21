@@ -168,8 +168,8 @@ test("public destination Boards render V4 metadata with real background view lin
     const rendered = requireV4(markup, boards.length);
     assert.match(markup, /Boards in and around Kyoto/);
     assert.match(markup, /aria-roledescription="carousel"/);
-    assert.match(markup, /aria-label="Previous slide"/);
-    assert.match(markup, /aria-label="Next slide"/);
+    assert.match(markup, /aria-label="Previous Board"/);
+    assert.match(markup, /aria-label="Next Board"/);
     assert.equal(selectionButtons(markup).length, 1);
     assert.match(markup, /href="\/boards\/771"/);
     assert.doesNotMatch(markup, /href="\/boards\/772"/);
@@ -248,5 +248,6 @@ test("empty libraries and galleries preserve their empty presentation and progre
         })
     );
     requireV4(pending, 1);
-    assert.match(pending, /Loading more Boards…/);
+    assert.doesNotMatch(pending, /Loading more Boards/);
+    assert.match(pending, /1 Board/);
 });

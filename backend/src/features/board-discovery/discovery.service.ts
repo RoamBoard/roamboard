@@ -75,11 +75,12 @@ export function createDiscoveryService(repository: DiscoveryRepository, boards: 
                 !(await repository.canReadSavedMap(userId, input.handle))
             )
                 throw new AppError(404, "Collection not found", "NOT_FOUND");
-            if ((context === "category") !== Boolean(input.tag))
+            if ((context === "category") !== Boolean(input.tag || input.tags?.length))
                 invalid("Category requires a tag; other collections do not accept it");
+            if (input.tag && input.tags) invalid("Choose tag or tags, not both");
             if (input.period && context !== "featured") invalid("Period is only valid for Featured");
             if (
-                context !== "map" &&
+                !["map", "destination"].includes(context) &&
                 [input.country, input.longitude, input.latitude, input.collection].some((value) => value !== undefined)
             )
                 invalid("Location parameters are only valid for map collections");
@@ -87,6 +88,8 @@ export function createDiscoveryService(repository: DiscoveryRepository, boards: 
                 invalid("Choose a country or a map point");
             if ((input.longitude === undefined) !== (input.latitude === undefined))
                 invalid("Map points require both coordinates");
+            if (context === "destination" && !input.country) invalid("A destination country is required");
+            if (context === "destination" && input.collection) invalid("Destination collections contain public Boards");
             if (input.status && context !== "mine") invalid("Status is only valid for My Boards");
             const saved = context === "saved" || context === "profile-saved";
             const sort =
