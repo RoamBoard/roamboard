@@ -9,6 +9,7 @@ import BoardCopyEditor from "@/components/features/boards/BoardCopyEditor";
 import BoardDialog from "@/components/features/boards/BoardDialog";
 import BoardIcon from "@/components/features/boards/BoardIcon";
 import BoardPhoto from "@/components/features/boards/BoardPhoto";
+import ImageZoomDialog from "@/components/ui/ImageZoomDialog";
 import PublishedBoardDay from "@/components/features/boards/PublishedBoardDay";
 import useBoardPreview from "@/components/features/boards/useBoardPreview";
 import useBoardPhotos from "@/components/features/boards/useBoardPhotos";
@@ -55,6 +56,7 @@ export default function PublishedBoard({
     const cover = board.coverImage?.url ? board.coverImage : automaticPhotos.photos.cover;
     const coverLabel = automaticPhotos.slots.find((slot) => slot.id === "cover")?.label || board.title;
     const [selectedActivity, setSelectedActivity] = useState<BoardActivity | null>(null);
+    const [zoomedActivityPhotos, setZoomedActivityPhotos] = useState<BoardActivity | null>(null);
     const [bookmarked, setBookmarked] = useState(savedByMe);
     const [currentSaveCount, setCurrentSaveCount] = useState(savedCount);
     const [bookmarkBusy, setBookmarkBusy] = useState(false);
@@ -135,6 +137,7 @@ export default function PublishedBoard({
                         showCredit={!board.coverImage?.url}
                         insetCredit
                         preload
+                        zoomable
                         className="mx-auto h-[16rem] w-[82%] rounded-b-[50%] sm:h-[25rem] lg:h-[29rem] lg:w-[80%]"
                         sizes="80vw"
                     />
@@ -243,6 +246,7 @@ export default function PublishedBoard({
                             key={day.number}
                             day={day}
                             onSelectActivity={handleOpenActivity}
+                            onZoomPhoto={setZoomedActivityPhotos}
                             photos={{
                                 first: automaticPhotos.photos[`day-${day.number}-first`],
                                 second: automaticPhotos.photos[`day-${day.number}-second`]
@@ -291,6 +295,7 @@ export default function PublishedBoard({
                                 <BoardPhoto
                                     image={author.photo}
                                     placeholderLabel={`${author.name}'s profile photo`}
+                                    zoomable
                                     className="aspect-[3/4] min-h-72"
                                 />
                             </div>
@@ -310,6 +315,9 @@ export default function PublishedBoard({
                 >
                     {feedback}
                 </ActivityDetailsDialog>
+            )}
+            {zoomedActivityPhotos && (
+                <ImageZoomDialog images={zoomedActivityPhotos.images} onClose={() => setZoomedActivityPhotos(null)} />
             )}
             {preview.draft ? (
                 <BoardDialog title="Make it yours" onClose={() => preview.setDraft(null)}>

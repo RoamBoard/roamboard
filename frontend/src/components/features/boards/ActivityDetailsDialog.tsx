@@ -1,10 +1,11 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import BoardDialog from "@/components/features/boards/BoardDialog";
 import BoardIcon from "@/components/features/boards/BoardIcon";
 import BoardPhoto from "@/components/features/boards/BoardPhoto";
-import type { BoardActivity } from "@/types/board";
+import ImageZoomDialog from "@/components/ui/ImageZoomDialog";
+import type { BoardActivity, BoardImage } from "@/types/board";
 import type { PublishedBoardDay } from "@/types/published-board";
 
 type Props = {
@@ -19,6 +20,63 @@ type Props = {
 
 const actionClasses =
     "border-line hover:bg-faint inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 border px-5 py-2 text-14 focus-visible:outline-2 focus-visible:outline-offset-4";
+
+function ActivityPhotoGallery({ images }: { images: BoardImage[] }) {
+    const [zoomedIndex, setZoomedIndex] = useState<number | null>(null);
+
+    return (
+        <div className="mb-6 grid gap-4 sm:grid-cols-2">
+            {images.map((image, index) => (
+                <figure key={`${image.id}-${index}`}>
+                    <BoardPhoto
+                        image={image}
+                        className="aspect-[4/3]"
+                        zoomable
+                        onZoom={() => setZoomedIndex(index)}
+                    />
+                    {image.photographer ? (
+                        <figcaption className="text-muted-foreground text-12 mt-2">
+                            Photo by{" "}
+                            {image.photographerUrl ? (
+                                <a
+                                    href={image.photographerUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="underline underline-offset-4"
+                                >
+                                    {image.photographer}
+                                </a>
+                            ) : (
+                                image.photographer
+                            )}
+                            {image.sourceUrl ? (
+                                <>
+                                    {" "}
+                                    on{" "}
+                                    <a
+                                        href={image.sourceUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="underline underline-offset-4"
+                                    >
+                                        Unsplash
+                                    </a>
+                                </>
+                            ) : null}
+                        </figcaption>
+                    ) : null}
+                </figure>
+            ))}
+            {zoomedIndex !== null && (
+                <ImageZoomDialog
+                    images={images}
+                    initialIndex={zoomedIndex}
+                    onClose={() => setZoomedIndex(null)}
+                />
+            )}
+        </div>
+    );
+}
 
 // This component displays the selected activity. PublishedBoard decides when it opens.
 export default function ActivityDetailsDialog({ activity, days, saved, onClose, onSave, onCopy, children }: Props) {
@@ -40,46 +98,7 @@ export default function ActivityDetailsDialog({ activity, days, saved, onClose, 
                 {activity.time ? ` · ${activity.time}` : ""}
             </p>
             {/* Show every photo here; the card only shows the first one. */}
-            {activity.images.length ? (
-                <div className="mb-6 grid gap-4 sm:grid-cols-2">
-                    {activity.images.map((image, index) => (
-                        <figure key={`${image.id}-${index}`}>
-                            <BoardPhoto image={image} className="aspect-[4/3]" />
-                            {image.photographer ? (
-                                <figcaption className="text-muted-foreground text-12 mt-2">
-                                    Photo by{" "}
-                                    {image.photographerUrl ? (
-                                        <a
-                                            href={image.photographerUrl}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="underline underline-offset-4"
-                                        >
-                                            {image.photographer}
-                                        </a>
-                                    ) : (
-                                        image.photographer
-                                    )}
-                                    {image.sourceUrl ? (
-                                        <>
-                                            {" "}
-                                            on{" "}
-                                            <a
-                                                href={image.sourceUrl}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="underline underline-offset-4"
-                                            >
-                                                Unsplash
-                                            </a>
-                                        </>
-                                    ) : null}
-                                </figcaption>
-                            ) : null}
-                        </figure>
-                    ))}
-                </div>
-            ) : null}
+            {activity.images.length ? <ActivityPhotoGallery images={activity.images} /> : null}
             {activity.description ? (
                 <p className="text-16 leading-relaxed whitespace-pre-line">{activity.description}</p>
             ) : null}
@@ -111,3 +130,4 @@ export default function ActivityDetailsDialog({ activity, days, saved, onClose, 
         </BoardDialog>
     );
 }
+
