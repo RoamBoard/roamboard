@@ -1,6 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
+import { Maximize2 } from "lucide-react";
 import BoardPhoto from "@/components/features/boards/BoardPhoto";
 import type { BoardActivity, BoardImage, BoardItem } from "@/types/board";
 import type { PublishedBoardDay as BoardDay } from "@/types/published-board";
@@ -36,11 +37,13 @@ const numberLabel = (number: number) => String(number).padStart(2, "0");
 function ActivityCard({
     activity,
     index,
-    onSelectActivity
+    onSelectActivity,
+    onZoomPhoto
 }: {
     activity: BoardActivity;
     index: number;
     onSelectActivity: (activity: BoardActivity) => void;
+    onZoomPhoto?: (activity: BoardActivity) => void;
 }) {
     return (
         <article className="group border-line relative grid min-w-0 border-t transition-colors focus-within:outline-2 focus-within:outline-offset-4 motion-reduce:transition-none sm:grid-cols-[1.2fr_1fr]">
@@ -63,7 +66,25 @@ function ActivityCard({
                     </div>
                 ) : null}
             </div>
-            <BoardPhoto image={activity.images[0]} className="aspect-[4/3] sm:aspect-auto sm:min-h-60" />
+            <div className="relative flex flex-col sm:h-full">
+                <BoardPhoto
+                    image={activity.images[0]}
+                    className="aspect-[4/3] sm:aspect-auto sm:h-full sm:min-h-60 sm:w-full"
+                />
+                {activity.images[0] && onZoomPhoto ? (
+                    <button
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onZoomPhoto(activity);
+                        }}
+                        aria-label={`Enlarge photo for ${activity.title}`}
+                        className="absolute right-2 bottom-2 z-20 flex size-8 cursor-zoom-in items-center justify-center rounded-[2px] bg-black/60 text-white opacity-100 transition-opacity hover:bg-black/80 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-white sm:opacity-0 sm:group-hover:opacity-100"
+                    >
+                        <Maximize2 className="size-4" />
+                    </button>
+                ) : null}
+            </div>
             {/* This button covers the card so the whole card can be clicked. */}
             <button
                 type="button"
@@ -77,7 +98,7 @@ function ActivityCard({
 
 // Boards can also have photos, text, or locations without an activity.
 function OtherBoardItem({ item }: { item: Exclude<BoardItem, BoardActivity> }) {
-    if (item.type === "image") return <BoardPhoto image={item.image} className="aspect-[16/10]" />;
+    if (item.type === "image") return <BoardPhoto image={item.image} zoomable className="aspect-[16/10]" />;
     if (item.type === "text")
         return (
             <p className="border-line text-14 border-t px-5 py-8 leading-relaxed whitespace-pre-line">{item.text}</p>
@@ -86,7 +107,7 @@ function OtherBoardItem({ item }: { item: Exclude<BoardItem, BoardActivity> }) {
         <article className="border-line border-t px-5 py-8">
             <h3 className="text-16 font-semibold">{item.location.name}</h3>
             {item.notes ? <p className="text-muted-foreground text-14 mt-4 leading-relaxed">{item.notes}</p> : null}
-            <BoardPhoto image={item.images?.[0]} className="mt-5 aspect-[4/3]" />
+            <BoardPhoto image={item.images?.[0]} zoomable className="mt-5 aspect-[4/3]" />
         </article>
     );
 }
@@ -95,11 +116,13 @@ function OtherBoardItem({ item }: { item: Exclude<BoardItem, BoardActivity> }) {
 export default function PublishedBoardDay({
     day,
     onSelectActivity,
+    onZoomPhoto,
     photos = {},
     photoLabels = {}
 }: {
     day: BoardDay;
     onSelectActivity: (activity: BoardActivity) => void;
+    onZoomPhoto?: (activity: BoardActivity) => void;
     photos?: { first?: BoardImage; second?: BoardImage };
     photoLabels?: { first?: string; second?: string };
 }) {
@@ -180,6 +203,7 @@ export default function PublishedBoardDay({
                                             activity={item}
                                             index={activities.findIndex((activity) => activity.id === item.id)}
                                             onSelectActivity={onSelectActivity}
+                                            onZoomPhoto={onZoomPhoto}
                                         />
                                     ) : (
                                         <OtherBoardItem item={item} />
