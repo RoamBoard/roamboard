@@ -17,6 +17,7 @@ type Props = {
 const ZOOM_MIN = 1;
 const ZOOM_MAX = 4;
 const ZOOM_STEP = 0.5;
+const KEYBOARD_PAN_STEP = 50;
 
 export default function ImageZoomDialog({ images, initialIndex = 0, onClose }: Props) {
     const dialogRef = useRef<HTMLDivElement>(null);
@@ -36,6 +37,7 @@ export default function ImageZoomDialog({ images, initialIndex = 0, onClose }: P
     const handleSwitchImage = useCallback((newIndex: number) => {
         setScale(1);
         setPan({ x: 0, y: 0 });
+        hasMoved.current = false;
         setCurrentIndex(newIndex);
     }, []);
 
@@ -64,6 +66,14 @@ export default function ImageZoomDialog({ images, initialIndex = 0, onClose }: P
     const resetZoom = useCallback(() => {
         setScale(1);
         setPan({ x: 0, y: 0 });
+        hasMoved.current = false;
+    }, []);
+
+    const panBy = useCallback((dx: number, dy: number) => {
+        setPan((current) => ({
+            x: current.x + dx,
+            y: current.y + dy
+        }));
     }, []);
 
     const toggleZoom = useCallback(() => {
@@ -78,10 +88,10 @@ export default function ImageZoomDialog({ images, initialIndex = 0, onClose }: P
 
     // Pointer events for panning when zoomed in
     const handlePointerDown = (e: React.PointerEvent) => {
+        hasMoved.current = false;
         if (scale <= 1) return;
         e.preventDefault();
         setIsDragging(true);
-        hasMoved.current = false;
         dragStart.current = {
             x: e.clientX,
             y: e.clientY,
@@ -115,6 +125,17 @@ export default function ImageZoomDialog({ images, initialIndex = 0, onClose }: P
         }
     };
 
+    const handlePointerCancel = (e: React.PointerEvent) => {
+        if (isDragging) {
+            setIsDragging(false);
+            try {
+                (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+            } catch {
+                // Ignore if pointer capture was already lost
+            }
+        }
+    };
+
     const handleImageClick = () => {
         if (hasMoved.current) return;
         toggleZoom();
@@ -132,6 +153,39 @@ export default function ImageZoomDialog({ images, initialIndex = 0, onClose }: P
     // Keyboard navigation
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
+            if (scale > 1) {
+                if (event.key === "ArrowUp" || event.key === "w" || event.key === "W") {
+                    event.preventDefault();
+                    panBy(0, KEYBOARD_PAN_STEP);
+                    return;
+                }
+                if (event.key === "ArrowDown" || event.key === "s" || event.key === "S") {
+                    event.preventDefault();
+                    panBy(0, -KEYBOARD_PAN_STEP);
+                    return;
+                }
+                if (
+                    event.key === "a" ||
+                    event.key === "A" ||
+                    (event.shiftKey && event.key === "ArrowLeft") ||
+                    (!hasMultiple && event.key === "ArrowLeft")
+                ) {
+                    event.preventDefault();
+                    panBy(KEYBOARD_PAN_STEP, 0);
+                    return;
+                }
+                if (
+                    event.key === "d" ||
+                    event.key === "D" ||
+                    (event.shiftKey && event.key === "ArrowRight") ||
+                    (!hasMultiple && event.key === "ArrowRight")
+                ) {
+                    event.preventDefault();
+                    panBy(-KEYBOARD_PAN_STEP, 0);
+                    return;
+                }
+            }
+
             if (event.key === "ArrowLeft") {
                 event.preventDefault();
                 goToPrev();
@@ -152,7 +206,7 @@ export default function ImageZoomDialog({ images, initialIndex = 0, onClose }: P
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [goToPrev, goToNext, zoomIn, zoomOut, resetZoom]);
+    }, [goToPrev, goToNext, zoomIn, zoomOut, resetZoom, panBy, scale, hasMultiple]);
 
     // Prevent background scrolling while open
     useEffect(() => {
@@ -240,12 +294,13 @@ export default function ImageZoomDialog({ images, initialIndex = 0, onClose }: P
 
             {/* Main Image Stage */}
             <main
-                className={`relative flex w-full flex-1 items-center justify-center overflow-hidden p-2 sm:p-6 ${
+                className={`relative flex w-full flex-1 touch-none items-center justify-center overflow-hidden p-2 sm:p-6 ${
                     scale > 1 ? (isDragging ? "cursor-grabbing" : "cursor-grab") : "cursor-zoom-in"
                 }`}
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerCancel}
                 onWheel={handleWheel}
                 onClick={handleImageClick}
             >
@@ -255,7 +310,7 @@ export default function ImageZoomDialog({ images, initialIndex = 0, onClose }: P
                         transformOrigin: "center center"
                     }}
                     className={`relative flex h-[76dvh] max-h-[82vh] w-[92vw] max-w-[90vw] items-center justify-center ${
-                        isDragging ? "" : "transition-transform duration-200 ease-out"
+                        isDragging ? "" : "transition-transform duration-200 ease-out motion-reduce:transition-none"
                     }`}
                 >
                     <Photo

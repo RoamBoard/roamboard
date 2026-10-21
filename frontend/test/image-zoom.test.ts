@@ -168,8 +168,11 @@ function mountZoomDialog(
         },
         render: runRender,
         unmount,
-        emitKeyDown: (key: string) => {
-            const ev = { key, preventDefault: noop };
+        emitKeyDown: (keyOrEvent: string | { key: string; shiftKey?: boolean }) => {
+            const ev =
+                typeof keyOrEvent === "string"
+                    ? { key: keyOrEvent, shiftKey: false, preventDefault: noop }
+                    : { shiftKey: false, preventDefault: noop, ...keyOrEvent };
             winListeners.get("keydown")?.forEach((cb) => cb(ev));
         }
     };
@@ -281,12 +284,24 @@ test("ImageZoomDialog displays enlarged photo with controls, counter, and attrib
     const attribution = harness.nodes.find((n) => n.props.children === "Jane Doe");
     assert.ok(attribution, "Photographer Jane Doe must be credited");
 
+    // Stage accessibility, touch-action, and reduced motion
+    const stage = harness.nodes.find(
+        (n) => typeof n.props.className === "string" && n.props.className.includes("touch-none")
+    );
+    assert.ok(stage, "Main stage must set touch-action none via touch-none");
+    assert.equal(typeof stage.props.onPointerCancel, "function", "Stage must handle onPointerCancel");
+
+    const animatedBox = harness.nodes.find(
+        (n) => typeof n.props.className === "string" && n.props.className.includes("motion-reduce:transition-none")
+    );
+    assert.ok(animatedBox, "Image container must support reduced motion");
+
     // Clicking close calls onClose
     (closeBtn.props.onClick as () => void)();
     assert.equal(closed.length, 1);
 });
 
-test("ImageZoomDialog keyboard navigation and zoom shortcuts", (context) => {
+test("ImageZoomDialog keyboard navigation, panning, and zoom shortcuts", (context) => {
     const harness = mountZoomDialog(context, {
         images: testImages,
         initialIndex: 0,
@@ -316,9 +331,34 @@ test("ImageZoomDialog keyboard navigation and zoom shortcuts", (context) => {
     const scaleBadge = harness.nodes.find((n) => n.props.children && n.props.children.toString().includes("150%"));
     assert.ok(scaleBadge, "Scale must increase to 150% after pressing +");
 
+    // Keyboard panning when zoomed in
+    harness.emitKeyDown("ArrowUp");
+    harness.render();
+    const pannedUpStage = harness.nodes.find((n) =>
+        String((n.props.style as { transform?: string })?.transform).includes("translate(0px, 50px)")
+    );
+    assert.ok(pannedUpStage, "ArrowUp must pan up 50px when zoomed in");
+
+    harness.emitKeyDown({ key: "ArrowLeft", shiftKey: true });
+    harness.render();
+    const pannedLeftStage = harness.nodes.find((n) =>
+        String((n.props.style as { transform?: string })?.transform).includes("translate(50px, 50px)")
+    );
+    assert.ok(pannedLeftStage, "Shift+ArrowLeft must pan left 50px when zoomed in");
+
     // Reset zoom with 0
     harness.emitKeyDown("0");
     harness.render();
     const resetBadge = harness.nodes.find((n) => n.props.children && n.props.children.toString().includes("100%"));
     assert.ok(resetBadge, "Scale must reset to 100% after pressing 0");
+});
+
+test("BoardPhoto disables hover scale when motion reduction is preferred", () => {
+    const { nodes } = capture(() => BoardPhoto({ image: testImages[0], zoomable: true }));
+    const img = nodes.find(
+        (n) =>
+            typeof n.props.className === "string" &&
+            n.props.className.includes("motion-reduce:group-hover/photo:transform-none")
+    );
+    assert.ok(img, "Zoomable photo must disable hover scale for reduced motion");
 });

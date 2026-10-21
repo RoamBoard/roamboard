@@ -66,8 +66,11 @@ function ActivityCard({
                     </div>
                 ) : null}
             </div>
-            <div className="group/cardphoto relative">
-                <BoardPhoto image={activity.images[0]} className="aspect-[4/3] sm:aspect-auto sm:min-h-60" />
+            <div className="relative flex flex-col sm:h-full">
+                <BoardPhoto
+                    image={activity.images[0]}
+                    className="aspect-[4/3] sm:aspect-auto sm:h-full sm:min-h-60 sm:w-full"
+                />
                 {activity.images[0] && onZoomPhoto ? (
                     <button
                         type="button"
@@ -76,7 +79,7 @@ function ActivityCard({
                             onZoomPhoto(activity);
                         }}
                         aria-label={`Enlarge photo for ${activity.title}`}
-                        className="absolute right-2 bottom-2 z-20 flex size-8 cursor-zoom-in items-center justify-center rounded-[2px] bg-black/60 text-white opacity-0 transition-opacity group-hover/cardphoto:opacity-100 hover:bg-black/80 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-white"
+                        className="absolute right-2 bottom-2 z-20 flex size-8 cursor-zoom-in items-center justify-center rounded-[2px] bg-black/60 text-white opacity-100 transition-opacity hover:bg-black/80 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-white sm:opacity-0 sm:group-hover:opacity-100"
                     >
                         <Maximize2 className="size-4" />
                     </button>

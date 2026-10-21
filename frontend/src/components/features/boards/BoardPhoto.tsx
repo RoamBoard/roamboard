@@ -138,7 +138,7 @@ export default function BoardPhoto({
                         fill
                         sizes={sizes}
                         preload={preload}
-                        className="object-cover transition-transform duration-300 ease-out group-hover/photo:scale-103"
+                        className="object-cover transition-transform duration-300 ease-out group-hover/photo:scale-103 motion-reduce:transition-none motion-reduce:group-hover/photo:transform-none"
                         onError={() => setFailedUrl(image.url)}
                         unoptimized
                     />
