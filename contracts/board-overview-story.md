@@ -11,15 +11,18 @@ Implementation is a separate task; this approval does not itself start feature c
 Rebuild the individual published Board viewer at `/boards/[boardId]` as an activity-led, day-wise story that helps
 visitors browse other users' trips. The `/boards` discovery listing is not currently included in this draft.
 
-Desktop downward scrolling moves the story continuously sideways through the overview and days, then transitions
-into a vertically scrolling ending. Mobile presents the same content and order as a vertical day-by-day story.
-Each day occupies at least one desktop screen width and can extend further to accommodate its content.
+Desktop downward scroll gestures snap sideways through the overview and full-screen day scenes, following the
+existing destination guide. Each day uses one scene, or two for photo-heavy days, and every photo appears in these
+scenes. The last scene transitions into a vertically scrolling ending. Mobile presents the same content and order as a vertical day-by-day story.
+Each day occupies one or two desktop screen widths. Dense scenes retain all photographs, using a compact collage
+and accessible inner scrolling if the content cannot fit safely.
 Activities retain itinerary order, with their names, times, notes and all associated photos grouped together.
 Photo-rich activities can occupy more horizontal space; precise composition is refined during implementation review.
 
 The opening overview should include the title, total saves, total comments, activity information and a whole-trip map.
 On desktop, a small map stays visible throughout each day's story and highlights the relevant activity as the reader
-progresses. When scrolling sufficiently into the next day, the map automatically switches its activity/pin filter to
+progresses. It stays bottom left under the day counter with no floating-card styling; pressing the map background or
+its enlarge control opens a larger map. When snapping into the next day, the map automatically switches its activity/pin filter to
 that day. The activation rule is defined in the frontend behavior section. An All days view also shows pins across the whole
 Board. A manually selected day or All days filter stays active until the reader chooses Follow story; subsequent
 scrolling does not override the manual filter. Map filters do not change the story's scroll position. On mobile,
@@ -29,7 +32,8 @@ After the last day, the page transitions into a vertical ending with a compact d
 the save action, comments and relevant comment actions. Compact itinerary items can reopen activity details.
 Persistent chapter navigation lets readers jump to the overview, any day, and the ending/comments without traversing
 intervening photos. Stat selection and permission-specific actions are defined in the technical sections below.
-The user emphasized lively, smooth interaction comparable to the existing `/boards` components. Scroll-linked
+Day summaries include small saved-photo selections, and the ending includes the owner's profile photo and biography.
+The user emphasized lively, smooth interaction comparable to existing browsing components. Snapped scene
 transitions, responsive hover/click feedback, smooth chapter jumps and stable image-loading layouts are acceptance
 criteria; exact motion design is refined and visually verified during implementation.
 
@@ -48,9 +52,10 @@ otherwise valid 251-to-500-character notes. Frontend character counting is defin
 
 ## Image presentation
 
-Show each complete saved image in the story while preserving its proportions and any presentation crop already
-applied by its author. Do not introduce additional layout crops to make images fit uniform frames. Mixed portrait,
-landscape and panoramic photos need layouts that accommodate their saved proportions.
+The requester revised the display direction on 2026-10-21: story-only crops into varied square, 16:9, 4:3 and portrait
+frames are approved. Use varied sizes and asymmetric placement with stable, aesthetically balanced compositions.
+Remove gray letterboxing frames. Saved uploads and author presentation edits remain intact; the shared enlarged
+image viewer shows the complete saved image. Every associated photo still appears in the scenes.
 
 Extreme shapes, such as a 1-by-3404-pixel image, must not stretch the page or receive excessive upscaling. Constrain
 their display within sensible frame dimensions while keeping the image intact. These are viewer-only safeguards;
@@ -347,12 +352,13 @@ event cannot be rolled back after a later database failure; do not claim transac
   keyboard and mobile swiping, preserve attribution, and never show notes. Closing restores focus/story position.
 - Fetch larger images on demand with bounded neighbor preloading. Retain working display images while loading or
   on failure. Failures must not erase activity text or reset chapter position. Reserve stable image spaces using
-  available dimensions; legacy missing dimensions use bounded contained frames. Never stretch tiny files.
+  available dimensions; legacy missing dimensions use bounded viewer crops. Extreme or tiny files retain contained
+  display, and enlarged viewing preserves the complete saved image.
 - Frontend notes count 250 Unicode code points using the existing comment-length approach, with a character indicator.
   Unchanged legacy notes survive unrelated edits; changed over-limit notes get validation, never silent truncation.
 - Preserve addressable chapter links and `#comments`, including direct entry, sign-in return and browser Back.
   Keyboard, reduced motion, touch, both themes and compact viewports are part of review.
-- Motion responds directly to scroll without mandatory snapping or scroll traps. Use restrained transitions and
+- Desktop scroll gestures snap one scene at a time, like the destination guide. Use restrained transitions and
   interaction feedback. Reduced motion removes decorative travel while preserving usable navigation. Avoid large
   image shifts, delayed controls and unnecessary animation on tiny scroll movements.
 
@@ -373,6 +379,15 @@ draft-generation/retry timing, comment refresh, permission mapping and frontend 
 decisions remain. Proportions, spacing, easing and exact display bounds are refined in implementation/browser review
 within these requirements. Implementation, migration, merging and deployment remain separate tasks.
 
+## Viewer design revision - 2026-10-21
+
+The requester explicitly superseded the earlier continuous-scroll and no-extra-cropping rules. Desktop uses sideways
+snapping like the destination guide, one scene per day or two for photo-heavy days, with every photo included.
+Use stable asymmetric collages with varied sizes and aspect ratios, without gray image bars. The small map stays
+bottom left under the day counter, integrated into the layout, and can be enlarged on request. Ending day summaries
+include small representative saved photographs; the owner's current profile photo and biography appear at the end.
+Reuse the shared ImageZoomDialog from main. Mobile remains vertical with the same photos and order.
+
 ## Implementation record
 
 2026-10-21: source implementation now includes the responsive story, shared day-following map, addressable chapters,
@@ -382,7 +397,8 @@ Protected large delivery preserves saved edits and uses display permissions/fall
 The story gallery reuses the shared ImageZoomDialog with its zoom/pan controls, adding ordered placements, swipe
 navigation, larger delivery and bounded neighbour preloading.
 
-Verification: backend lint/typecheck/build and 259 tests passed; frontend production build and 861 tests passed.
+Initial implementation verification: backend lint/typecheck/build and 259 tests passed; frontend production build
+and 861 tests passed.
 Independently authored isolated PostgreSQL coverage passed 8 tests for migration/pool persistence, revision and
 permission races at commit, provider-free authorized reads, full comment totals and pool constraints/cascades.
 These tests used and cleaned up a temporary schema, without applying 021 to shared development.
@@ -395,13 +411,17 @@ No browser surface was connected and in-app browser creation was unavailable, so
 pending for scroll feel, responsive compositions, mixed/extreme photos, map/provider failures, gallery focus/touch,
 theme/reduced-motion behavior and actual enlarged-photo sharpness. Automated checks do not replace that review.
 
+The viewer design revision passes 871 frontend tests, including production-scene geometry in headless Chromium at
+narrow and wide desktop sizes and dense-photo retention/navigation checks. Most new layout/navigation tests were
+authored alongside implementation; independent review of their intent and coverage remains pending.
+
 ## Decision log
 
 The requester approved every decision below for both applications on 2026-10-21.
 
 | Topic                      | Status | Direction                                                                                                                                              |
 | -------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Desktop scrolling          | Agreed | Continuous sideways travel driven by downward scrolling, followed by a vertical ending.                                                                |
+| Desktop scrolling          | Agreed | Revised 2026-10-21: sideways snap scenes, one or two per day, followed by a vertical ending.                                                           |
 | Mobile scrolling           | Agreed | Vertical day-by-day story with the same content and order.                                                                                             |
 | Story organization         | Agreed | Activity-led, preserving itinerary order and grouping activity details with all its photos.                                                            |
 | Minimum day space          | Agreed | At least one desktop screen width per day.                                                                                                             |
@@ -419,7 +439,7 @@ The requester approved every decision below for both applications on 2026-10-21.
 | Notes and photo clicks     | Agreed | Short note excerpt in the story, full note in activity details; enlarged photo views never show notes.                                                 |
 | Activity-note limit        | Agreed | Frontend-only 250-character limit for new/edited notes; preserve existing longer notes and the backend/storage 500-character allowance.                |
 | Vertical ending            | Agreed | Compact day-by-day itinerary, key Board stats, save action, comments and relevant comment actions.                                                     |
-| Image proportions          | Agreed | Preserve each complete saved image and its proportions; no extra story-layout crops.                                                                   |
+| Image proportions          | Agreed | Revised 2026-10-21: varied display-only crops; enlarged viewing preserves the complete saved image.                                                    |
 | Extreme image shapes       | Agreed | Constrain viewer display and upscaling only; upload validation and crop-tool improvements are deferred.                                                |
 | Enlarged image navigation  | Agreed | Browse all photos displayed in the story, starting at the clicked photo; close back to the same story position.                                        |
 | Filler lifecycle           | Agreed | Preserve through ordinary edits and off/on toggles; changing destination selects a new pool.                                                           |

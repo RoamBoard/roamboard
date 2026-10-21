@@ -2,12 +2,16 @@
 
 import Link from "next/link";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { motion } from "motion/react";
-import { ArrowDown, ArrowRight, Bookmark, MapPin } from "lucide-react";
+import { ArrowDown, ArrowRight, Bookmark } from "lucide-react";
 import BackLink from "@/components/ui/BackLink";
 import ActivityDetailsDialog from "./ActivityDetailsDialog";
 import BoardComments from "./BoardComments";
 import BoardPhoto from "./BoardPhoto";
+import BoardDialog from "./BoardDialog";
+import BoardDayScene from "./BoardDayScene";
+import BoardStoryEnding from "./BoardStoryEnding";
+import StoryDaySidebar from "./StoryDaySidebar";
+import { createDayScenes, sceneActivities, type ScenePhoto } from "@/lib/board-story-scenes";
 import StoryPhoto from "./StoryPhoto";
 import StoryGallery, { type StoryPlacement } from "./StoryGallery";
 import StoryMap from "./StoryMap";
@@ -40,11 +44,9 @@ export default function PublishedBoard({
         track: trackRef,
         viewport: viewportRef,
         rail: railRef,
-        x,
         desktop,
-        size,
         chapter: currentChapter,
-        activityId,
+        sceneId,
         jump
     } = useStoryScroll(days.map((day) => day.number).join(","));
     const [selectedActivity, setSelectedActivity] = useState<BoardActivity | null>(null);
@@ -58,6 +60,8 @@ export default function PublishedBoard({
     const [signInToSave, setSignInToSave] = useState(false);
     const [manualFilter, setManualFilter] = useState<number | "all" | null>(null);
     const [focusedActivity, setFocusedActivity] = useState<string>();
+    const [hoveredActivity, setHoveredActivity] = useState<string>();
+    const [mapExpanded, setMapExpanded] = useState(false);
     const mapSession = useRef<ReturnType<typeof loadMapboxMapSession> | null>(null);
     const session = useCallback(() => {
         mapSession.current ??= loadMapboxMapSession().catch((error) => {
@@ -103,6 +107,31 @@ export default function PublishedBoard({
         ],
         [board.coverImage, days, fillerPlacements]
     );
+    const scenes = useMemo(
+        () =>
+            days.flatMap((day) => {
+                const photos: ScenePhoto[] = [
+                    ...(fillerPlacements.get(`empty-${day.number}`) ?? []).map((photo) => ({
+                        ...photo,
+                        illustration: true
+                    })),
+                    ...sceneActivities(day).flatMap((activity) => [
+                        ...activity.images.map((image, index) => ({
+                            id: `activity-${activity.id}-${index}`,
+                            image,
+                            activityId: activity.id
+                        })),
+                        ...(fillerPlacements.get(activity.id) ?? []).map((photo) => ({ ...photo, illustration: true }))
+                    ])
+                ];
+                return createDayScenes(day, photos);
+            }),
+        [days, fillerPlacements]
+    );
+    const activeScene = scenes.find((scene) => scene.id === sceneId);
+    const highlighted =
+        focusedActivity ?? hoveredActivity ?? activeScene?.photos.find((photo) => photo.activityId)?.activityId;
+    const sceneIds = ["overview", ...scenes.map((scene) => scene.id)];
     const openPhoto = (id: string) => {
         const index = placements.findIndex((placement) => placement.id === id);
         if (index >= 0) setGalleryIndex(index);
@@ -200,22 +229,14 @@ export default function PublishedBoard({
             </div>
         </dl>
     );
-    const renderFillers = (key: string) =>
-        (fillerPlacements.get(key) ?? []).map((placement) => (
-            <div key={placement.id} className="max-w-full shrink-0 lg:w-max">
-                <p className="text-muted-foreground mb-3 text-[10px] tracking-[0.15em] uppercase">
-                    Destination illustration
-                </p>
-                <StoryPhoto image={placement.image} onOpen={() => openPhoto(placement.id)} />
-            </div>
-        ));
     const map = (mapFilter: number | "all") => (
         <StoryMap
             days={days}
             filter={mapFilter}
             session={session}
-            activeId={focusedActivity ?? activityId}
+            activeId={highlighted}
             onOpen={setSelectedActivity}
+            onEnlarge={() => setMapExpanded(true)}
         />
     );
 
@@ -247,28 +268,55 @@ export default function PublishedBoard({
                     </a>
                 ))}
             </nav>
-            <div ref={trackRef} style={desktop ? { height: size.travel + size.height } : undefined}>
+            <div
+                ref={trackRef}
+                className={desktop ? "grid h-[calc(100dvh-52px)] min-h-0 grid-cols-[15rem_minmax(0,1fr)]" : ""}
+            >
+                {desktop ? (
+                    <StoryDaySidebar
+                        days={days}
+                        scene={activeScene}
+                        sceneIds={sceneIds}
+                        sceneId={sceneId}
+                        filter={filter}
+                        follow={manualFilter === null}
+                        map={map(filter)}
+                        onFilter={(value) => {
+                            setManualFilter(value);
+                            setFocusedActivity(undefined);
+                        }}
+                        onFollow={() => {
+                            setManualFilter(null);
+                            setFocusedActivity(undefined);
+                        }}
+                        onEnlarge={() => setMapExpanded(true)}
+                        onOpen={setSelectedActivity}
+                        onLocation={focusLocation}
+                        onHighlight={setHoveredActivity}
+                        jump={jump}
+                    />
+                ) : null}
                 <div
                     ref={viewportRef}
-                    className={desktop ? "sticky top-[52px] overflow-clip" : "min-w-0"}
-                    style={desktop ? { height: size.height } : undefined}
+                    role="region"
+                    aria-label="Board story scenes"
+                    tabIndex={desktop ? 0 : undefined}
+                    className={
+                        desktop
+                            ? "@container min-w-0 snap-x snap-mandatory [scrollbar-width:none] overflow-x-auto overflow-y-hidden overscroll-x-contain focus-visible:outline-2 focus-visible:-outline-offset-2 [&::-webkit-scrollbar]:hidden"
+                            : "min-w-0"
+                    }
                 >
-                    <motion.div
-                        ref={railRef}
-                        style={{ x }}
-                        className={desktop ? "relative flex h-full w-max" : "relative"}
-                    >
+                    <div ref={railRef} className={desktop ? "relative flex h-full w-max" : "relative"}>
                         <header
                             id="overview"
+                            data-story-scene
                             data-story-chapter
                             tabIndex={-1}
-                            className={`border-line relative min-w-0 px-6 py-8 outline-none sm:px-12 ${desktop ? "flex h-full w-[var(--story-width)] shrink-0 items-center gap-10 pr-96" : "border-b"}`}
+                            className={`border-line relative min-w-0 px-6 py-8 outline-none sm:px-12 ${desktop ? "flex h-full w-[var(--story-width)] shrink-0 snap-start snap-always items-center gap-10 overflow-y-auto" : "border-b"}`}
                         >
                             <div className="min-w-0 flex-1">
-                                <BackLink
-                                    fallbackHref="/boards"
-                                    className={desktop ? "absolute top-3 left-5" : "mb-8"}
-                                />
+                                <BackLink fallbackHref="/boards" className={desktop ? "mb-5" : "mb-8"} />
                                 <div className="mb-4 flex items-center gap-3">
                                     <Link
                                         href={`/profile/${encodeURIComponent(author.id)}`}
@@ -334,7 +382,7 @@ export default function PublishedBoard({
                                 </p>
                             </div>
                             {board.coverImage ? (
-                                <div className={`mt-8 min-w-0 ${desktop ? "max-w-[32vw] flex-1" : ""}`}>
+                                <div className={`mt-8 min-w-0 ${desktop ? "max-w-[40%] flex-1 translate-y-12" : ""}`}>
                                     <StoryPhoto image={board.coverImage} eager onOpen={() => openPhoto("cover")} />
                                 </div>
                             ) : null}
@@ -345,219 +393,31 @@ export default function PublishedBoard({
                                 </div>
                             ) : null}
                         </header>
-                        {days.map((day) => (
-                            <section
-                                key={day.number}
-                                id={`day-${day.number}`}
-                                aria-labelledby={`day-heading-${day.number}`}
-                                data-story-chapter
-                                tabIndex={-1}
-                                className={`border-line min-w-0 border-b px-6 py-9 outline-none sm:px-12 ${desktop ? "flex h-full min-w-[var(--story-width)] shrink-0 items-center gap-12 border-r border-b-0 pr-96" : ""}`}
-                            >
-                                <header className={`mb-8 shrink-0 ${desktop ? "w-64 self-start pt-8" : ""}`}>
-                                    <p className="text-muted-foreground mb-4 text-[10px] tracking-[0.2em] uppercase">
-                                        Chapter {String(day.number).padStart(2, "0")}
-                                    </p>
-                                    <h2
-                                        id={`day-heading-${day.number}`}
-                                        className="font-display text-6xl leading-none font-bold sm:text-7xl"
-                                    >
-                                        Day {day.number}
-                                    </h2>
-                                    {day.date ? (
-                                        <time className="text-muted-foreground mt-4 block text-xs" dateTime={day.date}>
-                                            {day.date}
-                                        </time>
-                                    ) : null}
-                                    {day.title && day.title !== `Day ${day.number}` ? (
-                                        <p className="mt-4 text-sm">{day.title}</p>
-                                    ) : null}
-                                    <p className="text-muted-foreground mt-4 text-xs">
-                                        {day.items.filter((item) => item.type === "activity").length} activities
-                                    </p>
-                                    {!desktop ? <div className="mt-6">{map(day.number)}</div> : null}
-                                </header>
-                                {day.items.length ? (
-                                    day.items.map((item, sequence) =>
-                                        item.type === "activity" ? (
-                                            <div
-                                                key={item.id}
-                                                data-story-activity={item.id}
-                                                className={desktop ? "flex shrink-0 items-center gap-10" : ""}
-                                            >
-                                                <div
-                                                    className={`border-line mb-8 min-w-0 border-t pt-5 ${desktop ? "w-72 shrink-0" : ""}`}
-                                                >
-                                                    <p className="text-muted-foreground mb-4 text-[10px] tracking-wider">
-                                                        {String(sequence + 1).padStart(2, "0")}
-                                                        {item.time ? ` / ${item.time}` : ""}
-                                                    </p>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setSelectedActivity(item)}
-                                                        className="group text-left focus-visible:outline-2 focus-visible:outline-offset-4"
-                                                    >
-                                                        <h3 className="font-display text-3xl leading-tight font-bold transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-                                                            {item.title}
-                                                        </h3>
-                                                    </button>
-                                                    {item.description ? (
-                                                        <p className="text-muted-foreground mt-4 max-w-md text-sm leading-relaxed">
-                                                            {Array.from(item.description).slice(0, 120).join("")}
-                                                            {Array.from(item.description).length > 120 ? "…" : ""}
-                                                        </p>
-                                                    ) : null}
-                                                    {item.location ? (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => focusLocation(item)}
-                                                            className="text-muted-foreground mt-4 flex min-h-11 items-center gap-2 text-left text-xs underline underline-offset-4"
-                                                        >
-                                                            <MapPin size={14} className="shrink-0" />
-                                                            {item.location.name}
-                                                        </button>
-                                                    ) : null}
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setSelectedActivity(item)}
-                                                        className="mt-3 inline-flex min-h-11 items-center gap-3 text-xs underline underline-offset-4"
-                                                    >
-                                                        Activity details <ArrowRight size={14} />
-                                                    </button>
-                                                </div>
-                                                <div
-                                                    className={
-                                                        desktop
-                                                            ? "flex shrink-0 items-center gap-8"
-                                                            : "mb-10 grid gap-6"
-                                                    }
-                                                >
-                                                    {item.images.map((image, index) => (
-                                                        <StoryPhoto
-                                                            key={`${image.id}-${index}`}
-                                                            image={image}
-                                                            onOpen={() => openPhoto(`activity-${item.id}-${index}`)}
-                                                        />
-                                                    ))}
-                                                </div>
-                                                {renderFillers(item.id)}
-                                            </div>
-                                        ) : null
-                                    )
-                                ) : (
-                                    <div className="text-muted-foreground max-w-sm text-sm leading-relaxed">
-                                        <p>A little room to wander.</p>
-                                        <p className="mt-3">
-                                            No activities are recorded for this day. Continue to the next chapter or
-                                            explore the journey map.
-                                        </p>
-                                    </div>
-                                )}
-                                {renderFillers(`empty-${day.number}`)}
-                            </section>
+
+                        {scenes.map((scene) => (
+                            <BoardDayScene
+                                key={scene.id}
+                                scene={scene}
+                                boardId={board.id}
+                                desktop={desktop}
+                                onOpenPhoto={openPhoto}
+                                onOpenActivity={setSelectedActivity}
+                                onHighlight={setHoveredActivity}
+                                mobileMap={map(scene.day.number)}
+                            />
                         ))}
-                    </motion.div>
-                    {desktop ? (
-                        <aside
-                            aria-label="Journey map"
-                            className="border-line bg-background/95 absolute right-5 bottom-5 z-10 w-[min(19rem,30%)] rounded-xl border p-3 shadow-sm backdrop-blur-sm"
-                        >
-                            <div className="mb-3 flex items-center justify-between gap-2">
-                                <label className="min-w-0 text-[10px]">
-                                    Map view
-                                    <select
-                                        aria-label="Map day filter"
-                                        value={filter}
-                                        onChange={(event) => {
-                                            setManualFilter(
-                                                event.target.value === "all" ? "all" : Number(event.target.value)
-                                            );
-                                            setFocusedActivity(undefined);
-                                        }}
-                                        className="border-line bg-background ml-2 max-w-28 border-b py-2 text-xs"
-                                    >
-                                        <option value="all">All days</option>
-                                        {days.map((day) => (
-                                            <option key={day.number} value={day.number}>
-                                                Day {day.number}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </label>
-                                <button
-                                    type="button"
-                                    aria-pressed={manualFilter === null}
-                                    onClick={() => {
-                                        setManualFilter(null);
-                                        setFocusedActivity(undefined);
-                                    }}
-                                    className="min-h-10 text-[10px] underline underline-offset-4"
-                                >
-                                    Follow story
-                                </button>
-                            </div>
-                            {map(filter)}
-                            <p className="text-muted-foreground mt-2 text-[9px]">
-                                Day colors · activity numbers · Ctrl-scroll to zoom
-                            </p>
-                        </aside>
-                    ) : null}
+                    </div>
                 </div>
             </div>
-            <section id="ending" tabIndex={-1} className="border-line px-6 py-16 outline-none sm:px-12 sm:py-24">
-                <p className="text-muted-foreground text-[10px] tracking-[0.2em] uppercase">The journey, at a glance</p>
-                <h2 className="font-display mt-3 text-5xl font-bold sm:text-7xl">Every day. Every memory.</h2>
-                <div className="mt-10 max-w-3xl">{stats}</div>
-                <div className="mt-10 max-w-3xl">
-                    {days.map((day) => (
-                        <div key={day.number} className="border-line grid grid-cols-[5rem_1fr] gap-4 border-b py-5">
-                            <a
-                                href={`#day-${day.number}`}
-                                onClick={(event) => {
-                                    event.preventDefault();
-                                    jump(`day-${day.number}`);
-                                }}
-                                className="font-display text-xl underline decoration-1 underline-offset-4"
-                            >
-                                Day {day.number}
-                            </a>
-                            <ul className="space-y-3">
-                                {day.items
-                                    .filter((item): item is BoardActivity => item.type === "activity")
-                                    .map((item) => (
-                                        <li key={item.id}>
-                                            <button
-                                                type="button"
-                                                onClick={() => setSelectedActivity(item)}
-                                                className="min-h-9 text-left text-sm hover:underline"
-                                            >
-                                                {item.time ? (
-                                                    <span className="text-muted-foreground mr-4 text-xs">
-                                                        {item.time}
-                                                    </span>
-                                                ) : null}
-                                                {item.title}
-                                            </button>
-                                        </li>
-                                    ))}
-                                {!day.items.length ? (
-                                    <li className="text-muted-foreground text-xs">No recorded activities</li>
-                                ) : null}
-                            </ul>
-                        </div>
-                    ))}
-                </div>
-                <div className="mt-8 flex flex-wrap">{saveAction}</div>
-                {author.bio ? (
-                    <p className="text-muted-foreground mt-8 max-w-lg text-sm leading-relaxed">
-                        From{" "}
-                        <Link href={`/profile/${encodeURIComponent(author.id)}`} className="underline">
-                            @{author.name}
-                        </Link>{" "}
-                        — {author.bio}
-                    </p>
-                ) : null}
-            </section>
+            <BoardStoryEnding
+                days={days}
+                author={author}
+                stats={stats}
+                saveAction={saveAction}
+                jump={jump}
+                onOpenActivity={setSelectedActivity}
+                onOpenPhoto={openPhoto}
+            />
             {bookmarkMessage ? (
                 <p role="status" className="px-6 pb-5 text-xs sm:px-12">
                     {bookmarkMessage}
@@ -575,6 +435,24 @@ export default function PublishedBoard({
                 </p>
             ) : null}
             <BoardComments boardId={board.id} onTotalChange={setCommentsTotal} />
+            {mapExpanded ? (
+                <BoardDialog
+                    title={filter === "all" ? "The whole journey" : `Day ${filter} map`}
+                    onClose={() => setMapExpanded(false)}
+                >
+                    <StoryMap
+                        days={days}
+                        filter={filter}
+                        activeId={highlighted}
+                        session={session}
+                        expanded
+                        onOpen={(activity) => {
+                            setMapExpanded(false);
+                            setSelectedActivity(activity);
+                        }}
+                    />
+                </BoardDialog>
+            ) : null}
             {selectedActivity ? (
                 <ActivityDetailsDialog
                     activity={selectedActivity}

@@ -8,6 +8,7 @@ import { DatabasePublishedBoardContent } from "../src/components/features/boards
 import PublishedBoard from "../src/components/features/boards/PublishedBoard";
 import StoryGallery from "../src/components/features/boards/StoryGallery";
 import StoryPhoto from "../src/components/features/boards/StoryPhoto";
+import BoardDayScene from "../src/components/features/boards/BoardDayScene";
 import type { BoardDocument } from "../src/lib/board-creator-api";
 import { getBoardDays } from "../src/lib/board-presentation";
 import { loadPublishedBoard, toPublishedBoardData } from "../src/lib/published-board-data";
@@ -285,7 +286,7 @@ test("published day headings show exact saved dates even on empty days and leave
     const header = (number: number) => {
         const match = markup.match(
             new RegExp(
-                `<section\\b[^>]*aria-labelledby="day-heading-${number}"[^>]*>[\\s\\S]*?<header\\b[^>]*>([\\s\\S]*?)<\\/header>`
+                `<section\\b[^>]*aria-labelledby="day-${number}-heading"[^>]*>[\\s\\S]*?<header\\b[^>]*>([\\s\\S]*?)<\\/header>`
             )
         );
         assert.ok(match, `Day ${number} must have a heading`);
@@ -521,10 +522,29 @@ test("photo clicks open the matching story placement with all displayed photos a
         const tree = PublishedBoard(toPublishedBoardData(source));
         const nodes = descendants(tree);
         if (!captured.clicked) {
-            const photos = nodes.filter((node) => node.type === StoryPhoto);
-            assert.equal(photos.length, 5, "Cover, all three activity photos and one illustration must be visible");
+            const scene = nodes.find(
+                (node) =>
+                    node.type === BoardDayScene &&
+                    (node.props as ComponentProps<typeof BoardDayScene>).scene.day.number === 2
+            );
+            assert.ok(scene);
+            const sceneProps = scene.props as ComponentProps<typeof BoardDayScene>;
+            assert.equal(
+                sceneProps.scene.photos.length,
+                4,
+                "Every activity photo and the illustration must be in the day scene"
+            );
+            assert.equal(
+                nodes.filter((node) => node.type === StoryPhoto).length,
+                1,
+                "The overview keeps its separate cover placement"
+            );
             captured.clicked = true;
-            const activityCover = photos[1].props as ComponentProps<typeof StoryPhoto>;
+            const sceneNodes = descendants(BoardDayScene(sceneProps));
+            const activityCover = sceneNodes.find((node) => node.type === StoryPhoto)?.props as ComponentProps<
+                typeof StoryPhoto
+            >;
+            assert.ok(activityCover);
             activityCover.onOpen();
         }
         const gallery = nodes.find((node) => node.type === StoryGallery);

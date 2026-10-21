@@ -14,13 +14,17 @@ export default function StoryMap({
     filter,
     activeId,
     onOpen,
-    session
+    session,
+    expanded = false,
+    onEnlarge
 }: {
     days: PublishedBoardDay[];
     filter: number | "all";
     activeId?: string;
     onOpen: (activity: BoardActivity) => void;
     session: () => ReturnType<typeof loadMapboxMapSession>;
+    expanded?: boolean;
+    onEnlarge?: () => void;
 }) {
     const container = useRef<HTMLDivElement>(null);
     const [visible, setVisible] = useState(false);
@@ -82,7 +86,7 @@ export default function StoryMap({
         };
     }, [visible, points.length, session, attempt]);
     return (
-        <div ref={container} className="bg-faint relative overflow-hidden rounded-lg">
+        <div ref={container} className="relative overflow-hidden">
             {!points.length ? (
                 <p className="text-muted-foreground grid min-h-44 place-content-center px-6 text-center text-xs">
                     No saved locations for {filter === "all" ? "this Board" : `Day ${filter}`}.
@@ -107,10 +111,11 @@ export default function StoryMap({
                     points={points}
                     routeGeometry={noRoute}
                     onError={() => setError(true)}
+                    onMapClick={onEnlarge ? () => onEnlarge() : undefined}
                     cooperativeGestures
                     selectedPointId={activeId}
                     selectedZoom={12}
-                    className="h-52 w-full sm:h-64"
+                    className={expanded ? "h-[65dvh] min-h-72 w-full" : "h-40 w-full sm:h-44"}
                     onPointClick={(point) => {
                         const activity = activities.find((item) => item.activity.id === point.id)?.activity;
                         if (activity) onOpen(activity);

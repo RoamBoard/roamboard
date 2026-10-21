@@ -1,164 +1,196 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { useMotionValue } from "motion/react";
 
-const desktopQuery = "(min-width: 1024px) and (min-height: 620px) and (prefers-reduced-motion: no-preference)";
+const query = "(min-width: 1024px) and (min-height: 620px)";
 const subscribe = (listener: () => void) => {
-    const query = window.matchMedia(desktopQuery);
-    query.addEventListener("change", listener);
-    return () => query.removeEventListener("change", listener);
+    const media = window.matchMedia(query);
+    media.addEventListener("change", listener);
+    return () => media.removeEventListener("change", listener);
 };
-const getDesktop = () => window.matchMedia(desktopQuery).matches;
 
+function innerScroller(target: Element, boundary: HTMLElement, direction: number): boolean {
+    if (target === boundary) return false;
+    if (
+        target instanceof HTMLElement &&
+        /auto|scroll/.test(getComputedStyle(target).overflowY) &&
+        target.scrollHeight > target.clientHeight + 1 &&
+        (direction < 0 ? target.scrollTop > 1 : target.scrollTop < target.scrollHeight - target.clientHeight - 1)
+    )
+        return true;
+    return target.parentElement ? innerScroller(target.parentElement, boundary, direction) : false;
+}
+
+// Native snap scrolling mirrors the destination guide; maps and editable controls keep their own gestures.
 export default function useStoryScroll(chapterKey: string) {
-    const desktop = useSyncExternalStore(subscribe, getDesktop, () => false);
+    const desktop = useSyncExternalStore(
+        subscribe,
+        () => window.matchMedia(query).matches,
+        () => false
+    );
     const track = useRef<HTMLDivElement>(null);
     const viewport = useRef<HTMLDivElement>(null);
     const rail = useRef<HTMLDivElement>(null);
-    const x = useMotionValue(0);
-    const [size, setSize] = useState({ width: 0, height: 0, travel: 0 });
-    const [chapter, setChapter] = useState("overview");
-    const [activityId, setActivityId] = useState<string>();
-    const stableChapter = useRef("overview");
-    const restoredHash = useRef("");
+    const [sceneId, setSceneId] = useState("overview");
+    const chapter = sceneId.replace(/-part-2$/, "");
+    const behavior = () =>
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches ? ("instant" as const) : ("smooth" as const);
 
-    useEffect(() => {
-        const element = viewport.current;
-        const content = rail.current;
-        if (!element || !content) return;
-        const measure = () => {
-            const width = element.clientWidth;
-            element.style.setProperty("--story-width", `${width}px`);
-            const next = { width, height: window.innerHeight - 52, travel: Math.max(0, content.scrollWidth - width) };
-            setSize((current) =>
-                current.width === next.width && current.height === next.height && current.travel === next.travel
-                    ? current
-                    : next
-            );
-        };
-        measure();
-        const observer = new ResizeObserver(measure);
-        observer.observe(element);
-        observer.observe(content);
-        window.addEventListener("resize", measure);
-        return () => {
-            observer.disconnect();
-            window.removeEventListener("resize", measure);
-        };
-    }, [desktop, chapterKey]);
-
-    const scrollToChapter = useCallback(
-        (id: string, smooth: boolean) => {
+    const reveal = useCallback(
+        (id: string, smooth = true) => {
             const target = document.getElementById(id);
-            if (!target || !track.current || !rail.current) return;
-            const start = track.current.getBoundingClientRect().top + window.scrollY - 52;
-            const top =
-                desktop && rail.current.contains(target)
-                    ? start + target.offsetLeft
-                    : target.getBoundingClientRect().top + window.scrollY - 64;
-            window.scrollTo({
-                top: Math.max(0, top),
-                behavior:
-                    smooth && !window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "smooth" : "instant"
-            });
-            setChapter(id === "comments" || id.startsWith("comment-") ? "ending" : id);
-            stableChapter.current = id;
+            const container = viewport.current;
+            if (!target || !container || !track.current) return;
+            const isScene = rail.current?.contains(target);
+            if (desktop && isScene) {
+                window.scrollTo({
+                    top: track.current.getBoundingClientRect().top + window.scrollY - 52,
+                    behavior: "instant"
+                });
+                container.scrollTo({ left: target.offsetLeft, behavior: smooth ? behavior() : "instant" });
+            } else target.scrollIntoView({ block: "start", behavior: smooth ? behavior() : "instant" });
+            setSceneId(id === "comments" || id.startsWith("comment-") ? "ending" : id);
         },
         [desktop]
     );
 
     useEffect(() => {
-        const frame = { id: 0 };
+        const container = viewport.current;
+        const wrapper = track.current;
+        const content = rail.current;
+        if (!container || !wrapper || !content) return;
+        const sections = () => [...content.querySelectorAll<HTMLElement>("[data-story-scene]")];
+        const gesture = { locked: false, timer: 0, inner: false, last: 0 };
         const update = () => {
-            frame.id = 0;
-            if (!track.current || !rail.current || !viewport.current) return;
-            const start = track.current.getBoundingClientRect().top + window.scrollY - 52;
-            const distance = Math.max(0, Math.min(size.travel, window.scrollY - start));
-            x.set(desktop ? -distance : 0);
-            const sections = [...rail.current.querySelectorAll<HTMLElement>("[data-story-chapter]")];
-            const current = desktop
-                ? sections.find((section) => section.offsetLeft + section.offsetWidth > distance + size.width / 2)
-                : sections.find((section) => section.getBoundingClientRect().bottom > window.innerHeight / 2);
-            const ending = document.getElementById("ending");
-            const atEnd = ending && ending.getBoundingClientRect().top <= window.innerHeight / 2;
-            const previous = sections.find((section) => section.id === stableChapter.current);
-            // Small reversals at a day boundary should not flicker the map's automatic filter.
-            const center = distance + size.width / 2;
-            const retained =
-                desktop &&
-                previous &&
-                center >= previous.offsetLeft - 20 &&
-                center <= previous.offsetLeft + previous.offsetWidth + 20;
-            const nextChapter = atEnd ? "ending" : retained ? previous.id : current?.id;
-            if (nextChapter) {
-                stableChapter.current = nextChapter;
-                setChapter(nextChapter);
+            if (desktop) {
+                const scene = sections().reduce<HTMLElement | undefined>(
+                    (best, item) =>
+                        !best ||
+                        Math.abs(item.offsetLeft - container.scrollLeft) <
+                            Math.abs(best.offsetLeft - container.scrollLeft)
+                            ? item
+                            : best,
+                    undefined
+                );
+                if (scene && wrapper.getBoundingClientRect().bottom > 80) setSceneId(scene.id);
+            } else {
+                const scene = sections().find((item) => item.getBoundingClientRect().bottom > window.innerHeight / 2);
+                if (scene) setSceneId(scene.id);
             }
-            const candidates = [...rail.current.querySelectorAll<HTMLElement>("[data-story-activity]")];
-            const visible = candidates.filter((element) => {
-                const rect = element.getBoundingClientRect();
-                return desktop
-                    ? rect.right > 0 && rect.left < window.innerWidth
-                    : rect.bottom > 52 && rect.top < window.innerHeight;
-            });
-            const nearest = visible.reduce<HTMLElement | undefined>((best, element) => {
-                const rect = element.getBoundingClientRect();
-                const previous = best?.getBoundingClientRect();
-                const position = desktop
-                    ? rect.left + rect.width / 2 - (viewport.current!.getBoundingClientRect().left + size.width / 2)
-                    : rect.top + rect.height / 2 - window.innerHeight / 2;
-                const before = previous
-                    ? desktop
-                        ? previous.left +
-                          previous.width / 2 -
-                          (viewport.current!.getBoundingClientRect().left + size.width / 2)
-                        : previous.top + previous.height / 2 - window.innerHeight / 2
-                    : Infinity;
-                return Math.abs(position) < Math.abs(before) ? element : best;
-            }, undefined);
-            setActivityId(nearest?.dataset.storyActivity);
+            const ending = document.getElementById("ending");
+            if (ending && ending.getBoundingClientRect().top < window.innerHeight / 2) setSceneId("ending");
         };
-        const schedule = () => {
-            if (!frame.id) frame.id = requestAnimationFrame(update);
+        const move = (direction: number) => {
+            const scenes = sections();
+            const index = Math.round(container.scrollLeft / Math.max(1, container.clientWidth));
+            const next = scenes[index + direction];
+            if (next) container.scrollTo({ left: next.offsetLeft, behavior: behavior() });
+            else if (direction > 0) reveal("ending");
         };
+        const wheel = (event: WheelEvent) => {
+            if (
+                !desktop ||
+                event.ctrlKey ||
+                event.metaKey ||
+                !(event.target instanceof Element) ||
+                event.target.closest(".mapboxgl-map, input, textarea, select, [role=slider], dialog")
+            )
+                return;
+            const horizontal = Math.abs(event.deltaX) > Math.abs(event.deltaY);
+            const delta = horizontal ? event.deltaX : event.deltaY;
+            if (!delta) return;
+            const continuing = Date.now() - gesture.last < 160;
+            gesture.last = Date.now();
+            if (!horizontal && innerScroller(event.target, wrapper, delta)) {
+                gesture.inner = true;
+                return;
+            }
+            event.preventDefault();
+            if (!horizontal && gesture.inner && continuing) return;
+            gesture.inner = false;
+            if (gesture.locked) return;
+            gesture.locked = true;
+            gesture.timer = window.setTimeout(() => {
+                gesture.locked = false;
+            }, 500);
+            move(Math.sign(delta));
+        };
+        const key = (event: KeyboardEvent) => {
+            if (
+                !desktop ||
+                event.defaultPrevented ||
+                event.ctrlKey ||
+                event.metaKey ||
+                event.altKey ||
+                !(event.target instanceof Element) ||
+                event.target.closest("input,textarea,select,[role=slider],.mapboxgl-map,dialog")
+            )
+                return;
+            if (
+                !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(
+                    event.key
+                )
+            )
+                return;
+            if (event.key === " " && event.target.closest("a,button,summary")) return;
+            const direction =
+                ["ArrowLeft", "ArrowUp", "PageUp", "Home"].includes(event.key) || (event.key === " " && event.shiftKey)
+                    ? -1
+                    : 1;
+            if (innerScroller(event.target, wrapper, direction) && !["ArrowLeft", "ArrowRight"].includes(event.key))
+                return;
+            event.preventDefault();
+            if (event.key === "Home") reveal("overview");
+            else if (event.key === "End") reveal("ending");
+            else move(direction);
+        };
+        const focus = (event: FocusEvent) => {
+            if (!desktop || !(event.target instanceof Element)) return;
+            const scene = event.target.closest<HTMLElement>("[data-story-scene]");
+            if (scene && Math.abs(scene.offsetLeft - container.scrollLeft) > container.clientWidth / 2)
+                reveal(scene.id);
+        };
+        const observer = new ResizeObserver(() => {
+            container.style.setProperty("--story-width", `${container.clientWidth}px`);
+            update();
+        });
+        observer.observe(container);
+        container.style.setProperty("--story-width", `${container.clientWidth}px`);
+        wrapper.addEventListener("wheel", wheel, { passive: false });
+        wrapper.addEventListener("keydown", key);
+        container.addEventListener("scroll", update, { passive: true });
+        content.addEventListener("focusin", focus);
+        window.addEventListener("scroll", update, { passive: true });
         update();
-        window.addEventListener("scroll", schedule, { passive: true });
         return () => {
-            cancelAnimationFrame(frame.id);
-            window.removeEventListener("scroll", schedule);
+            observer.disconnect();
+            window.clearTimeout(gesture.timer);
+            wrapper.removeEventListener("wheel", wheel);
+            wrapper.removeEventListener("keydown", key);
+            container.removeEventListener("scroll", update);
+            content.removeEventListener("focusin", focus);
+            window.removeEventListener("scroll", update);
         };
-    }, [desktop, size, x]);
+    }, [desktop, chapterKey, reveal]);
 
     useEffect(() => {
-        if (desktop && !size.width) return;
         const restore = () => {
             const id = window.location.hash.slice(1);
-            const signature = `${id}:${desktop}`;
-            if (id && restoredHash.current !== signature) {
-                restoredHash.current = signature;
-                scrollToChapter(id, false);
-            }
-        };
-        const navigate = () => {
-            restoredHash.current = "";
-            restore();
+            if (id) reveal(id, false);
         };
         const frame = requestAnimationFrame(restore);
-        window.addEventListener("hashchange", navigate);
-        window.addEventListener("popstate", navigate);
+        window.addEventListener("hashchange", restore);
+        window.addEventListener("popstate", restore);
         return () => {
             cancelAnimationFrame(frame);
-            window.removeEventListener("hashchange", navigate);
-            window.removeEventListener("popstate", navigate);
+            window.removeEventListener("hashchange", restore);
+            window.removeEventListener("popstate", restore);
         };
-    }, [desktop, size.width, size.travel, scrollToChapter]);
-
+    }, [reveal]);
     const jump = (id: string) => {
         if (window.location.hash !== `#${id}`) window.history.pushState(window.history.state, "", `#${id}`);
-        scrollToChapter(id, true);
-        restoredHash.current = `${id}:${desktop}`;
+        reveal(id);
         document.getElementById(id)?.focus({ preventScroll: true });
     };
-    return { desktop, track, viewport, rail, x, size, chapter, activityId, jump };
+    return { desktop, track, viewport, rail, sceneId, chapter, jump };
 }

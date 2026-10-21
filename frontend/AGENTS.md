@@ -97,21 +97,27 @@ This is a living project guide. Agents may and should update `AGENTS.md` when th
 
 ## Current integrated surfaces
 
-`PublishedBoard` implements the agreed activity-led story at `/boards/[boardId]`: desktop scrolling drives continuous
-horizontal chapters into a vertical itinerary/comments ending; compact screens and reduced motion use vertical days.
-`useStoryScroll` owns measurement, hash navigation, stable chapter selection and scroll position. `StoryMap` reuses
+`PublishedBoard` implements the agreed activity-led story at `/boards/[boardId]`: desktop wheel gestures snap sideways through one scene per day, or two for photo-heavy days, then release into a
+vertical itinerary/comments ending. Compact screens use vertical days; reduced motion keeps navigation without
+animated travel. Every photograph appears, including dense scenes with accessible inner scrolling.
+`useStoryScroll` owns native snap navigation, gesture pacing, hash navigation and chapter state. Map and browser zoom
+gestures never advance the story. The small map is integrated bottom left under the persistent day counter and can
+expand on request. `BoardDayScene` uses deterministic asymmetric photo compositions with varied viewer-only crops. `StoryMap` reuses
 the existing map renderer, lazily loads one shared session per viewer and supports automatic day following plus
-manual day/All days filters on desktop. `StoryPhoto` contains full saved proportions, while `StoryGallery` wraps the shared `ImageZoomDialog` and browses
+manual day/All days filters on desktop. `StoryPhoto` has no gray image frame; scene and summary crops leave the saved image intact, while `StoryGallery` wraps the shared `ImageZoomDialog` and browses
 stable story placements with on-demand large delivery, bounded neighbour warming, keyboard/touch controls and credits.
 Activity details retain full notes; enlarged photos never show notes. Unsupported preview Save/Copy actions are gone
-from this production viewer. Author photos stay outside the gallery.
+from this production viewer. Day summaries include representative saved-photo miniatures, and the ending includes the owner's current portrait and
+biography. Author photos stay outside the gallery.
 
 Creator opt-in is default-off, persists through save/hydration and stays off for remixes. A low-upload suggestion does
 not restrict eligibility; partial selections show non-blocking author feedback. New/edited activity notes validate
 250 Unicode code points with a counter, preserving unchanged longer legacy notes; backend validation stays 500.
 The backend requires migration 021 (applied to shared development on 2026-10-21) for persisted illustrations. Automated presenter, API and
 isolated PostgreSQL tests cover contract behavior; browser visual/interaction acceptance remains pending because no
-browser surface was connected during implementation.
+browser surface was connected during implementation. Production-scene geometry is also checked in headless Chromium
+for bounded, non-overlapping, tappable images at narrow and wide desktop sizes. The latest scene/navigation tests
+were authored alongside implementation; independent coverage review remains necessary.
 
 `BoardCollectionGrid` is the fourth Board list: component 2 photographic cards in a wider responsive grid, twenty
 results with URL-backed contextual search, sorting and numbered pagination. `/boards/collections/[context]` hosts
