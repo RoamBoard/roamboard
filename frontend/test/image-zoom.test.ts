@@ -66,7 +66,8 @@ const testActivity: BoardActivity = {
 
 function mountZoomDialog(
     context: TestContext,
-    props: { images: BoardImage[]; initialIndex?: number; onClose: () => void }
+    props: { images: BoardImage[]; initialIndex?: number; onClose: () => void },
+    options: { prefersReducedMotion?: boolean } = {}
 ) {
     const winListeners = new Map<string, Set<(e: unknown) => void>>();
     const winState = {
@@ -76,7 +77,12 @@ function mountZoomDialog(
         },
         removeEventListener: (type: string, listener: (e: unknown) => void) => {
             winListeners.get(type)?.delete(listener);
-        }
+        },
+        matchMedia: () => ({
+            matches: options.prefersReducedMotion ?? false,
+            addEventListener: noop,
+            removeEventListener: noop
+        })
     };
 
     const docState = {
@@ -358,7 +364,30 @@ test("BoardPhoto disables hover scale when motion reduction is preferred", () =>
     const img = nodes.find(
         (n) =>
             typeof n.props.className === "string" &&
-            n.props.className.includes("motion-reduce:group-hover/photo:transform-none")
+            n.props.className.includes("motion-safe:group-hover/photo:scale-103") &&
+            n.props.className.includes("motion-reduce:transform-none")
     );
     assert.ok(img, "Zoomable photo must disable hover scale for reduced motion");
+});
+
+test("ImageZoomDialog disables zoom transition when reduced motion is preferred", (context) => {
+    const harness = mountZoomDialog(
+        context,
+        {
+            images: testImages,
+            initialIndex: 0,
+            onClose: noop
+        },
+        { prefersReducedMotion: true }
+    );
+
+    const animatedBox = harness.nodes.find(
+        (n) => typeof n.props.className === "string" && n.props.className.includes("motion-reduce:transition-none")
+    );
+    assert.ok(animatedBox, "Image container must have motion-reduce:transition-none");
+    assert.ok(
+        typeof animatedBox.props.className === "string" &&
+            !animatedBox.props.className.includes("motion-safe:transition-transform"),
+        "Image container must omit transition-transform when reduced motion is preferred"
+    );
 });

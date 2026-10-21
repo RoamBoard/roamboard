@@ -27,8 +27,19 @@ export default function ImageZoomDialog({ images, initialIndex = 0, onClose }: P
     const [scale, setScale] = useState(1);
     const [pan, setPan] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
+    const [reducedMotion, setReducedMotion] = useState(
+        () => typeof window !== "undefined" && Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches)
+    );
     const dragStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
     const hasMoved = useRef(false);
+
+    useEffect(() => {
+        if (typeof window === "undefined" || !window.matchMedia) return;
+        const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+        const handleChange = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
+        media.addEventListener?.("change", handleChange);
+        return () => media.removeEventListener?.("change", handleChange);
+    }, []);
 
     const currentImage = images[currentIndex] || images[0];
     const hasMultiple = images.length > 1;
@@ -310,7 +321,9 @@ export default function ImageZoomDialog({ images, initialIndex = 0, onClose }: P
                         transformOrigin: "center center"
                     }}
                     className={`relative flex h-[76dvh] max-h-[82vh] w-[92vw] max-w-[90vw] items-center justify-center ${
-                        isDragging ? "" : "transition-transform duration-200 ease-out motion-reduce:transition-none"
+                        isDragging || reducedMotion
+                            ? "motion-reduce:transition-none"
+                            : "motion-safe:transition-transform motion-safe:duration-200 motion-safe:ease-out motion-reduce:transition-none"
                     }`}
                 >
                     <Photo
@@ -334,7 +347,7 @@ export default function ImageZoomDialog({ images, initialIndex = 0, onClose }: P
                                 goToPrev();
                             }}
                             aria-label="Previous photo"
-                            className="absolute top-1/2 left-3 z-20 flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-black/60 text-white/90 shadow-xl backdrop-blur-sm transition-all hover:scale-105 hover:bg-black/85 hover:text-white focus-visible:outline-2 focus-visible:outline-white sm:left-6"
+                            className="absolute top-1/2 left-3 z-20 flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-black/60 text-white/90 shadow-xl backdrop-blur-sm hover:bg-black/85 hover:text-white focus-visible:outline-2 focus-visible:outline-white motion-safe:transition-all motion-safe:hover:scale-105 motion-reduce:transform-none motion-reduce:transition-none sm:left-6"
                         >
                             <ChevronLeft size={24} strokeWidth={2} />
                         </button>
@@ -345,7 +358,7 @@ export default function ImageZoomDialog({ images, initialIndex = 0, onClose }: P
                                 goToNext();
                             }}
                             aria-label="Next photo"
-                            className="absolute top-1/2 right-3 z-20 flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-black/60 text-white/90 shadow-xl backdrop-blur-sm transition-all hover:scale-105 hover:bg-black/85 hover:text-white focus-visible:outline-2 focus-visible:outline-white sm:right-6"
+                            className="absolute top-1/2 right-3 z-20 flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-black/60 text-white/90 shadow-xl backdrop-blur-sm hover:bg-black/85 hover:text-white focus-visible:outline-2 focus-visible:outline-white motion-safe:transition-all motion-safe:hover:scale-105 motion-reduce:transform-none motion-reduce:transition-none sm:right-6"
                         >
                             <ChevronRight size={24} strokeWidth={2} />
                         </button>
