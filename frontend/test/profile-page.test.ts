@@ -181,3 +181,130 @@ test("visitor profile shows the profile owner's saved and published collections 
     assert.equal(library.props.ownCollection, false, "another user's saves must not become the visitor's bookmarks");
     assert.deepEqual(library.props.boards, [saved]);
 });
+
+test("visitor profile renders friends rail with links to friends' profiles and view all", () => {
+    const mockFriends = [
+        {
+            friendshipId: 101,
+            userId: "u-f1",
+            username: "friend_one",
+            displayName: "Friend One",
+            profilePictureUrl: null,
+            bio: null,
+            location: "Kyoto"
+        },
+        {
+            friendshipId: 102,
+            userId: "u-f2",
+            username: "friend_two",
+            displayName: "Friend Two",
+            profilePictureUrl: null,
+            bio: null,
+            location: "Osaka"
+        }
+    ];
+
+    const { markup } = capture(() =>
+        createElement(VisitorProfileContent, {
+            view: {
+                profile: mockProfile,
+                isOwner: false,
+                friendshipStatus: "accepted",
+                stats: {
+                    countriesVisited: 0,
+                    citiesExplored: 0,
+                    continentsCovered: 0,
+                    photosUploaded: 0,
+                    activitiesDone: 0,
+                    boardsCreated: 0,
+                    friends: 2,
+                    activitiesSaved: 0,
+                    boardsSaved: 0
+                },
+                boards: [],
+                savedBoards: [],
+                destinations: []
+            },
+            initialFriends: mockFriends
+        })
+    );
+
+    assert.match(markup, /Wanderer(&#x27;|')s friends \(2\)/);
+    assert.match(markup, /travelers they(&#x27;|')re connected with/);
+    assert.match(markup, /Friend One/);
+    assert.match(markup, /@friend_one/);
+    assert.match(markup, /Friend Two/);
+    assert.match(markup, /@friend_two/);
+
+    // Verify view all link
+    assert.match(
+        markup,
+        /href="\/friends\?handle=wanderer"/,
+        "Must render view all link pointing to /friends?handle=wanderer"
+    );
+
+    // Verify profile links for friends
+    assert.match(markup, /href="\/profile\/friend_one"/, "Must render link to friend_one's profile");
+    assert.match(markup, /href="\/profile\/friend_two"/, "Must render link to friend_two's profile");
+});
+
+test("visitor profile renders empty state when other user has no friends", () => {
+    const { markup } = capture(() =>
+        createElement(VisitorProfileContent, {
+            view: {
+                profile: mockProfile,
+                isOwner: false,
+                friendshipStatus: "none",
+                stats: {
+                    countriesVisited: 0,
+                    citiesExplored: 0,
+                    continentsCovered: 0,
+                    photosUploaded: 0,
+                    activitiesDone: 0,
+                    boardsCreated: 0,
+                    friends: 0,
+                    activitiesSaved: 0,
+                    boardsSaved: 0
+                },
+                boards: [],
+                savedBoards: [],
+                destinations: []
+            },
+            initialFriends: []
+        })
+    );
+
+    assert.match(markup, /No travel pals yet/);
+    assert.match(markup, /Wanderer hasn(&#x27;|')t connected with any travel pals yet\./);
+    assert.doesNotMatch(markup, /Find Friends/);
+});
+
+test("visitor profile renders error state and allows retry", () => {
+    const { markup } = capture(() =>
+        createElement(VisitorProfileContent, {
+            view: {
+                profile: mockProfile,
+                isOwner: false,
+                friendshipStatus: "none",
+                stats: {
+                    countriesVisited: 0,
+                    citiesExplored: 0,
+                    continentsCovered: 0,
+                    photosUploaded: 0,
+                    activitiesDone: 0,
+                    boardsCreated: 0,
+                    friends: 0,
+                    activitiesSaved: 0,
+                    boardsSaved: 0
+                },
+                boards: [],
+                savedBoards: [],
+                destinations: []
+            },
+            initialFriendsError: "Travel pals could not be loaded."
+        })
+    );
+
+    assert.match(markup, /Travel pals could not be loaded\./);
+    assert.match(markup, />Retry<\/button>/, "Must render retry button on failure");
+});
