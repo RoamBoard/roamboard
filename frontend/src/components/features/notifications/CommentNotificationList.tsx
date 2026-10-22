@@ -57,7 +57,7 @@ export default function CommentNotificationList({
                             aria-disabled={pendingId !== null}
                             className={`border-line hover:bg-faint/60 flex items-start gap-3 border p-3 transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] ${
                                 notification.readAt ? "bg-background" : "bg-faint/50"
-                            } ${pendingId !== null ? "pointer-events-none" : ""} ${onMarkRead && !notification.readAt ? "pr-11" : ""}`}
+                            } ${pendingId !== null ? "pointer-events-none" : ""} ${onMarkRead && !notification.readAt ? "pr-14 md:pr-11" : ""}`}
                         >
                             <span className="bg-muted text-muted-foreground flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full">
                                 {notification.commenter.profilePictureUrl ? (
@@ -118,7 +118,7 @@ export default function CommentNotificationList({
                                 }}
                                 aria-disabled={pendingId !== null}
                                 aria-label={`Mark notification from ${notification.commenter.displayName} on ${notification.boardTitle} as read`}
-                                className="text-muted-foreground hover:text-foreground absolute top-2 right-2 flex size-7 cursor-pointer items-center justify-center focus-visible:outline-2 focus-visible:outline-offset-2"
+                                className="text-muted-foreground hover:text-foreground absolute top-0 right-0 flex size-11 cursor-pointer items-center justify-center focus-visible:outline-2 focus-visible:-outline-offset-2 md:top-2 md:right-2 md:size-7 md:focus-visible:outline-offset-2"
                             >
                                 <X size={14} strokeWidth={1.5} aria-hidden="true" />
                             </button>

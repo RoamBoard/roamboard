@@ -4,6 +4,8 @@ import React, { Children, createElement, isValidElement, type ReactNode } from "
 import { renderToStaticMarkup } from "react-dom/server";
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import Sidebar from "../src/components/layout/Sidebar";
+import ProfileControl from "../src/components/ui/ProfileControl";
+import NotificationControl from "../src/components/ui/NotificationControl";
 import { setSidebarExpanded } from "../src/components/layout/sidebar-state";
 
 type Props = {
@@ -16,7 +18,7 @@ function elements(node: ReactNode): Array<{ type: unknown; props: Props }> {
     return [{ type: node.type, props: node.props }, ...Children.toArray(node.props.children).flatMap(elements)];
 }
 
-// Only the event-target methods used by the production delegated pointer handlers.
+// Only the event-target methods used by the production focus handlers.
 class PointerTarget {
     constructor(
         readonly tag: string,
@@ -146,10 +148,10 @@ function mountSidebar(context: TestContext, desktop = true) {
     };
 }
 
-test("desktop navigation hover reveals labels only after a deliberate pause", (context) => {
+test("desktop rail hover reveals labels after 170ms", (context) => {
     const sidebar = mountSidebar(context);
-    sidebar.event("onPointerOver");
-    context.mock.timers.tick(149);
+    sidebar.event("onPointerEnter");
+    context.mock.timers.tick(169);
     sidebar.render();
     assert.equal(sidebar.expanded(), false);
     context.mock.timers.tick(1);
@@ -159,47 +161,45 @@ test("desktop navigation hover reveals labels only after a deliberate pause", (c
     assert.equal(sidebar.expanded(), true);
 });
 
-test("briefly crossing a navigation control cancels its pending reveal", (context) => {
+test("briefly crossing the rail cancels its pending reveal", (context) => {
     const sidebar = mountSidebar(context);
-    const link = new PointerTarget("a");
-    sidebar.event("onPointerOver", link);
+    sidebar.event("onPointerEnter");
     context.mock.timers.tick(75);
-    sidebar.event("onPointerOut", link);
+    sidebar.event("onPointerLeave");
     context.mock.timers.tick(500);
     sidebar.render();
     assert.equal(sidebar.expanded(), false);
 });
 
-test("moving between descendants of one link preserves the hover delay", (context) => {
+test("moving between controls inside the rail preserves the hover delay", (context) => {
     const sidebar = mountSidebar(context);
-    const link = new PointerTarget("a");
-    const icon = new PointerTarget("svg", link);
-    const label = new PointerTarget("span", link);
-    sidebar.event("onPointerOver", icon);
-    context.mock.timers.tick(75);
-    sidebar.event("onPointerOut", icon, "mouse", label);
-    sidebar.event("onPointerOver", label, "mouse", icon);
-    context.mock.timers.tick(75);
+    sidebar.event("onPointerEnter", new PointerTarget("a"));
+    context.mock.timers.tick(85);
+    // Pointer moves between descendants do not fire another enter on the aside.
+    context.mock.timers.tick(85);
     sidebar.render();
     assert.equal(sidebar.expanded(), true);
 });
 
-test("hovering the logo or blank rail leaves navigation collapsed", (context) => {
+test("hovering the logo or blank rail reveals navigation", (context) => {
     const sidebar = mountSidebar(context);
-    sidebar.event("onPointerOver", new PointerTarget("a", new PointerTarget("header")));
-    context.mock.timers.tick(500);
+    sidebar.event("onPointerEnter", new PointerTarget("a", new PointerTarget("header")));
+    context.mock.timers.tick(170);
     sidebar.render();
-    assert.equal(sidebar.expanded(), false);
-    sidebar.event("onPointerOver", new PointerTarget("aside"));
-    context.mock.timers.tick(500);
+    assert.equal(sidebar.expanded(), true);
+    sidebar.event("onPointerLeave");
+    context.mock.timers.tick(100);
     sidebar.render();
-    assert.equal(sidebar.expanded(), false);
+    sidebar.event("onPointerEnter", new PointerTarget("aside"));
+    context.mock.timers.tick(170);
+    sidebar.render();
+    assert.equal(sidebar.expanded(), true);
 });
 
 test("leaving the sidebar delays collapse and returning cancels it", (context) => {
     const sidebar = mountSidebar(context);
-    sidebar.event("onPointerOver");
-    context.mock.timers.tick(150);
+    sidebar.event("onPointerEnter");
+    context.mock.timers.tick(170);
     sidebar.render();
     assert.equal(sidebar.expanded(), true);
     sidebar.event("onPointerLeave");
@@ -218,7 +218,7 @@ test("leaving the sidebar delays collapse and returning cancels it", (context) =
 
 test("Escape cancels a pending navigation reveal", (context) => {
     const sidebar = mountSidebar(context);
-    sidebar.event("onPointerOver");
+    sidebar.event("onPointerEnter");
     context.mock.timers.tick(75);
     sidebar.event("onKeyDown");
     context.mock.timers.tick(500);
@@ -228,7 +228,7 @@ test("Escape cancels a pending navigation reveal", (context) => {
 
 test("touch pointer movement never reveals desktop labels", (context) => {
     const sidebar = mountSidebar(context);
-    sidebar.event("onPointerOver", new PointerTarget("a"), "touch");
+    sidebar.event("onPointerEnter", new PointerTarget("a"), "touch");
     context.mock.timers.tick(500);
     sidebar.render();
     assert.equal(sidebar.expanded(), false);
@@ -238,8 +238,8 @@ test("revealing labels leaves the logo markup unchanged", (context) => {
     const sidebar = mountSidebar(context);
     const before = sidebar.render().markup.match(/<header\b[^>]*>[\s\S]*?<\/header>/)?.[0];
     assert.ok(before);
-    sidebar.event("onPointerOver");
-    context.mock.timers.tick(150);
+    sidebar.event("onPointerEnter");
+    context.mock.timers.tick(170);
     const after = sidebar.render().markup.match(/<header\b[^>]*>[\s\S]*?<\/header>/)?.[0];
     assert.equal(sidebar.expanded(), true);
     assert.equal(after, before);
@@ -261,7 +261,7 @@ test("keeping navigation open survives pointer departure and can be toggled off"
 
 test("unmount cancels pending hover work", (context) => {
     const sidebar = mountSidebar(context);
-    sidebar.event("onPointerOver");
+    sidebar.event("onPointerEnter");
     sidebar.unmount();
     context.mock.timers.tick(500);
     sidebar.render();
@@ -270,7 +270,7 @@ test("unmount cancels pending hover work", (context) => {
 
 test("mobile navigation ignores hover and the toggle opens its drawer", (context) => {
     const sidebar = mountSidebar(context, false);
-    sidebar.event("onPointerOver");
+    sidebar.event("onPointerEnter");
     context.mock.timers.tick(500);
     assert.doesNotMatch(sidebar.render().markup, /<dialog/);
     assert.equal(sidebar.expanded(), false);
@@ -283,4 +283,28 @@ test("mobile navigation ignores hover and the toggle opens its drawer", (context
     (drawer.props.onClose as () => void)();
     assert.doesNotMatch(sidebar.render().markup, /<dialog/);
     assert.equal(sidebar.expanded(), false);
+});
+
+test("mobile account, notifications and navigation open one overlay at a time", (context) => {
+    const sidebar = mountSidebar(context, false);
+    const controls = () => {
+        const { nodes } = sidebar.render();
+        const account = nodes.find((node) => node.type === ProfileControl);
+        const notifications = nodes.find((node) => node.type === NotificationControl);
+        assert.ok(account && notifications);
+        return { account: account.props, notifications: notifications.props };
+    };
+    const initial = controls();
+    assert.equal(initial.account.mobile, true);
+    assert.equal(initial.notifications.mobile, true);
+    (initial.account.onSidebarOpenChange as (open: boolean) => void)(true);
+    assert.equal(controls().account.sidebarAccountOpen, true);
+    assert.equal(controls().notifications.open, false);
+    (controls().notifications.onOpenChange as (open: boolean) => void)(true);
+    assert.equal(controls().account.sidebarAccountOpen, false);
+    assert.equal(controls().notifications.open, true);
+    sidebar.toggle();
+    assert.equal(controls().account.sidebarAccountOpen, false);
+    assert.equal(controls().notifications.open, false);
+    assert.match(sidebar.render().markup, /<dialog[^>]*aria-label="Roamboard navigation"/);
 });

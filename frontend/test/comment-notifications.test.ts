@@ -409,188 +409,197 @@ test("clear failure leaves page history visible; retry marks it read without rem
     );
 });
 
-test("the bell marks one comment read without clearing the others or friend requests", async (context) => {
-    const owner = { userId: "owner", username: "owner", displayName: "Owner" };
-    const friend = {
-        requestId: 4,
-        requester: { userId: "friend", username: "friend", displayName: "Friend", profilePictureUrl: null }
-    };
-    const unread: CommentNotification = {
-        notificationId: 7,
-        boardId: 12,
-        boardTitle: "Unread Board",
-        commentId: 32,
-        kind: "comment",
-        commenter: { displayName: "Avery", username: "avery", profilePictureUrl: null },
-        excerpt: "New comment",
-        createdAt: "2026-01-01T00:00:00.000Z",
-        readAt: null
-    };
-    const secondUnread = { ...unread, notificationId: 8, commentId: 33, boardTitle: "Second Board" };
-    const state = {
-        cleared: false,
-        readIds: new Set<number>(),
-        listUrls: [] as string[],
-        releaseClear: null as (() => void) | null
-    };
-    context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
-        const url = String(input);
-        if (url.endsWith("/auth/me")) return Response.json({ data: owner });
-        if (url.endsWith("/friend-requests")) return Response.json({ data: [friend] });
-        if (url.endsWith("/7/read")) {
-            state.readIds.add(7);
-            return Response.json({ data: { notificationId: 7, readAt: "2026-10-22T00:00:00.000Z" } });
-        }
-        if (url.endsWith("/read-all")) {
-            await new Promise<void>((resolve) => {
-                state.releaseClear = resolve;
-            });
-            state.cleared = true;
-            return Response.json({ data: { unreadCount: 0 } });
-        }
-        if (url.includes("/comment-notifications")) {
-            state.listUrls.push(url);
-            assert.ok(url.includes("unreadOnly=true"));
-            const remaining = state.cleared
-                ? []
-                : [unread, secondUnread].filter((item) => !state.readIds.has(item.notificationId));
-            return Response.json({
-                data: remaining,
-                meta: { nextCursor: null, hasMore: false, unreadCount: remaining.length }
-            });
-        }
-        return Response.json({ data: [] });
-    });
-    const states: unknown[] = [];
-    const refs: Array<{ current: unknown }> = [];
-    const effects: Array<() => void | (() => void)> = [];
-    const cleanups: Array<() => void> = [];
-    const mounted = { value: false };
-    const render = () => {
-        const cursor = { state: 0, ref: 0 };
-        const original = {
-            useState: React.useState,
-            useRef: React.useRef,
-            useCallback: React.useCallback,
-            useEffect: React.useEffect
+for (const mobile of [false, true]) {
+    test(`the ${mobile ? "mobile sheet" : "desktop bell"} marks one comment read and keeps dismissal focus in its active surface`, async (context) => {
+        const owner = { userId: "owner", username: "owner", displayName: "Owner" };
+        const friend = {
+            requestId: 4,
+            requester: { userId: "friend", username: "friend", displayName: "Friend", profilePictureUrl: null }
         };
-        const holder: { tree: ReactNode } = { tree: null };
-        function Probe() {
-            React.useState = ((initial: unknown) => {
-                const index = cursor.state++;
-                if (!(index in states)) states[index] = typeof initial === "function" ? initial() : initial;
-                return [
-                    states[index],
-                    (next: unknown) => {
-                        states[index] = typeof next === "function" ? next(states[index]) : next;
-                    }
-                ];
-            }) as typeof React.useState;
-            React.useRef = ((initial: unknown) => (refs[cursor.ref++] ??= { current: initial })) as typeof React.useRef;
-            React.useCallback = ((callback: unknown) => callback) as typeof React.useCallback;
-            React.useEffect = (effect) => {
-                if (!mounted.value) effects.push(effect);
-            };
-            try {
-                holder.tree = NotificationControl({
-                    open: true,
-                    initialRequests: [friend],
-                    initialUserId: owner.userId
+        const unread: CommentNotification = {
+            notificationId: 7,
+            boardId: 12,
+            boardTitle: "Unread Board",
+            commentId: 32,
+            kind: "comment",
+            commenter: { displayName: "Avery", username: "avery", profilePictureUrl: null },
+            excerpt: "New comment",
+            createdAt: "2026-01-01T00:00:00.000Z",
+            readAt: null
+        };
+        const secondUnread = { ...unread, notificationId: 8, commentId: 33, boardTitle: "Second Board" };
+        const state = {
+            cleared: false,
+            readIds: new Set<number>(),
+            listUrls: [] as string[],
+            releaseClear: null as (() => void) | null
+        };
+        context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+            const url = String(input);
+            if (url.endsWith("/auth/me")) return Response.json({ data: owner });
+            if (url.endsWith("/friend-requests")) return Response.json({ data: [friend] });
+            if (url.endsWith("/7/read")) {
+                state.readIds.add(7);
+                return Response.json({ data: { notificationId: 7, readAt: "2026-10-22T00:00:00.000Z" } });
+            }
+            if (url.endsWith("/read-all")) {
+                await new Promise<void>((resolve) => {
+                    state.releaseClear = resolve;
                 });
-                return holder.tree;
-            } finally {
-                Object.assign(React, original);
+                state.cleared = true;
+                return Response.json({ data: { unreadCount: 0 } });
             }
-        }
-        const html = renderToStaticMarkup(
-            createElement(
-                AppRouterContext.Provider,
-                {
-                    value: {
-                        bfcacheId: "bell-clear-test",
-                        back() {},
-                        forward() {},
-                        refresh() {},
-                        push() {},
-                        replace() {},
-                        prefetch() {}
-                    }
-                },
-                createElement(Probe)
-            )
+            if (url.includes("/comment-notifications")) {
+                state.listUrls.push(url);
+                assert.ok(url.includes("unreadOnly=true"));
+                const remaining = state.cleared
+                    ? []
+                    : [unread, secondUnread].filter((item) => !state.readIds.has(item.notificationId));
+                return Response.json({
+                    data: remaining,
+                    meta: { nextCursor: null, hasMore: false, unreadCount: remaining.length }
+                });
+            }
+            return Response.json({ data: [] });
+        });
+        const states: unknown[] = [];
+        const refs: Array<{ current: unknown }> = [];
+        const effects: Array<() => void | (() => void)> = [];
+        const cleanups: Array<() => void> = [];
+        const mounted = { value: false };
+        const render = () => {
+            const cursor = { state: 0, ref: 0 };
+            const original = {
+                useState: React.useState,
+                useRef: React.useRef,
+                useCallback: React.useCallback,
+                useEffect: React.useEffect
+            };
+            const holder: { tree: ReactNode } = { tree: null };
+            function Probe() {
+                React.useState = ((initial: unknown) => {
+                    const index = cursor.state++;
+                    if (!(index in states)) states[index] = typeof initial === "function" ? initial() : initial;
+                    return [
+                        states[index],
+                        (next: unknown) => {
+                            states[index] = typeof next === "function" ? next(states[index]) : next;
+                        }
+                    ];
+                }) as typeof React.useState;
+                React.useRef = ((initial: unknown) =>
+                    (refs[cursor.ref++] ??= { current: initial })) as typeof React.useRef;
+                React.useCallback = ((callback: unknown) => callback) as typeof React.useCallback;
+                React.useEffect = (effect) => {
+                    if (!mounted.value) effects.push(effect);
+                };
+                try {
+                    holder.tree = NotificationControl({
+                        mobile,
+                        open: true,
+                        initialRequests: [friend],
+                        initialUserId: owner.userId
+                    });
+                    return holder.tree;
+                } finally {
+                    Object.assign(React, original);
+                }
+            }
+            const html = renderToStaticMarkup(
+                createElement(
+                    AppRouterContext.Provider,
+                    {
+                        value: {
+                            bfcacheId: "bell-clear-test",
+                            back() {},
+                            forward() {},
+                            refresh() {},
+                            push() {},
+                            replace() {},
+                            prefetch() {}
+                        }
+                    },
+                    createElement(Probe)
+                )
+            );
+            if (!mounted.value) {
+                mounted.value = true;
+                for (const effect of effects.splice(0)) {
+                    const cleanup = effect();
+                    if (typeof cleanup === "function") cleanups.push(cleanup);
+                }
+            }
+            return { html, nodes: elements(holder.tree) };
+        };
+        context.after(() => cleanups.forEach((cleanup) => cleanup()));
+        render();
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        const before = render();
+        assert.ok(before.html.includes("Unread Board"));
+        assert.ok(before.html.includes("Second Board"));
+        assert.ok(before.html.includes("3 pending notifications"));
+        assert.ok(before.html.includes('aria-label="Mark notification from Avery on Unread Board as read"'));
+        assert.ok(!before.html.includes(">Mark as read<"));
+        assert.ok(before.html.includes("Friend"));
+        const list = before.nodes.find((node) => node.type === CommentNotificationList);
+        assert.ok(list);
+        const focusMoves = { bell: 0, sheet: 0 };
+        const trigger = before.nodes.find(
+            (node) => node.type === "button" && node.props["aria-label"] === "Notifications"
         );
-        if (!mounted.value) {
-            mounted.value = true;
-            for (const effect of effects.splice(0)) {
-                const cleanup = effect();
-                if (typeof cleanup === "function") cleanups.push(cleanup);
-            }
-        }
-        return { html, nodes: elements(holder.tree) };
-    };
-    context.after(() => cleanups.forEach((cleanup) => cleanup()));
-    render();
-    await new Promise<void>((resolve) => setImmediate(resolve));
-    const before = render();
-    assert.ok(before.html.includes("Unread Board"));
-    assert.ok(before.html.includes("Second Board"));
-    assert.ok(before.html.includes("3 pending notifications"));
-    assert.ok(before.html.includes('aria-label="Mark notification from Avery on Unread Board as read"'));
-    assert.ok(!before.html.includes(">Mark as read<"));
-    assert.ok(before.html.includes("Friend"));
-    const list = before.nodes.find((node) => node.type === CommentNotificationList);
-    assert.ok(list);
-    const marking = (list.props.onMarkRead as (notification: CommentNotification) => Promise<void>)(unread);
-    const dismissing = render();
-    assert.ok(!dismissing.html.includes("Unread Board"));
-    assert.ok(dismissing.html.includes("Second Board"));
-    const remainingList = dismissing.nodes.find((node) => node.type === CommentNotificationList);
-    assert.ok(remainingList);
-    const remainingButton = elements(
-        CommentNotificationList(remainingList.props as Parameters<typeof CommentNotificationList>[0])
-    ).find((node) => node.type === "button");
-    assert.equal(remainingButton?.props.disabled, undefined);
-    assert.equal(remainingButton?.props["aria-disabled"], true);
-    await marking;
-    await new Promise<void>((resolve) => setImmediate(resolve));
-    const afterOne = render();
-    assert.ok(!afterOne.html.includes("Unread Board"));
-    assert.ok(afterOne.html.includes("Second Board"));
-    assert.ok(afterOne.html.includes("2 pending notifications"));
-    assert.ok(afterOne.html.includes("Friend"));
-    assert.ok(state.readIds.has(7));
-    assert.equal(state.cleared, false);
-    const button = afterOne.nodes.find(
-        (node) => node.type === "button" && node.props.children === "Clear all notifications"
-    );
-    assert.ok(button);
-    const trigger = afterOne.nodes.find(
-        (node) => node.type === "button" && node.props["aria-label"] === "Notifications"
-    );
-    assert.ok(trigger);
-    const focusedClearButton = {
-        ownerDocument: { activeElement: null as unknown },
-        closest: () => ({ contains: (element: unknown) => element === focusedClearButton })
-    };
-    focusedClearButton.ownerDocument.activeElement = focusedClearButton;
-    (button.props.ref as { current: unknown }).current = focusedClearButton;
-    const focusMoves = { count: 0 };
-    (trigger.props.ref as { current: unknown }).current = { focus: () => (focusMoves.count += 1) };
-    (button.props.onClick as () => void)();
-    assert.equal(focusMoves.count, 1);
-    const duringClear = render();
-    const pendingButton = duringClear.nodes.find(
-        (node) => node.type === "button" && node.props.children === "Clear all notifications"
-    );
-    assert.equal(pendingButton?.props.disabled, true);
-    assert.ok(!duringClear.html.includes("Clearing…"));
-    assert.ok(state.releaseClear);
-    state.releaseClear();
-    await new Promise<void>((resolve) => setImmediate(resolve));
-    const after = render();
-    assert.ok(!after.html.includes("Unread Board"));
-    assert.ok(!after.html.includes("Second Board"));
-    assert.ok(after.html.includes("1 pending notifications"));
-    assert.ok(after.html.includes("Friend"));
-    assert.ok(state.listUrls.length >= 2);
-});
+        assert.ok(trigger);
+        (trigger.props.ref as { current: unknown }).current = { focus: () => (focusMoves.bell += 1) };
+        const panel = before.nodes.find((node) => node.props.closeButtonRef);
+        assert.ok(panel, "The notification panel provides a persistent close control for mobile focus fallback");
+        (panel.props.closeButtonRef as { current: unknown }).current = { focus: () => (focusMoves.sheet += 1) };
+        (list.props.onDismissFocusFallback as () => void)();
+        assert.deepEqual(focusMoves, mobile ? { bell: 0, sheet: 1 } : { bell: 1, sheet: 0 });
+        const marking = (list.props.onMarkRead as (notification: CommentNotification) => Promise<void>)(unread);
+        const dismissing = render();
+        assert.ok(!dismissing.html.includes("Unread Board"));
+        assert.ok(dismissing.html.includes("Second Board"));
+        const remainingList = dismissing.nodes.find((node) => node.type === CommentNotificationList);
+        assert.ok(remainingList);
+        const remainingButton = elements(
+            CommentNotificationList(remainingList.props as Parameters<typeof CommentNotificationList>[0])
+        ).find((node) => node.type === "button");
+        assert.equal(remainingButton?.props.disabled, undefined);
+        assert.equal(remainingButton?.props["aria-disabled"], true);
+        await marking;
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        const afterOne = render();
+        assert.ok(!afterOne.html.includes("Unread Board"));
+        assert.ok(afterOne.html.includes("Second Board"));
+        assert.ok(afterOne.html.includes("2 pending notifications"));
+        assert.ok(afterOne.html.includes("Friend"));
+        assert.ok(state.readIds.has(7));
+        assert.equal(state.cleared, false);
+        const button = afterOne.nodes.find(
+            (node) => node.type === "button" && node.props.children === "Clear all notifications"
+        );
+        assert.ok(button);
+        const focusedClearButton = {
+            ownerDocument: { activeElement: null as unknown },
+            closest: () => ({ contains: (element: unknown) => element === focusedClearButton })
+        };
+        focusedClearButton.ownerDocument.activeElement = focusedClearButton;
+        (button.props.ref as { current: unknown }).current = focusedClearButton;
+        (button.props.onClick as () => void)();
+        assert.deepEqual(focusMoves, mobile ? { bell: 0, sheet: 2 } : { bell: 2, sheet: 0 });
+        const duringClear = render();
+        const pendingButton = duringClear.nodes.find(
+            (node) => node.type === "button" && node.props.children === "Clear all notifications"
+        );
+        assert.equal(pendingButton?.props.disabled, true);
+        assert.ok(!duringClear.html.includes("Clearing…"));
+        assert.ok(state.releaseClear);
+        state.releaseClear();
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        const after = render();
+        assert.ok(!after.html.includes("Unread Board"));
+        assert.ok(!after.html.includes("Second Board"));
+        assert.ok(after.html.includes("1 pending notifications"));
+        assert.ok(after.html.includes("Friend"));
+        assert.ok(state.listUrls.length >= 2);
+    });
+}

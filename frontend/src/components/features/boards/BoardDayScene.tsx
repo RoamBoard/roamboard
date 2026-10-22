@@ -179,7 +179,7 @@ export default function BoardDayScene({
             className={
                 desktop
                     ? "relative h-full w-[var(--story-width)] shrink-0 snap-start snap-always [scrollbar-gutter:stable] overflow-y-auto py-6 pr-24 pl-20 outline-none"
-                    : "border-line scroll-mt-16 border-b px-5 py-8 outline-none sm:px-8"
+                    : "border-line scroll-mt-[calc(4rem+var(--app-header-height,0px))] border-b px-5 py-8 outline-none sm:px-8"
             }
         >
             <div

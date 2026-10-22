@@ -16,8 +16,8 @@ export default function AppShell({ children, activeHref, profile = {}, discover,
         <div
             className={
                 discover
-                    ? "bg-background text-foreground relative grid min-h-dvh w-full grid-cols-[auto_minmax(0,1fr)] [overflow-anchor:none]"
-                    : "bg-background text-foreground relative grid h-dvh w-full grid-cols-[auto_minmax(0,1fr)] overflow-hidden"
+                    ? "bg-background text-foreground relative grid min-h-dvh w-full grid-cols-1 grid-rows-[auto_1fr] [--app-header-height:3.5rem] [overflow-anchor:none] md:grid-cols-[auto_minmax(0,1fr)] md:grid-rows-1 md:[--app-header-height:0px]"
+                    : "bg-background text-foreground relative grid h-dvh w-full grid-cols-1 grid-rows-[auto_minmax(0,1fr)] overflow-hidden [--app-header-height:3.5rem] md:grid-cols-[auto_minmax(0,1fr)] md:grid-rows-1 md:[--app-header-height:0px]"
             }
         >
             <Sidebar activeHref={activeHref} profile={profile} />

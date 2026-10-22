@@ -82,9 +82,10 @@ export default function DiscoverExperience({ hero, journey, mobileJourney, child
             handledHash.current = signature;
             state.frame = requestAnimationFrame(() => {
                 const withinFeed = target.getBoundingClientRect().top - feedElement.getBoundingClientRect().top;
+                const mobileOffset = parseFloat(getComputedStyle(feedElement).scrollMarginTop) || 24;
                 const top = desktop
                     ? (section.current?.offsetTop ?? 0) + travel + withinFeed - 24
-                    : window.scrollY + target.getBoundingClientRect().top - 24;
+                    : window.scrollY + target.getBoundingClientRect().top - mobileOffset;
                 horizontal.set(desktop ? -travel : 0);
                 window.scrollTo({ top, behavior: "instant" });
             });
@@ -103,9 +104,10 @@ export default function DiscoverExperience({ hero, journey, mobileJourney, child
 
     function revealFeed(event?: MouseEvent) {
         event?.preventDefault();
+        const mobileOffset = feed.current ? parseFloat(getComputedStyle(feed.current).scrollMarginTop) || 0 : 0;
         const top = desktop
             ? (section.current?.offsetTop ?? 0) + travel
-            : (feed.current?.getBoundingClientRect().top ?? 0) + window.scrollY;
+            : (feed.current?.getBoundingClientRect().top ?? 0) + window.scrollY - mobileOffset;
         horizontal.set(desktop ? -travel : 0);
         window.scrollTo({ top, behavior: "instant" });
         document.getElementById("discover-feed")?.focus({ preventScroll: true });
@@ -151,6 +153,7 @@ export default function DiscoverExperience({ hero, journey, mobileJourney, child
                             )}
                             <div
                                 ref={feed}
+                                className="scroll-mt-[calc(1.5rem+var(--app-header-height,0px))]"
                                 onFocusCapture={() => {
                                     if (desktop && window.scrollY < travel) revealFeed();
                                 }}

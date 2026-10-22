@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { ArrowUpRight, Compass, Layers, PanelLeftClose, PanelLeftOpen, Plus, Users, X } from "lucide-react";
+import { ArrowUpRight, Compass, Layers, Menu, PanelLeftClose, PanelLeftOpen, Plus, Users, X } from "lucide-react";
 import ProfileControl, { type ProfileControlProps } from "@/components/ui/ProfileControl";
 import NotificationControl from "@/components/ui/NotificationControl";
 import { getSidebarExpanded, getSidebarServerSnapshot, setSidebarExpanded, subscribeSidebar } from "./sidebar-state";
@@ -186,7 +186,7 @@ export default function Sidebar({ activeHref, profile = {} }: { activeHref: stri
     const [accountOpen, setAccountOpen] = useState(false);
     const [notificationsOpen, setNotificationsOpen] = useState(false);
     const [hovered, setHovered] = useState(false);
-    const expanded = (desktop && (savedExpanded || hovered)) || accountOpen || notificationsOpen;
+    const expanded = desktop && (savedExpanded || hovered || accountOpen || notificationsOpen);
     const sidebarWidth = expanded ? "176px" : "80px";
     const [mobileOpen, setMobileOpen] = useState(false);
     const triggerRef = useRef<HTMLButtonElement>(null);
@@ -232,26 +232,15 @@ export default function Sidebar({ activeHref, profile = {} }: { activeHref: stri
                 initial={false}
                 animate={{ "--sidebar-width": sidebarWidth }}
                 transition={{ duration: reducedMotion ? 0 : 0.24, ease: [0.22, 1, 0.36, 1] }}
-                onPointerEnter={() => {
+                onPointerEnter={(event) => {
                     clearTimeout(hoverTimers.current.close);
                     hoverTimers.current.close = undefined;
-                }}
-                onPointerOver={(event) => {
-                    if (!desktop || event.pointerType === "touch" || expanded) return;
-                    const target = event.target;
-                    if (!(target instanceof Element) || target.closest("header")) return;
-                    if (!target.closest("a, button") || hoverTimers.current.open !== undefined) return;
+                    if (!desktop || event.pointerType === "touch" || expanded || hoverTimers.current.open !== undefined)
+                        return;
                     hoverTimers.current.open = setTimeout(() => {
                         hoverTimers.current.open = undefined;
                         setHovered(true);
-                    }, 150); // hover delay
-                }}
-                onPointerOut={(event) => {
-                    const target = event.target;
-                    const control = target instanceof Element ? target.closest("a, button") : null;
-                    if (event.relatedTarget instanceof Element && control?.contains(event.relatedTarget)) return;
-                    clearTimeout(hoverTimers.current.open);
-                    hoverTimers.current.open = undefined;
+                    }, 170);
                 }}
                 onPointerLeave={() => {
                     clearHoverTimers();
@@ -286,27 +275,30 @@ export default function Sidebar({ activeHref, profile = {} }: { activeHref: stri
                         }
                     }
                 }}
-                className={`bg-background text-foreground border-line sticky top-0 z-40 flex h-dvh ${accountOpen ? "w-56" : "w-16"} flex-col self-start border-r pt-[env(safe-area-inset-top)] pb-[max(1.5rem,env(safe-area-inset-bottom))] md:w-[var(--sidebar-width)] [@media(max-height:400px)]:pb-2`}
+                className="bg-background text-foreground border-line sticky top-0 z-40 flex h-14 w-full items-center self-start border-b px-2 md:h-dvh md:w-[var(--sidebar-width)] md:flex-col md:items-stretch md:border-r md:border-b-0 md:px-0 md:pt-[env(safe-area-inset-top)] md:pb-[max(1.5rem,env(safe-area-inset-bottom))] md:[@media(max-height:400px)]:pb-2"
             >
-                <header className="relative h-[clamp(11rem,25dvh,15rem)] shrink-0 [@media(max-height:400px)]:h-12 [@media(max-height:650px)]:h-20">
+                <header className="relative flex min-w-0 flex-1 items-center md:block md:h-[clamp(11rem,25dvh,15rem)] md:flex-none md:shrink-0 md:[@media(max-height:400px)]:h-12 md:[@media(max-height:650px)]:h-20">
                     <Link
                         href="/home"
                         aria-label="Roamboard home"
-                        className="font-display text-24 md:text-30 absolute top-7 left-[20px] leading-none font-bold tracking-tight whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-4 md:left-[25px] [@media(max-height:400px)]:top-3"
+                        className="font-display text-20 md:text-30 flex min-h-11 items-center px-2 leading-none font-bold tracking-tight whitespace-nowrap focus-visible:outline-2 focus-visible:-outline-offset-2 md:absolute md:top-7 md:left-[25px] md:block md:min-h-0 md:px-0 md:focus-visible:outline-offset-4 md:[@media(max-height:400px)]:top-3"
                     >
-                        <span className="[writing-mode:vertical-rl] [@media(max-height:650px)]:hidden">ROAMBOARD</span>
-                        <span className="hidden [@media(max-height:650px)]:inline" aria-hidden="true">
+                        <span className="md:[writing-mode:vertical-rl] md:[@media(max-height:650px)]:hidden">
+                            ROAMBOARD
+                        </span>
+                        <span className="hidden md:[@media(max-height:650px)]:inline" aria-hidden="true">
                             R.
                         </span>
                     </Link>
                 </header>
-                <div id={panelId} className="flex min-h-0 min-w-0 flex-1 flex-col">
+                <div id={panelId} className="hidden min-h-0 min-w-0 flex-1 flex-col md:flex">
                     <SidebarNavigation activeHref={selectedHref} expanded={expanded} />
                 </div>
-                <div aria-hidden="true" className="border-line mx-2.5 mt-auto mb-2 border-t md:mx-4" />
-                <div className="mx-2.5 flex shrink-0 flex-col gap-1 md:mx-4">
+                <div aria-hidden="true" className="border-line mx-4 mt-auto mb-2 hidden border-t md:block" />
+                <div className="flex shrink-0 gap-1 md:mx-4 md:flex-col">
                     <NotificationControl
                         sidebar
+                        mobile={!desktop}
                         iconOnly={!expanded}
                         open={notificationsOpen}
                         onOpenChange={(open) => {
@@ -317,6 +309,7 @@ export default function Sidebar({ activeHref, profile = {} }: { activeHref: stri
                     <ProfileControl
                         {...profile}
                         sidebar
+                        mobile={!desktop}
                         iconOnly={!expanded}
                         sidebarAccountOpen={accountOpen}
                         onSidebarOpenChange={(open) => {
@@ -325,7 +318,7 @@ export default function Sidebar({ activeHref, profile = {} }: { activeHref: stri
                         }}
                     />
                 </div>
-                <div aria-hidden="true" className="border-line mx-2.5 mt-2 border-t md:mx-4" />
+                <div aria-hidden="true" className="border-line mx-4 mt-2 hidden border-t md:block" />
                 <button
                     type="button"
                     ref={triggerRef}
@@ -348,11 +341,17 @@ export default function Sidebar({ activeHref, profile = {} }: { activeHref: stri
                             setNotificationsOpen(false);
                             setHovered(false);
                             setSidebarExpanded(!savedExpanded);
-                        } else setMobileOpen(true);
+                        } else {
+                            setAccountOpen(false);
+                            setNotificationsOpen(false);
+                            setMobileOpen(true);
+                        }
                     }}
-                    className={`text-muted-foreground/50 hover:text-muted-foreground mx-2.5 mt-3 flex h-11 shrink-0 cursor-pointer items-center focus-visible:outline-2 focus-visible:outline-offset-4 md:mx-4 ${desktop && expanded ? "px-3" : "justify-center"}`}
+                    className={`text-muted-foreground/50 hover:text-muted-foreground ml-1 flex h-11 min-w-11 shrink-0 cursor-pointer items-center focus-visible:outline-2 focus-visible:-outline-offset-2 md:mx-4 md:mt-3 md:focus-visible:outline-offset-4 ${desktop && expanded ? "px-3" : "justify-center"}`}
                 >
-                    {desktop && savedExpanded ? (
+                    {!desktop ? (
+                        <Menu aria-hidden="true" size={20} strokeWidth={1.5} />
+                    ) : savedExpanded ? (
                         <PanelLeftClose aria-hidden="true" size={20} strokeWidth={1.5} />
                     ) : (
                         <PanelLeftOpen aria-hidden="true" size={20} strokeWidth={1.5} />
