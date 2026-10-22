@@ -15,6 +15,7 @@ export default function StoryMap({
     activeId,
     onOpen,
     session,
+    active = true,
     expanded = false,
     fill = false,
     focusFirst = false,
@@ -26,6 +27,7 @@ export default function StoryMap({
     activeId?: string;
     onOpen: (activity: BoardActivity) => void;
     session: () => ReturnType<typeof loadMapboxMapSession>;
+    active?: boolean;
     expanded?: boolean;
     fill?: boolean;
     focusFirst?: boolean;
@@ -78,7 +80,7 @@ export default function StoryMap({
         return () => observer.disconnect();
     }, []);
     useEffect(() => {
-        if (!visible || !points.length) return;
+        if (!active || !visible || !points.length) return;
         const state = { cancelled: false };
         void session()
             .then((result) => {
@@ -90,7 +92,7 @@ export default function StoryMap({
         return () => {
             state.cancelled = true;
         };
-    }, [visible, points.length, session, attempt]);
+    }, [active, visible, points.length, session, attempt]);
     const mapSize = fill ? "h-full w-full" : expanded ? "h-[min(60dvh,32rem)] min-h-72" : "aspect-square w-full";
     return (
         <div ref={container} className={fill ? "relative h-full overflow-hidden" : "relative overflow-hidden"}>
@@ -112,7 +114,7 @@ export default function StoryMap({
                         Retry map
                     </button>
                 </div>
-            ) : token ? (
+            ) : active && token ? (
                 <InteractiveMap
                     token={token}
                     fillHeight={fill}

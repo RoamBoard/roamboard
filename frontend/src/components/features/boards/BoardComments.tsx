@@ -381,15 +381,19 @@ export default function BoardComments({
     onTotalChange?: (count: number | undefined) => void;
 }) {
     const totalCallback = useRef(onTotalChange);
+    const totalVersionRef = useRef(0);
     useEffect(() => {
         totalCallback.current = onTotalChange;
     }, [onTotalChange]);
     const refreshTotal = async (epoch: number) => {
+        const version = ++totalVersionRef.current;
         try {
             const page = await listBoardComments(boardId);
-            if (epoch === accountEpochRef.current) totalCallback.current?.(page.meta.totalCount);
+            if (epoch === accountEpochRef.current && version === totalVersionRef.current)
+                totalCallback.current?.(page.meta.totalCount);
         } catch {
-            if (epoch === accountEpochRef.current) totalCallback.current?.(undefined);
+            if (epoch === accountEpochRef.current && version === totalVersionRef.current)
+                totalCallback.current?.(undefined);
         }
     };
     const fragment = useSyncExternalStore(subscribeCommentFragment, getCommentFragment, getServerCommentFragment);

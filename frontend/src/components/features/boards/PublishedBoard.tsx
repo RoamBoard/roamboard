@@ -284,11 +284,12 @@ export default function PublishedBoard({
             </div>
         </dl>
     );
-    const map = (mapFilter: number | "all") => (
+    const map = (mapFilter: number | "all", active: boolean) => (
         <StoryMap
             days={days}
             filter={mapFilter}
             session={session}
+            active={active}
             userZoom={mapZoom}
             activeId={highlighted}
             fill
@@ -296,7 +297,9 @@ export default function PublishedBoard({
             onOpen={setSelectedActivity}
         />
     );
-    const journeyMap = (mapFilter: number | "all") => <StoryMapControls map={map(mapFilter)} />;
+    const journeyMap = (mapFilter: number | "all", active: boolean) => (
+        <StoryMapControls map={map(mapFilter, active)} />
+    );
     const sceneIndex = sceneId === "ending" ? sceneIds.length - 1 : Math.max(0, sceneIds.indexOf(sceneId));
     const nextScene = sceneIds[sceneIndex + 1] ?? "ending";
     const previousScene = sceneIds[sceneIndex - 1];
@@ -412,7 +415,9 @@ export default function PublishedBoard({
                                 </div>
                                 {desktop ? (
                                     <>
-                                        <div className="col-[1/4] row-[4/7] self-end">{journeyMap("all")}</div>
+                                        <div className="col-[1/4] row-[4/7] self-end">
+                                            {journeyMap("all", sceneId === "overview")}
+                                        </div>
                                     </>
                                 ) : null}
                                 {board.coverImage ? (
@@ -433,7 +438,9 @@ export default function PublishedBoard({
                                         />
                                     </div>
                                 ) : null}
-                                {!desktop ? <div className="mt-8">{journeyMap("all")}</div> : null}
+                                {!desktop ? (
+                                    <div className="mt-8">{journeyMap("all", sceneId === "overview")}</div>
+                                ) : null}
                                 {!desktop ? (
                                     <ScrollCue
                                         targetId={sceneIds[1] ?? "ending"}
@@ -458,7 +465,7 @@ export default function PublishedBoard({
                                 onOpenPhoto={openPhoto}
                                 onOpenActivity={setSelectedActivity}
                                 onHighlight={highlightActivity}
-                                journeyMap={journeyMap(scene.day.number)}
+                                journeyMap={journeyMap(scene.day.number, sceneId === scene.id)}
                                 onLocation={focusLocation}
                             />
                         ))}
@@ -511,6 +518,7 @@ export default function PublishedBoard({
                         days={days}
                         filter="all"
                         session={session}
+                        active={sceneId === "ending"}
                         userZoom={mapZoom}
                         expanded
                         onOpen={setSelectedActivity}
