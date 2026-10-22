@@ -232,26 +232,15 @@ export default function Sidebar({ activeHref, profile = {} }: { activeHref: stri
                 initial={false}
                 animate={{ "--sidebar-width": sidebarWidth }}
                 transition={{ duration: reducedMotion ? 0 : 0.24, ease: [0.22, 1, 0.36, 1] }}
-                onPointerEnter={() => {
+                onPointerEnter={(event) => {
                     clearTimeout(hoverTimers.current.close);
                     hoverTimers.current.close = undefined;
-                }}
-                onPointerOver={(event) => {
-                    if (!desktop || event.pointerType === "touch" || expanded) return;
-                    const target = event.target;
-                    if (!(target instanceof Element) || target.closest("header")) return;
-                    if (!target.closest("a, button") || hoverTimers.current.open !== undefined) return;
+                    if (!desktop || event.pointerType === "touch" || expanded || hoverTimers.current.open !== undefined)
+                        return;
                     hoverTimers.current.open = setTimeout(() => {
                         hoverTimers.current.open = undefined;
                         setHovered(true);
-                    }, 150); // hover delay
-                }}
-                onPointerOut={(event) => {
-                    const target = event.target;
-                    const control = target instanceof Element ? target.closest("a, button") : null;
-                    if (event.relatedTarget instanceof Element && control?.contains(event.relatedTarget)) return;
-                    clearTimeout(hoverTimers.current.open);
-                    hoverTimers.current.open = undefined;
+                    }, 170);
                 }}
                 onPointerLeave={() => {
                     clearHoverTimers();
