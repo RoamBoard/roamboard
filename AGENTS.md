@@ -40,7 +40,7 @@ On Linux/macOS, use `pnpm format` and `pnpm format:check`. These commands cover 
 
 Prettier formats code and checks formatting; it does not replace ESLint, TypeScript checks, tests, or builds. Run the applicable frontend/backend checks required by their instructions as well.
 
-[Formatting CI](.github/workflows/format-ci.yml) runs `pnpm format:check` on all pull requests and pushes to `main`. Frontend and backend CI also run ESLint on all pull requests; warnings fail the lint check.
+[Formatting CI](.github/workflows/format-ci.yml) runs `pnpm format:check` on pull requests and manual dispatch. On pushes to `main`, [Publish Docker Images](.github/workflows/docker-publish.yml) checks formatting, frontend and backend lint, typechecks, and tests before building and deploying images. Frontend and backend CI also run ESLint on pull requests; warnings fail the lint check.
 
 ## Linting
 
