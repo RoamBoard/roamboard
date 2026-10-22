@@ -330,3 +330,14 @@ do not rerun it there. See db/MIGRATION_LOG.md for the exact backup and verifica
 Migration 009_image_presentation.sql adds non-destructive crop/resize settings and revisions for user uploads.
 Apply after prior migrations on fresh databases. It is already applied to shared development (2026-10-18) after
 a verified backup; do not rerun it there. See the migration log.
+
+## Board story migration
+
+The published story viewer needs `db/migrations/021_board_story.sql`. Run `npm run db:story` to inspect its status.
+After shared-database review, `npm run db:story -- --apply` creates a custom-format backup, verifies its archive and
+applies only 021 atomically. It does not rerun earlier migrations. Migration 021 was applied to shared development on 2026-10-21 after explicit user approval and a verified backup; do
+not rerun it there. Other environments must apply it before starting the updated backend.
+
+The new setting defaults off. Destination illustration selection uses the existing Unsplash credentials and shared
+quota policies, with no generation on visitor reads. Existing upload delivery stays light; enlarged images use the
+authorized `large` variant on demand. See [the story contract](../contracts/board-overview-story.md).

@@ -1,11 +1,14 @@
 import assert from "node:assert/strict";
 import test, { type TestContext } from "node:test";
-import { Children, createElement, isValidElement, type ReactNode } from "react";
+import { Children, createElement, isValidElement, type ComponentProps, type ReactNode } from "react";
 import { renderToStaticMarkup as renderMarkup } from "react-dom/server";
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import ActivityDetailsDialog from "../src/components/features/boards/ActivityDetailsDialog";
 import { DatabasePublishedBoardContent } from "../src/components/features/boards/DatabasePublishedBoard";
 import PublishedBoard from "../src/components/features/boards/PublishedBoard";
+import StoryGallery from "../src/components/features/boards/StoryGallery";
+import StoryPhoto from "../src/components/features/boards/StoryPhoto";
+import BoardDayScene from "../src/components/features/boards/BoardDayScene";
 import type { BoardDocument } from "../src/lib/board-creator-api";
 import { getBoardDays } from "../src/lib/board-presentation";
 import { loadPublishedBoard, toPublishedBoardData } from "../src/lib/published-board-data";
@@ -69,6 +72,13 @@ function retryButton(node: ReactNode): (() => void) | undefined {
     })[0];
 }
 
+function descendants(node: ReactNode): Array<{ type: unknown; props: unknown }> {
+    return Children.toArray(node).flatMap((child) => {
+        if (!isValidElement<{ children?: ReactNode }>(child)) return [];
+        return [{ type: child.type, props: child.props }, ...descendants(child.props.children)];
+    });
+}
+
 // Empty days and differently ordered photos make accidental data loss in the adapter visible.
 function document(): BoardDocument {
     return {
@@ -80,6 +90,11 @@ function document(): BoardDocument {
         visibility: "friends",
         isCompleted: true,
         coverImageId: 92,
+        savedCount: 0,
+        commentCount: 27,
+        fillerImagesEnabled: false,
+        fillerImages: [],
+        fillerImageStatus: "disabled",
         tagIds: [4],
         imageIds: [91, 92],
         tags: [{ tagId: 4, name: "Architecture" }],
@@ -93,6 +108,7 @@ function document(): BoardDocument {
                 imageId: 91,
                 url: "/api/v1/images/91/content?variant=display",
                 thumbnailUrl: "/api/v1/images/91/content?variant=thumbnail",
+                largeUrl: "/api/v1/images/91/content?variant=large",
                 capturedAt: null,
                 position: 0
             },
@@ -100,6 +116,7 @@ function document(): BoardDocument {
                 imageId: 92,
                 url: "/api/v1/images/92/content?variant=display",
                 thumbnailUrl: "/api/v1/images/92/content?variant=thumbnail",
+                largeUrl: "/api/v1/images/92/content?variant=large",
                 capturedAt: "2026-10-15T10:00:00Z",
                 position: 1
             }
@@ -172,15 +189,16 @@ test("viewer labels current saves, exposes a text save button and counts activit
         const data = toPublishedBoardData({ ...saved, savedCount: count });
         assert.equal(data.savedCount, count);
         const markup = renderToStaticMarkup(createElement(PublishedBoard, data));
-        assert.match(markup, /aria-label="Save Board"[^>]*>[\s\S]*?Save Board<svg/);
-        assert.ok(markup.includes(`${count} ${count === 1 ? "save" : "saves"}`));
-        assert.match(markup, />activities<\/dt><dd[^>]*>02<\/dd>/);
+        assert.match(markup, /aria-label="Save Board"/);
+        assert.match(markup, /<button\b[^>]*aria-label="Save Board"[^>]*>[\s\S]*?Save Board/);
+        assert.match(markup, new RegExp(`aria-label="${count} ${count === 1 ? "save" : "saves"}"`));
+        assert.match(markup, /<dd[^>]*>2<\/dd><dt[^>]*>activities<\/dt>/);
         assert.doesNotMatch(markup, />places<\/dt>/);
     }
     const savedMarkup = renderToStaticMarkup(
         createElement(PublishedBoard, toPublishedBoardData({ ...saved, savedByMe: true, savedCount: 1 }))
     );
-    assert.match(savedMarkup, /aria-label="Unsave Board" aria-pressed="true"/);
+    assert.match(savedMarkup, /<button\b(?=[^>]*aria-label="Unsave Board")(?=[^>]*aria-pressed="true")[^>]*>/);
     const ownerMarkup = renderToStaticMarkup(
         createElement(
             PublishedBoard,
@@ -191,7 +209,7 @@ test("viewer labels current saves, exposes a text save button and counts activit
             })
         )
     );
-    assert.match(ownerMarkup, /27 saves/);
+    assert.match(ownerMarkup, /aria-label="27 saves"/);
     assert.doesNotMatch(ownerMarkup, /aria-label="Save Board"/);
 });
 
@@ -268,7 +286,7 @@ test("published day headings show exact saved dates even on empty days and leave
     const header = (number: number) => {
         const match = markup.match(
             new RegExp(
-                `<section\\b[^>]*aria-labelledby="day-${number}"[^>]*>[\\s\\S]*?<header\\b[^>]*>([\\s\\S]*?)<\\/header>`
+                `<section\\b[^>]*aria-labelledby="day-${number}-heading"[^>]*>[\\s\\S]*?<header\\b[^>]*>([\\s\\S]*?)<\\/header>`
             )
         );
         assert.ok(match, `Day ${number} must have a heading`);
@@ -279,18 +297,20 @@ test("published day headings show exact saved dates even on empty days and leave
     assert.doesNotMatch(header(5), /<time\b|2026-10-/i);
 });
 
-test("the copy and author footer appears for visitors but not the Board owner", () => {
+test("the story ending and comments remain available to visitors and owners without browser-only copy promotions", () => {
     const source = document();
     const visitor = renderPage({ status: "ready", data: toPublishedBoardData(source) });
-    assert.match(visitor, /Make it yours/i);
-    assert.match(visitor, /Copy board preview/i);
-    assert.match(visitor, /About station_walker/i);
+    assert.doesNotMatch(visitor, /Make it yours|Copy board preview|copies are previews/i);
+    assert.match(visitor, /id="ending"/i);
+    assert.match(visitor, /href="\/profile\/station_walker"/);
+    assert.match(visitor, /I photograph railway stations\./);
     assert.match(visitor, /id="comments"/i);
-    assert.ok(visitor.indexOf("About station_walker") < visitor.indexOf('id="comments"'));
+    assert.ok(visitor.indexOf('id="ending"') < visitor.indexOf('id="comments"'));
 
     source.permissions = { canEditContent: true, canManageBoard: true };
     const owner = renderPage({ status: "ready", data: toPublishedBoardData(source) });
-    assert.doesNotMatch(owner, /Make it yours|Copy board preview|About station_walker/i);
+    assert.doesNotMatch(owner, /Make it yours|Copy board preview|copies are previews/i);
+    assert.match(owner, /id="ending"/i);
     assert.match(owner, /Edit Board/i);
     assert.match(owner, /id="comments"/i);
 });
@@ -305,35 +325,33 @@ test("activity details show their saved day date and retain the activity time wi
             ActivityDetailsDialog({
                 activity,
                 days: getBoardDays(data.board),
-                saved: false,
                 onClose() {},
-                onSave() {},
-                onCopy() {},
-                children: null
+                onOpenPhoto() {},
+                onFocusLocation() {}
             })
         );
     };
     const dated = renderDetails();
-    assert.match(dated, /<time\b[^>]*datetime="2026-10-15"[^>]*>\s*2026-10-15\s*<\/time>/i);
+    assert.match(dated, /2026-10-15/);
     assert.match(dated, /18:00/);
     source.days[1].date = null;
     assert.doesNotMatch(renderDetails(), /datetime="\d{4}-\d{2}-\d{2}"|2026-10-15/i);
 });
 
 for (const [visibility, label] of [
-    ["public", "Access: Anyone"],
-    ["friends", "Access: Friends and invited members"],
-    ["collaborators", "Access: Invited members"],
-    ["private", "Access: Only you"]
+    ["public", /Public Board|Anyone/],
+    ["friends", /Friends and invited members/],
+    ["collaborators", /Invited members/],
+    ["private", /Only you/]
 ] as const) {
     test(`the published header explains ${visibility} access`, () => {
         const data = toPublishedBoardData(document());
         data.board.visibility = visibility;
         const markup = renderToStaticMarkup(createElement(PublishedBoard, data));
-        const header = markup.match(/<header\b[^>]*>([\s\S]*?)<\/header>/);
-        assert.ok(header);
-        const text = header[1].replace(/<[^>]*>/g, " ").replace(/\s+/g, " ");
-        assert.ok(text.includes(label), `The header must show ${label}`);
+        const overview = markup.match(/<(?:section|header)\b[^>]*id="overview"[^>]*>([\s\S]*?)<\/(?:section|header)>/);
+        assert.ok(overview);
+        const text = overview[1].replace(/<[^>]*>/g, " ").replace(/\s+/g, " ");
+        assert.match(text, label);
     });
 }
 
@@ -389,25 +407,20 @@ test("database viewer renders real content without the persistent activity previ
     assert.match(markup, /href="\/boards\/718\/edit"/);
 });
 
-test("an author without a photo retains the header circle and footer portrait placeholders", () => {
+test("an author without a photo retains the linked identity without inventing a portrait", () => {
     const source = document();
     source.author = { username: "station_walker", bio: "I photograph railway stations.", photo: null };
     const markup = renderToStaticMarkup(createElement(PublishedBoard, toPublishedBoardData(source)));
-    const placeholders = Array.from(markup.matchAll(/<div\b[^>]*role="img"[^>]*>/g), (match) => match[0]).filter(
-        (tag) => /aria-label="[^"]*station_walker[^"]*"/.test(tag)
-    );
-    assert.equal(placeholders.length, 2);
-    assert.match(placeholders[0], /size-16/);
-    assert.match(placeholders[0], /rounded-full/);
-    assert.match(placeholders[1], /aspect-\[3\/4\]/);
+    assert.match(markup, /href="\/profile\/station_walker"/);
+    assert.match(markup, /station_walker/);
     assert.doesNotMatch(markup, /alt="station_walker"/);
     assert.doesNotMatch(markup, /\/api\/v1\/images\/93\/content/);
 });
 
-test("a supplied author photo still renders in both author positions", () => {
+test("a supplied current author photo renders with the protected Board context", () => {
     const markup = renderToStaticMarkup(createElement(PublishedBoard, toPublishedBoardData(document())));
-    assert.equal((markup.match(/alt="station_walker"/g) ?? []).length, 2);
-    assert.equal((markup.match(/src="[^"]*\/api\/v1\/images\/93\/content[^"]*"/g) ?? []).length, 2);
+    assert.match(markup, /alt="station_walker"/);
+    assert.match(markup, /src="[^"]*\/api\/v1\/images\/93\/content\?variant=display&amp;boardId=718"/);
 });
 
 test("activity details render Unsplash attribution with the saved photo and photographer links", () => {
@@ -418,16 +431,149 @@ test("activity details render Unsplash attribution with the saved photo and phot
         ActivityDetailsDialog({
             activity,
             days: getBoardDays(result.board),
-            saved: false,
             onClose() {},
-            onSave() {},
-            onCopy() {},
-            children: null
+            onOpenPhoto() {},
+            onFocusLocation() {}
         })
     );
     assert.match(markup, /Ada Rail/);
     assert.match(markup, /href="https:\/\/unsplash\.com\/@adarail"/);
     assert.match(markup, /href="https:\/\/unsplash\.com\/photos\/station-portrait"/);
+});
+
+test("the story preserves addressable chapters, empty days and its ending before the comments section", () => {
+    const markup = renderToStaticMarkup(createElement(PublishedBoard, toPublishedBoardData(document())));
+    for (const id of ["overview", "day-1", "day-2", "day-5", "ending", "comments"]) {
+        assert.match(markup, new RegExp(`id="${id}"`));
+        assert.match(markup, new RegExp(`href="#${id}"`));
+    }
+    assert.match(markup, /No activities are recorded for this day/);
+    assert.ok(markup.indexOf('id="day-1"') < markup.indexOf('id="day-2"'));
+    assert.ok(markup.indexOf('id="day-2"') < markup.indexOf('id="day-5"'));
+    assert.ok(markup.indexOf('id="day-5"') < markup.indexOf('id="ending"'));
+    assert.ok(markup.indexOf('id="ending"') < markup.indexOf('id="comments"'));
+    assert.doesNotMatch(markup, /Copy board preview|Make it yours|Save activity preview/);
+});
+
+test("story excerpts preserve complete notes in activity details and keep notes out of the enlarged gallery", () => {
+    const source = document();
+    const note = `${"A useful detail. ".repeat(16)}Complete-note-only ending.`;
+    source.days[1].activities[0].note = note;
+    const data = toPublishedBoardData(source);
+    const activity = data.board.items.find((item) => item.type === "activity");
+    assert.ok(activity?.type === "activity");
+    const story = renderToStaticMarkup(createElement(PublishedBoard, data));
+    assert.match(story, /A useful detail/);
+    assert.doesNotMatch(story, /Complete-note-only ending/);
+    const details = renderToStaticMarkup(
+        createElement(ActivityDetailsDialog, {
+            activity,
+            days: getBoardDays(data.board),
+            onClose() {},
+            onOpenPhoto() {},
+            onFocusLocation() {}
+        })
+    );
+    assert.match(details, /Complete-note-only ending/);
+    const gallery = renderToStaticMarkup(
+        createElement(StoryGallery, {
+            placements: activity.images.map((image, index) => ({ id: `photo-${index}`, image })),
+            initialIndex: 2,
+            onClose() {}
+        })
+    );
+    assert.doesNotMatch(gallery, /A useful detail|Complete-note-only ending/);
+    assert.match(gallery, /Ada Rail/);
+    assert.match(gallery, /aria-label="Previous photo"/);
+    assert.match(gallery, /aria-label="Next photo"/);
+    assert.match(gallery, /aria-label="Close enlarged view"/);
+});
+
+test("photo clicks open the matching story placement with all displayed photos and exclude portraits and unattached uploads", () => {
+    const source = document();
+    source.imageIds.push(94);
+    source.images.push({
+        imageId: 94,
+        position: 2,
+        url: "/api/v1/images/94/content?variant=display",
+        thumbnailUrl: "/api/v1/images/94/content?variant=thumbnail",
+        capturedAt: null
+    });
+    source.fillerImagesEnabled = true;
+    source.fillerImageStatus = "partial";
+    source.fillerImages = [
+        {
+            provider: "unsplash",
+            providerImageId: "destination-filler",
+            position: 0,
+            url: "https://images.unsplash.com/destination-filler?w=1600",
+            thumbnailUrl: "https://images.unsplash.com/destination-filler?w=320",
+            largeUrl: "https://images.unsplash.com/destination-filler?w=4096",
+            width: 6000,
+            height: 4000,
+            alt: "Destination illustration",
+            photographer: "Destination Photographer",
+            photographerUrl: "https://unsplash.com/@destination",
+            sourceUrl: "https://unsplash.com/photos/destination-filler"
+        }
+    ];
+    const captured: { gallery?: ComponentProps<typeof StoryGallery>; clicked: boolean } = { clicked: false };
+    function Probe() {
+        const tree = PublishedBoard(toPublishedBoardData(source));
+        const nodes = descendants(tree);
+        if (!captured.clicked) {
+            const scene = nodes.find(
+                (node) =>
+                    node.type === BoardDayScene &&
+                    (node.props as ComponentProps<typeof BoardDayScene>).scene.day.number === 2
+            );
+            assert.ok(scene);
+            const sceneProps = scene.props as ComponentProps<typeof BoardDayScene>;
+            assert.equal(
+                sceneProps.scene.photos.length,
+                4,
+                "Every activity photo and the illustration must be in the day scene"
+            );
+            assert.equal(
+                nodes.filter((node) => node.type === StoryPhoto).length,
+                1,
+                "The overview keeps its separate cover placement"
+            );
+            captured.clicked = true;
+            const sceneNodes = descendants(BoardDayScene(sceneProps));
+            const activityCover = sceneNodes.find(
+                (node) =>
+                    node.type === StoryPhoto &&
+                    (node.props as ComponentProps<typeof StoryPhoto>).image.url ===
+                        `${apiOrigin}/api/v1/images/92/content?variant=display`
+            )?.props as ComponentProps<typeof StoryPhoto>;
+            assert.ok(activityCover);
+            activityCover.onOpen();
+        }
+        const gallery = nodes.find((node) => node.type === StoryGallery);
+        if (gallery) captured.gallery = gallery.props as ComponentProps<typeof StoryGallery>;
+        return tree;
+    }
+    renderToStaticMarkup(createElement(Probe));
+    assert.ok(captured.gallery);
+    assert.equal(
+        captured.gallery.initialIndex,
+        2,
+        "Reused cover must open its clicked activity placement after the earlier stop's illustration"
+    );
+    const placements = captured.gallery.placements;
+    assert.equal(new Set(placements.map((placement) => placement.id)).size, 5);
+    assert.deepEqual(
+        placements.map((placement) => placement.image.url),
+        [
+            `${apiOrigin}/api/v1/images/92/content?variant=display`,
+            "https://images.unsplash.com/destination-filler?w=1600",
+            `${apiOrigin}/api/v1/images/92/content?variant=display`,
+            `${apiOrigin}/api/v1/images/91/content?variant=display`,
+            "https://images.unsplash.com/station.jpg"
+        ]
+    );
+    assert.ok(placements.every((placement) => !/\/images\/(93|94)\//.test(placement.image.url)));
 });
 
 test("the published Board loader uses the real endpoint with session credentials and supplies the ready view", async (t) => {

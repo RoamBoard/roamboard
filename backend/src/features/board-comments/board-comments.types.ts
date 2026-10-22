@@ -21,6 +21,7 @@ export interface CommentCursor {
 }
 
 export interface CommentsRepository {
+    count(boardId: number): Promise<number>;
     list(boardId: number, cursor: CommentCursor | null, limit: number): Promise<CommentRecord[]>;
     get(boardId: number, commentId: number): Promise<CommentRecord | null>;
     create(boardId: number, authorUserId: string, body: string): Promise<CommentRecord>;

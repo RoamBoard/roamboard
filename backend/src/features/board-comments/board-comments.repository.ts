@@ -145,6 +145,13 @@ async function readComment(client: PoolClient, commentId: number): Promise<Comme
 
 export function createCommentsRepository(): CommentsRepository {
     return {
+        async count(boardId) {
+            const result = await getPool().query<{ count: number }>(
+                "SELECT COUNT(*)::int AS count FROM board_comment WHERE board_id=$1",
+                [boardId]
+            );
+            return result.rows[0]!.count;
+        },
         async list(boardId, cursor: CommentCursor | null, limit) {
             const result = await getPool().query<CommentRow>(
                 `SELECT ${fields}

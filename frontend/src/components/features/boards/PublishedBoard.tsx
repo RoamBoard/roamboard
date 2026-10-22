@@ -1,44 +1,34 @@
 "use client";
 
 import Link from "next/link";
-import BackLink from "@/components/ui/BackLink";
-import { useRef, useState } from "react";
-import ActivityDetailsDialog from "@/components/features/boards/ActivityDetailsDialog";
-import BoardComments from "@/components/features/boards/BoardComments";
-import BoardCopyEditor from "@/components/features/boards/BoardCopyEditor";
-import BoardDialog from "@/components/features/boards/BoardDialog";
-import BoardIcon from "@/components/features/boards/BoardIcon";
-import BoardPhoto from "@/components/features/boards/BoardPhoto";
-import ImageZoomDialog from "@/components/ui/ImageZoomDialog";
-import PublishedBoardDay from "@/components/features/boards/PublishedBoardDay";
-import useBoardPreview from "@/components/features/boards/useBoardPreview";
-import useBoardPhotos from "@/components/features/boards/useBoardPhotos";
-import { getBoardDays, getBoardPlaceNames } from "@/lib/board-presentation";
-import type { BoardActivity } from "@/types/board";
-import type { PublishedBoardData } from "@/types/published-board";
+import { useRouter } from "next/navigation";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { ArrowRight, Copy, MessageCircle } from "lucide-react";
+import ChapterBar from "@/components/ui/ChapterBar";
+import ScrollCue from "@/components/ui/ScrollCue";
+import ActivityDetailsDialog from "./ActivityDetailsDialog";
+import BoardComments from "./BoardComments";
+import BoardPhoto from "./BoardPhoto";
+import BoardDayScene from "./BoardDayScene";
+import BoardStoryEnding from "./BoardStoryEnding";
+import BoardIcon from "./BoardIcon";
+import StoryMapControls from "./StoryMapControls";
+import { createDayScenes, sceneActivities, storySeed, type ScenePhoto } from "@/lib/board-story-scenes";
+import StoryPhoto from "./StoryPhoto";
+import StoryGallery, { type StoryPlacement } from "./StoryGallery";
+import StoryMap from "./StoryMap";
+import useStoryScroll from "./useStoryScroll";
+import { getBoardDays } from "@/lib/board-presentation";
+import { loadMapboxMapSession } from "@/lib/providers";
 import { ProfileApiError, saveBoardBookmark, unsaveBoardBookmark } from "@/lib/profile";
 import { loadBoardDocument } from "@/lib/board-creator-api";
+import type { BoardActivity } from "@/types/board";
+import type { PublishedBoardData } from "@/types/published-board";
 
-const actionClasses =
-    "border-line hover:bg-faint inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 border px-5 py-2 text-14 focus-visible:outline-2 focus-visible:outline-offset-4";
-
-const numberLabel = (number: number) => String(number).padStart(2, "0");
-
-// Invited members can also read friends-only boards under the backend's access rules.
-const accessLabels = {
-    public: "Anyone",
-    friends: "Friends and invited members",
-    collaborators: "Invited members",
-    private: "Only you"
-};
-
-// The tag API has names but no icon field.
-function getTagIcon(tag: string) {
-    const name = tag.toLowerCase();
-    if (name.includes("nature")) return "leaf";
-    if (name.includes("romantic")) return "heart";
-    return "gem";
-}
+const countLabel = (count: number | undefined) =>
+    Number.isSafeInteger(count) && count! >= 0 ? new Intl.NumberFormat("en-US").format(count!) : "Unavailable";
+const actionClass =
+    "hover:bg-faint inline-flex min-h-11 cursor-pointer items-center gap-3 rounded-full px-5 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 disabled:opacity-50";
 
 export default function PublishedBoard({
     board,
@@ -47,24 +37,106 @@ export default function PublishedBoard({
     canEditContent = false,
     canManageBoard = false,
     savedByMe = false,
-    savedCount
+    savedCount,
+    commentCount,
+    fillerImages = []
 }: PublishedBoardData) {
-    const days = getBoardDays(board);
-    const places = getBoardPlaceNames(board);
-    const activityCount = board.items.filter((item) => item.type === "activity").length;
-    const automaticPhotos = useBoardPhotos(board, tagLabels);
-    const cover = board.coverImage?.url ? board.coverImage : automaticPhotos.photos.cover;
-    const coverLabel = automaticPhotos.slots.find((slot) => slot.id === "cover")?.label || board.title;
+    const router = useRouter();
+    const days = useMemo(() => getBoardDays(board), [board]);
+    const {
+        track: trackRef,
+        viewport: viewportRef,
+        rail: railRef,
+        desktop,
+        chapter: currentChapter,
+        sceneId,
+        jump
+    } = useStoryScroll(days.map((day) => day.number).join(","));
     const [selectedActivity, setSelectedActivity] = useState<BoardActivity | null>(null);
-    const [zoomedActivityPhotos, setZoomedActivityPhotos] = useState<BoardActivity | null>(null);
+    const [galleryIndex, setGalleryIndex] = useState<number | null>(null);
     const [bookmarked, setBookmarked] = useState(savedByMe);
-    const [currentSaveCount, setCurrentSaveCount] = useState(savedCount);
+    const [saveTotal, setSaveTotal] = useState(savedCount);
+    const [commentsTotal, setCommentsTotal] = useState(commentCount);
     const [bookmarkBusy, setBookmarkBusy] = useState(false);
+    const [remixBusy, setRemixBusy] = useState(false);
+    const [feedbackContext, setFeedbackContext] = useState<"overview" | "ending">("overview");
     const bookmarkPending = useRef(false);
     const [bookmarkMessage, setBookmarkMessage] = useState("");
     const [signInToSave, setSignInToSave] = useState(false);
-    // Preview saves and copies only stay in this browser tab.
-    const preview = useBoardPreview(board, selectedActivity);
+    const [focusedActivity, setFocusedActivity] = useState<string>();
+    const [hoveredActivity, setHoveredActivity] = useState<string>();
+    const mapZoom = useRef<number | undefined>(undefined);
+    const mapSession = useRef<ReturnType<typeof loadMapboxMapSession> | null>(null);
+    const session = useCallback(() => {
+        mapSession.current ??= loadMapboxMapSession().catch((error) => {
+            mapSession.current = null;
+            throw error;
+        });
+        return mapSession.current;
+    }, []);
+    const activities = days.flatMap((day) =>
+        day.items.filter((item): item is BoardActivity => item.type === "activity")
+    );
+    const fillerPlacements = useMemo(() => {
+        const groups = days.flatMap((day) =>
+            day.items.filter((item) => item.type === "activity").map((item) => item.id)
+        );
+        const assignments = new Map<string, StoryPlacement[]>();
+        fillerImages.forEach((image, index) => {
+            const group =
+                groups[
+                    Math.min(groups.length - 1, Math.floor(((index + 1) * groups.length) / (fillerImages.length + 1)))
+                ];
+            const key = group ?? `empty-${days[0]?.number ?? 1}`;
+            assignments.set(key, [...(assignments.get(key) ?? []), { id: `filler-${index}`, image }]);
+        });
+        return assignments;
+    }, [days, fillerImages]);
+    const scenes = useMemo(
+        () =>
+            days.flatMap((day) => {
+                const photos: ScenePhoto[] = [
+                    ...(fillerPlacements.get(`empty-${day.number}`) ?? []).map((photo) => ({
+                        ...photo,
+                        illustration: true
+                    })),
+                    ...sceneActivities(day).flatMap((activity) => [
+                        ...activity.images.map((image, index) => ({
+                            id: `activity-${activity.id}-${index}`,
+                            image,
+                            activityId: activity.id
+                        })),
+                        ...(fillerPlacements.get(activity.id) ?? []).map((photo) => ({
+                            ...photo,
+                            activityId: activity.id,
+                            illustration: true
+                        }))
+                    ])
+                ];
+                return createDayScenes(day, photos);
+            }),
+        [days, fillerPlacements]
+    );
+    const placements = useMemo<StoryPlacement[]>(
+        () => [
+            ...(board.coverImage ? [{ id: "cover", image: board.coverImage }] : []),
+            ...scenes.flatMap((scene) => scene.photos)
+        ],
+        [board.coverImage, scenes]
+    );
+    const highlighted = hoveredActivity ?? focusedActivity;
+    const highlightActivity = (id?: string) => {
+        setHoveredActivity(id);
+        if (id && activities.some((activity) => activity.id === id && activity.location)) setFocusedActivity(id);
+    };
+    const sceneIds = ["overview", ...scenes.map((scene) => scene.id)];
+    const openPhoto = (id: string) => {
+        const index = placements.findIndex((placement) => placement.id === id);
+        if (index >= 0) setGalleryIndex(index);
+    };
+    const focusLocation = (activity: BoardActivity) => {
+        setFocusedActivity(activity.id);
+    };
 
     async function toggleBookmark() {
         if (bookmarkPending.current) return;
@@ -81,254 +153,401 @@ export default function PublishedBoard({
             );
             try {
                 const current = await loadBoardDocument(Number(board.id));
-                setCurrentSaveCount(current.savedCount);
+                setSaveTotal(current.savedCount);
                 setBookmarked(Boolean(current.savedByMe));
             } catch {
-                // The save succeeded, but do not invent a total if its refresh fails.
-                setCurrentSaveCount(undefined);
+                setSaveTotal(undefined);
             }
-        } catch (caught) {
-            setSignInToSave(caught instanceof ProfileApiError && caught.status === 401);
-            setBookmarkMessage(caught instanceof Error ? caught.message : "The Board could not be saved.");
+        } catch (error) {
+            setSignInToSave(error instanceof ProfileApiError && error.status === 401);
+            setBookmarkMessage(error instanceof Error ? error.message : "The Board could not be saved.");
         } finally {
             bookmarkPending.current = false;
             setBookmarkBusy(false);
         }
     }
 
-    // Don't carry a previous activity's save message into this popup.
-    function handleOpenActivity(activity: BoardActivity) {
-        preview.clearFeedback();
-        setSelectedActivity(activity);
+    async function remixBoard() {
+        if (bookmarkPending.current) return;
+        bookmarkPending.current = true;
+        setRemixBusy(true);
+        setFeedbackContext("ending");
+        setBookmarkMessage("");
+        setSignInToSave(false);
+        try {
+            if (!bookmarked) {
+                await saveBoardBookmark(Number(board.id));
+                setBookmarked(true);
+                try {
+                    const current = await loadBoardDocument(Number(board.id));
+                    setSaveTotal(current.savedCount);
+                } catch {
+                    setSaveTotal(undefined);
+                }
+            }
+            router.push(`/boards/new?remix=${board.id}`);
+        } catch (error) {
+            setSignInToSave(error instanceof ProfileApiError && error.status === 401);
+            setBookmarkMessage(error instanceof Error ? error.message : "This Board could not be opened for remix.");
+        } finally {
+            bookmarkPending.current = false;
+            setRemixBusy(false);
+        }
     }
 
-    function handleCloseActivity() {
-        setSelectedActivity(null);
-    }
+    const actionFeedback = (context: "overview" | "ending") =>
+        bookmarkMessage && feedbackContext === context ? (
+            <p role="status" className="mt-3 text-xs">
+                {bookmarkMessage}
+                {signInToSave ? (
+                    <>
+                        {" "}
+                        <Link
+                            href={`/login?returnTo=${encodeURIComponent(`/boards/${board.id}${context === "ending" ? "#ending" : ""}`)}`}
+                            className="underline"
+                        >
+                            Sign in
+                        </Link>
+                    </>
+                ) : null}
+            </p>
+        ) : null;
 
-    // Keep the popup open if copying fails, so the error stays visible.
-    function handleCopyActivity() {
-        if (preview.copyActivity()) handleCloseActivity();
-    }
-
-    const feedback = (
+    const saveAction = (context: "overview" | "ending") => (
         <>
-            {preview.message && (
-                <p role="status" className="text-muted-foreground text-12 mt-3">
-                    {preview.message}
-                </p>
-            )}
-            {preview.error ? (
-                <p role="alert" className="text-14 mt-3">
-                    {preview.error}
-                </p>
+            {!canManageBoard ? (
+                <button
+                    type="button"
+                    onClick={() => {
+                        setFeedbackContext(context);
+                        return toggleBookmark();
+                    }}
+                    disabled={bookmarkBusy || remixBusy}
+                    aria-label={bookmarked ? "Unsave Board" : "Save Board"}
+                    aria-pressed={bookmarked}
+                    className={`${actionClass} border-line border py-3`}
+                >
+                    <BoardIcon name="bookmark" className={`size-5 ${bookmarked ? "fill-current" : ""}`} />
+                    {bookmarkBusy ? "Saving…" : bookmarked ? "Unsave Board" : "Save this Board"}
+                </button>
+            ) : null}
+            {canEditContent ? (
+                <Link href={`/boards/${board.id}/edit`} className={actionClass}>
+                    Edit Board <ArrowRight size={16} />
+                </Link>
             ) : null}
         </>
     );
+    const remixAction = !canManageBoard ? (
+        <button
+            type="button"
+            aria-label="Remix Board"
+            onClick={remixBoard}
+            disabled={bookmarkBusy || remixBusy}
+            className={`${actionClass} border-line border py-3`}
+        >
+            <Copy size={18} aria-hidden="true" />
+            {remixBusy ? "Opening remix…" : "Remix this Board"}
+        </button>
+    ) : null;
+    const stats = (
+        <dl className="border-line grid grid-cols-2 gap-x-4 gap-y-5 border-y py-6 text-center text-xs @min-[30rem]:grid-cols-4 @min-[45rem]:gap-x-8">
+            <div>
+                <dd className="font-display text-4xl @min-[30rem]:text-5xl">{days.length}</dd>
+                <dt className="text-muted-foreground mt-2">days</dt>
+            </div>
+            <div>
+                <dd className="font-display text-4xl @min-[30rem]:text-5xl">{activities.length}</dd>
+                <dt className="text-muted-foreground mt-2">activities</dt>
+            </div>
+            <div
+                aria-label={
+                    saveTotal === undefined
+                        ? "Save count unavailable"
+                        : `${saveTotal} ${saveTotal === 1 ? "save" : "saves"}`
+                }
+            >
+                <dd className="font-display flex items-center justify-center gap-1.5 text-4xl @min-[30rem]:text-5xl">
+                    <BoardIcon name="bookmark" className="size-6 shrink-0 @min-[30rem]:size-7" />
+                    {countLabel(saveTotal)}
+                </dd>
+                <dt className="text-muted-foreground mt-2">saves</dt>
+            </div>
+            <div>
+                <dd className="font-display text-4xl @min-[30rem]:text-5xl">
+                    <span className="flex items-center justify-center gap-1.5">
+                        <MessageCircle className="size-6 shrink-0 @min-[30rem]:size-7" aria-hidden="true" />
+                        {countLabel(commentsTotal)}
+                    </span>
+                </dd>
+                <dt className="text-muted-foreground mt-2">comments</dt>
+            </div>
+        </dl>
+    );
+    const map = (mapFilter: number | "all", active: boolean) => (
+        <StoryMap
+            days={days}
+            filter={mapFilter}
+            session={session}
+            active={active}
+            userZoom={mapZoom}
+            activeId={highlighted}
+            fill
+            focusFirst={mapFilter !== "all"}
+            onOpen={setSelectedActivity}
+        />
+    );
+    const journeyMap = (mapFilter: number | "all", active: boolean) => (
+        <StoryMapControls map={map(mapFilter, active)} />
+    );
+    const sceneIndex = sceneId === "ending" ? sceneIds.length - 1 : Math.max(0, sceneIds.indexOf(sceneId));
+    const nextScene = sceneIds[sceneIndex + 1] ?? "ending";
+    const previousScene = sceneIds[sceneIndex - 1];
 
     return (
-        <>
-            <article className="break-words">
-                <header className="relative pb-12 text-center sm:pb-20">
-                    <BackLink fallbackHref="/boards" className="absolute top-6 left-4 z-10 sm:left-8" />
-                    <BoardPhoto
-                        image={cover}
-                        placeholderLabel={coverLabel}
-                        showCredit={!board.coverImage?.url}
-                        insetCredit
-                        preload
-                        zoomable
-                        className="mx-auto h-[16rem] w-[82%] rounded-b-[50%] sm:h-[25rem] lg:h-[29rem] lg:w-[80%]"
-                        sizes="80vw"
-                    />
-                    <div className="relative mx-auto -mt-7 w-fit">
-                        {/* Keep the avatar circle when there is no profile photo, so the name stays below the cover. */}
-                        <Link href={`/profile/${encodeURIComponent(author.id)}`} className="block hover:underline">
-                            <div
-                                role={author.photo ? undefined : "img"}
-                                aria-label={author.photo ? undefined : `Profile photo placeholder for ${author.name}`}
-                                className="border-background bg-faint mx-auto size-16 overflow-hidden rounded-full border-4"
-                            >
-                                <BoardPhoto image={author.photo} className="h-full w-full" sizes="64px" />
-                            </div>
-                            <p className="text-12 mt-2">{author.name}</p>
-                        </Link>
-                        <p className="text-muted-foreground text-10">presents</p>
-                    </div>
-                    <h1 className="font-display mx-auto mt-7 max-w-6xl px-5 text-[clamp(2.75rem,7vw,8rem)] leading-[0.95] font-bold tracking-tight break-words uppercase">
-                        {board.title}
-                    </h1>
-                    <p className="text-muted-foreground text-12 mt-4 px-5">Access: {accessLabels[board.visibility]}</p>
-                    {board.description ? (
-                        <p className="text-muted-foreground text-14 sm:text-16 mx-auto mt-9 max-w-lg px-5 leading-snug whitespace-pre-line">
-                            {board.description}
-                        </p>
-                    ) : null}
-                    {!canManageBoard && (
-                        <button
-                            type="button"
-                            onClick={toggleBookmark}
-                            disabled={bookmarkBusy}
-                            aria-label={bookmarked ? "Unsave Board" : "Save Board"}
-                            aria-pressed={bookmarked}
-                            className="hover:bg-faint text-14 mt-7 inline-flex min-h-11 cursor-pointer items-center justify-center gap-3 px-4 focus-visible:outline-2 focus-visible:outline-offset-4 disabled:cursor-wait disabled:opacity-60"
+        <article className="relative min-w-0 break-words">
+            <ChapterBar
+                chapters={[
+                    { id: "overview", title: "Overview" },
+                    ...days.map((day) => ({ id: `day-${day.number}`, title: `Day ${day.number}` })),
+                    { id: "ending", title: "Summary" },
+                    { id: "comments", title: "Comments" }
+                ]}
+                current={currentChapter}
+                onNavigate={jump}
+            />
+            <div ref={trackRef} className={desktop ? "relative min-h-0" : ""}>
+                <div
+                    ref={viewportRef}
+                    role="region"
+                    aria-label="Board story scenes"
+                    tabIndex={desktop ? 0 : undefined}
+                    className={
+                        desktop
+                            ? "@container sticky top-[62px] h-[calc(100dvh-62px)] min-w-0 snap-x snap-mandatory [scrollbar-width:none] overflow-x-auto overflow-y-hidden overscroll-x-contain focus-visible:outline-2 focus-visible:-outline-offset-2 [&::-webkit-scrollbar]:hidden"
+                            : "min-w-0"
+                    }
+                >
+                    <div ref={railRef} className={desktop ? "relative flex h-full w-max" : "relative"}>
+                        <header
+                            id="overview"
+                            data-story-scene
+                            data-story-chapter
+                            tabIndex={-1}
+                            className={`border-line relative min-w-0 outline-none ${desktop ? "h-full w-[var(--story-width)] shrink-0 snap-start snap-always [scrollbar-gutter:stable] overflow-y-auto py-6 pr-24 pl-20" : "border-b px-6 py-8 sm:px-12"}`}
                         >
-                            {bookmarkBusy
-                                ? bookmarked
-                                    ? "Removing…"
-                                    : "Saving…"
-                                : bookmarked
-                                  ? "Unsave Board"
-                                  : "Save Board"}
-                            <BoardIcon name="bookmark" className={`size-5 ${bookmarked ? "fill-current" : ""}`} />
-                        </button>
-                    )}
-                    <p
-                        role="status"
-                        className="text-muted-foreground text-16 mt-4 flex items-center justify-center gap-2 tabular-nums"
-                    >
-                        <BoardIcon name="bookmark" className="size-4" />
-                        {currentSaveCount !== undefined &&
-                        Number.isSafeInteger(currentSaveCount) &&
-                        currentSaveCount >= 0
-                            ? `${new Intl.NumberFormat("en-US").format(currentSaveCount)} ${currentSaveCount === 1 ? "save" : "saves"}`
-                            : "Save count unavailable"}
-                    </p>
-                    {bookmarkMessage && (
-                        <p role="status" className="text-12 text-muted-foreground">
-                            {bookmarkMessage}{" "}
-                            {signInToSave && (
-                                <Link href="/login" className="underline">
-                                    Sign in
-                                </Link>
-                            )}
-                        </p>
-                    )}
-                    {/* Show feedback on the page when no popup is open. */}
-                    <div className="mx-auto max-w-md px-5">{selectedActivity || preview.draft ? null : feedback}</div>
-                    {canEditContent ? (
-                        <Link href={`/boards/${board.id}/edit`} className={`${actionClasses} mt-5`}>
-                            Edit Board
-                        </Link>
-                    ) : null}
-                    <dl className="border-line text-muted-foreground mx-auto mt-10 flex w-fit border-y px-8 py-6">
-                        <div className="border-line flex items-baseline gap-1 border-r pr-8">
-                            <dt className="text-12 order-2">days</dt>
-                            <dd className="text-36 leading-none">{numberLabel(days.length)}</dd>
-                        </div>
-                        <div className="flex items-baseline gap-1 pl-8">
-                            <dt className="text-12 order-2">{activityCount === 1 ? "activity" : "activities"}</dt>
-                            <dd className="text-36 leading-none">{numberLabel(activityCount)}</dd>
-                        </div>
-                    </dl>
-                    {/* Only show the first three tags. */}
-                    {tagLabels.length ? (
-                        <ul className="border-line text-muted-foreground text-12 mx-auto mt-8 flex w-fit max-w-[90%] flex-wrap justify-center gap-x-7 gap-y-4 border-b px-2 pb-8">
-                            {tagLabels.slice(0, 3).map((tag) => (
-                                <li key={tag} className="flex items-center gap-2">
-                                    <BoardIcon name={getTagIcon(tag)} className="size-6" />
-                                    {tag}
-                                </li>
-                            ))}
-                        </ul>
-                    ) : null}
-                    {places.length ? (
-                        <ul className="border-line text-muted-foreground text-14 mx-auto mt-7 w-fit max-w-[85%] space-y-2 border-b px-5 pb-7">
-                            {places.map((place, index) => (
-                                <li key={`${place}-${index}`}>{place}</li>
-                            ))}
-                        </ul>
-                    ) : null}
-                </header>
-                {days.length ? (
-                    days.map((day) => (
-                        <PublishedBoardDay
-                            key={day.number}
-                            day={day}
-                            onSelectActivity={handleOpenActivity}
-                            onZoomPhoto={setZoomedActivityPhotos}
-                            photos={{
-                                first: automaticPhotos.photos[`day-${day.number}-first`],
-                                second: automaticPhotos.photos[`day-${day.number}-second`]
-                            }}
-                            photoLabels={{
-                                first: automaticPhotos.slots.find((slot) => slot.id === `day-${day.number}-first`)
-                                    ?.label,
-                                second: automaticPhotos.slots.find((slot) => slot.id === `day-${day.number}-second`)
-                                    ?.label
-                            }}
-                        />
-                    ))
-                ) : (
-                    <p className="text-muted-foreground px-5 py-16 text-center">This board has no activities yet.</p>
-                )}
-                {!canManageBoard && (
-                    <footer className="border-line grid min-h-[42rem] grid-cols-1 gap-24 border-t px-5 py-10 sm:px-9 lg:gap-36 lg:py-12">
-                        <section>
-                            <p className="text-muted-foreground text-12">like this board?</p>
-                            <h2 className="font-display text-36 mt-1 font-bold uppercase">Make it yours</h2>
-                            <p className="text-muted-foreground text-14 mt-1 max-w-60">
-                                Create a preview copy in this tab and add your own ideas.
-                            </p>
-                            <button type="button" onClick={preview.copyBoard} className={`${actionClasses} mt-5`}>
-                                <BoardIcon name="copy" className="size-4" />
-                                Copy board preview
-                            </button>
-                        </section>
-                        <section
-                            aria-labelledby="board-author-heading"
-                            className="w-full max-w-lg min-w-0 self-end justify-self-end"
-                        >
-                            <h2
-                                id="board-author-heading"
-                                className="font-display text-36 text-right leading-none font-bold uppercase"
-                            >
-                                About {author.name}
-                            </h2>
-                            <p className="text-muted-foreground text-12 mt-3 ml-auto max-w-60 text-right">
-                                Every board starts with a person. Here is the traveller behind this one.
-                            </p>
-                            <div className="mt-6 grid gap-5 sm:grid-cols-[1fr_1.1fr]">
-                                <div className="text-muted-foreground text-right">
-                                    <p className="text-14 leading-snug whitespace-pre-line">{author.bio}</p>
+                            <div className={desktop ? "grid h-full min-h-[48rem] grid-cols-12 grid-rows-6 gap-5" : ""}>
+                                <div
+                                    className={
+                                        desktop
+                                            ? "col-[1/8] row-[1/4] min-h-0 min-w-0 overflow-y-auto overscroll-contain"
+                                            : "min-w-0 flex-1"
+                                    }
+                                >
+                                    <div data-story-author-row className="mb-4 flex flex-wrap items-center gap-3">
+                                        <Link
+                                            href={`/profile/${encodeURIComponent(author.id)}`}
+                                            className="block w-fit shrink-0"
+                                        >
+                                            <div
+                                                role={author.photo ? undefined : "img"}
+                                                aria-label={
+                                                    author.photo
+                                                        ? undefined
+                                                        : `Profile photo placeholder for ${author.name}`
+                                                }
+                                                className="bg-faint size-12 overflow-hidden rounded-full"
+                                            >
+                                                <BoardPhoto image={author.photo} className="size-full" sizes="48px" />
+                                            </div>
+                                        </Link>
+                                        <p className="text-muted-foreground text-[10px] tracking-[0.2em] uppercase">
+                                            A BOARD CREATED BY{" "}
+                                            <Link
+                                                href={`/profile/${encodeURIComponent(author.id)}`}
+                                                className="underline underline-offset-4"
+                                            >
+                                                @{author.name}
+                                            </Link>
+                                        </p>
+                                        <div className="ml-4 flex flex-wrap items-center gap-2">
+                                            {saveAction("overview")}
+                                        </div>
+                                    </div>
+                                    {actionFeedback("overview")}
+                                    <h1 className="font-display max-w-4xl text-[clamp(2.75rem,4.5vw,4.75rem)] leading-[0.95] font-bold tracking-tight uppercase">
+                                        {board.title}
+                                    </h1>
+                                    {board.description ? (
+                                        <p className="text-muted-foreground mt-5 max-w-3xl text-sm leading-relaxed whitespace-pre-line">
+                                            {board.description}
+                                        </p>
+                                    ) : null}
+                                    <div data-story-metadata className="mt-4 flex flex-wrap items-center gap-3">
+                                        <span className="text-muted-foreground text-[10px]">
+                                            Access:{" "}
+                                            {board.visibility === "public"
+                                                ? "Anyone"
+                                                : board.visibility === "friends"
+                                                  ? "Friends and invited members"
+                                                  : board.visibility === "private"
+                                                    ? "Only you"
+                                                    : "Invited members"}
+                                        </span>
+                                        {tagLabels.length ? (
+                                            <ul className="flex flex-wrap gap-2">
+                                                {tagLabels.map((tag) => (
+                                                    <li
+                                                        key={tag}
+                                                        className="border-line rounded-full border px-3 py-1 text-[10px]"
+                                                    >
+                                                        {tag}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        ) : null}
+                                    </div>
+                                    <div
+                                        className={`@container mt-3 w-full max-w-md min-w-0 [&_dd]:text-2xl [&_dl]:gap-x-4 [&_dl]:py-3 [&_dt]:mt-1 [&_svg]:size-4 ${desktop ? "[&_dl]:grid-cols-4" : ""}`}
+                                    >
+                                        {stats}
+                                    </div>
                                 </div>
-                                <BoardPhoto
-                                    image={author.photo}
-                                    placeholderLabel={`${author.name}'s profile photo`}
-                                    zoomable
-                                    className="aspect-[3/4] min-h-72"
-                                />
+                                {desktop ? (
+                                    <>
+                                        <div className="col-[1/4] row-[4/7] self-end">
+                                            {journeyMap("all", sceneId === "overview")}
+                                        </div>
+                                    </>
+                                ) : null}
+                                {board.coverImage ? (
+                                    <div
+                                        className={
+                                            desktop
+                                                ? "[container-type:size] col-[8/13] row-[1/7] flex h-full min-h-0 min-w-0 items-center justify-center"
+                                                : "[container-type:size] mt-8 flex h-[65dvh] min-h-80 items-center justify-center"
+                                        }
+                                    >
+                                        <StoryPhoto
+                                            image={board.coverImage}
+                                            frame
+                                            preservePortrait
+                                            portraitShape={storySeed(`${board.id}:cover`) % 2 ? "square" : "tall"}
+                                            eager
+                                            onOpen={() => openPhoto("cover")}
+                                        />
+                                    </div>
+                                ) : null}
+                                {!desktop ? (
+                                    <div className="mt-8">{journeyMap("all", sceneId === "overview")}</div>
+                                ) : null}
+                                {!desktop ? (
+                                    <ScrollCue
+                                        targetId={sceneIds[1] ?? "ending"}
+                                        label="Scroll to explore"
+                                        lines={false}
+                                        className="mt-8"
+                                        onClick={(event) => {
+                                            event.preventDefault();
+                                            jump(sceneIds[1] ?? "ending");
+                                        }}
+                                    />
+                                ) : null}
                             </div>
-                        </section>
-                    </footer>
-                )}
-            </article>
-            <BoardComments boardId={board.id} />
-            {selectedActivity && (
+                        </header>
+
+                        {scenes.map((scene) => (
+                            <BoardDayScene
+                                key={scene.id}
+                                scene={scene}
+                                boardId={board.id}
+                                desktop={desktop}
+                                onOpenPhoto={openPhoto}
+                                onOpenActivity={setSelectedActivity}
+                                onHighlight={highlightActivity}
+                                journeyMap={journeyMap(scene.day.number, sceneId === scene.id)}
+                                onLocation={focusLocation}
+                            />
+                        ))}
+                    </div>
+                    {desktop
+                        ? [
+                              { target: nextScene, label: "Next story scene", direction: "right", position: "right-3" },
+                              {
+                                  target: previousScene,
+                                  label: "Previous story scene",
+                                  direction: "left",
+                                  position: "left-3"
+                              }
+                          ].map(({ target, label, direction, position }) =>
+                              target ? (
+                                  <ScrollCue
+                                      key={direction}
+                                      targetId={target}
+                                      label={label}
+                                      direction={direction as "left" | "right"}
+                                      lines={false}
+                                      className={`absolute top-1/2 ${position} z-20 -translate-y-1/2`}
+                                      onClick={(event) => {
+                                          if (
+                                              !event.metaKey &&
+                                              !event.ctrlKey &&
+                                              !event.shiftKey &&
+                                              event.button === 0
+                                          ) {
+                                              event.preventDefault();
+                                              jump(target);
+                                          }
+                                      }}
+                                  />
+                              ) : null
+                          )
+                        : null}
+                </div>
+            </div>
+            <BoardStoryEnding
+                days={days}
+                author={author}
+                boardTitle={board.title}
+                stats={stats}
+                saveAction={saveAction("ending")}
+                remixAction={remixAction}
+                actionFeedback={actionFeedback("ending")}
+                journeyMap={
+                    <StoryMap
+                        days={days}
+                        filter="all"
+                        session={session}
+                        active={sceneId === "ending"}
+                        userZoom={mapZoom}
+                        expanded
+                        onOpen={setSelectedActivity}
+                    />
+                }
+                jump={jump}
+                onOpenActivity={setSelectedActivity}
+                onOpenPhoto={openPhoto}
+            />
+            <BoardComments boardId={board.id} onTotalChange={setCommentsTotal} />
+            {selectedActivity ? (
                 <ActivityDetailsDialog
                     activity={selectedActivity}
                     days={days}
-                    saved={preview.activitySaved}
-                    onClose={handleCloseActivity}
-                    onSave={preview.saveActivity}
-                    onCopy={handleCopyActivity}
-                >
-                    {feedback}
-                </ActivityDetailsDialog>
-            )}
-            {zoomedActivityPhotos && (
-                <ImageZoomDialog images={zoomedActivityPhotos.images} onClose={() => setZoomedActivityPhotos(null)} />
-            )}
-            {preview.draft ? (
-                <BoardDialog title="Make it yours" onClose={() => preview.setDraft(null)}>
-                    <BoardCopyEditor sourceBoardId={board.id} initialDraft={preview.draft} onSaved={preview.setDraft} />
-                    {preview.error ? (
-                        <p role="alert" className="text-14 mt-3">
-                            {preview.error}
-                        </p>
-                    ) : null}
-                </BoardDialog>
+                    onClose={() => setSelectedActivity(null)}
+                    onOpenPhoto={(activity, index) => openPhoto(`activity-${activity.id}-${index}`)}
+                    onFocusLocation={(activity) => {
+                        focusLocation(activity);
+                        setSelectedActivity(null);
+                    }}
+                />
             ) : null}
-        </>
+            {galleryIndex !== null ? (
+                <StoryGallery
+                    placements={placements}
+                    initialIndex={galleryIndex}
+                    onClose={() => setGalleryIndex(null)}
+                />
+            ) : null}
+        </article>
     );
 }

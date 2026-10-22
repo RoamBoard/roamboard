@@ -17,6 +17,13 @@ with description/tags clipped within their own text area so they cannot overlap 
 
 ## Preparation API
 
+The published Board's itinerary summary also offers "Remix this Board" to eligible non-owners. On activation, an
+unsaved Board is first saved through the existing credentialed bookmark endpoint; only a confirmed save opens
+`/boards/new?remix=<boardId>`. Already saved Boards open that route directly. Duplicate Save/Remix requests are guarded;
+failed saves do not navigate, and sign-in feedback returns to the Board's `#ending` summary. Owners retain Edit because
+the existing API forbids bookmarking one's own Board. This entry point does not change preparation permissions or
+create a new Board before the creator's normal Save/Publish action.
+
 `POST /api/v1/boards/:boardId/remix-content` requires a session and exact frontend Origin. The Board must
 still be published, readable and saved by that user. The request has no content fields. Success returns
 `200 { data: ... }` containing `title`, `description`, `destination`, `tags`, `days`, `images` and `coverImageId`.

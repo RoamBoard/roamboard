@@ -81,8 +81,8 @@ export function createImagesRepository(): ImagesRepository {
                 const image = await client.query<{ uploaded_image_id: number }>(
                     `INSERT INTO uploaded_image
                      (storage_key, uploaded_by_user_id, captured_at, uploaded_at,
-                      byte_size, file_format, latitude, longitude)
-                     VALUES ($1,$2,$3,NOW()::timestamp,$4,$5,$6,$7)
+                      byte_size, file_format, latitude, longitude, width, height)
+                     VALUES ($1,$2,$3,NOW()::timestamp,$4,$5,$6,$7,$8,$9)
                      RETURNING uploaded_image_id`,
                     [
                         asset.storageKey,
@@ -91,7 +91,9 @@ export function createImagesRepository(): ImagesRepository {
                         asset.byteSize,
                         asset.format,
                         asset.latitude,
-                        asset.longitude
+                        asset.longitude,
+                        asset.width ?? null,
+                        asset.height ?? null
                     ]
                 );
                 const imageId = image.rows[0]!.uploaded_image_id;

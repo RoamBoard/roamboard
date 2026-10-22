@@ -1,7 +1,8 @@
+import { prepareFillerPool } from "./boards.fillers.js";
 import { AppError } from "../../shared/app-error.js";
 import { boardImageIds, type ImageCleanup } from "../images/images.cleanup.js";
 import type { BoardWrite } from "./boards.schemas.js";
-import type { BoardRepository, BoardsService, CopyBoardImage } from "./boards.types.js";
+import type { BoardRepository, BoardsService, CopyBoardImage, FillerProvider } from "./boards.types.js";
 
 export { canReadBoard } from "./boards.types.js";
 
@@ -83,7 +84,8 @@ async function validateDocument(repository: BoardRepository, input: BoardWrite):
 export function createBoardsService(
     repository: BoardRepository,
     copyImage?: CopyBoardImage,
-    cleanupImages?: ImageCleanup
+    cleanupImages?: ImageCleanup,
+    fillerProvider?: FillerProvider
 ): BoardsService {
     return {
         async prepareRemix(userId, boardId) {
@@ -108,7 +110,8 @@ export function createBoardsService(
                     capturedAt: null,
                     imageId: ids.get(image.imageId)!,
                     url: `/api/v1/images/${ids.get(image.imageId)!}/content?variant=display`,
-                    thumbnailUrl: `/api/v1/images/${ids.get(image.imageId)!}/content?variant=thumbnail`
+                    thumbnailUrl: `/api/v1/images/${ids.get(image.imageId)!}/content?variant=thumbnail`,
+                    largeUrl: `/api/v1/images/${ids.get(image.imageId)!}/content?variant=large`
                 })),
                 days: source.days.map((day) => ({
                     dayNumber: day.dayNumber,
@@ -140,7 +143,13 @@ export function createBoardsService(
             )
                 invalid();
             const validated = await validateDocument(repository, input);
-            return repository.saveBoard(userId, null, null, validated);
+            return repository.saveBoard(
+                userId,
+                null,
+                null,
+                validated,
+                await prepareFillerPool(validated, null, fillerProvider)
+            );
         },
         async replace(userId, boardId, revision, input) {
             const access = await repository.getAccess(boardId, userId);
@@ -160,12 +169,23 @@ export function createBoardsService(
                 input.destination === undefined && input.status === "published"
                     ? current?.destination
                     : input.destination;
-            const validated = await validateDocument(repository, { ...input, destination });
+            if (access.revision !== revision)
+                throw new AppError(409, "Board changed in another session", "STALE_BOARD_REVISION");
+            const validated = await validateDocument(repository, {
+                ...input,
+                destination,
+                fillerImagesEnabled: input.fillerImagesEnabled ?? current?.fillerImagesEnabled ?? false
+            });
             if (!owner && input.isCompleted !== undefined) {
                 if (current?.isCompleted !== input.isCompleted)
                     throw new AppError(403, "Only the owner can change completion", "FORBIDDEN");
             }
-            const saved = await repository.saveBoard(userId, boardId, revision, validated);
+            const existingPool =
+                validated.fillerImagesEnabled && validated.status === "published"
+                    ? await repository.getFillerPool(boardId)
+                    : null;
+            const pool = await prepareFillerPool(validated, existingPool, fillerProvider);
+            const saved = await repository.saveBoard(userId, boardId, revision, validated, pool);
             const retainedImages = new Set(boardImageIds(saved));
             await cleanupImages?.(boardImageIds(current).filter((id) => !retainedImages.has(id)));
             return saved;

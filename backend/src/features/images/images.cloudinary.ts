@@ -10,6 +10,7 @@ import type { QuotaService } from "../quotas/quota.service.js";
 import type { ImagePresentationEdit } from "./images.schemas.js";
 
 const variants = {
+    large: { width: 4096, height: 4096, crop: "limit", quality: "auto", fetch_format: "jpg" },
     display: { width: 1600, height: 1600, crop: "limit", quality: "auto", fetch_format: "jpg" },
     thumbnail: { width: 320, height: 320, crop: "limit", quality: "auto", fetch_format: "jpg" }
 } as const;
@@ -68,6 +69,8 @@ function parseAsset(raw: Record<string, unknown>): ProviderAsset | null {
     const { capturedAt, latitude, longitude } = cloudinaryPhotoMetadata(raw);
     return {
         storageKey: raw.public_id,
+        width: typeof raw.width === "number" && raw.width > 0 ? raw.width : undefined,
+        height: typeof raw.height === "number" && raw.height > 0 ? raw.height : undefined,
         originalFilename: typeof raw.original_filename === "string" ? raw.original_filename : undefined,
         format: raw.format.toLowerCase(),
         byteSize: raw.bytes,

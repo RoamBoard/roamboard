@@ -144,6 +144,7 @@ function setup() {
         }
     };
     const boardRepository: BoardRepository = {
+        getFillerPool: async () => null,
         async listAccessible() {
             return { items: [], hasMore: false };
         },

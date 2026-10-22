@@ -32,6 +32,8 @@ export interface UploadedImage {
 }
 
 export interface ProviderAsset {
+    width?: number;
+    height?: number;
     originalFilename?: string;
     storageKey: string;
     format: string;
@@ -53,7 +55,7 @@ export interface ImageProvider {
     inspect(storageKey: string): Promise<ProviderAsset | null>;
     openVariant(
         storageKey: string,
-        variant: "display" | "thumbnail" | "original",
+        variant: "display" | "thumbnail" | "large" | "original",
         edit?: ImagePresentationEdit | null
     ): Promise<{ stream: Readable; contentType: string }>;
     destroy(storageKey: string): Promise<void>;
@@ -121,7 +123,7 @@ export interface ImagesService {
     }>;
     openImage(
         imageId: number,
-        variant: "display" | "thumbnail" | "original",
+        variant: "display" | "thumbnail" | "large" | "original",
         userId: string | null,
         boardId?: number,
         profileHandle?: string

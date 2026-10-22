@@ -35,6 +35,9 @@ export type BoardImage = {
     id: string;
     url: string;
     alt: string;
+    largeUrl?: string;
+    width?: number;
+    height?: number;
     source: "application" | "upload";
     photographer?: string;
     photographerUrl?: string;

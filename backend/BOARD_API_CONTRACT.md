@@ -332,3 +332,26 @@ and DELETE. Authors edit their own text with a revision check and may delete it;
 Drafts and inaccessible Boards return 404. Current author display names, handles, and profile photos are read from
 `app_user`. Migration `013_board_comments.sql` adds storage after the existing `012_friendship_accepted_at.sql`;
 applying it to the shared database remains a separate step.
+
+## Published Board story additions
+
+See the agreed [Board overview story contract](../contracts/board-overview-story.md). Migration
+`021_board_story.sql` must be applied before running the updated Board repository. Existing Boards remain opted out.
+
+- Board POST accepts `fillerImagesEnabled` (default false); omission on PUT preserves the saved preference. Only this
+  preference is writable. Responses include `fillerImages`, `fillerImageStatus` and the authoritative `commentCount`.
+- Opted-in published saves select up to three canonical, distinct Unsplash destination illustrations outside the
+  transaction, then commit them with the ordinary permission/revision-checked document. Drafts and disabled saves do
+  no provider work. Reads never generate photos. Disabled pools remain stored; destination identity changes discard
+  stale selections on the next enabled published save. Provider failures permit partial/empty pools and a normal save.
+- Board images include revision-aware `largeUrl` and available presentation dimensions. New uploads record original
+  dimensions; old uploads without dimensions retain bounded viewer frames. The new `large` delivery variant applies
+  saved presentation edits, caps at 4096 by 4096 without upscaling, uses display authorization and falls back to display
+  delivery on provider failure. `original` remains uploader-only.
+- Comment pages retain their array, cursor and ordering and add `meta.totalCount`, independent of the current page.
+  Totals exclude deleted comments and require the published Board's read access.
+- Activity-note API/storage validation remains 500 characters. The story editor's 250-code-point rule is frontend-only.
+
+`npm run db:story` inspects migration status. `npm run db:story -- --apply` first creates and verifies a custom-format
+backup, then applies only 021 in a transaction. Shared-database application and deployment are separate from source
+implementation; consult the migration log before applying.

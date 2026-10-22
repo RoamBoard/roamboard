@@ -22,10 +22,12 @@ type Props = {
     routeGeometry: Array<[number, number]>;
     onMapClick?: (latitude: number, longitude: number) => void;
     onPointClick?: (point: MapPoint) => void;
+    onError?: () => void;
     selectedPointId?: string;
     initialCenter?: { latitude: number; longitude: number };
     initialZoom?: number;
     selectedZoom?: number;
+    userZoom?: { current: number | undefined };
     fillHeight?: boolean;
     scrollZoom?: boolean;
 };
@@ -38,10 +40,12 @@ export default function InteractiveMap({
     routeGeometry,
     onMapClick,
     onPointClick,
+    onError,
     selectedPointId,
     initialCenter,
     initialZoom = 11,
-    selectedZoom = 14,
+    selectedZoom = 15,
+    userZoom,
     fillHeight = false,
     scrollZoom = true,
     cooperativeGestures = false,
@@ -52,6 +56,7 @@ export default function InteractiveMap({
     const markersRef = useRef<Marker[]>([]);
     const onMapClickRef = useRef(onMapClick);
     const onPointClickRef = useRef(onPointClick);
+    const onErrorRef = useRef(onError);
     const [mapError, setMapError] = useState("");
     const [mapReady, setMapReady] = useState(false);
     const initialLatitude = initialCenter?.latitude ?? 59.3293;
@@ -64,6 +69,9 @@ export default function InteractiveMap({
     useEffect(() => {
         onPointClickRef.current = onPointClick;
     }, [onPointClick]);
+    useEffect(() => {
+        onErrorRef.current = onError;
+    }, [onError]);
 
     useEffect(() => {
         if (!token || !containerRef.current) return;
@@ -75,9 +83,14 @@ export default function InteractiveMap({
                 container: containerRef.current,
                 style: "mapbox://styles/mapbox/streets-v12",
                 center: [initialLongitude, initialLatitude],
-                zoom: initialZoom,
+                zoom: userZoom?.current ?? initialZoom,
                 cooperativeGestures
             });
+            if (userZoom) {
+                map.on("zoomend", (event) => {
+                    if ("originalEvent" in event && event.originalEvent) userZoom.current = map.getZoom();
+                });
+            }
             if (!scrollZoom) map.scrollZoom.disable();
             map.addControl(new mapboxgl.NavigationControl(), "top-right");
             map.on("load", () => {
@@ -104,7 +117,10 @@ export default function InteractiveMap({
             if (onMapClickRef.current) {
                 map.on("click", (event) => onMapClickRef.current?.(event.lngLat.lat, event.lngLat.lng));
             }
-            map.on("error", (event) => setMapError(event.error?.message ?? "The Mapbox map could not load."));
+            map.on("error", (event) => {
+                setMapError(event.error?.message ?? "The Mapbox map could not load.");
+                onErrorRef.current?.();
+            });
             mapRef.current = map;
         }, 0);
         return () => {
@@ -114,7 +130,7 @@ export default function InteractiveMap({
             mapRef.current?.remove();
             mapRef.current = null;
         };
-    }, [token, scrollZoom, initialLatitude, initialLongitude, initialZoom, cooperativeGestures]);
+    }, [token, scrollZoom, initialLatitude, initialLongitude, initialZoom, cooperativeGestures, userZoom]);
 
     useEffect(() => {
         markersRef.current.forEach((marker) => marker.remove());
@@ -161,7 +177,7 @@ export default function InteractiveMap({
         if (points.length === 1 && points[0]) {
             map.easeTo({
                 center: [points[0].longitude, points[0].latitude],
-                zoom: 13
+                zoom: userZoom?.current ?? 15
             });
         }
         if (points.length > 1) {
@@ -169,9 +185,14 @@ export default function InteractiveMap({
                 (current, point) => current.extend([point.longitude, point.latitude]),
                 new mapboxgl.LngLatBounds()
             );
-            map.fitBounds(bounds, { padding: 64, maxZoom: 14 });
+            const width = containerRef.current?.clientWidth ?? 0;
+            const height = containerRef.current?.clientHeight ?? 0;
+            // Compact story maps must retain usable camera space after both padding edges are removed.
+            if (userZoom?.current !== undefined) map.easeTo({ center: bounds.getCenter(), zoom: userZoom.current });
+            else if (width > 0 && height > 0)
+                map.fitBounds(bounds, { padding: Math.min(64, width / 4, height / 4), maxZoom: 14 });
         }
-    }, [points, mapReady]);
+    }, [points, mapReady, userZoom]);
 
     useEffect(() => {
         const point = points.find((item) => item.id === selectedPointId);
@@ -189,8 +210,8 @@ export default function InteractiveMap({
             }
         });
         if (!point) return;
-        mapRef.current?.easeTo({ center: [point.longitude, point.latitude], zoom: selectedZoom });
-    }, [selectedPointId, points, mapReady, selectedZoom]);
+        mapRef.current?.easeTo({ center: [point.longitude, point.latitude], zoom: userZoom?.current ?? selectedZoom });
+    }, [selectedPointId, points, mapReady, selectedZoom, userZoom]);
 
     useEffect(() => {
         if (!containerRef.current) return;

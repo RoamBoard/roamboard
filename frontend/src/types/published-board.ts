@@ -17,6 +17,8 @@ export type PublishedBoardData = {
     canManageBoard?: boolean;
     savedByMe?: boolean;
     savedCount?: number;
+    commentCount?: number;
+    fillerImages?: BoardImage[];
 };
 
 export type PublishedBoardState = {

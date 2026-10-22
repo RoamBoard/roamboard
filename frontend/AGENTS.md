@@ -97,6 +97,58 @@ This is a living project guide. Agents may and should update `AGENTS.md` when th
 
 ## Current integrated surfaces
 
+`PublishedBoard` implements the agreed activity-led story at `/boards/[boardId]`: desktop wheel gestures snap sideways
+through balanced scenes with at most six photographs each, then release into normal vertical scrolling through the itinerary/comments ending, with a smooth return to the last scene.
+Every photograph appears; photo-heavy days can use more than two scenes. Compact screens use vertical days; reduced
+motion keeps navigation without animated travel. Scene timelines show only their own activities in two columns without a nested scrollbar; Summary retains full days.
+`useStoryScroll` owns native horizontal smooth scrolling and mandatory snapping like DestinationRail, with a sticky
+desktop stage and a native vertical runway for middle-button scrolling and Summary release, gesture pacing,
+hash navigation and chapter state. The reusable 62px `ChapterBar` distinguishes Comments from Summary. Expanded corner maps collapse before wheel navigation; viewport resize retains the current scene. Native middle-button scrolling remains available; partial ending transitions
+realign before scene navigation. Native scrolling settles at the nearest scene on scrollend. Scene shells must
+allow vertical scroll chaining so the final day can release into Summary; containment belongs on inner controls. Map and browser zoom
+gestures never advance the story. The day heading and timed activity timeline sit top left; the larger corner map sits bottom left inside the scene,
+without an additional sidebar; the overview matches the day map size and position. Maps expand in place toward the top right to about half the scene,
+moving covered content outward/upward and fading it, then settling it back into place on collapse; Escape or the same control collapses them. `StoryMapControls` supplies a label-free square map with an overlay enlarge control. Corner pins follow the current
+day automatically; activity/photo hover and keyboard focus zoom to the last selected saved pin. Each scene uses a two-column activity timeline. The Summary includes an interactive all-pins map between the day list and author. `BoardDayScene` uses deterministic bento photo compositions
+with varied viewer-only crops and attached activity captions. Wide tiles place captions to the right of the photograph with a 12px gap;
+narrow tiles keep captions below. Portrait photos use a stable mix of tall and square frames, including images whose
+dimensions are learned on load. Timed activities sort chronologically around fixed
+untimed itinerary slots; saved documents and within-activity photo order stay intact. The gallery follows the displayed
+chronology. Story photographs use a tiny centered hover scale, with a consistent pointer
+cursor and thin theme-aware outline. Photo entrance animations are removed; scene travel supplies the transition.
+Captions below photos center on their image; wide side captions retain vertical centering.
+The overview gives title/description more width beside a slightly smaller cover, places Save/Edit with the author,
+keeps Access inline with tags and uses centered icon-led statistics with tighter icon/count spacing. `ScrollCue` supplies line-free next/previous
+controls; chapter hashes support arbitrary `-part-N` scene numbers. Comment totals are plain text; Comments remains
+available in the chapter bar.
+`StoryMap` reuses
+the existing map renderer, lazily loads one shared session per viewer and supports automatic day following plus
+automatic day scope on desktop. `StoryPhoto` has no gray image frame; scene and summary crops leave the saved image intact, while `StoryGallery` wraps the shared `ImageZoomDialog` and browses
+stable story placements with on-demand large delivery, bounded neighbour warming, keyboard/touch controls and credits.
+Scene captions show notes through 150 Unicode points in full, with 150-point excerpts for longer notes.
+Statistics and labels are centered, and story arrows support focus, Enter and Space. Day maps start near a saved
+activity and focus at zoom 15; shared map single-pin and selected-pin cameras, including destination pins, also use
+zoom 15 while multi-pin overviews keep fitting every point. The profile globe starts closer at zoom 1.9. Activity details retain full notes; enlarged photos never show notes. Unsupported preview Save/Copy actions are gone
+from this production viewer. The centered ending uses the Board title, with Save/Remix immediately beneath it,
+larger representative day photographs and the owner's larger square portrait and biography. Remix confirms a bookmark
+when needed before opening `/boards/new?remix=<id>`, with duplicate guards and inline failure/sign-in feedback. Owners
+retain Edit under existing permissions. Author photos stay outside the gallery.
+
+Creator opt-in is default-off, persists through save/hydration and stays off for remixes. A low-upload suggestion does
+not restrict eligibility; partial selections show non-blocking author feedback. New/edited activity notes validate
+250 Unicode code points with a counter, preserving unchanged longer legacy notes; backend validation stays 500.
+The backend requires migration 021 (applied to shared development on 2026-10-21) for persisted illustrations. Automated presenter, API and
+isolated PostgreSQL tests cover contract behavior. Production-scene geometry is also checked in headless Chromium
+for bounded, non-overlapping, tappable images, attached captions and unobscured day/map corners at narrow and wide
+desktop sizes. Independent revision tests cover chronology, retained images, caption/detail callbacks, gallery ordering,
+integrated maps, portrait variants/on-load dimensions, balanced pagination, summary action order and Remix success/failure
+handling. Live local Chromium smoke checks cover direct ending links, day jumps, wheel and previous/next navigation,
+timeline/side-caption geometry, six-photo caps, larger maps, summary action placement, shared photo enlargement/return,
+the square author portrait and compact overflow. Story maps initialize at a saved trip point rather than the default city.
+The shared `InteractiveMap` bounds padding scales to its actual container dimensions; compact maps cannot use a fixed
+64px inset on every edge. Independent component regressions cover compact, normal and zero-size camera viewports.
+Broader manual interaction and visual acceptance remain pending.
+
 `BoardCollectionGrid` is the fourth Board list: component 2 photographic cards in a wider responsive grid, twenty
 results with URL-backed contextual search, sorting and numbered pagination. `/boards/collections/[context]` hosts
 View all destinations; Social embeds the friends collection directly. Source scopes preserve profile ownership,
@@ -130,7 +182,7 @@ ready, with retry on failure. Days/order/times and cover selections remain; cale
 completion, memberships and visibility are not copied. Normal new-Board visibility preferences apply. Only Save
 or Publish creates a Board. See [the remix contract](../contracts/saved-board-remix.md).
 
-Secondary screens use the shared `BackLink`: profile/settings, notifications, Board selection/editing/viewing and Discover details. It shares the primary-color 16px medium-weight navigation style and 16px arrows with ViewAllBoards through `navigation-link-style.ts` and scrolls away with the page content; it has no separate header bar. Keep it inside each screen's actual scroll container. Main navigation destinations omit it. `BackNavigationTracker` records the previous internal URL on browser history entries while preserving router state, so Back uses browser history after refresh or forward/back; direct entries use a route-specific parent fallback. Authentication/welcome screens are excluded as return destinations. Board editor leave confirmation preserves Back or fallback replacement after discarding unsaved changes.
+Secondary screens use the shared `BackLink`: profile/settings, notifications, Board selection/editing and Discover details. The published Board overview omits Back to avoid same-route chapter history and leave space for its four-column statistics row above the map. It shares the primary-color 16px medium-weight navigation style and 16px arrows with ViewAllBoards through `navigation-link-style.ts` and scrolls away with the page content; it has no separate header bar. Keep it inside each screen's actual scroll container. Main navigation destinations omit it. `BackNavigationTracker` records the previous internal URL on browser history entries while preserving router state, so Back uses browser history after refresh or forward/back; direct entries use a route-specific parent fallback. Authentication/welcome screens are excluded as return destinations. Board editor leave confirmation preserves Back or fallback replacement after discarding unsaved changes.
 
 `Sidebar` is shared by `AppShell` and `PublishedBoardShell`. It uses a sticky 64px mobile / 80px desktop rail in the page grid; desktop expansion grows to 176px and resizes the page beside it. Hovering a navigation or account control for 150ms temporarily reveals labels; leaving the rail collapses it after 100ms, and returning cancels that collapse. The logo and navigation positions stay fixed during expansion. Keyboard focus reveals labels immediately. The explicit keep-open choice is saved in `roamboard-sidebar-expanded` local storage. Navigation uses icons with lowercase labels on expansion and an underlined active destination, ordered Roam, Boards, Discover, Create, Social. Mobile expansion opens a native modal drawer. The sidebar account control expands its sign-in/profile, Settings, and Light/Dark choices inline above the trigger. Navigation scrolls at every height; the account panel has a viewport-based height bound and its own scrolling. Active destinations are derived from the pathname, including nested creation, Board, Discover, profile, and developer routes. Discover keeps its own scroll-driven intro behavior independently of navigation expansion; Discover panels and destination chapters use their available container width.
 
@@ -596,24 +648,8 @@ inspector is no longer used by the page route. The profile page reads live accou
 
 Profile settings validate the existing backend rules before saving. A red error summary above Save Changes explains corrections and links to the affected fields; save failures retain the draft. Loading failures are separate from save errors. Pending saves disable editing and repeat submissions. A confirmed save opens the returned username's profile with an owner-only, dismissible confirmation. Leaving settings while a save is pending prevents its eventual response from redirecting the user back. Profile photos still save through their separate controls.
 
-`useBoardPhotos` fills decorative desktop photo spaces from a shared destination/country Unsplash pool, with
-location/tag fallback when a successful search returns too few photos. These illustrations are independent of
-activity photo matching. A missing user-selected header uses another distinct automatic photo. Existing headers and activity photos are retained; IDs and image URLs already used in
-the Board are excluded from automatic selection. `src/lib/board-photos.ts` shares queries through a bounded
-browser-tab cache and calls the existing credentialed, quota-managed backend Unsplash endpoint. Failed provider
-requests do not trigger automatic backup requests. Photo lookup never delays Board rendering or writes to the
-Board document. Missing results and image-load errors retain a gray location-name placeholder in automatic photo
-spaces. Automatic photos have a small credit line on the image, with
-links to the photographer and Unsplash.
-
-`src/lib/board-preview.ts` uses tab-local session storage for preview bookmarks,
-saved activities, and editable copies. These actions do not write to the backend
-or represent account-owned resources.
-
-`PublishedBoard` owns the selected activity and its open/close handlers.
-`PublishedBoardDay` renders the timeline and cards, `ActivityDetailsDialog`
-renders the selected activity, and `useBoardPreview` manages preview save/copy
-state.
+The old `useBoardPhotos`, `PublishedBoardDay` and browser-preview copy helpers remain as legacy utilities; the
+production published viewer above no longer uses automatic read-time illustrations or preview Save/Copy actions.
 
 ### Independent frontend and API testing
 
@@ -674,9 +710,8 @@ through the existing persisted photo editor. BoardPhotoStrip supplies arrow navi
 Thumbnail lists lazy-load with asynchronous decoding. Creator photo reviews use thumbnail delivery; the two V4 covers use display delivery. Activity cards avoid
 Motion layout measurements, the sticky chapter bar has an opaque background, and Smart Create uses one combined
 SVG circuit mask instead of 78 masks. Browser performance measurements remain pending.
-Decorative published Board spaces use a shared destination/country Unsplash search pool of up to 20 photos, selecting
-distinct candidates randomly per resolution. They show photographer/Unsplash credit, never attach themselves to
-activities, and leave placeholders on failure. Strict place matching still applies to actual activity photos.
+Published Board destination illustrations now use the persisted, explicit opt-in pool described above. Strict
+place matching still applies independently to actual activity photos.
 
 The Board editor offers owners a Delete Board text action below View saved Board for persisted drafts and published
 Boards, including saved remix copies. It uses the existing owner-only DELETE endpoint and shared confirmation dialog,

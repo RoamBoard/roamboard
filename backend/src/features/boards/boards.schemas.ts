@@ -78,6 +78,7 @@ const destinationSchema = locationSchema
     .strict();
 
 const boardFields = {
+    fillerImagesEnabled: z.boolean().optional(),
     destination: destinationSchema.nullable().optional(),
     status: z.enum(["draft", "published"]),
     isCompleted: z.boolean().optional(),
@@ -93,6 +94,7 @@ const boardFields = {
 export const createBoardSchema = z
     .object({
         ...boardFields,
+        fillerImagesEnabled: z.boolean().default(false),
         visibility: boardFields.visibility.default("collaborators"),
         tagIds: boardFields.tagIds.default([]),
         imageIds: boardFields.imageIds.default([]),
@@ -131,7 +133,10 @@ export const imageVariantQuerySchema = z
     .object({
         v: z.preprocess((val) => (Array.isArray(val) ? val[0] : val), z.coerce.number().int().nonnegative()).optional(),
         variant: z
-            .preprocess((val) => (Array.isArray(val) ? val[0] : val), z.enum(["display", "thumbnail", "original"]))
+            .preprocess(
+                (val) => (Array.isArray(val) ? val[0] : val),
+                z.enum(["display", "thumbnail", "large", "original"])
+            )
             .default("display"),
         // Author photos carry Board context so the image service can enforce the same read permissions.
         boardId: z
@@ -164,7 +169,9 @@ export const completeUploadSchema = z
     })
     .strict();
 
-export type BoardWrite = z.infer<typeof createBoardSchema>;
+export type BoardWrite = Omit<z.infer<typeof createBoardSchema>, "fillerImagesEnabled"> & {
+    fillerImagesEnabled?: boolean;
+};
 export type BoardReplace = z.infer<typeof replaceBoardSchema>;
 export type BoardDayWrite = BoardWrite["days"][number];
 export type BoardActivityWrite = BoardDayWrite["activities"][number];

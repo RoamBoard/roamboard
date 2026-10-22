@@ -1,5 +1,20 @@
 # Shared development database migration log
 
+## Published Board story - 2026-10-21
+
+Applied only `021_board_story.sql` to the configured shared development database after the requester explicitly
+approved application. `npm run db:story -- --apply` created a fresh custom-format backup, verified its archive with
+`pg_restore --list`, and applied the migration in one transaction under an advisory lock.
+
+Backup: `backend/backups/pre-021-2026-10-21T012752756Z.dump` (Git-ignored). Restore and off-machine retention were not
+tested. Read-only verification confirmed the default-off setting on all existing Boards, an empty constrained filler
+table and nullable upload dimension columns. Mounted public Board and comment reads returned 200 with consistent
+comment totals, empty disabled selections and revision-aware large image URLs. No provider selection calls or Board
+content updates were made. A repeat status check confirmed the migration is present and applied nothing.
+
+Do not rerun 021 on shared development. Other environments can use `npm run db:story` to inspect status before
+reviewing application. The source implementation does not automatically migrate or deploy environments.
+
 ## Expanded spoken language catalog — 2026-10-20
 
 Applied migration `019_add_spoken_languages.sql` in one transaction to the shared Azure database `roamboard_dev` through the SSH tunnel. It seeds 79 additional spoken languages into the `language` table (bringing the total to 107 persisted languages, covering all 106 spoken languages defined in `shared/spoken-languages.json`) to satisfy the `FK_user_language_1` foreign key constraint when users select and save newly supported languages in their profile. The migration is idempotent (`ON CONFLICT (language_name) DO NOTHING;`). Do not rerun 019.

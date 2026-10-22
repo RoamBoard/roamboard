@@ -373,7 +373,29 @@ export function BoardCommentRow({
     );
 }
 
-export default function BoardComments({ boardId }: { boardId: string }) {
+export default function BoardComments({
+    boardId,
+    onTotalChange
+}: {
+    boardId: string;
+    onTotalChange?: (count: number | undefined) => void;
+}) {
+    const totalCallback = useRef(onTotalChange);
+    const totalVersionRef = useRef(0);
+    useEffect(() => {
+        totalCallback.current = onTotalChange;
+    }, [onTotalChange]);
+    const refreshTotal = async (epoch: number) => {
+        const version = ++totalVersionRef.current;
+        try {
+            const page = await listBoardComments(boardId);
+            if (epoch === accountEpochRef.current && version === totalVersionRef.current)
+                totalCallback.current?.(page.meta.totalCount);
+        } catch {
+            if (epoch === accountEpochRef.current && version === totalVersionRef.current)
+                totalCallback.current?.(undefined);
+        }
+    };
     const fragment = useSyncExternalStore(subscribeCommentFragment, getCommentFragment, getServerCommentFragment);
     const [viewer, setViewer] = useState<AuthUser | null | undefined>(undefined);
     const [accountEpoch, setAccountEpoch] = useState(0);
@@ -432,11 +454,13 @@ export default function BoardComments({ boardId }: { boardId: string }) {
             const page = await listBoardComments(boardId);
             if (version !== readVersionRef.current) return;
             setComments(page.data);
+            totalCallback.current?.(page.meta.totalCount);
             setNextCursor(page.meta.nextCursor);
         } catch (cause) {
             if (version === readVersionRef.current) {
                 setReadNeedsLogin(cause instanceof BoardCommentApiError && cause.status === 401);
                 setReadError(commentError(cause));
+                totalCallback.current?.(undefined);
             }
         } finally {
             if (version === readVersionRef.current) setLoading(false);
@@ -526,6 +550,7 @@ export default function BoardComments({ boardId }: { boardId: string }) {
             if (epoch !== accountEpochRef.current) return;
             setComments((current) => [created, ...current.filter((item) => item.commentId !== created.commentId)]);
             setDraft("");
+            void refreshTotal(epoch);
             notifyCommentNotificationUpdate();
             void refreshSubscription(epoch);
         } catch (cause) {
@@ -548,6 +573,7 @@ export default function BoardComments({ boardId }: { boardId: string }) {
     function removeComment(commentId: number, epoch: number) {
         if (epoch !== accountEpochRef.current) return;
         setComments((current) => current.filter((item) => item.commentId !== commentId));
+        void refreshTotal(epoch);
     }
 
     async function toggleSubscription() {
@@ -571,8 +597,9 @@ export default function BoardComments({ boardId }: { boardId: string }) {
     return (
         <section
             id="comments"
+            tabIndex={-1}
             aria-labelledby="comments-heading"
-            className="border-line scroll-mt-8 border-t px-5 py-10 sm:px-9 sm:py-12"
+            className="border-line scroll-mt-16 border-t px-5 py-10 sm:px-9 sm:py-12"
         >
             <div className="mx-auto w-full max-w-3xl">
                 <div className="border-foreground flex items-center justify-between gap-3 border-b pb-5">

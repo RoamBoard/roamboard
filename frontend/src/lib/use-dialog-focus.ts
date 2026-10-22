@@ -73,7 +73,7 @@ export function useDialogFocus<T extends HTMLElement>(
             clearTimeout(timer);
             window.removeEventListener("keydown", handleKeyDown);
             if (previousActive && typeof previousActive.focus === "function") {
-                previousActive.focus();
+                previousActive.focus({ preventScroll: true });
             }
         };
     }, [containerRef, active]);

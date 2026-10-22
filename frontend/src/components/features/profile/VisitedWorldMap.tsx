@@ -185,7 +185,7 @@ export default function VisitedWorldMap({
             style: "mapbox://styles/mapbox/light-v11",
             projection: "globe",
             center: [10, 20],
-            zoom: 0.95,
+            zoom: 1.9,
             minZoom: 0.7
         });
         mapRef.current = map;
