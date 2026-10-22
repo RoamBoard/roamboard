@@ -438,8 +438,11 @@ export type FriendActivityItem = {
     timestamp: string;
 };
 
-export function loadFriends() {
-    return apiRequest<FriendUser[]>("/api/v1/users/me/friends").then((friends) =>
+export function loadFriends(handle?: string) {
+    const endpoint = handle
+        ? `/api/v1/users/by-handle/${encodeURIComponent(handle)}/friends`
+        : "/api/v1/users/me/friends";
+    return apiRequest<FriendUser[]>(endpoint).then((friends) =>
         friends.map((friend) => ({
             ...friend,
             profilePictureUrl: friend.profilePictureUrl ? new URL(friend.profilePictureUrl, apiOrigin).toString() : null
