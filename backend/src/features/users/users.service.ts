@@ -1,6 +1,6 @@
 import { AppError } from "../../shared/app-error.js";
 import type { ImageCleanup } from "../images/images.cleanup.js";
-import type { UsersRepository, ProfileChanges } from "./users.types.js";
+import type { UsersRepository, ProfileChanges, FriendUser } from "./users.types.js";
 import type { ImagesRepository } from "../images/images.types.js";
 import type { BoardRepository } from "../boards/boards.types.js";
 import { canReadBoard } from "../boards/boards.types.js";
@@ -133,6 +133,11 @@ export function createUsersService(
                 savedBoards: saved.items,
                 destinations
             };
+        },
+        async publicFriends(handle: string): Promise<FriendUser[]> {
+            const userId = await repository.findIdByHandle(handle);
+            if (!userId) throw new AppError(404, "Profile not found", "NOT_FOUND");
+            return repository.listFriends(userId);
         },
         languages: () => spokenLanguages,
         async update(userId: string, input: ProfileChanges) {

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import React, { Children, createElement, isValidElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
+import FriendsPage from "@/app/friends/page";
 import FriendsPageContent, { type FriendsPageContentProps } from "@/components/features/friends/FriendsPageContent";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import FindFriendsDialog from "@/components/features/social/FindFriendsDialog";
@@ -40,9 +41,14 @@ type ElementProps = {
     [key: string]: unknown;
 };
 
-function elements(node: ReactNode): Array<{ type: unknown; props: ElementProps }> {
+function elements(node: ReactNode): Array<{ type: unknown; props: ElementProps; key?: string | null }> {
     if (!isValidElement<ElementProps>(node)) return [];
-    return [{ type: node.type, props: node.props }, ...Children.toArray(node.props.children).flatMap(elements)];
+    const children = isValidElement(node.props.children)
+        ? [node.props.children]
+        : Array.isArray(node.props.children)
+          ? node.props.children
+          : [];
+    return [{ type: node.type, props: node.props, key: node.key }, ...children.flatMap(elements)];
 }
 
 function createStatefulHarness(initialProps: FriendsPageContentProps = {}) {
@@ -597,4 +603,149 @@ test("FriendsPageContent ignores failure from superseded read when newer read su
         !finalRender.markup.includes("Failed to load your travel pals."),
         "Error from older superseded read must not be displayed"
     );
+});
+
+test("FriendsPageContent renders other user's friends with custom title and hides owner controls (find friends, unfriend)", () => {
+    const harness = createStatefulHarness({
+        initialFriends: sampleFriends,
+        handle: "alice",
+        targetDisplayName: "Alice Wonder"
+    });
+    const gridRender = harness.render();
+
+    assert.match(
+        gridRender.markup,
+        /Alice Wonder(&#x27;|')s friends \(3\)/,
+        "Header should display other user's friends title"
+    );
+    assert.ok(
+        gridRender.markup.includes("travelers @alice is connected with"),
+        "Subtitle should indicate travelers of target user"
+    );
+
+    // Verify Find Friends button is NOT rendered
+    assert.ok(
+        !gridRender.markup.includes("Find Friends"),
+        "Find Friends button must not be present when viewing another user's friends"
+    );
+
+    // Verify unfriend button is NOT rendered in grid view
+    const unfriendBtnsGrid = gridRender.nodes.filter(
+        (n) => typeof n.props["aria-label"] === "string" && n.props["aria-label"].startsWith("Unfriend")
+    );
+    assert.equal(unfriendBtnsGrid.length, 0, "Unfriend button must not be present in grid view for other user");
+
+    // Switch to list view
+    const listBtn = gridRender.nodes.find((n) => n.type === "button" && n.props["aria-label"] === "List view");
+    assert.ok(listBtn);
+    listBtn.props.onClick?.();
+
+    const listRender = harness.render();
+    const unfriendBtnsList = listRender.nodes.filter(
+        (n) => typeof n.props["aria-label"] === "string" && n.props["aria-label"].startsWith("Unfriend")
+    );
+    assert.equal(unfriendBtnsList.length, 0, "Unfriend button must not be present in list view for other user");
+});
+
+test("FriendsPageContent renders empty state for other user's friends without Find Friends button", () => {
+    const harness = createStatefulHarness({
+        initialFriends: [],
+        handle: "bob"
+    });
+    const render = harness.render();
+
+    assert.match(
+        render.markup,
+        /@bob hasn(&#x27;|')t connected with any travel pals yet\./,
+        "Empty state should mention the target handle"
+    );
+    assert.ok(
+        !render.markup.includes("Find Friends"),
+        "Find Friends button must not be present in empty state for other user"
+    );
+});
+
+test("FriendsPageContent retry fetches other user's friends from /api/v1/users/by-handle/:handle/friends", async (context) => {
+    const calls: Array<{ url: string }> = [];
+    context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+        calls.push({ url: String(input) });
+        return Response.json({ data: sampleFriends }, { headers: { "content-type": "application/json" } });
+    });
+
+    const harness = createStatefulHarness({
+        initialFriends: [],
+        initialError: "Failed to load travel pals.",
+        handle: "chloe"
+    });
+    const initial = harness.render();
+    const retryBtn = initial.nodes.find((n) => n.type === "button" && n.props.children === "Retry");
+    assert.ok(retryBtn, "Expected Retry button");
+
+    await (retryBtn.props as { onClick: () => Promise<void> }).onClick();
+
+    assert.ok(
+        calls.some((c) => c.url.includes("/api/v1/users/by-handle/chloe/friends")),
+        "Must fetch friends from by-handle endpoint for the specified user"
+    );
+});
+
+test("FriendsPage keys FriendsPageContent by handle", async () => {
+    const defaultPage = await FriendsPage({});
+    const alicePage = await FriendsPage({
+        searchParams: Promise.resolve({ handle: "alice" })
+    });
+
+    const defaultElements = elements(defaultPage);
+    const aliceElements = elements(alicePage);
+
+    const defaultContent = defaultElements.find((el) => el.type === FriendsPageContent);
+    const aliceContent = aliceElements.find((el) => el.type === FriendsPageContent);
+
+    assert.ok(defaultContent, "FriendsPageContent should be in default page tree");
+    assert.ok(aliceContent, "FriendsPageContent should be in alice page tree");
+    assert.equal(defaultContent.key, "");
+    assert.equal(aliceContent.key, "alice");
+});
+
+test("FriendsPageContent resets loginRequired and page state when handle changes", async (context) => {
+    const isSuccess = { current: false };
+    context.mock.method(globalThis, "fetch", async () => {
+        if (isSuccess.current) {
+            return Response.json({ data: sampleFriends }, { headers: { "content-type": "application/json" } });
+        }
+        return new Response(JSON.stringify({ error: { message: "Unauthorized", code: "UNAUTHORIZED" } }), {
+            status: 401,
+            headers: { "content-type": "application/json" }
+        });
+    });
+
+    const harness = createStatefulHarness({
+        initialFriends: [],
+        initialError: "Failed to load travel pals.",
+        handle: null
+    });
+    const initial = harness.render();
+    const retryBtn = initial.nodes.find((n) => n.type === "button" && n.props.children === "Retry");
+    assert.ok(retryBtn, "Expected Retry button");
+
+    await (retryBtn.props as { onClick: () => Promise<void> }).onClick();
+
+    const loginRender = harness.render();
+    assert.ok(
+        loginRender.markup.includes("Sign in to see and manage all your travel pals"),
+        "Should show sign-in prompt after 401"
+    );
+
+    // When client navigates between /friends and /friends?handle=alice, FriendsPage keys FriendsPageContent by handle
+    // Mounting the keyed component for alice renders the public view without loginRequired
+    const aliceHarness = createStatefulHarness({
+        handle: "alice",
+        initialFriends: sampleFriends
+    });
+    const aliceRender = aliceHarness.render();
+    assert.ok(
+        !aliceRender.markup.includes("Sign in to see and manage all your travel pals"),
+        "Alice's view has no sign-in prompt"
+    );
+    assert.ok(aliceRender.markup.includes("travelers @alice is connected with"), "Alice's travel pals are visible");
 });

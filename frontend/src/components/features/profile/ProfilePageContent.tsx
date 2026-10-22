@@ -124,7 +124,7 @@ export function ProfileSavedBoardLibrary({
     );
 }
 
-function FriendAvatar({ friend }: { friend: FriendUser }) {
+export function FriendAvatar({ friend }: { friend: FriendUser }) {
     const [failed, setFailed] = useState(false);
     if (friend.profilePictureUrl && !failed) {
         return (
@@ -263,7 +263,7 @@ export default function ProfilePageContent({
                                     my friends ({friends.length})
                                 </h3>
                                 <p className="text-12 text-muted-foreground mt-2 font-medium">
-                                    fellow travelers you&apos;re connected with
+                                    travelers you&apos;re connected with
                                 </p>
                             </div>
                             <div className="flex items-center gap-4">

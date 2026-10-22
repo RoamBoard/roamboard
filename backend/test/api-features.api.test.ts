@@ -795,3 +795,95 @@ test("friendship lifecycle handles requests, public profile status, accept, reje
         404
     );
 });
+
+test("public friends HTTP endpoint supports anonymous access, validates handle, and reports missing users", async () => {
+    const mockFriends = [
+        {
+            friendshipId: 1,
+            acceptedAt: "2026-10-20T10:00:00.000Z",
+            userId: "u-bob",
+            username: "bob",
+            displayName: "Bob",
+            profilePictureUrl: null,
+            bio: "Traveler",
+            location: "Berlin"
+        }
+    ];
+
+    const users: UsersRepository = {
+        async read() {
+            return null;
+        },
+        async findIdByHandle(handle) {
+            return handle === "alice" ? "u-alice" : null;
+        },
+        async update() {},
+        async setPicture() {},
+        async listBoards() {
+            return [];
+        },
+        async countPublicPhotos() {
+            return 0;
+        },
+        async stats() {
+            return {};
+        },
+        async listSavedBoards() {
+            return { items: [], hasMore: false };
+        },
+        async saveBoard() {
+            return true;
+        },
+        async unsaveBoard() {},
+        async getFriendship() {
+            return null;
+        },
+        async sendFriendRequest() {
+            return 1;
+        },
+        async listIncomingFriendRequests() {
+            return [];
+        },
+        async acceptFriendRequest() {
+            return true;
+        },
+        async rejectFriendRequest() {
+            return true;
+        },
+        async listFriends(userId) {
+            return userId === "u-alice" ? mockFriends : [];
+        },
+        async searchUsers() {
+            return [];
+        },
+        async listFriendsBoards() {
+            return [];
+        },
+        async listFriendsActivity() {
+            return [];
+        },
+        async removeFriend() {
+            return true;
+        },
+        async removeFriendByHandle() {
+            return true;
+        }
+    };
+
+    const app = createApp({ repository, usersRepository: users });
+
+    // 1. Anonymous successful request
+    const successRes = await request(app).get("/api/v1/users/by-handle/alice/friends");
+    assert.equal(successRes.status, 200);
+    assert.deepEqual(successRes.body.data, mockFriends);
+
+    // 2. Invalid handle
+    const invalidRes = await request(app).get("/api/v1/users/by-handle/invalid!handle/friends");
+    assert.equal(invalidRes.status, 400);
+    assert.equal(invalidRes.body.error.code, "INVALID_REQUEST");
+
+    // 3. Missing user
+    const missingRes = await request(app).get("/api/v1/users/by-handle/missing/friends");
+    assert.equal(missingRes.status, 404);
+    assert.equal(missingRes.body.error.code, "NOT_FOUND");
+});

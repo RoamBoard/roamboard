@@ -8,6 +8,10 @@ export function createUsersController(service: ReturnType<typeof createUsersServ
             const { handle } = response.locals.params as { handle: string };
             response.json({ data: await service.publicProfile(handle, response.locals.user?.userId ?? null) });
         },
+        publicFriends: async (_request, response) => {
+            const { handle } = response.locals.params as { handle: string };
+            response.json({ data: await service.publicFriends(handle) });
+        },
         languages: async (_request, response) => {
             response.json({ data: service.languages() });
         },
