@@ -4,5 +4,9 @@ const id = z.coerce.number().int().positive().safe();
 
 export const subscriptionParamsSchema = z.object({ boardId: id }).strict();
 export const notificationParamsSchema = z.object({ notificationId: id }).strict();
-export const notificationQuerySchema = z.object({ cursor: z.string().min(1).max(512).optional() }).strict();
+export const notificationQuerySchema = z
+    .object({ cursor: z.string().min(1).max(512).optional(), unreadOnly: z.enum(["true", "false"]).optional() })
+    .strict();
+export const emptyNotificationQuerySchema = z.object({}).strict();
+export const emptyNotificationBodySchema = z.object({}).strict().default({});
 export const subscriptionBodySchema = z.object({ enabled: z.boolean() }).strict();

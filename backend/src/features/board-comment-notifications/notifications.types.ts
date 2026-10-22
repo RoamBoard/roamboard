@@ -20,7 +20,13 @@ export interface NotificationCursor {
 export interface NotificationsRepository {
     preference(boardId: number, userId: string): Promise<boolean | null>;
     setPreference(boardId: number, userId: string, enabled: boolean): Promise<void>;
-    list(userId: string, cursor: NotificationCursor | null, limit: number): Promise<NotificationRecord[]>;
+    list(
+        userId: string,
+        cursor: NotificationCursor | null,
+        limit: number,
+        unreadOnly?: boolean
+    ): Promise<NotificationRecord[]>;
     unreadCount(userId: string): Promise<number>;
     markRead(userId: string, notificationId: number): Promise<{ notificationId: number; readAt: string } | null>;
+    markAllRead(userId: string): Promise<void>;
 }

@@ -70,10 +70,10 @@ export function createNotificationsService(boards: BoardRepository, notification
             await notifications.setPreference(boardId, userId, enabled);
             return { enabled };
         },
-        async list(userId: string, cursorValue?: string) {
+        async list(userId: string, cursorValue?: string, unreadOnly = false) {
             const cursor = decodeCursor(cursorValue, userId);
             const [rows, unreadCount] = await Promise.all([
-                notifications.list(userId, cursor, pageSize + 1),
+                notifications.list(userId, cursor, pageSize + 1, unreadOnly),
                 notifications.unreadCount(userId)
             ]);
             const hasMore = rows.length > pageSize;
@@ -91,6 +91,10 @@ export function createNotificationsService(boards: BoardRepository, notification
             const read = await notifications.markRead(userId, notificationId);
             if (!read) throw new AppError(404, "Notification not found", "NOT_FOUND");
             return read;
+        },
+        async markAllRead(userId: string) {
+            await notifications.markAllRead(userId);
+            return { unreadCount: await notifications.unreadCount(userId) };
         }
     };
 }
