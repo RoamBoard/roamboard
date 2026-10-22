@@ -530,6 +530,7 @@ export default function BoardCreator({
                 pendingUploadRef.current = null;
             }
             const currentPayload = {
+                fillerImagesEnabled,
                 destination,
                 title,
                 description,

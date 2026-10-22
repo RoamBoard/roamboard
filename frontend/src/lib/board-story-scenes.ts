@@ -8,6 +8,7 @@ export type DayScene = {
     part: number;
     parts: number;
     photos: ScenePhoto[];
+    textActivities: BoardActivity[];
 };
 
 // Balance scenes around the six-photo limit, retaining every placement in its saved order.
@@ -15,7 +16,7 @@ export function createDayScenes(day: PublishedBoardDay, photos: ScenePhoto[]): D
     const parts = Math.max(1, Math.ceil(photos.length / 6));
     const split = Math.floor(photos.length / parts);
     const remainder = photos.length % parts;
-    return Array.from({ length: parts }, (_, index) => ({
+    const scenes: DayScene[] = Array.from({ length: parts }, (_, index) => ({
         id: index === 0 ? `day-${day.number}` : `day-${day.number}-part-${index + 1}`,
         day,
         part: index + 1,
@@ -23,8 +24,37 @@ export function createDayScenes(day: PublishedBoardDay, photos: ScenePhoto[]): D
         photos: photos.slice(
             index * split + Math.min(index, remainder),
             (index + 1) * split + Math.min(index + 1, remainder)
-        )
+        ),
+        textActivities: []
     }));
+    const activities = sceneActivities(day);
+    const photoSceneByActivity = new Map<string, number[]>();
+    scenes.forEach((scene, sceneIndex) => {
+        scene.photos.forEach((photo) => {
+            if (!photo.activityId) return;
+            const sceneIndexes = photoSceneByActivity.get(photo.activityId) ?? [];
+            if (!sceneIndexes.includes(sceneIndex)) sceneIndexes.push(sceneIndex);
+            photoSceneByActivity.set(photo.activityId, sceneIndexes);
+        });
+    });
+    const textOnly = activities.filter((activity) => !activity.images.length);
+    textOnly.forEach((activity) => {
+        const activityIndex = activities.indexOf(activity);
+        const previousPhotoActivity = activities
+            .slice(0, activityIndex)
+            .reverse()
+            .find((candidate) => photoSceneByActivity.has(candidate.id));
+        const nextPhotoActivity = activities
+            .slice(activityIndex + 1)
+            .find((candidate) => photoSceneByActivity.has(candidate.id));
+        const previousScene = previousPhotoActivity
+            ? photoSceneByActivity.get(previousPhotoActivity.id)!.at(-1)
+            : undefined;
+        const nextScene = nextPhotoActivity ? photoSceneByActivity.get(nextPhotoActivity.id)![0] : undefined;
+        const sceneIndex = previousScene ?? nextScene ?? 0;
+        scenes[sceneIndex]!.textActivities.push(activity);
+    });
+    return scenes;
 }
 
 export function sceneActivities(day: PublishedBoardDay): BoardActivity[] {

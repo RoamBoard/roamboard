@@ -187,6 +187,35 @@ test("short, empty and photo-heavy days balance scenes around six photos without
     }
 });
 
+test("text-only activities stay with the neighboring photo story before scenes are split", () => {
+    const day = {
+        number: 1,
+        title: "A timed day",
+        items: [
+            { id: "early", type: "activity" as const, title: "Early", description: "", time: "08:00", images: [] },
+            { id: "mid", type: "activity" as const, title: "Midday", description: "", time: "09:00", images: [] },
+            {
+                id: "late",
+                type: "activity" as const,
+                title: "Late",
+                description: "",
+                time: "10:00",
+                images: Array.from({ length: 8 }, (_, index) => image(`late-${index}`))
+            }
+        ]
+    };
+    const photos = day.items[2].images.map((photo, index) => ({
+        id: `late-placement-${index}`,
+        image: photo,
+        activityId: "late"
+    }));
+    const scenes = createDayScenes(day, photos);
+    assert.deepEqual(
+        scenes.map((scene) => scene.textActivities.map((activity) => activity.id)),
+        [["early", "mid"], []]
+    );
+});
+
 test("scene layout is stable across renders, varied in shape, and leaves the full saved image for zoom", () => {
     const day = getBoardDays(story().board).find((day) => day.number === 3)!;
     const photos = day.items.flatMap((item) =>

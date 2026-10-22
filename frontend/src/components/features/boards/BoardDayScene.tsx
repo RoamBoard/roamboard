@@ -72,10 +72,7 @@ export default function BoardDayScene({
 }) {
     const activities = sceneActivities(scene.day);
     const photoActivities = new Set(scene.photos.map((photo) => photo.activityId));
-    const unpictured = activities.filter((activity) => !activity.images.length);
-    const textActivities = unpictured.filter(
-        (_, index) => Math.floor((index * scene.parts) / Math.max(1, unpictured.length)) === scene.part - 1
-    );
+    const textActivities = scene.textActivities;
     const timelineActivities = activities.filter(
         (activity) => photoActivities.has(activity.id) || textActivities.includes(activity)
     );

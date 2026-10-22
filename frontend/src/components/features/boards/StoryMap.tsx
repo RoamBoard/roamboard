@@ -70,10 +70,7 @@ export default function StoryMap({
         if (!node) return;
         const observer = new IntersectionObserver(
             (entries) => {
-                if (entries.some((entry) => entry.isIntersecting)) {
-                    setVisible(true);
-                    observer.disconnect();
-                }
+                setVisible(entries.some((entry) => entry.isIntersecting));
             },
             { rootMargin: "100px" }
         );
