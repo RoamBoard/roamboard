@@ -10,8 +10,30 @@ import { roamFlowBoards } from "../src/data/roamflow-boards";
 import { appendRoamFlowBoards, loadRoamFlowPage } from "../src/lib/roamflow";
 import { editorialFallback } from "../src/lib/image-library";
 import { discoveryCard } from "./fixtures/discovery-card";
+import RoamFlow from "../src/components/features/discover/roamflow/RoamFlow";
 
 void globalThis.fetch;
+
+test("RoamFlow keeps loaded Boards in one list without chapter headings or a continue prompt", () => {
+    const boards = Array.from({ length: 15 }, (_, index) => ({
+        ...roamFlowBoards[index % roamFlowBoards.length],
+        id: `story-${index + 1}`
+    }));
+    const markup = renderToStaticMarkup(
+        createElement(RoamFlow, { initialPage: { boards, nextCursor: "3" }, reduceMotion: true })
+    );
+    assert.equal((markup.match(/<ol\b/g) ?? []).length, 1);
+    assert.equal((markup.match(/id="roamflow-story-/g) ?? []).length, boards.length);
+    assert.match(markup, /aria-label="Travel stories"/);
+    assert.match(markup, /Roam with the flow/);
+    assert.match(markup, /Just keep scrolling\./);
+    assert.match(markup, /href="#roamflow"[^>]*>Back to RoamFlow/);
+    assert.doesNotMatch(markup, /Skip gallery/);
+    assert.doesNotMatch(
+        markup,
+        /Take the longer way|Somewhere you haven.t been|Keep exploring|Continue to page footer/
+    );
+});
 
 test("RoamFlow pages public published summaries and retains Boards without covers", async (t) => {
     const signal = new AbortController().signal;

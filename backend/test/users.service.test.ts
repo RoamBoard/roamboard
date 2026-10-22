@@ -43,3 +43,40 @@ test("a cancelled crossed friend request is never reported as accepted", async (
         assert.equal(calls.lookups, conflictOnInsert ? 2 : 1);
     }
 });
+
+test("publicFriends returns friends for an existing user handle", async () => {
+    const mockFriends = [
+        {
+            friendshipId: 1,
+            acceptedAt: "2026-10-20T10:00:00.000Z",
+            userId: "u-bob",
+            username: "bob",
+            displayName: "Bob",
+            profilePictureUrl: null,
+            bio: "Traveler",
+            location: "Berlin"
+        }
+    ];
+    const repository = {
+        async findIdByHandle(handle: string) {
+            return handle === "alice" ? "u-alice" : null;
+        },
+        async listFriends(userId: string) {
+            return userId === "u-alice" ? mockFriends : [];
+        }
+    } as unknown as UsersRepository;
+
+    const service = createUsersService(
+        repository,
+        {} as Parameters<typeof createUsersService>[1],
+        {} as Parameters<typeof createUsersService>[2]
+    );
+
+    const friends = await service.publicFriends("alice");
+    assert.deepEqual(friends, mockFriends);
+
+    await assert.rejects(
+        () => service.publicFriends("nonexistent"),
+        (error: unknown) => error instanceof AppError && error.statusCode === 404 && error.code === "NOT_FOUND"
+    );
+});
