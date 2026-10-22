@@ -9,6 +9,7 @@ import { Bell, UserRound } from "lucide-react";
 import { observeCurrentUser, type AuthUser } from "@/lib/auth";
 import CommentNotificationList from "@/components/features/notifications/CommentNotificationList";
 import {
+    clearCommentNotifications,
     commentNotificationHref,
     listCommentNotifications,
     markCommentNotificationRead,
@@ -50,6 +51,7 @@ export default function NotificationControl({
     const isOpen = open ?? internalOpen;
     const panelId = useId();
     const triggerRef = useRef<HTMLButtonElement>(null);
+    const clearButtonRef = useRef<HTMLButtonElement>(null);
     const reducedMotion = useReducedMotion();
     const router = useRouter();
 
@@ -70,6 +72,10 @@ export default function NotificationControl({
     const [commentLoading, setCommentLoading] = useState(false);
     const [commentLoadError, setCommentLoadError] = useState("");
     const [openingCommentId, setOpeningCommentId] = useState<number | null>(null);
+    const [markingCommentId, setMarkingCommentId] = useState<number | null>(null);
+    const [clearingComments, setClearingComments] = useState(false);
+    const [commentActionError, setCommentActionError] = useState("");
+    const clearingCommentUserRef = useRef<string | null>(null);
 
     const apiOrigin = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
     const resolveAvatarUrl = (url: string | null) => {
@@ -102,7 +108,7 @@ export default function NotificationControl({
         const version = ++commentReadVersionRef.current;
         setCommentLoading(true);
         setCommentLoadError("");
-        void listCommentNotifications()
+        void listCommentNotifications(undefined, true)
             .then((page) => {
                 if (commentUserRef.current !== expectedUserId || version !== commentReadVersionRef.current) return;
                 setCommentItems(page.data.slice(0, 5));
@@ -129,6 +135,10 @@ export default function NotificationControl({
             setCommentUnreadCount(0);
             setCommentLoadError("");
             setOpeningCommentId(null);
+            setMarkingCommentId(null);
+            setClearingComments(false);
+            setCommentActionError("");
+            clearingCommentUserRef.current = null;
             setCommentLoading(false);
         }
         if (userId && (changed || isOpen)) fetchCommentNotifications(userId);
@@ -144,7 +154,7 @@ export default function NotificationControl({
 
     async function openCommentNotification(notification: CommentNotification) {
         const expectedUserId = commentUserRef.current;
-        if (!expectedUserId || openingCommentId !== null) return;
+        if (!expectedUserId || openingCommentId !== null || markingCommentId !== null) return;
         setOpeningCommentId(notification.notificationId);
         setActionError(null);
         try {
@@ -157,6 +167,45 @@ export default function NotificationControl({
                 setActionError("Could not open that notification. Try again.");
         } finally {
             if (commentUserRef.current === expectedUserId) setOpeningCommentId(null);
+        }
+    }
+
+    async function markCommentRead(notification: CommentNotification) {
+        const expectedUserId = commentUserRef.current;
+        if (!expectedUserId || openingCommentId !== null || markingCommentId !== null || clearingComments) return;
+        setMarkingCommentId(notification.notificationId);
+        setCommentActionError("");
+        try {
+            await markCommentNotificationRead(notification.notificationId);
+            if (commentUserRef.current === expectedUserId)
+                setCommentItems((current) =>
+                    current.filter((item) => item.notificationId !== notification.notificationId)
+                );
+        } catch {
+            if (commentUserRef.current === expectedUserId)
+                setCommentActionError("Could not mark that notification as read. Try again.");
+        } finally {
+            if (commentUserRef.current === expectedUserId) setMarkingCommentId(null);
+        }
+    }
+
+    async function clearComments() {
+        const expectedUserId = commentUserRef.current;
+        if (!expectedUserId || markingCommentId !== null || clearingCommentUserRef.current === expectedUserId) return;
+        const clearButton = clearButtonRef.current;
+        if (clearButton?.closest("section")?.contains(clearButton.ownerDocument.activeElement))
+            triggerRef.current?.focus();
+        clearingCommentUserRef.current = expectedUserId;
+        setClearingComments(true);
+        setCommentActionError("");
+        try {
+            await clearCommentNotifications();
+        } catch {
+            if (commentUserRef.current === expectedUserId)
+                setCommentActionError("Could not clear Board comment notifications. Try again.");
+        } finally {
+            if (clearingCommentUserRef.current === expectedUserId) clearingCommentUserRef.current = null;
+            if (commentUserRef.current === expectedUserId) setClearingComments(false);
         }
     }
 
@@ -379,6 +428,7 @@ export default function NotificationControl({
 
     const flyoutPlacement = sidebar ? "bottom-0 left-[calc(100%+1.75rem)]" : "top-[calc(100%+0.5rem)] right-0";
     const visibleCommentItems = commentAccountId === sessionUser?.userId ? commentItems : [];
+    const displayedCommentItems = visibleCommentItems.filter((item) => item.notificationId !== markingCommentId);
     const pendingCount = requests.length + (commentAccountId === sessionUser?.userId ? commentUnreadCount : 0);
 
     useEffect(() => {
@@ -606,22 +656,51 @@ export default function NotificationControl({
                                     {commentLoading && visibleCommentItems.length === 0 && (
                                         <p className="text-12 text-muted-foreground px-4 py-3">Loading comments…</p>
                                     )}
-                                    {visibleCommentItems.length > 0 && (
-                                        <section
-                                            aria-label="Board comment notifications"
-                                            className="border-line border-t"
-                                        >
-                                            <h3 className="text-10 tracking-label text-muted-foreground px-4 pt-3 font-bold uppercase">
-                                                Board comments
-                                            </h3>
-                                            <CommentNotificationList
-                                                items={visibleCommentItems}
-                                                compact
-                                                pendingId={openingCommentId}
-                                                onOpen={openCommentNotification}
-                                            />
-                                        </section>
-                                    )}
+                                    <AnimatePresence key={sessionUser.userId} initial={false}>
+                                        {(visibleCommentItems.length > 0 ||
+                                            (commentAccountId === sessionUser.userId && commentUnreadCount > 0)) && (
+                                            <motion.section
+                                                key="comment-notifications"
+                                                aria-label="Board comment notifications"
+                                                exit={{ opacity: 0, height: 0 }}
+                                                transition={{ duration: reducedMotion ? 0 : 0.2, ease: "easeOut" }}
+                                                className="border-line overflow-hidden border-t"
+                                            >
+                                                <div className="flex items-center justify-between gap-2 px-4 pt-3">
+                                                    <h3 className="text-10 tracking-label text-muted-foreground font-bold uppercase">
+                                                        Board comments
+                                                    </h3>
+                                                    {commentUnreadCount > 0 && (
+                                                        <button
+                                                            ref={clearButtonRef}
+                                                            type="button"
+                                                            onClick={() => void clearComments()}
+                                                            disabled={clearingComments || markingCommentId !== null}
+                                                            className="text-10 text-muted-foreground hover:text-foreground cursor-pointer underline disabled:cursor-default"
+                                                        >
+                                                            Clear all notifications
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                {commentActionError && (
+                                                    <p role="alert" className="text-10 px-4 pt-2 text-red-500">
+                                                        {commentActionError}
+                                                    </p>
+                                                )}
+                                                {visibleCommentItems.length > 0 && (
+                                                    <CommentNotificationList
+                                                        items={displayedCommentItems}
+                                                        compact
+                                                        pendingId={openingCommentId ?? markingCommentId}
+                                                        onOpen={openCommentNotification}
+                                                        onMarkRead={markCommentRead}
+                                                        onDismissFocusFallback={() => triggerRef.current?.focus()}
+                                                        reducedMotion={reducedMotion}
+                                                    />
+                                                )}
+                                            </motion.section>
+                                        )}
+                                    </AnimatePresence>
                                 </>
                             )}
                         </div>

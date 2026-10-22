@@ -78,7 +78,8 @@ function setup() {
         }
     } as BoardRepository;
     const preferences = new Map<string, boolean>();
-    const records: Array<NotificationRecord & { recipient: string }> = [];
+    const records: Array<NotificationRecord & { recipient: string; hidden?: boolean }> = [];
+    const failures = { clear: false };
     const notifications: NotificationsRepository = {
         async preference(boardId, userId) {
             return preferences.get(`${boardId}:${userId}`) ?? null;
@@ -86,9 +87,9 @@ function setup() {
         async setPreference(boardId, userId, enabled) {
             preferences.set(`${boardId}:${userId}`, enabled);
         },
-        async list(userId, cursor, limit) {
+        async list(userId, cursor, limit, unreadOnly = false) {
             return records
-                .filter((item) => item.recipient === userId)
+                .filter((item) => item.recipient === userId && !item.hidden && (!unreadOnly || item.readAt === null))
                 .filter(
                     (item) =>
                         !cursor ||
@@ -99,7 +100,7 @@ function setup() {
                 .slice(0, limit);
         },
         async unreadCount(userId) {
-            return records.filter((item) => item.recipient === userId && item.readAt === null).length;
+            return records.filter((item) => item.recipient === userId && !item.hidden && item.readAt === null).length;
         },
         async markRead(userId, notificationId) {
             const item = records.find(
@@ -108,10 +109,16 @@ function setup() {
             if (!item) return null;
             item.readAt ??= "2026-10-19T15:00:00.000Z";
             return { notificationId, readAt: item.readAt };
+        },
+        async markAllRead(userId) {
+            if (failures.clear) throw new Error("storage unavailable");
+            for (const item of records) {
+                if (item.recipient === userId) item.readAt ??= "2026-10-19T15:00:00.000Z";
+            }
         }
     };
     const app = createApp({ ...fakeAuth(), boardRepository: boards, notificationsRepository: notifications });
-    return { app, access, records };
+    return { app, access, records, failures };
 }
 
 test("subscriptions require access and exact Origin, with owner on and other viewers off by default", async () => {
@@ -226,4 +233,85 @@ test("only the recipient can mark an item read; repeated reads preserve its time
             .unreadCount,
         0
     );
+});
+
+test("clear marks both kinds across older and hidden rows, preserves history and other accounts", async () => {
+    const { app, records } = setup();
+    for (let id = 1; id <= 23; id++) {
+        records.push({
+            notificationId: id,
+            recipient: "owner",
+            boardId: 1,
+            boardTitle: "Tokyo",
+            commentId: id,
+            body: `Comment ${id}`,
+            kind: id % 2 === 0 ? "mention" : "comment",
+            commenter: { displayName: "Reader", username: "reader", profilePictureUrl: null },
+            createdAt: "2026-10-19T12:00:00.000Z",
+            readAt: id > 3 && id < 23 ? "2026-10-19T14:00:00.000Z" : null,
+            hidden: id === 23
+        });
+    }
+    records.push({ ...records[0]!, notificationId: 24, recipient: "reader", readAt: null });
+    const path = "/api/v1/users/me/comment-notifications";
+    const unread = await request(app).get(path).set("Cookie", cookie("owner")).query({ unreadOnly: "true" });
+    assert.equal(unread.status, 200);
+    assert.deepEqual(
+        unread.body.data.map((item: { notificationId: number }) => item.notificationId),
+        [3, 2, 1]
+    );
+    assert.equal(unread.body.meta.unreadCount, 3);
+    assert.equal(
+        (await request(app).get(path).set("Cookie", cookie("owner")).query({ unreadOnly: "bad" })).status,
+        400
+    );
+    const clearPath = `${path}/read-all`;
+    assert.equal((await request(app).post(clearPath).set("Origin", origin)).status, 401);
+    assert.equal((await request(app).post(clearPath).set("Cookie", cookie("owner"))).status, 403);
+    assert.equal(
+        (await request(app).post(clearPath).set("Cookie", cookie("owner")).set("Origin", "https://wrong.test")).status,
+        403
+    );
+    assert.equal(
+        (
+            await request(app)
+                .post(clearPath)
+                .set("Cookie", cookie("owner"))
+                .set("Origin", origin)
+                .send({ userId: "reader" })
+        ).status,
+        400
+    );
+    const cleared = await request(app).post(clearPath).set("Cookie", cookie("owner")).set("Origin", origin);
+    assert.equal(cleared.status, 200);
+    assert.equal(cleared.headers["cache-control"], "no-store");
+    assert.deepEqual(cleared.body, { data: { unreadCount: 0 } });
+    assert.ok(records.filter((item) => item.recipient === "owner").every((item) => item.readAt !== null));
+    assert.equal(records.find((item) => item.recipient === "reader")?.readAt, null);
+    assert.equal((await request(app).get(path).set("Cookie", cookie("owner"))).body.data.length, 20);
+    assert.deepEqual(
+        (await request(app).get(path).set("Cookie", cookie("owner")).query({ unreadOnly: "true" })).body.data,
+        []
+    );
+    assert.deepEqual(
+        (await request(app).post(clearPath).set("Cookie", cookie("owner")).set("Origin", origin)).body.data,
+        { unreadCount: 0 }
+    );
+    records.push({ ...records[0]!, notificationId: 25, readAt: null });
+    assert.equal(
+        (await request(app).get(path).set("Cookie", cookie("owner")).query({ unreadOnly: "true" })).body.data[0]
+            .notificationId,
+        25
+    );
+});
+
+test("clear storage failure does not report success", async () => {
+    const { app, failures } = setup();
+    failures.clear = true;
+    const result = await request(app)
+        .post("/api/v1/users/me/comment-notifications/read-all")
+        .set("Cookie", cookie("owner"))
+        .set("Origin", origin);
+    assert.equal(result.status, 500);
+    assert.equal(result.body.error.code, "INTERNAL_ERROR");
 });
