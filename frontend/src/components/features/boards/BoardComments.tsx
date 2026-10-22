@@ -193,7 +193,7 @@ export function BoardCommentRow({
     return (
         <li
             id={`comment-${comment.commentId}`}
-            className="group/comment border-line flex scroll-mt-8 items-start gap-3 border-b py-5"
+            className="group/comment border-line flex scroll-mt-[calc(4rem+var(--app-header-height,0px))] items-start gap-3 border-b py-5"
         >
             <CommentAvatar
                 key={comment.author.profilePictureUrl ?? "no-photo"}
@@ -599,7 +599,7 @@ export default function BoardComments({
             id="comments"
             tabIndex={-1}
             aria-labelledby="comments-heading"
-            className="border-line scroll-mt-16 border-t px-5 py-10 sm:px-9 sm:py-12"
+            className="border-line scroll-mt-[calc(4rem+var(--app-header-height,0px))] border-t px-5 py-10 sm:px-9 sm:py-12"
         >
             <div className="mx-auto w-full max-w-3xl">
                 <div className="border-foreground flex items-center justify-between gap-3 border-b pb-5">

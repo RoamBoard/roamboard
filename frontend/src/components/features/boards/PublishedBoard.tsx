@@ -334,7 +334,7 @@ export default function PublishedBoard({
                             data-story-scene
                             data-story-chapter
                             tabIndex={-1}
-                            className={`border-line relative min-w-0 outline-none ${desktop ? "h-full w-[var(--story-width)] shrink-0 snap-start snap-always [scrollbar-gutter:stable] overflow-y-auto py-6 pr-24 pl-20" : "border-b px-6 py-8 sm:px-12"}`}
+                            className={`border-line relative min-w-0 outline-none ${desktop ? "h-full w-[var(--story-width)] shrink-0 snap-start snap-always [scrollbar-gutter:stable] overflow-y-auto py-6 pr-24 pl-20" : "scroll-mt-[calc(4rem+var(--app-header-height,0px))] border-b px-6 py-8 sm:px-12"}`}
                         >
                             <div className={desktop ? "grid h-full min-h-[48rem] grid-cols-12 grid-rows-6 gap-5" : ""}>
                                 <div

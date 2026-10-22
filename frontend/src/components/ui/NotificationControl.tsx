@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useId, useRef, useCallback } from "react";
+import { useState, useEffect, useId, useRef, useCallback, type ReactNode, type Ref } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -8,6 +8,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Bell, UserRound } from "lucide-react";
 import { observeCurrentUser, type AuthUser } from "@/lib/auth";
 import CommentNotificationList from "@/components/features/notifications/CommentNotificationList";
+import MobileSheet from "@/components/ui/MobileSheet";
 import {
     clearCommentNotifications,
     commentNotificationHref,
@@ -26,6 +27,7 @@ import {
 
 export type NotificationControlProps = {
     sidebar?: boolean;
+    mobile?: boolean;
     iconOnly?: boolean;
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
@@ -38,6 +40,7 @@ export type NotificationControlProps = {
 
 export default function NotificationControl({
     sidebar = true,
+    mobile = false,
     iconOnly = false,
     open,
     onOpenChange,
@@ -52,6 +55,8 @@ export default function NotificationControl({
     const panelId = useId();
     const triggerRef = useRef<HTMLButtonElement>(null);
     const clearButtonRef = useRef<HTMLButtonElement>(null);
+    const sheetCloseRef = useRef<HTMLButtonElement>(null);
+    const focusPanelFallback = () => (mobile ? sheetCloseRef : triggerRef).current?.focus();
     const reducedMotion = useReducedMotion();
     const router = useRouter();
 
@@ -193,8 +198,7 @@ export default function NotificationControl({
         const expectedUserId = commentUserRef.current;
         if (!expectedUserId || markingCommentId !== null || clearingCommentUserRef.current === expectedUserId) return;
         const clearButton = clearButtonRef.current;
-        if (clearButton?.closest("section")?.contains(clearButton.ownerDocument.activeElement))
-            triggerRef.current?.focus();
+        if (clearButton?.closest("section")?.contains(clearButton.ownerDocument.activeElement)) focusPanelFallback();
         clearingCommentUserRef.current = expectedUserId;
         setClearingComments(true);
         setCommentActionError("");
@@ -426,7 +430,6 @@ export default function NotificationControl({
 
     const containerRef = useRef<HTMLDivElement>(null);
 
-    const flyoutPlacement = sidebar ? "bottom-0 left-[calc(100%+1.75rem)]" : "top-[calc(100%+0.5rem)] right-0";
     const visibleCommentItems = commentAccountId === sessionUser?.userId ? commentItems : [];
     const displayedCommentItems = visibleCommentItems.filter((item) => item.notificationId !== markingCommentId);
     const pendingCount = requests.length + (commentAccountId === sessionUser?.userId ? commentUnreadCount : 0);
@@ -461,9 +464,10 @@ export default function NotificationControl({
                 type="button"
                 aria-label="Notifications"
                 aria-expanded={isOpen}
+                aria-haspopup={mobile ? "dialog" : undefined}
                 aria-controls={panelId}
                 onClick={() => toggleOpen(!isOpen)}
-                className={`font-body text-12 text-muted-foreground hover:text-foreground relative flex min-h-11 w-full cursor-pointer items-center font-medium focus-visible:outline-1 focus-visible:outline-offset-4 ${iconOnly ? "justify-center" : "gap-3 px-3"}`}
+                className={`font-body text-12 text-muted-foreground hover:text-foreground relative flex min-h-11 w-full min-w-11 cursor-pointer items-center font-medium focus-visible:outline-1 focus-visible:-outline-offset-2 md:focus-visible:outline-offset-4 ${iconOnly ? "justify-center" : "gap-3 px-3"}`}
             >
                 <div className="relative flex shrink-0 items-center justify-center">
                     <Bell aria-hidden="true" size={20} strokeWidth={1.5} className="shrink-0" />
@@ -485,29 +489,15 @@ export default function NotificationControl({
             </button>
             <AnimatePresence initial={false}>
                 {isOpen && (
-                    <motion.div
+                    <NotificationPanel
                         id={panelId}
-                        initial={{ opacity: 0, x: reducedMotion ? 0 : -8, scale: reducedMotion ? 1 : 0.98 }}
-                        animate={{ opacity: 1, x: 0, scale: 1 }}
-                        exit={{ opacity: 0, x: reducedMotion ? 0 : -8, scale: reducedMotion ? 1 : 0.98 }}
-                        transition={{ duration: reducedMotion ? 0 : 0.16, ease: [0.22, 1, 0.36, 1] }}
-                        role="region"
-                        aria-label="Notifications panel"
-                        className={`bg-background text-foreground border-line absolute z-50 flex max-h-[min(28rem,calc(100dvh-4rem))] w-80 max-w-[calc(100vw-5rem)] flex-col overflow-hidden rounded-[2px] border p-0 shadow-2xl ${flyoutPlacement}`}
+                        mobile={mobile}
+                        sidebar={sidebar}
+                        reducedMotion={reducedMotion}
+                        onClose={() => toggleOpen(false)}
+                        closeButtonRef={sheetCloseRef}
                     >
-                        <div className="border-line flex shrink-0 items-center justify-between border-b px-4 py-3">
-                            <span className="text-10 tracking-label text-muted-foreground block font-bold uppercase">
-                                notifications
-                            </span>
-                            <Link
-                                href="/notifications"
-                                onClick={() => toggleOpen(false)}
-                                className="font-body text-10 text-muted-foreground hover:text-foreground cursor-pointer underline-offset-4 hover:underline"
-                            >
-                                view all ↗
-                            </Link>
-                        </div>
-                        <div className="flex-1 overflow-y-auto overscroll-contain">
+                        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
                             {!sessionUser ? (
                                 <div className="px-4 py-8 text-center">
                                     <p className="text-12 text-muted-foreground font-body mb-2">
@@ -613,7 +603,7 @@ export default function NotificationControl({
                                                             onClick={() => handleAccept(req.requestId)}
                                                             disabled={Boolean(actionInProgress[req.requestId])}
                                                             aria-label={`Accept friend request from ${req.requester.displayName}`}
-                                                            className="bg-foreground text-background font-body text-10 cursor-pointer rounded-[2px] px-3 py-1.5 font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
+                                                            className="bg-foreground text-background font-body text-12 md:text-10 min-h-11 cursor-pointer rounded-[2px] px-3 py-1.5 font-medium transition-opacity hover:opacity-90 disabled:opacity-50 md:min-h-0"
                                                         >
                                                             {actionInProgress[req.requestId] === "accepting"
                                                                 ? "accepting…"
@@ -624,7 +614,7 @@ export default function NotificationControl({
                                                             onClick={() => handleReject(req.requestId)}
                                                             disabled={Boolean(actionInProgress[req.requestId])}
                                                             aria-label={`Reject friend request from ${req.requester.displayName}`}
-                                                            className="border-line text-muted-foreground hover:text-foreground hover:border-foreground font-body text-10 cursor-pointer rounded-[2px] border px-3 py-1.5 font-medium transition-colors disabled:opacity-50"
+                                                            className="border-line text-muted-foreground hover:text-foreground hover:border-foreground font-body text-12 md:text-10 min-h-11 cursor-pointer rounded-[2px] border px-3 py-1.5 font-medium transition-colors disabled:opacity-50 md:min-h-0"
                                                         >
                                                             {actionInProgress[req.requestId] === "rejecting"
                                                                 ? "rejecting…"
@@ -666,7 +656,7 @@ export default function NotificationControl({
                                                 transition={{ duration: reducedMotion ? 0 : 0.2, ease: "easeOut" }}
                                                 className="border-line overflow-hidden border-t"
                                             >
-                                                <div className="flex items-center justify-between gap-2 px-4 pt-3">
+                                                <div className="flex flex-wrap items-center justify-between gap-x-2 px-4 pt-3">
                                                     <h3 className="text-10 tracking-label text-muted-foreground font-bold uppercase">
                                                         Board comments
                                                     </h3>
@@ -676,7 +666,7 @@ export default function NotificationControl({
                                                             type="button"
                                                             onClick={() => void clearComments()}
                                                             disabled={clearingComments || markingCommentId !== null}
-                                                            className="text-10 text-muted-foreground hover:text-foreground cursor-pointer underline disabled:cursor-default"
+                                                            className="text-12 text-muted-foreground hover:text-foreground md:text-10 min-h-11 cursor-pointer underline disabled:cursor-default md:min-h-0"
                                                         >
                                                             Clear all notifications
                                                         </button>
@@ -694,7 +684,7 @@ export default function NotificationControl({
                                                         pendingId={openingCommentId ?? markingCommentId}
                                                         onOpen={openCommentNotification}
                                                         onMarkRead={markCommentRead}
-                                                        onDismissFocusFallback={() => triggerRef.current?.focus()}
+                                                        onDismissFocusFallback={focusPanelFallback}
                                                         reducedMotion={reducedMotion}
                                                     />
                                                 )}
@@ -704,9 +694,70 @@ export default function NotificationControl({
                                 </>
                             )}
                         </div>
-                    </motion.div>
+                    </NotificationPanel>
                 )}
             </AnimatePresence>
         </div>
+    );
+}
+
+function NotificationPanel({
+    id,
+    mobile,
+    sidebar,
+    reducedMotion,
+    onClose,
+    closeButtonRef,
+    children
+}: {
+    id: string;
+    mobile: boolean;
+    sidebar: boolean;
+    reducedMotion: boolean | null;
+    onClose: () => void;
+    closeButtonRef: Ref<HTMLButtonElement>;
+    children: ReactNode;
+}) {
+    const viewAll = (
+        <Link
+            href="/notifications"
+            onClick={onClose}
+            className="font-body text-12 text-muted-foreground hover:text-foreground md:text-10 flex min-h-11 items-center underline-offset-4 hover:underline md:min-h-0"
+        >
+            view all ↗
+        </Link>
+    );
+    if (mobile)
+        return (
+            <MobileSheet
+                id={id}
+                title="Notifications"
+                onClose={onClose}
+                closeButtonRef={closeButtonRef}
+                action={viewAll}
+            >
+                {children}
+            </MobileSheet>
+        );
+    const placement = sidebar ? "bottom-0 left-[calc(100%+1.75rem)]" : "top-[calc(100%+0.5rem)] right-0";
+    return (
+        <motion.div
+            id={id}
+            initial={{ opacity: 0, x: reducedMotion ? 0 : -8, scale: reducedMotion ? 1 : 0.98 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: reducedMotion ? 0 : -8, scale: reducedMotion ? 1 : 0.98 }}
+            transition={{ duration: reducedMotion ? 0 : 0.16, ease: [0.22, 1, 0.36, 1] }}
+            role="region"
+            aria-label="Notifications panel"
+            className={`bg-background text-foreground border-line absolute z-50 flex max-h-[min(28rem,calc(100dvh-4rem))] w-80 max-w-[calc(100vw-5rem)] flex-col overflow-hidden rounded-[2px] border p-0 shadow-2xl ${placement}`}
+        >
+            <div className="border-line flex shrink-0 items-center justify-between border-b px-4 py-3">
+                <span className="text-10 tracking-label text-muted-foreground block font-bold uppercase">
+                    notifications
+                </span>
+                {viewAll}
+            </div>
+            {children}
+        </motion.div>
     );
 }

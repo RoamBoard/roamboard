@@ -37,7 +37,7 @@ export default function BoardStoryEnding({
         <section
             id="ending"
             tabIndex={-1}
-            className="mx-auto max-w-6xl scroll-mt-16 px-6 py-16 outline-none sm:px-12 sm:py-24"
+            className="mx-auto max-w-6xl scroll-mt-[calc(4rem+var(--app-header-height,0px))] px-6 py-16 outline-none sm:px-12 sm:py-24"
         >
             <p className="text-muted-foreground text-center text-[10px] tracking-[0.2em] uppercase">Summary</p>
             <h2 className="font-display mx-auto mt-3 max-w-4xl text-center text-5xl font-bold sm:text-7xl">

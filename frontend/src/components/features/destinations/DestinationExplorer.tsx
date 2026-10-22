@@ -117,7 +117,7 @@ export function DestinationExplorerContent({
 
     return (
         <section
-            className="font-body relative isolate grid min-h-dvh min-w-0 place-items-center overflow-hidden px-5 md:px-10"
+            className="font-body relative isolate grid min-h-[calc(100dvh-var(--app-header-height,0px))] min-w-0 place-items-center overflow-hidden px-5 md:px-10"
             aria-label="Roamboard"
         >
             <RoamWorld typing={Boolean(query.trim())} leaving={leaving} reduced={reduced} />

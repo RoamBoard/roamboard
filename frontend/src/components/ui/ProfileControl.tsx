@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect, useId, useRef, type ReactNode } from "react";
 import { observeCurrentUser, signOut, type AuthUser } from "@/lib/auth";
 import { restoreMockStore, updateMockSettings } from "@/data/mock-social";
+import MobileSheet from "@/components/ui/MobileSheet";
 import {
     DropdownMenu,
     DropdownMenuTrigger,
@@ -29,6 +30,7 @@ export type ProfileControlProps = {
     compact?: boolean;
     floating?: boolean;
     sidebar?: boolean;
+    mobile?: boolean;
     iconOnly?: boolean;
     sidebarAccountOpen?: boolean;
     onSidebarOpenChange?: (open: boolean) => void;
@@ -46,6 +48,7 @@ export default function ProfileControl({
     compact = false,
     floating = false,
     sidebar = false,
+    mobile = false,
     iconOnly = false,
     onSidebarOpenChange,
     sidebarAccountOpen
@@ -157,29 +160,27 @@ export default function ProfileControl({
             >
                 <AnimatePresence initial={false}>
                     {sidebarOpen && (
-                        <motion.div
+                        <AccountPanel
                             id={accountPanelId}
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: reducedMotion ? 0 : 0.2 }}
-                            role="region"
-                            aria-label="Account options"
-                            className="max-h-[min(40dvh,max(3rem,calc(100dvh-12rem)))] overflow-y-auto overscroll-contain"
+                            mobile={mobile}
+                            reducedMotion={reducedMotion}
+                            onClose={() => toggleSidebarAccount(false)}
                         >
-                            <div className="font-body text-12 flex flex-col items-start gap-1 py-2 pr-3 pl-12">
+                            <div className="font-body text-14 md:text-12 flex flex-col items-stretch gap-1 px-5 py-3 md:items-start md:py-2 md:pr-3 md:pl-12">
                                 {isLoggedIn && (
                                     <span className="text-muted-foreground mb-1 break-words">{displayName}</span>
                                 )}
                                 <Link
                                     href={isLoggedIn ? resolvedProfileHref : "/login"}
-                                    className="text-foreground py-2 underline-offset-4 hover:underline"
+                                    onClick={() => toggleSidebarAccount(false)}
+                                    className="text-foreground flex min-h-11 items-center py-2 underline-offset-4 hover:underline md:min-h-0"
                                 >
                                     {isLoggedIn ? "my profile" : "sign in"} ↗
                                 </Link>
                                 <Link
                                     href={isLoggedIn ? settingsHref : "/login"}
-                                    className="text-foreground py-2 underline-offset-4 hover:underline"
+                                    onClick={() => toggleSidebarAccount(false)}
+                                    className="text-foreground flex min-h-11 items-center py-2 underline-offset-4 hover:underline md:min-h-0"
                                 >
                                     settings
                                 </Link>
@@ -190,7 +191,7 @@ export default function ProfileControl({
                                             type="button"
                                             aria-pressed={selectedTheme === theme}
                                             onClick={() => selectTheme(theme)}
-                                            className={`cursor-pointer underline-offset-4 ${selectedTheme === theme ? "text-foreground underline" : "text-muted-foreground hover:text-foreground"}`}
+                                            className={`min-h-11 min-w-11 cursor-pointer underline-offset-4 md:min-h-0 md:min-w-0 ${selectedTheme === theme ? "text-foreground underline" : "text-muted-foreground hover:text-foreground"}`}
                                         >
                                             {theme}
                                         </button>
@@ -201,7 +202,7 @@ export default function ProfileControl({
                                         type="button"
                                         disabled={Boolean(user) || signingOut}
                                         onClick={() => void handleSignOut()}
-                                        className="cursor-pointer py-2 disabled:opacity-50"
+                                        className="min-h-11 cursor-pointer py-2 text-left disabled:opacity-50 md:min-h-0"
                                     >
                                         {signingOut ? "signing out…" : "log out"}
                                     </button>
@@ -212,7 +213,7 @@ export default function ProfileControl({
                                     </p>
                                 )}
                             </div>
-                        </motion.div>
+                        </AccountPanel>
                     )}
                 </AnimatePresence>
                 <button
@@ -220,9 +221,10 @@ export default function ProfileControl({
                     type="button"
                     aria-label="Account menu"
                     aria-expanded={sidebarOpen}
+                    aria-haspopup={mobile ? "dialog" : undefined}
                     aria-controls={accountPanelId}
                     onClick={() => toggleSidebarAccount(!sidebarOpen)}
-                    className={`font-body text-12 text-muted-foreground hover:text-foreground flex min-h-11 w-full cursor-pointer items-center font-medium focus-visible:outline-1 focus-visible:outline-offset-4 ${iconOnly ? "justify-center" : "gap-3 px-3"}`}
+                    className={`font-body text-12 text-muted-foreground hover:text-foreground flex min-h-11 w-full min-w-11 cursor-pointer items-center font-medium focus-visible:outline-1 focus-visible:-outline-offset-2 md:focus-visible:outline-offset-4 ${iconOnly ? "justify-center" : "gap-3 px-3"}`}
                 >
                     {accountIcon}
                     {!iconOnly && <span>account</span>}
@@ -335,5 +337,40 @@ export default function ProfileControl({
                 </DropdownMenuContent>
             </DropdownMenu>
         </div>
+    );
+}
+
+function AccountPanel({
+    id,
+    mobile,
+    reducedMotion,
+    onClose,
+    children
+}: {
+    id: string;
+    mobile: boolean;
+    reducedMotion: boolean | null;
+    onClose: () => void;
+    children: ReactNode;
+}) {
+    if (mobile)
+        return (
+            <MobileSheet id={id} title="Account" onClose={onClose}>
+                {children}
+            </MobileSheet>
+        );
+    return (
+        <motion.div
+            id={id}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: reducedMotion ? 0 : 0.2 }}
+            role="region"
+            aria-label="Account options"
+            className="max-h-[min(40dvh,max(3rem,calc(100dvh-12rem)))] overflow-y-auto overscroll-contain"
+        >
+            {children}
+        </motion.div>
     );
 }
