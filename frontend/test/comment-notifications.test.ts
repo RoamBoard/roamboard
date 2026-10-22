@@ -194,6 +194,48 @@ function elements(node: ReactNode): Array<{ type: unknown; props: Record<string,
     return [{ type: node.type, props: node.props }, ...Children.toArray(node.props.children).flatMap(elements)];
 }
 
+test("dismissing a focused notification moves focus before removing it", () => {
+    const notification: CommentNotification = {
+        notificationId: 7,
+        boardId: 12,
+        boardTitle: "Tokyo",
+        commentId: 32,
+        kind: "comment",
+        commenter: { displayName: "Avery", username: "avery", profilePictureUrl: null },
+        excerpt: "New comment",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        readAt: null
+    };
+    const actions: string[] = [];
+    const list = CommentNotificationList({
+        items: [notification, { ...notification, notificationId: 8 }],
+        pendingId: null,
+        onOpen: async () => {},
+        onMarkRead: async () => {
+            actions.push("mark");
+        },
+        onDismissFocusFallback: () => actions.push("bell")
+    });
+    const buttons = elements(list).filter((node) => node.type === "button");
+    const nextButton = { focus: () => actions.push("next") };
+    const firstButton = {
+        ownerDocument: { activeElement: null as unknown },
+        closest: () => ({ nextElementSibling: { querySelector: () => nextButton } })
+    };
+    firstButton.ownerDocument.activeElement = firstButton;
+    (buttons[0].props.onClick as (event: { currentTarget: unknown }) => void)({ currentTarget: firstButton });
+    assert.deepEqual(actions, ["next", "mark"]);
+
+    actions.length = 0;
+    const lastButton = {
+        ownerDocument: { activeElement: null as unknown },
+        closest: () => ({ nextElementSibling: null })
+    };
+    lastButton.ownerDocument.activeElement = lastButton;
+    (buttons[1].props.onClick as (event: { currentTarget: unknown }) => void)({ currentTarget: lastButton });
+    assert.deepEqual(actions, ["bell", "mark"]);
+});
+
 function mountSection(context: TestContext, userId: string) {
     const destinations: string[] = [];
     const states: unknown[] = [];
@@ -502,6 +544,13 @@ test("the bell marks one comment read without clearing the others or friend requ
     const dismissing = render();
     assert.ok(!dismissing.html.includes("Unread Board"));
     assert.ok(dismissing.html.includes("Second Board"));
+    const remainingList = dismissing.nodes.find((node) => node.type === CommentNotificationList);
+    assert.ok(remainingList);
+    const remainingButton = elements(
+        CommentNotificationList(remainingList.props as Parameters<typeof CommentNotificationList>[0])
+    ).find((node) => node.type === "button");
+    assert.equal(remainingButton?.props.disabled, undefined);
+    assert.equal(remainingButton?.props["aria-disabled"], true);
     await marking;
     await new Promise<void>((resolve) => setImmediate(resolve));
     const afterOne = render();
@@ -515,7 +564,20 @@ test("the bell marks one comment read without clearing the others or friend requ
         (node) => node.type === "button" && node.props.children === "Clear all notifications"
     );
     assert.ok(button);
+    const trigger = afterOne.nodes.find(
+        (node) => node.type === "button" && node.props["aria-label"] === "Notifications"
+    );
+    assert.ok(trigger);
+    const focusedClearButton = {
+        ownerDocument: { activeElement: null as unknown },
+        closest: () => ({ contains: (element: unknown) => element === focusedClearButton })
+    };
+    focusedClearButton.ownerDocument.activeElement = focusedClearButton;
+    (button.props.ref as { current: unknown }).current = focusedClearButton;
+    const focusMoves = { count: 0 };
+    (trigger.props.ref as { current: unknown }).current = { focus: () => (focusMoves.count += 1) };
     (button.props.onClick as () => void)();
+    assert.equal(focusMoves.count, 1);
     const duringClear = render();
     const pendingButton = duringClear.nodes.find(
         (node) => node.type === "button" && node.props.children === "Clear all notifications"

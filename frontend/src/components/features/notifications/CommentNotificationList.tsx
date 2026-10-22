@@ -15,6 +15,7 @@ export default function CommentNotificationList({
     pendingId,
     onOpen,
     onMarkRead,
+    onDismissFocusFallback,
     reducedMotion = false
 }: {
     items: CommentNotification[];
@@ -22,6 +23,7 @@ export default function CommentNotificationList({
     pendingId: number | null;
     onOpen: (notification: CommentNotification) => Promise<void>;
     onMarkRead?: (notification: CommentNotification) => Promise<void>;
+    onDismissFocusFallback?: () => void;
     reducedMotion?: boolean | null;
 }) {
     return (
@@ -53,7 +55,7 @@ export default function CommentNotificationList({
                             }}
                             aria-label={`${notification.commenter.displayName} ${notification.kind === "mention" ? "mentioned you in" : "commented on"} ${notification.boardTitle}`}
                             aria-disabled={pendingId !== null}
-                            className={`border-line hover:bg-faint/60 flex items-start gap-3 border p-3 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 ${
+                            className={`border-line hover:bg-faint/60 flex items-start gap-3 border p-3 transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] ${
                                 notification.readAt ? "bg-background" : "bg-faint/50"
                             } ${pendingId !== null ? "pointer-events-none" : ""} ${onMarkRead && !notification.readAt ? "pr-11" : ""}`}
                         >
@@ -100,10 +102,23 @@ export default function CommentNotificationList({
                         {onMarkRead && !notification.readAt && (
                             <button
                                 type="button"
-                                onClick={() => void onMarkRead(notification)}
-                                disabled={pendingId !== null}
+                                onClick={(event) => {
+                                    if (pendingId !== null) return;
+                                    const button = event.currentTarget;
+                                    if (button.ownerDocument.activeElement === button) {
+                                        const nextButton = button
+                                            .closest("li")
+                                            ?.nextElementSibling?.querySelector<HTMLButtonElement>(
+                                                "button:not(:disabled)"
+                                            );
+                                        if (nextButton) nextButton.focus();
+                                        else onDismissFocusFallback?.();
+                                    }
+                                    void onMarkRead(notification);
+                                }}
+                                aria-disabled={pendingId !== null}
                                 aria-label={`Mark notification from ${notification.commenter.displayName} on ${notification.boardTitle} as read`}
-                                className="text-muted-foreground hover:text-foreground absolute top-2 right-2 flex size-7 cursor-pointer items-center justify-center focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-default"
+                                className="text-muted-foreground hover:text-foreground absolute top-2 right-2 flex size-7 cursor-pointer items-center justify-center focus-visible:outline-2 focus-visible:outline-offset-2"
                             >
                                 <X size={14} strokeWidth={1.5} aria-hidden="true" />
                             </button>

@@ -51,6 +51,7 @@ export default function NotificationControl({
     const isOpen = open ?? internalOpen;
     const panelId = useId();
     const triggerRef = useRef<HTMLButtonElement>(null);
+    const clearButtonRef = useRef<HTMLButtonElement>(null);
     const reducedMotion = useReducedMotion();
     const router = useRouter();
 
@@ -191,6 +192,9 @@ export default function NotificationControl({
     async function clearComments() {
         const expectedUserId = commentUserRef.current;
         if (!expectedUserId || markingCommentId !== null || clearingCommentUserRef.current === expectedUserId) return;
+        const clearButton = clearButtonRef.current;
+        if (clearButton?.closest("section")?.contains(clearButton.ownerDocument.activeElement))
+            triggerRef.current?.focus();
         clearingCommentUserRef.current = expectedUserId;
         setClearingComments(true);
         setCommentActionError("");
@@ -668,6 +672,7 @@ export default function NotificationControl({
                                                     </h3>
                                                     {commentUnreadCount > 0 && (
                                                         <button
+                                                            ref={clearButtonRef}
                                                             type="button"
                                                             onClick={() => void clearComments()}
                                                             disabled={clearingComments || markingCommentId !== null}
@@ -689,6 +694,7 @@ export default function NotificationControl({
                                                         pendingId={openingCommentId ?? markingCommentId}
                                                         onOpen={openCommentNotification}
                                                         onMarkRead={markCommentRead}
+                                                        onDismissFocusFallback={() => triggerRef.current?.focus()}
                                                         reducedMotion={reducedMotion}
                                                     />
                                                 )}
