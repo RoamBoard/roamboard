@@ -16,6 +16,8 @@ export default function StoryMap({
     onOpen,
     session,
     expanded = false,
+    fill = false,
+    focusFirst = false,
     onEnlarge
 }: {
     days: PublishedBoardDay[];
@@ -24,6 +26,8 @@ export default function StoryMap({
     onOpen: (activity: BoardActivity) => void;
     session: () => ReturnType<typeof loadMapboxMapSession>;
     expanded?: boolean;
+    fill?: boolean;
+    focusFirst?: boolean;
     onEnlarge?: () => void;
 }) {
     const container = useRef<HTMLDivElement>(null);
@@ -56,6 +60,9 @@ export default function StoryMap({
         [days, filter]
     );
     const points = useMemo(() => activities.map((item) => item.point), [activities]);
+    const [initialCenter] = useState(() =>
+        points[0] ? { latitude: points[0].latitude, longitude: points[0].longitude } : undefined
+    );
     useEffect(() => {
         const node = container.current;
         if (!node) return;
@@ -86,14 +93,19 @@ export default function StoryMap({
         };
     }, [visible, points.length, session, attempt]);
     return (
-        <div ref={container} className="relative overflow-hidden">
+        <div ref={container} className={fill ? "relative h-full overflow-hidden" : "relative overflow-hidden"}>
             {!points.length ? (
-                <p className="text-muted-foreground grid min-h-44 place-content-center px-6 text-center text-xs">
+                <p
+                    className={`text-muted-foreground grid place-content-center px-4 text-center text-xs ${fill ? "h-full w-full" : expanded ? "h-[min(60dvh,32rem)] min-h-72" : "aspect-square w-full"}`}
+                >
                     No saved locations for {filter === "all" ? "this Board" : `Day ${filter}`}.
                 </p>
             ) : error ? (
-                <div role="alert" className="grid min-h-44 place-content-center gap-3 px-6 text-center text-xs">
-                    <p>The map is unavailable. The itinerary remains below.</p>
+                <div
+                    role="alert"
+                    className={`grid place-content-center gap-3 px-4 text-center text-xs ${fill ? "h-full w-full" : expanded ? "h-[min(60dvh,32rem)] min-h-72" : "aspect-square w-full"}`}
+                >
+                    <p>The map is unavailable. Board activities remain available.</p>
                     <button
                         type="button"
                         onClick={() => {
@@ -108,21 +120,41 @@ export default function StoryMap({
             ) : token ? (
                 <InteractiveMap
                     token={token}
+                    fillHeight={fill}
                     points={points}
+                    initialCenter={
+                        initialCenter ??
+                        (points[0] ? { latitude: points[0].latitude, longitude: points[0].longitude } : undefined)
+                    }
                     routeGeometry={noRoute}
                     onError={() => setError(true)}
                     onMapClick={onEnlarge ? () => onEnlarge() : undefined}
                     cooperativeGestures
-                    selectedPointId={activeId}
-                    selectedZoom={12}
-                    className={expanded ? "h-[65dvh] min-h-72 w-full" : "h-40 w-full sm:h-44"}
+                    selectedPointId={
+                        points.some((point) => point.id === activeId)
+                            ? activeId
+                            : focusFirst
+                              ? points[0]?.id
+                              : undefined
+                    }
+                    selectedZoom={15}
+                    className={
+                        fill
+                            ? "h-full w-full"
+                            : expanded
+                              ? "h-[min(60dvh,32rem)] min-h-72 w-full"
+                              : "aspect-square w-full"
+                    }
                     onPointClick={(point) => {
                         const activity = activities.find((item) => item.activity.id === point.id)?.activity;
                         if (activity) onOpen(activity);
                     }}
                 />
             ) : (
-                <p role="status" className="text-muted-foreground grid min-h-44 place-content-center text-xs">
+                <p
+                    role="status"
+                    className={`text-muted-foreground grid place-content-center text-xs ${fill ? "h-full w-full" : expanded ? "h-[min(60dvh,32rem)] min-h-72" : "aspect-square w-full"}`}
+                >
                     Loading map…
                 </p>
             )}

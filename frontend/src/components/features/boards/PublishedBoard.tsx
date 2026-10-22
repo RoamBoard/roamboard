@@ -1,17 +1,19 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { ArrowDown, ArrowRight, Bookmark } from "lucide-react";
+import { ArrowRight, Copy, MessageCircle } from "lucide-react";
 import BackLink from "@/components/ui/BackLink";
+import ScrollCue from "@/components/ui/ScrollCue";
 import ActivityDetailsDialog from "./ActivityDetailsDialog";
 import BoardComments from "./BoardComments";
 import BoardPhoto from "./BoardPhoto";
-import BoardDialog from "./BoardDialog";
 import BoardDayScene from "./BoardDayScene";
 import BoardStoryEnding from "./BoardStoryEnding";
-import StoryDaySidebar from "./StoryDaySidebar";
-import { createDayScenes, sceneActivities, type ScenePhoto } from "@/lib/board-story-scenes";
+import BoardIcon from "./BoardIcon";
+import StoryMapControls from "./StoryMapControls";
+import { createDayScenes, sceneActivities, storySeed, type ScenePhoto } from "@/lib/board-story-scenes";
 import StoryPhoto from "./StoryPhoto";
 import StoryGallery, { type StoryPlacement } from "./StoryGallery";
 import StoryMap from "./StoryMap";
@@ -39,6 +41,7 @@ export default function PublishedBoard({
     commentCount,
     fillerImages = []
 }: PublishedBoardData) {
+    const router = useRouter();
     const days = useMemo(() => getBoardDays(board), [board]);
     const {
         track: trackRef,
@@ -55,13 +58,13 @@ export default function PublishedBoard({
     const [saveTotal, setSaveTotal] = useState(savedCount);
     const [commentsTotal, setCommentsTotal] = useState(commentCount);
     const [bookmarkBusy, setBookmarkBusy] = useState(false);
+    const [remixBusy, setRemixBusy] = useState(false);
+    const [feedbackContext, setFeedbackContext] = useState<"overview" | "ending">("overview");
     const bookmarkPending = useRef(false);
     const [bookmarkMessage, setBookmarkMessage] = useState("");
     const [signInToSave, setSignInToSave] = useState(false);
-    const [manualFilter, setManualFilter] = useState<number | "all" | null>(null);
     const [focusedActivity, setFocusedActivity] = useState<string>();
     const [hoveredActivity, setHoveredActivity] = useState<string>();
-    const [mapExpanded, setMapExpanded] = useState(false);
     const mapSession = useRef<ReturnType<typeof loadMapboxMapSession> | null>(null);
     const session = useCallback(() => {
         mapSession.current ??= loadMapboxMapSession().catch((error) => {
@@ -73,8 +76,6 @@ export default function PublishedBoard({
     const activities = days.flatMap((day) =>
         day.items.filter((item): item is BoardActivity => item.type === "activity")
     );
-    const activeDay = /^day-(\d+)$/.exec(currentChapter)?.[1];
-    const filter = manualFilter ?? (activeDay ? Number(activeDay) : "all");
     const fillerPlacements = useMemo(() => {
         const groups = days.flatMap((day) =>
             day.items.filter((item) => item.type === "activity").map((item) => item.id)
@@ -90,23 +91,6 @@ export default function PublishedBoard({
         });
         return assignments;
     }, [days, fillerImages]);
-    const placements = useMemo<StoryPlacement[]>(
-        () => [
-            ...(board.coverImage ? [{ id: "cover", image: board.coverImage }] : []),
-            ...days.flatMap((day) => [
-                ...(fillerPlacements.get(`empty-${day.number}`) ?? []),
-                ...day.items.flatMap((item) =>
-                    item.type === "activity"
-                        ? [
-                              ...item.images.map((image, index) => ({ id: `activity-${item.id}-${index}`, image })),
-                              ...(fillerPlacements.get(item.id) ?? [])
-                          ]
-                        : []
-                )
-            ])
-        ],
-        [board.coverImage, days, fillerPlacements]
-    );
     const scenes = useMemo(
         () =>
             days.flatMap((day) => {
@@ -121,23 +105,35 @@ export default function PublishedBoard({
                             image,
                             activityId: activity.id
                         })),
-                        ...(fillerPlacements.get(activity.id) ?? []).map((photo) => ({ ...photo, illustration: true }))
+                        ...(fillerPlacements.get(activity.id) ?? []).map((photo) => ({
+                            ...photo,
+                            activityId: activity.id,
+                            illustration: true
+                        }))
                     ])
                 ];
                 return createDayScenes(day, photos);
             }),
         [days, fillerPlacements]
     );
-    const activeScene = scenes.find((scene) => scene.id === sceneId);
-    const highlighted =
-        focusedActivity ?? hoveredActivity ?? activeScene?.photos.find((photo) => photo.activityId)?.activityId;
+    const placements = useMemo<StoryPlacement[]>(
+        () => [
+            ...(board.coverImage ? [{ id: "cover", image: board.coverImage }] : []),
+            ...scenes.flatMap((scene) => scene.photos)
+        ],
+        [board.coverImage, scenes]
+    );
+    const highlighted = hoveredActivity ?? focusedActivity;
+    const highlightActivity = (id?: string) => {
+        setHoveredActivity(id);
+        if (id && activities.some((activity) => activity.id === id && activity.location)) setFocusedActivity(id);
+    };
     const sceneIds = ["overview", ...scenes.map((scene) => scene.id)];
     const openPhoto = (id: string) => {
         const index = placements.findIndex((placement) => placement.id === id);
         if (index >= 0) setGalleryIndex(index);
     };
     const focusLocation = (activity: BoardActivity) => {
-        setManualFilter(activity.dayNumber ?? 1);
         setFocusedActivity(activity.id);
     };
 
@@ -170,19 +166,68 @@ export default function PublishedBoard({
         }
     }
 
-    const saveAction = (
+    async function remixBoard() {
+        if (bookmarkPending.current) return;
+        bookmarkPending.current = true;
+        setRemixBusy(true);
+        setFeedbackContext("ending");
+        setBookmarkMessage("");
+        setSignInToSave(false);
+        try {
+            if (!bookmarked) {
+                await saveBoardBookmark(Number(board.id));
+                setBookmarked(true);
+                try {
+                    const current = await loadBoardDocument(Number(board.id));
+                    setSaveTotal(current.savedCount);
+                } catch {
+                    setSaveTotal(undefined);
+                }
+            }
+            router.push(`/boards/new?remix=${board.id}`);
+        } catch (error) {
+            setSignInToSave(error instanceof ProfileApiError && error.status === 401);
+            setBookmarkMessage(error instanceof Error ? error.message : "This Board could not be opened for remix.");
+        } finally {
+            bookmarkPending.current = false;
+            setRemixBusy(false);
+        }
+    }
+
+    const actionFeedback = (context: "overview" | "ending") =>
+        bookmarkMessage && feedbackContext === context ? (
+            <p role="status" className="mt-3 text-xs">
+                {bookmarkMessage}
+                {signInToSave ? (
+                    <>
+                        {" "}
+                        <Link
+                            href={`/login?returnTo=${encodeURIComponent(`/boards/${board.id}${context === "ending" ? "#ending" : ""}`)}`}
+                            className="underline"
+                        >
+                            Sign in
+                        </Link>
+                    </>
+                ) : null}
+            </p>
+        ) : null;
+
+    const saveAction = (context: "overview" | "ending") => (
         <>
             {!canManageBoard ? (
                 <button
                     type="button"
-                    onClick={toggleBookmark}
-                    disabled={bookmarkBusy}
+                    onClick={() => {
+                        setFeedbackContext(context);
+                        return toggleBookmark();
+                    }}
+                    disabled={bookmarkBusy || remixBusy}
                     aria-label={bookmarked ? "Unsave Board" : "Save Board"}
                     aria-pressed={bookmarked}
-                    className={actionClass}
+                    className={`${actionClass} border-line border py-3`}
                 >
-                    <Bookmark size={18} fill={bookmarked ? "currentColor" : "none"} />
-                    {bookmarkBusy ? "Saving…" : bookmarked ? "Unsave Board" : "Save Board"}
+                    <BoardIcon name="bookmark" className={`size-5 ${bookmarked ? "fill-current" : ""}`} />
+                    {bookmarkBusy ? "Saving…" : bookmarked ? "Unsave Board" : "Save this Board"}
                 </button>
             ) : null}
             {canEditContent ? (
@@ -192,15 +237,27 @@ export default function PublishedBoard({
             ) : null}
         </>
     );
+    const remixAction = !canManageBoard ? (
+        <button
+            type="button"
+            aria-label="Remix Board"
+            onClick={remixBoard}
+            disabled={bookmarkBusy || remixBusy}
+            className={`${actionClass} border-line border py-3`}
+        >
+            <Copy size={18} aria-hidden="true" />
+            {remixBusy ? "Opening remix…" : "Remix this Board"}
+        </button>
+    ) : null;
     const stats = (
-        <dl className="border-line flex flex-wrap gap-x-8 gap-y-4 border-y py-5 text-xs">
+        <dl className="border-line grid grid-cols-2 gap-x-4 gap-y-5 border-y py-6 text-center text-xs @min-[30rem]:grid-cols-4 @min-[45rem]:gap-x-8">
             <div>
-                <dd className="font-display text-3xl">{days.length}</dd>
-                <dt>days</dt>
+                <dd className="font-display text-4xl @min-[30rem]:text-5xl">{days.length}</dd>
+                <dt className="text-muted-foreground mt-2">days</dt>
             </div>
             <div>
-                <dd className="font-display text-3xl">{activities.length}</dd>
-                <dt>activities</dt>
+                <dd className="font-display text-4xl @min-[30rem]:text-5xl">{activities.length}</dd>
+                <dt className="text-muted-foreground mt-2">activities</dt>
             </div>
             <div
                 aria-label={
@@ -209,23 +266,20 @@ export default function PublishedBoard({
                         : `${saveTotal} ${saveTotal === 1 ? "save" : "saves"}`
                 }
             >
-                <dd className="font-display text-3xl">{countLabel(saveTotal)}</dd>
-                <dt>saves</dt>
+                <dd className="font-display flex items-center justify-center gap-1.5 text-4xl @min-[30rem]:text-5xl">
+                    <BoardIcon name="bookmark" className="size-6 shrink-0 @min-[30rem]:size-7" />
+                    {countLabel(saveTotal)}
+                </dd>
+                <dt className="text-muted-foreground mt-2">saves</dt>
             </div>
             <div>
-                <dd className="font-display text-3xl">
-                    <a
-                        href="#comments"
-                        onClick={(event) => {
-                            event.preventDefault();
-                            jump("comments");
-                        }}
-                        className="underline decoration-1 underline-offset-4"
-                    >
+                <dd className="font-display text-4xl @min-[30rem]:text-5xl">
+                    <span className="flex items-center justify-center gap-1.5">
+                        <MessageCircle className="size-6 shrink-0 @min-[30rem]:size-7" aria-hidden="true" />
                         {countLabel(commentsTotal)}
-                    </a>
+                    </span>
                 </dd>
-                <dt>comments</dt>
+                <dt className="text-muted-foreground mt-2">comments</dt>
             </div>
         </dl>
     );
@@ -235,10 +289,15 @@ export default function PublishedBoard({
             filter={mapFilter}
             session={session}
             activeId={highlighted}
+            fill
+            focusFirst={mapFilter !== "all"}
             onOpen={setSelectedActivity}
-            onEnlarge={() => setMapExpanded(true)}
         />
     );
+    const journeyMap = (mapFilter: number | "all") => <StoryMapControls map={map(mapFilter)} />;
+    const sceneIndex = sceneId === "ending" ? sceneIds.length - 1 : Math.max(0, sceneIds.indexOf(sceneId));
+    const nextScene = sceneIds[sceneIndex + 1] ?? "ending";
+    const previousScene = sceneIds[sceneIndex - 1];
 
     return (
         <article className="relative min-w-0 break-words">
@@ -249,7 +308,7 @@ export default function PublishedBoard({
                 {[
                     { id: "overview", title: "Overview" },
                     ...days.map((day) => ({ id: `day-${day.number}`, title: `Day ${day.number}` })),
-                    { id: "ending", title: "Itinerary" },
+                    { id: "ending", title: "Summary" },
                     { id: "comments", title: "Comments" }
                 ].map((chapter) => (
                     <a
@@ -268,34 +327,7 @@ export default function PublishedBoard({
                     </a>
                 ))}
             </nav>
-            <div
-                ref={trackRef}
-                className={desktop ? "grid h-[calc(100dvh-52px)] min-h-0 grid-cols-[15rem_minmax(0,1fr)]" : ""}
-            >
-                {desktop ? (
-                    <StoryDaySidebar
-                        days={days}
-                        scene={activeScene}
-                        sceneIds={sceneIds}
-                        sceneId={sceneId}
-                        filter={filter}
-                        follow={manualFilter === null}
-                        map={map(filter)}
-                        onFilter={(value) => {
-                            setManualFilter(value);
-                            setFocusedActivity(undefined);
-                        }}
-                        onFollow={() => {
-                            setManualFilter(null);
-                            setFocusedActivity(undefined);
-                        }}
-                        onEnlarge={() => setMapExpanded(true)}
-                        onOpen={setSelectedActivity}
-                        onLocation={focusLocation}
-                        onHighlight={setHoveredActivity}
-                        jump={jump}
-                    />
-                ) : null}
+            <div ref={trackRef} className={desktop ? "relative min-h-0" : ""}>
                 <div
                     ref={viewportRef}
                     role="region"
@@ -303,7 +335,7 @@ export default function PublishedBoard({
                     tabIndex={desktop ? 0 : undefined}
                     className={
                         desktop
-                            ? "@container min-w-0 snap-x snap-mandatory [scrollbar-width:none] overflow-x-auto overflow-y-hidden overscroll-x-contain focus-visible:outline-2 focus-visible:-outline-offset-2 [&::-webkit-scrollbar]:hidden"
+                            ? "@container sticky top-[52px] h-[calc(100dvh-52px)] min-w-0 snap-x snap-mandatory [scrollbar-width:none] overflow-x-auto overflow-y-hidden overscroll-x-contain focus-visible:outline-2 focus-visible:-outline-offset-2 [&::-webkit-scrollbar]:hidden"
                             : "min-w-0"
                     }
                 >
@@ -313,85 +345,120 @@ export default function PublishedBoard({
                             data-story-scene
                             data-story-chapter
                             tabIndex={-1}
-                            className={`border-line relative min-w-0 px-6 py-8 outline-none sm:px-12 ${desktop ? "flex h-full w-[var(--story-width)] shrink-0 snap-start snap-always items-center gap-10 overflow-y-auto" : "border-b"}`}
+                            className={`border-line relative min-w-0 outline-none ${desktop ? "h-full w-[var(--story-width)] shrink-0 snap-start snap-always [scrollbar-gutter:stable] overflow-y-auto py-6 pr-24 pl-20" : "border-b px-6 py-8 sm:px-12"}`}
                         >
-                            <div className="min-w-0 flex-1">
-                                <BackLink fallbackHref="/boards" className={desktop ? "mb-5" : "mb-8"} />
-                                <div className="mb-4 flex items-center gap-3">
-                                    <Link
-                                        href={`/profile/${encodeURIComponent(author.id)}`}
-                                        className="block w-fit shrink-0"
-                                    >
-                                        <div
-                                            role={author.photo ? undefined : "img"}
-                                            aria-label={
-                                                author.photo
-                                                    ? undefined
-                                                    : `Profile photo placeholder for ${author.name}`
-                                            }
-                                            className="bg-faint size-12 overflow-hidden rounded-full"
-                                        >
-                                            <BoardPhoto image={author.photo} className="size-full" sizes="48px" />
-                                        </div>
-                                    </Link>
-                                    <p className="text-muted-foreground text-[10px] tracking-[0.2em] uppercase">
-                                        A travel story by{" "}
+                            <div className={desktop ? "grid h-full min-h-[48rem] grid-cols-12 grid-rows-6 gap-5" : ""}>
+                                <div
+                                    className={
+                                        desktop
+                                            ? "col-[1/8] row-[1/4] min-h-0 min-w-0 overflow-y-auto overscroll-contain"
+                                            : "min-w-0 flex-1"
+                                    }
+                                >
+                                    <BackLink fallbackHref="/boards" className={desktop ? "mb-5" : "mb-8"} />
+                                    <div data-story-author-row className="mb-4 flex flex-wrap items-center gap-3">
                                         <Link
                                             href={`/profile/${encodeURIComponent(author.id)}`}
-                                            className="underline underline-offset-4"
+                                            className="block w-fit shrink-0"
                                         >
-                                            @{author.name}
-                                        </Link>
-                                    </p>
-                                </div>
-                                <h1 className="font-display max-w-4xl text-[clamp(2.75rem,5vw,5.5rem)] leading-[0.95] font-bold tracking-tight uppercase">
-                                    {board.title}
-                                </h1>
-                                {board.description ? (
-                                    <p className="text-muted-foreground mt-6 max-w-lg text-sm leading-relaxed whitespace-pre-line">
-                                        {board.description}
-                                    </p>
-                                ) : null}
-                                <p className="text-muted-foreground mt-4 text-[10px]">
-                                    Access:{" "}
-                                    {board.visibility === "public"
-                                        ? "Anyone"
-                                        : board.visibility === "friends"
-                                          ? "Friends and invited members"
-                                          : board.visibility === "private"
-                                            ? "Only you"
-                                            : "Invited members"}
-                                </p>
-                                {tagLabels.length ? (
-                                    <ul className="mt-5 flex flex-wrap gap-2">
-                                        {tagLabels.map((tag) => (
-                                            <li
-                                                key={tag}
-                                                className="border-line rounded-full border px-3 py-1 text-[10px]"
+                                            <div
+                                                role={author.photo ? undefined : "img"}
+                                                aria-label={
+                                                    author.photo
+                                                        ? undefined
+                                                        : `Profile photo placeholder for ${author.name}`
+                                                }
+                                                className="bg-faint size-12 overflow-hidden rounded-full"
                                             >
-                                                {tag}
-                                            </li>
-                                        ))}
-                                    </ul>
+                                                <BoardPhoto image={author.photo} className="size-full" sizes="48px" />
+                                            </div>
+                                        </Link>
+                                        <p className="text-muted-foreground text-[10px] tracking-[0.2em] uppercase">
+                                            A travel story by{" "}
+                                            <Link
+                                                href={`/profile/${encodeURIComponent(author.id)}`}
+                                                className="underline underline-offset-4"
+                                            >
+                                                @{author.name}
+                                            </Link>
+                                        </p>
+                                        <div className="ml-auto flex flex-wrap items-center gap-2">
+                                            {saveAction("overview")}
+                                        </div>
+                                    </div>
+                                    {actionFeedback("overview")}
+                                    <h1 className="font-display max-w-4xl text-[clamp(2.75rem,4.5vw,4.75rem)] leading-[0.95] font-bold tracking-tight uppercase">
+                                        {board.title}
+                                    </h1>
+                                    {board.description ? (
+                                        <p className="text-muted-foreground mt-5 max-w-3xl text-sm leading-relaxed whitespace-pre-line">
+                                            {board.description}
+                                        </p>
+                                    ) : null}
+                                    <div data-story-metadata className="mt-4 flex flex-wrap items-center gap-3">
+                                        <span className="text-muted-foreground text-[10px]">
+                                            Access:{" "}
+                                            {board.visibility === "public"
+                                                ? "Anyone"
+                                                : board.visibility === "friends"
+                                                  ? "Friends and invited members"
+                                                  : board.visibility === "private"
+                                                    ? "Only you"
+                                                    : "Invited members"}
+                                        </span>
+                                        {tagLabels.length ? (
+                                            <ul className="flex flex-wrap gap-2">
+                                                {tagLabels.map((tag) => (
+                                                    <li
+                                                        key={tag}
+                                                        className="border-line rounded-full border px-3 py-1 text-[10px]"
+                                                    >
+                                                        {tag}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        ) : null}
+                                    </div>
+                                    {!desktop ? <div className="@container mt-6 min-w-0">{stats}</div> : null}
+                                </div>
+                                {desktop ? (
+                                    <>
+                                        <div className="col-[1/4] row-[4/7] self-end">{journeyMap("all")}</div>
+                                        <div className="@container col-[4/7] row-[4/7] min-w-0 self-end">{stats}</div>
+                                    </>
                                 ) : null}
-                                <div className="mt-6">{stats}</div>
-                                <div className="mt-3 flex flex-wrap">{saveAction}</div>
-                                <p className="text-muted-foreground mt-7 flex items-center gap-3 text-xs">
-                                    <ArrowDown size={16} />
-                                    Scroll to explore {desktop ? <ArrowRight size={16} /> : null}
-                                </p>
+                                {board.coverImage ? (
+                                    <div
+                                        className={
+                                            desktop
+                                                ? "[container-type:size] col-[8/13] row-[1/7] flex h-full min-h-0 min-w-0 items-center justify-center"
+                                                : "[container-type:size] mt-8 flex h-[65dvh] min-h-80 items-center justify-center"
+                                        }
+                                    >
+                                        <StoryPhoto
+                                            image={board.coverImage}
+                                            frame
+                                            preservePortrait
+                                            portraitShape={storySeed(`${board.id}:cover`) % 2 ? "square" : "tall"}
+                                            eager
+                                            onOpen={() => openPhoto("cover")}
+                                        />
+                                    </div>
+                                ) : null}
+                                {!desktop ? <div className="mt-8">{journeyMap("all")}</div> : null}
+                                {!desktop ? (
+                                    <ScrollCue
+                                        targetId={sceneIds[1] ?? "ending"}
+                                        label="Scroll to explore"
+                                        lines={false}
+                                        className="mt-8"
+                                        onClick={(event) => {
+                                            event.preventDefault();
+                                            jump(sceneIds[1] ?? "ending");
+                                        }}
+                                    />
+                                ) : null}
                             </div>
-                            {board.coverImage ? (
-                                <div className={`mt-8 min-w-0 ${desktop ? "max-w-[40%] flex-1 translate-y-12" : ""}`}>
-                                    <StoryPhoto image={board.coverImage} eager onOpen={() => openPhoto("cover")} />
-                                </div>
-                            ) : null}
-                            {!desktop ? (
-                                <div className="mt-8">
-                                    <h2 className="mb-3 text-xs">The whole journey</h2>
-                                    {map("all")}
-                                </div>
-                            ) : null}
                         </header>
 
                         {scenes.map((scene) => (
@@ -402,57 +469,60 @@ export default function PublishedBoard({
                                 desktop={desktop}
                                 onOpenPhoto={openPhoto}
                                 onOpenActivity={setSelectedActivity}
-                                onHighlight={setHoveredActivity}
-                                mobileMap={map(scene.day.number)}
+                                onHighlight={highlightActivity}
+                                journeyMap={journeyMap(scene.day.number)}
+                                onLocation={focusLocation}
                             />
                         ))}
                     </div>
+                    {desktop ? (
+                        <ScrollCue
+                            targetId={nextScene}
+                            label="Next story scene"
+                            direction="right"
+                            lines={false}
+                            className="absolute top-1/2 right-3 z-20 -translate-y-1/2"
+                            onClick={(event) => {
+                                if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.button === 0) {
+                                    event.preventDefault();
+                                    jump(nextScene);
+                                }
+                            }}
+                        />
+                    ) : null}
+                    {desktop && previousScene ? (
+                        <ScrollCue
+                            targetId={previousScene}
+                            label="Previous story scene"
+                            direction="left"
+                            lines={false}
+                            className="absolute top-1/2 left-3 z-20 -translate-y-1/2"
+                            onClick={(event) => {
+                                if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.button === 0) {
+                                    event.preventDefault();
+                                    jump(previousScene);
+                                }
+                            }}
+                        />
+                    ) : null}
                 </div>
             </div>
             <BoardStoryEnding
                 days={days}
                 author={author}
+                boardTitle={board.title}
                 stats={stats}
-                saveAction={saveAction}
+                saveAction={saveAction("ending")}
+                remixAction={remixAction}
+                actionFeedback={actionFeedback("ending")}
+                journeyMap={
+                    <StoryMap days={days} filter="all" session={session} expanded onOpen={setSelectedActivity} />
+                }
                 jump={jump}
                 onOpenActivity={setSelectedActivity}
                 onOpenPhoto={openPhoto}
             />
-            {bookmarkMessage ? (
-                <p role="status" className="px-6 pb-5 text-xs sm:px-12">
-                    {bookmarkMessage}
-                    {signInToSave ? (
-                        <>
-                            {" "}
-                            <Link
-                                href={`/login?returnTo=${encodeURIComponent(`/boards/${board.id}`)}`}
-                                className="underline"
-                            >
-                                Sign in
-                            </Link>
-                        </>
-                    ) : null}
-                </p>
-            ) : null}
             <BoardComments boardId={board.id} onTotalChange={setCommentsTotal} />
-            {mapExpanded ? (
-                <BoardDialog
-                    title={filter === "all" ? "The whole journey" : `Day ${filter} map`}
-                    onClose={() => setMapExpanded(false)}
-                >
-                    <StoryMap
-                        days={days}
-                        filter={filter}
-                        activeId={highlighted}
-                        session={session}
-                        expanded
-                        onOpen={(activity) => {
-                            setMapExpanded(false);
-                            setSelectedActivity(activity);
-                        }}
-                    />
-                </BoardDialog>
-            ) : null}
             {selectedActivity ? (
                 <ActivityDetailsDialog
                     activity={selectedActivity}

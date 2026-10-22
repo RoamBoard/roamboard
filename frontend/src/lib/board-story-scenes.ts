@@ -10,21 +10,31 @@ export type DayScene = {
     photos: ScenePhoto[];
 };
 
-// Keep every placement and its saved order. A photo-rich day has two scenes, never a hidden remainder.
+// Balance scenes around the six-photo limit, retaining every placement in its saved order.
 export function createDayScenes(day: PublishedBoardDay, photos: ScenePhoto[]): DayScene[] {
-    const parts = photos.length > 6 ? 2 : 1;
-    const split = Math.ceil(photos.length / parts);
+    const parts = Math.max(1, Math.ceil(photos.length / 6));
+    const split = Math.floor(photos.length / parts);
+    const remainder = photos.length % parts;
     return Array.from({ length: parts }, (_, index) => ({
-        id: index === 0 ? `day-${day.number}` : `day-${day.number}-part-2`,
+        id: index === 0 ? `day-${day.number}` : `day-${day.number}-part-${index + 1}`,
         day,
         part: index + 1,
         parts,
-        photos: photos.slice(index * split, (index + 1) * split)
+        photos: photos.slice(
+            index * split + Math.min(index, remainder),
+            (index + 1) * split + Math.min(index + 1, remainder)
+        )
     }));
 }
 
 export function sceneActivities(day: PublishedBoardDay): BoardActivity[] {
-    return day.items.filter((item): item is BoardActivity => item.type === "activity");
+    const activities = day.items.filter((item): item is BoardActivity => item.type === "activity");
+    const timed = activities
+        .filter((activity) => /^\d{2}:\d{2}$/.test(activity.time ?? ""))
+        .sort((a, b) => a.time!.localeCompare(b.time!));
+    const cursor = { index: 0 };
+    // Untimed stops keep their itinerary slots; timed stops progress from morning to evening around them.
+    return activities.map((activity) => (/^\d{2}:\d{2}$/.test(activity.time ?? "") ? timed[cursor.index++] : activity));
 }
 
 export function storySeed(value: string): number {
@@ -32,50 +42,62 @@ export function storySeed(value: string): number {
 }
 
 const compositions = [
-    [[2, 12, 2, 12]],
+    [[4, 13, 1, 7]],
     [
-        [1, 8, 1, 10],
-        [8, 13, 5, 13]
+        [4, 10, 1, 4],
+        [6, 13, 4, 7]
     ],
     [
-        [1, 8, 2, 12],
-        [9, 13, 1, 6],
-        [8, 13, 8, 13]
+        [4, 9, 1, 4],
+        [9, 13, 2, 5],
+        [4, 9, 4, 7]
     ],
     [
-        [1, 7, 1, 7],
-        [8, 13, 2, 8],
-        [2, 7, 8, 13],
-        [8, 13, 9, 13]
+        [4, 9, 1, 4],
+        [9, 13, 1, 4],
+        [4, 8, 4, 7],
+        [8, 13, 4, 7]
     ],
     [
-        [1, 6, 1, 7],
-        [7, 13, 1, 6],
-        [1, 5, 8, 13],
-        [6, 10, 7, 13],
-        [10, 13, 8, 13]
+        [4, 8, 1, 4],
+        [8, 13, 1, 4],
+        [4, 7, 4, 7],
+        [7, 10, 4, 7],
+        [10, 13, 4, 7]
     ],
     [
-        [1, 5, 1, 7],
-        [6, 10, 2, 7],
-        [10, 13, 1, 6],
-        [1, 5, 8, 13],
-        [5, 10, 8, 13],
-        [10, 13, 7, 13]
+        [4, 7, 1, 4],
+        [7, 10, 1, 4],
+        [10, 13, 1, 4],
+        [4, 8, 4, 7],
+        [8, 11, 4, 7],
+        [11, 13, 4, 7]
     ]
 ] as const;
 
 export function photoComposition(count: number, index: number, seed: number) {
     const shape = [1, 16 / 9, 4 / 3, 3 / 4][(index + seed) % 4];
-    const position = ["start", "center", "end"][(index + seed) % 3];
     const placement = compositions[count - 1]?.[index];
-    if (!placement) return { aspectRatio: shape, alignSelf: position, justifySelf: position };
+    if (!placement) {
+        const perRow = count > 18 ? 4 : 3;
+        const offset = Math.floor(index / perRow) * perRow;
+        const rowCount = Math.min(perRow, count - offset);
+        const widths = rowCount === 4 ? [3, 4, 2, 3] : rowCount === 3 ? [4, 5, 3] : rowCount === 2 ? [7, 5] : [12];
+        const shift = seed % widths.length;
+        const columns = widths.map((_, position) => widths[(position + shift) % widths.length]);
+        const start = 1 + columns.slice(0, index % perRow).reduce((sum, width) => sum + width, 0);
+        return {
+            aspectRatio: shape,
+            gridColumn: `${start} / span ${columns[index % perRow]}`,
+            gridRow: `${Math.floor(index / perRow) + 1}`
+        };
+    }
     const [start, end, top, bottom] = placement;
+    // Vary shared boundaries, never flip the reading order or the day/map corner spaces.
+    const boundary = (column: number) => (column === 9 && seed % 2 ? 8 : column);
     return {
         aspectRatio: shape,
-        gridColumn: seed % 2 ? `${14 - end} / ${14 - start}` : `${start} / ${end}`,
-        gridRow: seed % 3 === 1 ? `${14 - bottom} / ${14 - top}` : `${top} / ${bottom}`,
-        alignSelf: position,
-        justifySelf: position
+        gridColumn: `${boundary(start)} / ${boundary(end)}`,
+        gridRow: `${top} / ${bottom}`
     };
 }

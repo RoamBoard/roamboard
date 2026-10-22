@@ -146,7 +146,7 @@ test("a photo-free Board retains its day summaries and author identity without i
     assert.doesNotMatch(summary, /<img\b/);
 });
 
-test("short, empty and photo-heavy days use at most two scenes without dropping or reordering photos", () => {
+test("short, empty and photo-heavy days balance scenes around six photos without dropping or reordering photos", () => {
     const day = getBoardDays(story().board).find((day) => day.number === 3)!;
     for (const count of [0, 1, 6, 7, 31, 60]) {
         const photos = Array.from({ length: count }, (_, index) => ({
@@ -155,7 +155,13 @@ test("short, empty and photo-heavy days use at most two scenes without dropping 
             activityId: "city-walk"
         }));
         const scenes = createDayScenes(day, photos);
-        assert.equal(scenes.length, count > 6 ? 2 : 1);
+        assert.equal(scenes.length, Math.max(1, Math.ceil(count / 6)));
+        assert.ok(scenes.every((scene) => scene.photos.length <= 6));
+        assert.ok(
+            Math.max(...scenes.map((scene) => scene.photos.length)) -
+                Math.min(...scenes.map((scene) => scene.photos.length)) <=
+                1
+        );
         assert.equal(scenes[0].id, "day-3");
         assert.deepEqual(
             scenes.flatMap((scene) => scene.photos),

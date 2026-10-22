@@ -119,7 +119,8 @@ test("country city selection loads credited details and opens the existing city 
     const selected = await render();
     const map = selected.find((node) => node.props.selectedPointId === "wikivoyage:42:tokyo");
     assert.ok(map, "Selecting a city must focus its existing map marker");
-    assert.equal(map.props.selectedZoom, 6, "Country city selection should show the city area");
+    assert.equal(map.props.selectedZoom, 15, "Country city selection uses the shared close pin focus");
+    assert.equal(map.props.initialZoom, 4, "The country overview retains its wider initial camera");
     const action = selected.find(
         (node) => typeof node.props.href === "string" && node.props.href.startsWith("/discover/destinations/tokyo?")
     );

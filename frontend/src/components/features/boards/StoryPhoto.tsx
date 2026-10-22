@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import BoardCardTilt from "./cards/BoardCardTilt";
 import type { BoardImage } from "@/types/board";
 
 export function StoryPhotoCredit({ image }: { image: BoardImage }) {
@@ -40,52 +41,84 @@ export default function StoryPhoto({
     onOpen,
     eager = false,
     aspectRatio,
-    thumbnail = false
+    thumbnail = false,
+    frame = false,
+    preservePortrait = false,
+    portraitShape = "tall"
 }: {
     image: BoardImage;
     onOpen: () => void;
     eager?: boolean;
     aspectRatio?: number;
     thumbnail?: boolean;
+    frame?: boolean;
+    preservePortrait?: boolean;
+    portraitShape?: "tall" | "square";
 }) {
     const [failed, setFailed] = useState(false);
-    const ratio = image.width && image.height ? image.width / image.height : 4 / 3;
+    const [naturalSize, setNaturalSize] = useState<{ width: number; height: number }>();
+    const width = image.width || naturalSize?.width;
+    const height = image.height || naturalSize?.height;
+    const ratio = width && height ? width / height : 4 / 3;
+    const portrait =
+        preservePortrait && ratio >= 0.1 && ratio < 0.9 && (!width || !height || Math.min(width, height) >= 32);
+    const fillFrame = frame && !portrait;
+    const displayRatio = portrait ? (portraitShape === "square" ? 1 : ratio) : aspectRatio || ratio;
     const crop =
-        aspectRatio !== undefined &&
-        !(image.width && image.height && (Math.min(image.width, image.height) < 32 || ratio < 0.1 || ratio > 10));
+        (frame || aspectRatio !== undefined) &&
+        !(width && height && (Math.min(width, height) < 32 || ratio < 0.1 || ratio > 10));
     return (
         <figure
-            className="flex max-w-full shrink-0 flex-col"
+            className={`flex max-w-full shrink-0 cursor-pointer flex-col ${fillFrame ? "h-full min-h-0 w-full" : ""}`}
             style={{
-                width: aspectRatio
-                    ? thumbnail
-                        ? "100%"
-                        : `min(100cqw, calc((100cqh - 1.5rem) * ${aspectRatio}))`
-                    : `min(100%, ${image.width || 800}px)`
+                width: fillFrame
+                    ? "100%"
+                    : aspectRatio || portrait
+                      ? thumbnail
+                          ? "100%"
+                          : `min(100cqw, calc((100cqh - 1.5rem) * ${displayRatio}))`
+                      : `min(100%, ${image.width || 800}px)`
             }}
         >
-            <button
-                type="button"
-                onClick={onOpen}
-                aria-label={`Enlarge ${image.alt}`}
-                className="relative block w-full cursor-zoom-in overflow-hidden outline-offset-4 transition-transform hover:scale-[1.025] focus-visible:outline-2 motion-reduce:transform-none"
-                style={{ aspectRatio: aspectRatio || ratio }}
+            <BoardCardTilt
+                active={!thumbnail}
+                lift={3}
+                className={`cursor-pointer ${fillFrame ? "flex min-h-0 flex-1" : ""}`}
             >
-                {failed ? (
-                    <span className="text-muted-foreground p-4 text-xs">Saved photo unavailable</span>
-                ) : (
-                    <Image
-                        src={image.url}
-                        alt={image.alt}
-                        fill
-                        sizes={thumbnail ? "96px" : "(max-width: 1024px) 80vw, 40vw"}
-                        unoptimized
-                        loading={eager ? "eager" : "lazy"}
-                        onError={() => setFailed(true)}
-                        className={crop ? "object-cover" : "object-scale-down"}
+                <button
+                    type="button"
+                    onClick={onOpen}
+                    aria-label={`Enlarge ${image.alt}`}
+                    className={`relative block w-full cursor-pointer overflow-hidden outline-offset-4 transition-shadow hover:shadow-lg focus-visible:outline-2 motion-reduce:transform-none ${fillFrame ? "min-h-0 flex-1" : ""}`}
+                    style={{ aspectRatio: displayRatio }}
+                >
+                    <span
+                        aria-hidden="true"
+                        className="border-foreground/25 dark:border-foreground/30 pointer-events-none absolute inset-0 z-10 border"
                     />
-                )}
-            </button>
+                    {failed ? (
+                        <span className="text-muted-foreground p-4 text-xs">Saved photo unavailable</span>
+                    ) : (
+                        <Image
+                            src={image.url}
+                            alt={image.alt}
+                            fill
+                            sizes={thumbnail ? "(max-width: 640px) 40vw, 192px" : "(max-width: 1024px) 80vw, 50vw"}
+                            unoptimized
+                            loading={eager ? "eager" : "lazy"}
+                            onError={() => setFailed(true)}
+                            onLoad={(event) => {
+                                if (!image.width || !image.height)
+                                    setNaturalSize({
+                                        width: event.currentTarget.naturalWidth,
+                                        height: event.currentTarget.naturalHeight
+                                    });
+                            }}
+                            className={`pointer-events-none ${crop ? "object-cover" : "object-scale-down"}`}
+                        />
+                    )}
+                </button>
+            </BoardCardTilt>
             {!thumbnail ? <StoryPhotoCredit image={image} /> : null}
         </figure>
     );

@@ -377,7 +377,7 @@ export default function DestinationPlaces({
                             routeGeometry={noRoute}
                             initialCenter={guide.destination}
                             initialZoom={isCountry ? 4 : 11}
-                            selectedZoom={isCountry ? 6 : 14}
+                            selectedZoom={15}
                             selectedPointId={selected?.id}
                             fillHeight
                             cooperativeGestures

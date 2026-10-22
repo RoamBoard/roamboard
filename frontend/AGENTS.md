@@ -97,27 +97,57 @@ This is a living project guide. Agents may and should update `AGENTS.md` when th
 
 ## Current integrated surfaces
 
-`PublishedBoard` implements the agreed activity-led story at `/boards/[boardId]`: desktop wheel gestures snap sideways through one scene per day, or two for photo-heavy days, then release into a
-vertical itinerary/comments ending. Compact screens use vertical days; reduced motion keeps navigation without
-animated travel. Every photograph appears, including dense scenes with accessible inner scrolling.
-`useStoryScroll` owns native snap navigation, gesture pacing, hash navigation and chapter state. Map and browser zoom
-gestures never advance the story. The small map is integrated bottom left under the persistent day counter and can
-expand on request. `BoardDayScene` uses deterministic asymmetric photo compositions with varied viewer-only crops. `StoryMap` reuses
+`PublishedBoard` implements the agreed activity-led story at `/boards/[boardId]`: desktop wheel gestures snap sideways
+through balanced scenes with at most six photographs each, then release into a vertical itinerary/comments ending.
+Every photograph appears; photo-heavy days can use more than two scenes. Compact screens use vertical days; reduced
+motion keeps navigation without animated travel. Scene timelines show only their own activities in two columns without a nested scrollbar; Summary retains full days.
+`useStoryScroll` owns native horizontal smooth scrolling and mandatory snapping like DestinationRail, with a sticky
+desktop stage and a native vertical runway for middle-button scrolling and Summary release, gesture pacing,
+hash navigation and chapter state. Native middle-button scrolling remains available; partial ending transitions
+realign before scene navigation. Native scrolling settles at the nearest scene on scrollend. Scene shells must
+allow vertical scroll chaining so the final day can release into Summary; containment belongs on inner controls. Map and browser zoom
+gestures never advance the story. The day heading and timed activity timeline sit top left; the larger corner map sits bottom left inside the scene,
+without an additional sidebar; the overview matches the day map size and position. Maps expand in place toward the top right to about half the scene,
+moving covered content outward/upward and fading it, then settling it back into place on collapse; Escape or the same control collapses them. `StoryMapControls` supplies a label-free square map with an overlay enlarge control. Corner pins follow the current
+day automatically; activity/photo hover and keyboard focus zoom to the last selected saved pin. Each scene uses a two-column activity timeline. The Summary includes an interactive all-pins map between the day list and author. `BoardDayScene` uses deterministic bento photo compositions
+with varied viewer-only crops and attached activity captions. Wide tiles place captions beside the photograph;
+narrow tiles keep captions below. Portrait photos use a stable mix of tall and square frames, including images whose
+dimensions are learned on load. Timed activities sort chronologically around fixed
+untimed itinerary slots; saved documents and within-activity photo order stay intact. The gallery follows the displayed
+chronology. Story photographs reuse `BoardCardTilt` for subtle pointer rotation and a 3px lift, with a consistent pointer
+cursor and thin theme-aware outline. Photo entrance animations are removed; scene travel supplies the transition.
+Captions below photos center on their image; wide side captions retain vertical centering.
+The overview gives title/description more width beside a slightly smaller cover, places Save/Edit with the author,
+keeps Access inline with tags and uses centered icon-led statistics with tighter icon/count spacing. `ScrollCue` supplies line-free next/previous
+controls; chapter hashes support arbitrary `-part-N` scene numbers. Comment totals are plain text; Comments remains
+available in the chapter bar.
+`StoryMap` reuses
 the existing map renderer, lazily loads one shared session per viewer and supports automatic day following plus
-manual day/All days filters on desktop. `StoryPhoto` has no gray image frame; scene and summary crops leave the saved image intact, while `StoryGallery` wraps the shared `ImageZoomDialog` and browses
+automatic day scope on desktop. `StoryPhoto` has no gray image frame; scene and summary crops leave the saved image intact, while `StoryGallery` wraps the shared `ImageZoomDialog` and browses
 stable story placements with on-demand large delivery, bounded neighbour warming, keyboard/touch controls and credits.
-Activity details retain full notes; enlarged photos never show notes. Unsupported preview Save/Copy actions are gone
-from this production viewer. Day summaries include representative saved-photo miniatures, and the ending includes the owner's current portrait and
-biography. Author photos stay outside the gallery.
+Scene captions show notes through 150 Unicode points in full, with 150-point excerpts for longer notes.
+Statistics and labels are centered, and story arrows support focus, Enter and Space. Day maps start near a saved
+activity and focus at zoom 15; shared map single-pin and selected-pin cameras, including destination pins, also use
+zoom 15 while multi-pin overviews keep fitting every point. The profile globe starts closer at zoom 1.9. Activity details retain full notes; enlarged photos never show notes. Unsupported preview Save/Copy actions are gone
+from this production viewer. The centered ending uses the Board title, with Save/Remix immediately beneath it,
+larger representative day photographs and the owner's larger square portrait and biography. Remix confirms a bookmark
+when needed before opening `/boards/new?remix=<id>`, with duplicate guards and inline failure/sign-in feedback. Owners
+retain Edit under existing permissions. Author photos stay outside the gallery.
 
 Creator opt-in is default-off, persists through save/hydration and stays off for remixes. A low-upload suggestion does
 not restrict eligibility; partial selections show non-blocking author feedback. New/edited activity notes validate
 250 Unicode code points with a counter, preserving unchanged longer legacy notes; backend validation stays 500.
 The backend requires migration 021 (applied to shared development on 2026-10-21) for persisted illustrations. Automated presenter, API and
-isolated PostgreSQL tests cover contract behavior; browser visual/interaction acceptance remains pending because no
-browser surface was connected during implementation. Production-scene geometry is also checked in headless Chromium
-for bounded, non-overlapping, tappable images at narrow and wide desktop sizes. The latest scene/navigation tests
-were authored alongside implementation; independent coverage review remains necessary.
+isolated PostgreSQL tests cover contract behavior. Production-scene geometry is also checked in headless Chromium
+for bounded, non-overlapping, tappable images, attached captions and unobscured day/map corners at narrow and wide
+desktop sizes. Independent revision tests cover chronology, retained images, caption/detail callbacks, gallery ordering,
+integrated maps, portrait variants/on-load dimensions, balanced pagination, summary action order and Remix success/failure
+handling. Live local Chromium smoke checks cover direct ending links, day jumps, wheel and previous/next navigation,
+timeline/side-caption geometry, six-photo caps, larger maps, summary action placement, shared photo enlargement/return,
+the square author portrait and compact overflow. Story maps initialize at a saved trip point rather than the default city.
+The shared `InteractiveMap` bounds padding scales to its actual container dimensions; compact maps cannot use a fixed
+64px inset on every edge. Independent component regressions cover compact, normal and zero-size camera viewports.
+Broader manual interaction and visual acceptance remain pending.
 
 `BoardCollectionGrid` is the fourth Board list: component 2 photographic cards in a wider responsive grid, twenty
 results with URL-backed contextual search, sorting and numbered pagination. `/boards/collections/[context]` hosts

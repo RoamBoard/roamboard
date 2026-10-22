@@ -43,7 +43,7 @@ export default function InteractiveMap({
     selectedPointId,
     initialCenter,
     initialZoom = 11,
-    selectedZoom = 14,
+    selectedZoom = 15,
     fillHeight = false,
     scrollZoom = true,
     cooperativeGestures = false,
@@ -170,7 +170,7 @@ export default function InteractiveMap({
         if (points.length === 1 && points[0]) {
             map.easeTo({
                 center: [points[0].longitude, points[0].latitude],
-                zoom: 13
+                zoom: 15
             });
         }
         if (points.length > 1) {
@@ -178,7 +178,11 @@ export default function InteractiveMap({
                 (current, point) => current.extend([point.longitude, point.latitude]),
                 new mapboxgl.LngLatBounds()
             );
-            map.fitBounds(bounds, { padding: 64, maxZoom: 14 });
+            const width = containerRef.current?.clientWidth ?? 0;
+            const height = containerRef.current?.clientHeight ?? 0;
+            // Compact story maps must retain usable camera space after both padding edges are removed.
+            if (width > 0 && height > 0)
+                map.fitBounds(bounds, { padding: Math.min(64, width / 4, height / 4), maxZoom: 14 });
         }
     }, [points, mapReady]);
 

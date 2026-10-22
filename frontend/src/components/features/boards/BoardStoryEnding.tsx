@@ -11,16 +11,24 @@ import type { BoardAuthor, PublishedBoardDay } from "@/types/published-board";
 export default function BoardStoryEnding({
     days,
     author,
+    boardTitle,
     stats,
     saveAction,
+    remixAction,
+    actionFeedback,
+    journeyMap,
     jump,
     onOpenActivity,
     onOpenPhoto
 }: {
     days: PublishedBoardDay[];
     author: BoardAuthor;
+    boardTitle: string;
     stats: ReactNode;
     saveAction: ReactNode;
+    remixAction?: ReactNode;
+    actionFeedback?: ReactNode;
+    journeyMap?: ReactNode;
     jump: (id: string) => void;
     onOpenActivity: (activity: BoardActivity) => void;
     onOpenPhoto: (id: string) => void;
@@ -29,12 +37,19 @@ export default function BoardStoryEnding({
         <section
             id="ending"
             tabIndex={-1}
-            className="border-line scroll-mt-16 px-6 py-16 outline-none sm:px-12 sm:py-24"
+            className="mx-auto max-w-6xl scroll-mt-16 px-6 py-16 outline-none sm:px-12 sm:py-24"
         >
-            <p className="text-muted-foreground text-[10px] tracking-[0.2em] uppercase">The journey, at a glance</p>
-            <h2 className="font-display mt-3 text-5xl font-bold sm:text-7xl">Every day. Every memory.</h2>
-            <div className="mt-10 max-w-3xl">{stats}</div>
-            <div className="mt-10 max-w-3xl">
+            <p className="text-muted-foreground text-center text-[10px] tracking-[0.2em] uppercase">Summary</p>
+            <h2 className="font-display mx-auto mt-3 max-w-4xl text-center text-5xl font-bold sm:text-7xl">
+                {boardTitle}
+            </h2>
+            <div className="mt-6 flex flex-wrap justify-center gap-4">
+                {saveAction}
+                {remixAction}
+            </div>
+            <div className="text-center">{actionFeedback}</div>
+            <div className="@container mx-auto mt-10 max-w-4xl">{stats}</div>
+            <div className="mx-auto mt-10 max-w-4xl">
                 {days.map((day) => {
                     const activities = sceneActivities(day);
                     // Prefer one photo per activity before filling any remaining miniature positions.
@@ -72,17 +87,16 @@ export default function BoardStoryEnding({
                                 {photos.length ? (
                                     <div
                                         aria-label={`Day ${day.number} photo summary`}
-                                        className="mb-4 flex flex-wrap gap-2"
+                                        className="mb-6 grid max-w-2xl grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4"
                                     >
                                         {photos.map((photo, index) => (
-                                            <div
-                                                key={photo.id}
-                                                className={index === 1 ? "mt-2 w-20 shrink-0" : "w-20 shrink-0"}
-                                            >
+                                            <div key={photo.id} className={index === 1 ? "mt-4 min-w-0" : "min-w-0"}>
                                                 <StoryPhoto
                                                     image={photo.image}
                                                     aspectRatio={index === 2 ? 4 / 3 : 1}
                                                     thumbnail
+                                                    preservePortrait
+                                                    portraitShape={index % 2 ? "square" : "tall"}
                                                     onOpen={() => onOpenPhoto(photo.id)}
                                                 />
                                             </div>
@@ -115,17 +129,21 @@ export default function BoardStoryEnding({
                     );
                 })}
             </div>
-            <div className="mt-8 flex flex-wrap">{saveAction}</div>
+            {journeyMap ? (
+                <section aria-label="All Board locations" className="mx-auto max-w-4xl py-8 sm:py-12">
+                    {journeyMap}
+                </section>
+            ) : null}
             <section
                 aria-label="About the Board author"
-                className="border-line mt-12 flex max-w-3xl items-start gap-5 border-t pt-8"
+                className="border-line mx-auto flex max-w-4xl flex-col items-start gap-8 border-t pt-12 sm:flex-row sm:gap-12"
             >
                 <Link
                     href={`/profile/${encodeURIComponent(author.id)}`}
                     aria-label={`View ${author.name}'s profile`}
-                    className="bg-faint block size-20 shrink-0 overflow-hidden rounded-full"
+                    className="bg-faint block size-40 shrink-0 overflow-hidden sm:size-56"
                 >
-                    <BoardPhoto image={author.photo} className="size-full" sizes="80px" />
+                    <BoardPhoto image={author.photo} className="size-full" sizes="(max-width: 640px) 160px, 224px" />
                 </Link>
                 <div>
                     <p className="text-muted-foreground mb-2 text-[10px] tracking-[0.18em] uppercase">

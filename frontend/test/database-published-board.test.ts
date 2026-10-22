@@ -541,9 +541,12 @@ test("photo clicks open the matching story placement with all displayed photos a
             );
             captured.clicked = true;
             const sceneNodes = descendants(BoardDayScene(sceneProps));
-            const activityCover = sceneNodes.find((node) => node.type === StoryPhoto)?.props as ComponentProps<
-                typeof StoryPhoto
-            >;
+            const activityCover = sceneNodes.find(
+                (node) =>
+                    node.type === StoryPhoto &&
+                    (node.props as ComponentProps<typeof StoryPhoto>).image.url ===
+                        `${apiOrigin}/api/v1/images/92/content?variant=display`
+            )?.props as ComponentProps<typeof StoryPhoto>;
             assert.ok(activityCover);
             activityCover.onOpen();
         }
@@ -553,17 +556,21 @@ test("photo clicks open the matching story placement with all displayed photos a
     }
     renderToStaticMarkup(createElement(Probe));
     assert.ok(captured.gallery);
-    assert.equal(captured.gallery.initialIndex, 1, "Reused cover must open its clicked activity placement");
+    assert.equal(
+        captured.gallery.initialIndex,
+        2,
+        "Reused cover must open its clicked activity placement after the earlier stop's illustration"
+    );
     const placements = captured.gallery.placements;
     assert.equal(new Set(placements.map((placement) => placement.id)).size, 5);
     assert.deepEqual(
         placements.map((placement) => placement.image.url),
         [
             `${apiOrigin}/api/v1/images/92/content?variant=display`,
+            "https://images.unsplash.com/destination-filler?w=1600",
             `${apiOrigin}/api/v1/images/92/content?variant=display`,
             `${apiOrigin}/api/v1/images/91/content?variant=display`,
-            "https://images.unsplash.com/station.jpg",
-            "https://images.unsplash.com/destination-filler?w=1600"
+            "https://images.unsplash.com/station.jpg"
         ]
     );
     assert.ok(placements.every((placement) => !/\/images\/(93|94)\//.test(placement.image.url)));
