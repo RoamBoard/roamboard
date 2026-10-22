@@ -103,6 +103,14 @@ const photo = (index: number): BoardImage => ({
     height: index % 3 === 1 ? 1200 : 800
 });
 
+test("Overview keeps four desktop statistics in its information area and omits Back", () => {
+    const overview = productionStats("overview");
+    assert.doesNotMatch(overview, />\s*back\s*</i);
+    assert.match(overview, /@min-\[30rem\]:grid-cols-4/);
+    assert.ok(overview.indexOf("<dl") > overview.indexOf("A saved description"));
+    assert.ok(overview.indexOf("<dl") < overview.indexOf('aria-label="Journey map"'));
+});
+
 test("desktop collages keep every photo visible, separated and inside the scene across narrow and wide layouts", async (context) => {
     const chrome = [
         process.env.CHROME_BIN,
@@ -179,7 +187,7 @@ test("desktop collages keep every photo visible, separated and inside the scene 
             const timeline=section.querySelector('ol[aria-label$="activity timeline"]'), timelineStyle=timeline&&getComputedStyle(timeline);
             const captionNotes=[...section.querySelectorAll('[data-story-caption] p')].map(note=>({length:Array.from(note.textContent).length,height:note.clientHeight,scrollHeight:note.scrollHeight}));
             const countLabel=[...section.querySelectorAll('header p')].find(label=>/activities/.test(label.textContent));
-            const photos=[...section.querySelectorAll('[data-story-photo] button[aria-label^="Enlarge "]')].map(button=>{const r=button.getBoundingClientRect(), parent=gallery||section, area=parent.getBoundingClientRect(),border=button.querySelector('[aria-hidden="true"]'),outline=border&&getComputedStyle(border),caption=button.closest('[data-story-photo]').querySelector('[data-story-caption]'),captionRect=caption&&caption.getBoundingClientRect();return {left:r.left-bounds.left,top:r.top-bounds.top,width:r.width,height:r.height,reachable:r.top-area.top+parent.scrollTop>=0&&r.bottom-area.top+parent.scrollTop<=parent.scrollHeight+1,fit:getComputedStyle(button.querySelector('img')).objectFit,bg:getComputedStyle(button).backgroundColor,cursor:getComputedStyle(button).cursor,borderWidth:outline?parseFloat(outline.borderTopWidth):0,borderColor:outline?.borderTopColor,captionBelow:captionRect&&captionRect.top>=r.bottom-1,captionAlign:caption&&getComputedStyle(caption).textAlign}});
+            const photos=[...section.querySelectorAll('[data-story-photo] button[aria-label^="Enlarge "]')].map(button=>{const r=button.getBoundingClientRect(), parent=gallery||section, area=parent.getBoundingClientRect(),border=button.querySelector('[aria-hidden="true"]'),outline=border&&getComputedStyle(border),caption=button.closest('[data-story-photo]').querySelector('[data-story-caption]'),captionRect=caption&&caption.getBoundingClientRect();return {left:r.left-bounds.left,top:r.top-bounds.top,width:r.width,height:r.height,reachable:r.top-area.top+parent.scrollTop>=0&&r.bottom-area.top+parent.scrollTop<=parent.scrollHeight+1,fit:getComputedStyle(button.querySelector('img')).objectFit,bg:getComputedStyle(button).backgroundColor,cursor:getComputedStyle(button).cursor,borderWidth:outline?parseFloat(outline.borderTopWidth):0,borderColor:outline?.borderTopColor,captionBelow:captionRect&&captionRect.top>=r.bottom-1,captionAlign:caption&&getComputedStyle(caption).textAlign,captionRight:captionRect&&captionRect.left>=r.right-1,captionGap:parseFloat(getComputedStyle(button.closest("[data-story-photo]")).gap)}});
             results.push({width,count:Number(variant.dataset.count),height:bounds.height,shellOverscroll:getComputedStyle(section).overscrollBehaviorY,scrollHeight:gallery?.scrollHeight||section.scrollHeight,scrollClient:gallery?.clientHeight||section.clientHeight,map:{left:map.left-bounds.left,top:map.top-bounds.top,right:map.right-bounds.left,bottom:map.bottom-bounds.top},heading:{left:heading.left-bounds.left,right:heading.right-bounds.left,top:heading.top-bounds.top,bottom:heading.bottom-bounds.top},countSize:countLabel?parseFloat(getComputedStyle(countLabel).fontSize):0,captionNotes,timelineColumns:timelineStyle?.gridTemplateColumns.split(' ').length,photos});
           }
           document.getElementById('results').textContent=JSON.stringify(results);
@@ -234,6 +242,8 @@ test("desktop collages keep every photo visible, separated and inside the scene 
                 borderColor: string;
                 captionBelow: boolean;
                 captionAlign: string;
+                captionRight: boolean;
+                captionGap: number;
             }>;
         }>;
         const statsMatch = stdout.match(/<pre id="stats-results" hidden="">([^<]+)<\/pre>/);
@@ -347,6 +357,13 @@ test("desktop collages keep every photo visible, separated and inside the scene 
                 assert.equal(bounds.cursor, "pointer", "Photo hover keeps the ordinary interactive pointer");
                 assert.ok(bounds.borderWidth > 0 && bounds.borderWidth <= 1, "Photographs have a superthin outline");
                 assert.notEqual(bounds.borderColor, "rgba(0, 0, 0, 0)");
+                if (bounds.captionBelow !== null) {
+                    assert.ok(
+                        bounds.captionBelow || bounds.captionRight,
+                        "Captions stay below or to the right of their photo"
+                    );
+                    assert.ok(bounds.captionGap <= 12, "Image and activity caption gap stays within 12px");
+                }
                 if (bounds.captionBelow)
                     assert.equal(bounds.captionAlign, "center", "Captions beneath photographs stay centered");
                 assert.ok(

@@ -27,6 +27,7 @@ type Props = {
     initialCenter?: { latitude: number; longitude: number };
     initialZoom?: number;
     selectedZoom?: number;
+    userZoom?: { current: number | undefined };
     fillHeight?: boolean;
     scrollZoom?: boolean;
 };
@@ -44,6 +45,7 @@ export default function InteractiveMap({
     initialCenter,
     initialZoom = 11,
     selectedZoom = 15,
+    userZoom,
     fillHeight = false,
     scrollZoom = true,
     cooperativeGestures = false,
@@ -81,9 +83,14 @@ export default function InteractiveMap({
                 container: containerRef.current,
                 style: "mapbox://styles/mapbox/streets-v12",
                 center: [initialLongitude, initialLatitude],
-                zoom: initialZoom,
+                zoom: userZoom?.current ?? initialZoom,
                 cooperativeGestures
             });
+            if (userZoom) {
+                map.on("zoomend", (event) => {
+                    if ("originalEvent" in event && event.originalEvent) userZoom.current = map.getZoom();
+                });
+            }
             if (!scrollZoom) map.scrollZoom.disable();
             map.addControl(new mapboxgl.NavigationControl(), "top-right");
             map.on("load", () => {
@@ -123,7 +130,7 @@ export default function InteractiveMap({
             mapRef.current?.remove();
             mapRef.current = null;
         };
-    }, [token, scrollZoom, initialLatitude, initialLongitude, initialZoom, cooperativeGestures]);
+    }, [token, scrollZoom, initialLatitude, initialLongitude, initialZoom, cooperativeGestures, userZoom]);
 
     useEffect(() => {
         markersRef.current.forEach((marker) => marker.remove());
@@ -170,7 +177,7 @@ export default function InteractiveMap({
         if (points.length === 1 && points[0]) {
             map.easeTo({
                 center: [points[0].longitude, points[0].latitude],
-                zoom: 15
+                zoom: userZoom?.current ?? 15
             });
         }
         if (points.length > 1) {
@@ -181,10 +188,11 @@ export default function InteractiveMap({
             const width = containerRef.current?.clientWidth ?? 0;
             const height = containerRef.current?.clientHeight ?? 0;
             // Compact story maps must retain usable camera space after both padding edges are removed.
-            if (width > 0 && height > 0)
+            if (userZoom?.current !== undefined) map.easeTo({ center: bounds.getCenter(), zoom: userZoom.current });
+            else if (width > 0 && height > 0)
                 map.fitBounds(bounds, { padding: Math.min(64, width / 4, height / 4), maxZoom: 14 });
         }
-    }, [points, mapReady]);
+    }, [points, mapReady, userZoom]);
 
     useEffect(() => {
         const point = points.find((item) => item.id === selectedPointId);
@@ -202,8 +210,8 @@ export default function InteractiveMap({
             }
         });
         if (!point) return;
-        mapRef.current?.easeTo({ center: [point.longitude, point.latitude], zoom: selectedZoom });
-    }, [selectedPointId, points, mapReady, selectedZoom]);
+        mapRef.current?.easeTo({ center: [point.longitude, point.latitude], zoom: userZoom?.current ?? selectedZoom });
+    }, [selectedPointId, points, mapReady, selectedZoom, userZoom]);
 
     useEffect(() => {
         if (!containerRef.current) return;

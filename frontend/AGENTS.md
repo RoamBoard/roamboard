@@ -98,23 +98,23 @@ This is a living project guide. Agents may and should update `AGENTS.md` when th
 ## Current integrated surfaces
 
 `PublishedBoard` implements the agreed activity-led story at `/boards/[boardId]`: desktop wheel gestures snap sideways
-through balanced scenes with at most six photographs each, then release into a vertical itinerary/comments ending.
+through balanced scenes with at most six photographs each, then release into normal vertical scrolling through the itinerary/comments ending, with a smooth return to the last scene.
 Every photograph appears; photo-heavy days can use more than two scenes. Compact screens use vertical days; reduced
 motion keeps navigation without animated travel. Scene timelines show only their own activities in two columns without a nested scrollbar; Summary retains full days.
 `useStoryScroll` owns native horizontal smooth scrolling and mandatory snapping like DestinationRail, with a sticky
 desktop stage and a native vertical runway for middle-button scrolling and Summary release, gesture pacing,
-hash navigation and chapter state. Native middle-button scrolling remains available; partial ending transitions
+hash navigation and chapter state. The reusable 62px `ChapterBar` distinguishes Comments from Summary. Expanded corner maps collapse before wheel navigation; viewport resize retains the current scene. Native middle-button scrolling remains available; partial ending transitions
 realign before scene navigation. Native scrolling settles at the nearest scene on scrollend. Scene shells must
 allow vertical scroll chaining so the final day can release into Summary; containment belongs on inner controls. Map and browser zoom
 gestures never advance the story. The day heading and timed activity timeline sit top left; the larger corner map sits bottom left inside the scene,
 without an additional sidebar; the overview matches the day map size and position. Maps expand in place toward the top right to about half the scene,
 moving covered content outward/upward and fading it, then settling it back into place on collapse; Escape or the same control collapses them. `StoryMapControls` supplies a label-free square map with an overlay enlarge control. Corner pins follow the current
 day automatically; activity/photo hover and keyboard focus zoom to the last selected saved pin. Each scene uses a two-column activity timeline. The Summary includes an interactive all-pins map between the day list and author. `BoardDayScene` uses deterministic bento photo compositions
-with varied viewer-only crops and attached activity captions. Wide tiles place captions beside the photograph;
+with varied viewer-only crops and attached activity captions. Wide tiles place captions to the right of the photograph with a 12px gap;
 narrow tiles keep captions below. Portrait photos use a stable mix of tall and square frames, including images whose
 dimensions are learned on load. Timed activities sort chronologically around fixed
 untimed itinerary slots; saved documents and within-activity photo order stay intact. The gallery follows the displayed
-chronology. Story photographs reuse `BoardCardTilt` for subtle pointer rotation and a 3px lift, with a consistent pointer
+chronology. Story photographs use a tiny centered hover scale, with a consistent pointer
 cursor and thin theme-aware outline. Photo entrance animations are removed; scene travel supplies the transition.
 Captions below photos center on their image; wide side captions retain vertical centering.
 The overview gives title/description more width beside a slightly smaller cover, places Save/Edit with the author,
@@ -182,7 +182,7 @@ ready, with retry on failure. Days/order/times and cover selections remain; cale
 completion, memberships and visibility are not copied. Normal new-Board visibility preferences apply. Only Save
 or Publish creates a Board. See [the remix contract](../contracts/saved-board-remix.md).
 
-Secondary screens use the shared `BackLink`: profile/settings, notifications, Board selection/editing/viewing and Discover details. It shares the primary-color 16px medium-weight navigation style and 16px arrows with ViewAllBoards through `navigation-link-style.ts` and scrolls away with the page content; it has no separate header bar. Keep it inside each screen's actual scroll container. Main navigation destinations omit it. `BackNavigationTracker` records the previous internal URL on browser history entries while preserving router state, so Back uses browser history after refresh or forward/back; direct entries use a route-specific parent fallback. Authentication/welcome screens are excluded as return destinations. Board editor leave confirmation preserves Back or fallback replacement after discarding unsaved changes.
+Secondary screens use the shared `BackLink`: profile/settings, notifications, Board selection/editing and Discover details. The published Board overview omits Back to avoid same-route chapter history and leave space for its four-column statistics row above the map. It shares the primary-color 16px medium-weight navigation style and 16px arrows with ViewAllBoards through `navigation-link-style.ts` and scrolls away with the page content; it has no separate header bar. Keep it inside each screen's actual scroll container. Main navigation destinations omit it. `BackNavigationTracker` records the previous internal URL on browser history entries while preserving router state, so Back uses browser history after refresh or forward/back; direct entries use a route-specific parent fallback. Authentication/welcome screens are excluded as return destinations. Board editor leave confirmation preserves Back or fallback replacement after discarding unsaved changes.
 
 `Sidebar` is shared by `AppShell` and `PublishedBoardShell`. It uses a sticky 64px mobile / 80px desktop rail in the page grid; desktop expansion grows to 176px and resizes the page beside it. Hovering a navigation or account control for 150ms temporarily reveals labels; leaving the rail collapses it after 100ms, and returning cancels that collapse. The logo and navigation positions stay fixed during expansion. Keyboard focus reveals labels immediately. The explicit keep-open choice is saved in `roamboard-sidebar-expanded` local storage. Navigation uses icons with lowercase labels on expansion and an underlined active destination, ordered Roam, Boards, Discover, Create, Social. Mobile expansion opens a native modal drawer. The sidebar account control expands its sign-in/profile, Settings, and Light/Dark choices inline above the trigger. Navigation scrolls at every height; the account panel has a viewport-based height bound and its own scrolling. Active destinations are derived from the pathname, including nested creation, Board, Discover, profile, and developer routes. Discover keeps its own scroll-driven intro behavior independently of navigation expansion; Discover panels and destination chapters use their available container width.
 

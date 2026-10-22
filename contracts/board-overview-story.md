@@ -26,7 +26,7 @@ The opening overview should include the title, total saves, total comments, acti
 On desktop, a larger square map sits bottom left on the day canvas, without an additional sidebar.
 The day heading, activity count and ordered activity/time timeline sit top left. Each scene lists its own activities in two columns without an inner timeline scrollbar; Summary retains the full day. The opening cover uses the same square map size and bottom-left position as the day scenes. Map labels, manual day filters
 and Follow story controls are removed. The current day determines the corner map's pins automatically.
-Hovering or keyboard-focusing an activity or its photograph moves and zooms the map to its saved pin; day maps start near their first located activity and zoom to level 15 on focus; the map stays
+Hovering or keyboard-focusing an activity or its photograph moves and zooms the map to its saved pin; day maps start near their first located activity and default to level 15 on focus; once the viewer changes zoom, preserve that zoom throughout the Board, including activity hovers and day/summary maps; the map stays
 at the last hovered pin on pointer leave. The overlay enlarge button expands the same map upward and rightward to about half the scene.
 Covered content moves outward/upward and fades, then returns with a restrained spring-like settling motion on collapse; it becomes inert while obscured; the same control or Escape collapses it. Reduced motion disables animation. On mobile, each day's map appears inline at the start of that day.
 
@@ -44,10 +44,10 @@ cover photograph and more spacious statistics with save/comment icons. Day scene
 without decorative lines; the overview only needs its next arrow.
 The user emphasized lively, smooth interaction comparable to existing browsing components. Snapped scene
 transitions, responsive hover/click feedback, smooth chapter jumps and stable image-loading layouts are acceptance
-criteria; story photos retain subtle pointer-following tilt and lift, thin theme-aware outlines and a consistent click pointer.
+criteria; story photos use a tiny centered enlargement on hover, thin theme-aware outlines and a consistent click pointer.
 Remove photo entrance animations; use native horizontal smooth scrolling and mandatory snapping like the destination
 guide for forward and backward scene transitions. Reduced-motion preferences disable movement.
-Center captions under their photo and vertically center side captions.
+Center captions under their photo and vertically center right-side captions.
 
 Remove the activity Save and Copy preview buttons. Show activity notes up to 150 Unicode code points in full, with longer notes excerpted at 150 points, and the full note
 in activity details. Clicking a map pin opens the same activity details as clicking the corresponding activity.
@@ -68,7 +68,7 @@ The requester revised the display direction on 2026-10-21: story-only crops into
 frames are approved. Use varied sizes and asymmetric placement with stable, aesthetically balanced compositions.
 Clearly portrait photos use a stable mix of tall and square frames, never wide landscape crops. Learn natural
 dimensions on image load when persisted dimensions are unavailable. On wide photo tiles, put the activity caption
-beside the image, alternating sides where appropriate, to leave a squarer image area; narrower tiles keep captions below.
+beside the image, always to the right, to leave a squarer image area; narrower tiles keep captions below.
 Remove gray letterboxing frames. Saved uploads and author presentation edits remain intact; the shared enlarged
 image viewer shows the complete saved image. Every associated photo still appears in the scenes.
 
@@ -497,3 +497,7 @@ verification details. No separate absent teammate approval is claimed.
 Status changed from Draft to Agreed. At approval time, feature implementation had not been requested or started. The requester subsequently authorized
 implementation across both applications on 2026-10-21. The contract remains
 the shared implementation reference; later behavior changes must update its decisions before implementation.
+
+## Viewer refinement ? 2026-10-22
+
+The requester revised desktop interaction: Summary and Comments use normal vertical scrolling; the transition back to the last day animates smoothly. Rapid wheel input must never release into continuous horizontal travel. Scrolling with an enlarged corner map collapses it and advances the story; browser zoom gestures remain native. Resizing preserves the selected scene. The reusable chapter bar is 62px tall and highlights Comments independently of Summary. Overview statistics share one desktop row above the unchanged map; the overview Back button is removed. Edit sits closer to the author. Photo captions always appear to the right or below images with a consistent 12px gap. Photo hover uses a tiny centered scale without lift or tilt.

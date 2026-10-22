@@ -88,12 +88,18 @@ for (const thumbnail of [false, true]) {
         const photo = mountPhoto(context, thumbnail);
         assert.equal(photo.calls.observers, 0, "Entering or changing scenes must not stage photograph entrances");
         assert.equal(photo.calls.animations, 0);
-        const tilt = photo.nodes.find((node) => node.type === BoardCardTilt);
-        assert.ok(tilt);
-        assert.equal(tilt.props.active, !thumbnail);
-        if (!thumbnail) assert.ok(Number(tilt.props.lift) > 0 && Number(tilt.props.lift) <= 4);
+        assert.equal(
+            photo.nodes.some((node) => node.type === BoardCardTilt),
+            false,
+            "Photos must not tilt or lift on hover"
+        );
         const trigger = photo.nodes.find((node) => node.type === "button");
         assert.equal(trigger?.props["aria-label"], "Enlarge Morning at the lake");
+        const classes = String(trigger?.props.className);
+        const scale = classes.match(/hover:scale-\[([\d.]+)\]/);
+        assert.ok(scale && Number(scale[1]) > 1 && Number(scale[1]) <= 1.02, "Hover enlarges the photo only slightly");
+        assert.doesNotMatch(classes, /(?:translate|rotate|origin-(?:top|bottom|left|right))/);
+        assert.ok(classes.includes("motion-reduce:transform-none"), "Reduced motion disables hover movement");
         (trigger?.props.onClick as () => void)();
         assert.equal(photo.calls.opened, 1, "The gentle hover wrapper preserves photo activation");
     });

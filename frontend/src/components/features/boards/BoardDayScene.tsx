@@ -111,7 +111,6 @@ export default function BoardDayScene({
         const composition = photoComposition(tiles.length, index, seed);
         const compact = dense || tiles.length >= 5;
         const sideCaption = desktop && item.activity && !compact;
-        const captionFirst = index % 2 === 1;
         return (
             <div
                 key={item.key}
@@ -133,7 +132,7 @@ export default function BoardDayScene({
                 <div
                     className={
                         desktop
-                            ? `grid h-full min-h-0 gap-3 ${item.activity && item.photo ? "grid-rows-[minmax(0,1fr)_auto]" : "grid-rows-1"} ${sideCaption ? (captionFirst ? "@min-[30rem]:grid-cols-[minmax(9rem,0.55fr)_minmax(0,1fr)] @min-[30rem]:grid-rows-1 @min-[30rem]:items-center" : "@min-[30rem]:grid-cols-[minmax(0,1fr)_minmax(9rem,0.55fr)] @min-[30rem]:grid-rows-1 @min-[30rem]:items-center") : ""}`
+                            ? `grid h-full min-h-0 gap-3 ${item.activity && item.photo ? "grid-rows-[minmax(0,1fr)_auto]" : "grid-rows-1"} ${sideCaption ? "@min-[30rem]:grid-cols-[minmax(0,1fr)_minmax(9rem,0.55fr)] @min-[30rem]:grid-rows-1 @min-[30rem]:items-center" : ""}`
                             : "flex min-w-0 flex-col gap-3"
                     }
                 >
@@ -141,7 +140,7 @@ export default function BoardDayScene({
                         <div
                             className={
                                 desktop
-                                    ? "[container-type:size] flex h-full min-h-11 min-w-0 items-start justify-center"
+                                    ? `[container-type:size] flex h-full min-h-11 min-w-0 items-end justify-center ${sideCaption ? "@min-[30rem]:justify-end" : ""}`
                                     : "min-w-0"
                             }
                         >
@@ -159,7 +158,7 @@ export default function BoardDayScene({
                     {item.activity ? (
                         <div
                             data-story-caption
-                            className={`min-w-0 text-center [&_button]:mx-auto [&_button]:text-center ${sideCaption ? "@min-[30rem]:text-left @min-[30rem]:[&_button]:mx-0 @min-[30rem]:[&_button]:text-left" : ""} ${sideCaption && captionFirst ? "@min-[30rem]:order-first" : ""}`}
+                            className={`min-w-0 text-center [&_button]:mx-auto [&_button]:text-center ${sideCaption ? "@min-[30rem]:text-left @min-[30rem]:[&_button]:mx-0 @min-[30rem]:[&_button]:text-left" : ""}`}
                         >
                             <ActivityCaption
                                 activity={item.activity}

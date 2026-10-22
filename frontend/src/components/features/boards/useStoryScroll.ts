@@ -44,13 +44,16 @@ export default function useStoryScroll(chapterKey: string) {
             if (!target || !container || !track.current) return;
             const isScene = rail.current?.contains(target);
             if (desktop && isScene) {
-                const start = track.current.getBoundingClientRect().top + window.scrollY - 52;
+                const start = track.current.getBoundingClientRect().top + window.scrollY - 62;
                 const index = target.offsetLeft / Math.max(1, container.clientWidth);
                 const last = (rail.current?.querySelectorAll("[data-story-scene]").length ?? 1) - 1;
                 if (!smooth || Math.abs(container.scrollLeft - target.offsetLeft) < 1) {
                     horizontalNavigation.current = false;
                     container.scrollLeft = target.offsetLeft;
-                    window.scrollTo({ top: start + index * container.clientHeight, behavior: "instant" });
+                    window.scrollTo({
+                        top: start + index * container.clientHeight,
+                        behavior: smooth ? behavior() : "instant"
+                    });
                 } else {
                     horizontalNavigation.current = true;
                     // Animate the same native horizontal scroll surface as DestinationRail.
@@ -65,7 +68,7 @@ export default function useStoryScroll(chapterKey: string) {
                 horizontalNavigation.current = false;
                 target.scrollIntoView({ block: "start", behavior: smooth ? behavior() : "instant" });
             }
-            setSceneId(id === "comments" || id.startsWith("comment-") ? "ending" : id);
+            setSceneId(id.startsWith("comment-") ? "comments" : id);
         },
         [desktop]
     );
@@ -78,7 +81,12 @@ export default function useStoryScroll(chapterKey: string) {
         const sections = () => [...content.querySelectorAll<HTMLElement>("[data-story-scene]")];
         const gesture = { locked: false, timer: 0, inner: false, last: 0 };
         const synchronized = { left: container.scrollLeft };
-        const start = () => wrapper.getBoundingClientRect().top + window.scrollY - 52;
+        const position = {
+            index: Math.round(container.scrollLeft / Math.max(1, container.clientWidth)),
+            width: container.clientWidth,
+            height: container.clientHeight
+        };
+        const start = () => wrapper.getBoundingClientRect().top + window.scrollY - 62;
         const settle = () => {
             if (!desktop || horizontalNavigation.current) return;
             const distance = window.scrollY - start();
@@ -104,22 +112,19 @@ export default function useStoryScroll(chapterKey: string) {
                     synchronized.left = progress * container.clientWidth;
                     container.scrollLeft = synchronized.left;
                 }
-                const scene = sections().reduce<HTMLElement | undefined>(
-                    (best, item) =>
-                        !best ||
-                        Math.abs(item.offsetLeft - container.scrollLeft) <
-                            Math.abs(best.offsetLeft - container.scrollLeft)
-                            ? item
-                            : best,
-                    undefined
-                );
-                if (scene && wrapper.getBoundingClientRect().bottom > 80) setSceneId(scene.id);
+                const scene = sections()[Math.round(container.scrollLeft / Math.max(1, container.clientWidth))];
+                if (scene && wrapper.getBoundingClientRect().bottom > 80) {
+                    position.index = sections().indexOf(scene);
+                    setSceneId(scene.id);
+                }
             } else {
                 const scene = sections().find((item) => item.getBoundingClientRect().bottom > window.innerHeight / 2);
                 if (scene) setSceneId(scene.id);
             }
             const ending = document.getElementById("ending");
             if (ending && ending.getBoundingClientRect().top < window.innerHeight / 2) setSceneId("ending");
+            const comments = document.getElementById("comments");
+            if (comments && comments.getBoundingClientRect().top < window.innerHeight / 2) setSceneId("comments");
         };
         const move = (direction: number) => {
             const scenes = sections();
@@ -147,34 +152,44 @@ export default function useStoryScroll(chapterKey: string) {
         const wheel = (event: WheelEvent) => {
             if (
                 !desktop ||
+                (wrapper.parentElement &&
+                    event.target instanceof Node &&
+                    !wrapper.parentElement.contains(event.target)) ||
                 event.ctrlKey ||
                 event.metaKey ||
                 !(event.target instanceof Element) ||
-                event.target.closest(".mapboxgl-map, input, textarea, select, [role=slider], dialog")
+                event.target.closest("input, textarea, select, [role=slider], dialog, [contenteditable=true]")
             )
                 return;
+            const expanded = document.querySelector('[data-story-map-expanded="true"]');
+            if (!expanded && event.target.closest(".mapboxgl-map")) return;
+            if (expanded) window.dispatchEvent(new Event("story-map-collapse"));
             const horizontal = Math.abs(event.deltaX) > Math.abs(event.deltaY);
             const delta = horizontal ? event.deltaX : event.deltaY;
             if (!delta) return;
             const last = start() + (sections().length - 1) * container.clientHeight;
-            if (!horizontal && window.scrollY > last + 1) return;
+            // Summary and Comments keep native vertical scrolling; only their entrance returns to the final scene.
+            const ending = document.getElementById("ending");
+            const endingTop = ending
+                ? ending.getBoundingClientRect().top + window.scrollY - 62
+                : last + container.clientHeight;
+            if (window.scrollY > last + 1 && (delta > 0 || window.scrollY > endingTop + 1)) return;
             const continuing = Date.now() - gesture.last < 160;
             gesture.last = Date.now();
-            if (!horizontal && innerScroller(event.target, wrapper, delta)) {
+            if (!expanded && !horizontal && innerScroller(event.target, wrapper, delta)) {
                 gesture.inner = true;
                 return;
             }
-            // At the last scene, ordinary downward scrolling naturally releases the sticky stage.
-            if (!horizontal && delta > 0 && window.scrollY >= last - 1) return;
             event.preventDefault();
             if (!horizontal && gesture.inner && continuing) return;
             gesture.inner = false;
-            if (gesture.locked) return;
+            if (gesture.locked || horizontalNavigation.current) return;
             gesture.locked = true;
             gesture.timer = window.setTimeout(() => {
                 gesture.locked = false;
             }, 500);
-            move(Math.sign(delta));
+            if (window.scrollY > last + 1) reveal(sections().at(-1)!.id);
+            else move(Math.sign(delta));
         };
         const key = (event: KeyboardEvent) => {
             if (
@@ -212,15 +227,23 @@ export default function useStoryScroll(chapterKey: string) {
                 reveal(scene.id);
         };
         const observer = new ResizeObserver(() => {
+            const resized = position.width !== container.clientWidth || position.height !== container.clientHeight;
+            position.width = container.clientWidth;
+            position.height = container.clientHeight;
             container.style.setProperty("--story-width", `${container.clientWidth}px`);
             if (desktop) wrapper.style.height = `${sections().length * container.clientHeight}px`;
             else wrapper.style.removeProperty("height");
+            if (desktop && resized && window.scrollY <= start() + sections().length * position.height) {
+                horizontalNavigation.current = false;
+                container.scrollTo({ left: position.index * container.clientWidth, behavior: "instant" });
+                window.scrollTo({ top: start() + position.index * container.clientHeight, behavior: "instant" });
+            }
             update();
         });
         observer.observe(container);
         container.style.setProperty("--story-width", `${container.clientWidth}px`);
         if (desktop) wrapper.style.height = `${sections().length * container.clientHeight}px`;
-        wrapper.addEventListener("wheel", wheel, { passive: false });
+        window.addEventListener("wheel", wheel, { passive: false, capture: true });
         wrapper.addEventListener("keydown", key);
         container.addEventListener("scroll", horizontalScroll, { passive: true });
         container.addEventListener("scrollend", horizontalEnd);
@@ -231,7 +254,7 @@ export default function useStoryScroll(chapterKey: string) {
         return () => {
             observer.disconnect();
             window.clearTimeout(gesture.timer);
-            wrapper.removeEventListener("wheel", wheel);
+            window.removeEventListener("wheel", wheel, { capture: true });
             wrapper.removeEventListener("keydown", key);
             container.removeEventListener("scroll", horizontalScroll);
             container.removeEventListener("scrollend", horizontalEnd);

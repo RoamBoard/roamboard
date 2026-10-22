@@ -18,6 +18,7 @@ export default function StoryMap({
     expanded = false,
     fill = false,
     focusFirst = false,
+    userZoom,
     onEnlarge
 }: {
     days: PublishedBoardDay[];
@@ -28,6 +29,7 @@ export default function StoryMap({
     expanded?: boolean;
     fill?: boolean;
     focusFirst?: boolean;
+    userZoom?: { current: number | undefined };
     onEnlarge?: () => void;
 }) {
     const container = useRef<HTMLDivElement>(null);
@@ -138,6 +140,7 @@ export default function StoryMap({
                               : undefined
                     }
                     selectedZoom={15}
+                    userZoom={userZoom}
                     className={
                         fill
                             ? "h-full w-full"

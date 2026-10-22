@@ -16,7 +16,8 @@ class Surface {
     offsetLeft = 0;
     overflowY = "visible";
     kind = "";
-    documentTop = 52;
+    dataset: Record<string, string> = {};
+    documentTop = 62;
     focused = false;
     scrolls: number[] = [];
     smoothTarget?: number;
@@ -35,6 +36,7 @@ class Surface {
     closest(selector: string): Surface | null {
         if (
             (this.kind === "map" && selector.includes(".mapboxgl-map")) ||
+            (this.dataset.storyMapExpanded === "true" && selector.includes("data-story-map-expanded")) ||
             (this.kind === "button" && selector.includes("button")) ||
             (this.kind === "link" && /\ba(?:\[|\b)/.test(selector)) ||
             (selector.includes("[data-story-scene]") && (this.id === "overview" || this.id.startsWith("day-")))
@@ -71,13 +73,23 @@ function mount(context: TestContext, desktop = true) {
     const target = new Surface("photo");
     target.parentElement = scenes[0];
     const ending = new Surface("ending");
-    ending.documentTop = 52 + scenes.length * viewport.clientHeight;
+    ending.documentTop = 62 + scenes.length * viewport.clientHeight;
+    const comments = new Surface("comments");
+    comments.documentTop = ending.documentTop + 1400;
+    const states: unknown[] = [];
+    const dispatched: string[] = [];
+    const observerCallback = { resize: () => {} };
     Object.assign(rail, { querySelectorAll: () => scenes, contains: (element: Surface) => scenes.includes(element) });
     const timers = new Map<number, () => void>();
-    const windowListeners = new Map<string, Set<() => void>>();
+    const windowListeners = new Map<string, Set<(event?: unknown) => void>>();
     const verticalScrolls: number[] = [];
+    const verticalBehaviors: Array<string | undefined> = [];
     const win = {
         innerHeight: 800,
+        dispatchEvent(event: Event) {
+            dispatched.push(event.type);
+            return true;
+        },
         scrollY: 0,
         location: { hash: "" },
         history: {
@@ -87,8 +99,9 @@ function mount(context: TestContext, desktop = true) {
             }
         },
         matchMedia: (query: string) => ({ matches: !query.includes("reduced-motion") && desktop }),
-        scrollTo({ top }: { top: number }) {
+        scrollTo({ top, behavior }: { top: number; behavior?: string }) {
             verticalScrolls.push(top);
+            verticalBehaviors.push(behavior);
             win.scrollY = top;
             windowListeners.get("scroll")?.forEach((listener) => listener());
         },
@@ -114,13 +127,23 @@ function mount(context: TestContext, desktop = true) {
         Object.defineProperty(globalThis, name, { value, configurable: true, writable: true });
     };
     install("window", win);
-    install("document", { getElementById: (id: string) => [...scenes, ending].find((scene) => scene.id === id) });
+    install("document", {
+        getElementById: (id: string) => [...scenes, ending, comments].find((scene) => scene.id === id),
+        addEventListener: win.addEventListener,
+        removeEventListener: win.removeEventListener,
+        querySelector: (selector: string) => target.closest(selector),
+        documentElement: { scrollHeight: comments.documentTop + 1400 },
+        body: { scrollHeight: comments.documentTop + 1400 }
+    });
     install("Element", Surface);
     install("HTMLElement", Surface);
     install("getComputedStyle", (element: Surface) => ({ overflowY: element.overflowY }));
     install(
         "ResizeObserver",
         class {
+            constructor(callback: () => void) {
+                observerCallback.resize = callback;
+            }
             observe() {}
             disconnect() {}
         }
@@ -141,7 +164,10 @@ function mount(context: TestContext, desktop = true) {
     const index = { ref: 0 };
     const effects: Array<() => void | (() => void)> = [];
     React.useRef = ((initial: unknown) => refs[index.ref++] ?? { current: initial }) as typeof React.useRef;
-    React.useState = ((initial?: unknown) => [initial, () => {}]) as typeof React.useState;
+    React.useState = ((initial?: unknown) => [
+        initial,
+        (value: unknown) => states.push(value)
+    ]) as typeof React.useState;
     React.useEffect = ((effect: () => void | (() => void)) => {
         effects.push(effect);
     }) as typeof React.useEffect;
@@ -178,7 +204,9 @@ function mount(context: TestContext, desktop = true) {
             },
             ...extra
         };
-        track.listeners.get("wheel")?.(event as never);
+        const global = windowListeners.get("wheel");
+        if (global?.size) global.forEach((listener) => listener(event));
+        else track.listeners.get("wheel")?.(event as never);
         return event;
     };
     const settle = () => {
@@ -214,11 +242,16 @@ function mount(context: TestContext, desktop = true) {
         horizontalProgress,
         horizontalEnd,
         verticalScrolls,
-        rail
+        verticalBehaviors,
+        rail,
+        comments,
+        states,
+        dispatched,
+        resize: () => observerCallback.resize()
     };
 }
 
-test("wheel snaps align the native vertical runway and release ordinary downward scrolling after the last scene", (context) => {
+test("wheel snaps align the native vertical runway and step into the ending after the last scene", (context) => {
     const app = mount(context);
     assert.equal(app.wheel(500).prevented, true);
     assert.equal(
@@ -245,14 +278,15 @@ test("wheel snaps align the native vertical runway and release ordinary downward
     assert.equal(app.win.scrollY, 1400);
     assert.equal(app.viewport.scrollLeft, 1600);
     app.settle();
-    assert.equal(app.wheel(500).prevented, false);
+    assert.equal(app.wheel(500).prevented, true);
+    assert.ok(app.win.scrollY > 1400, "The final scene advances into the vertical ending");
     app.nativeScroll(1550);
     assert.equal(app.viewport.scrollLeft, 1600);
     app.settle();
     app.wheel(-500, app.target, { deltaX: -500, deltaY: 0 });
     app.horizontalEnd();
-    assert.equal(app.viewport.scrollLeft, 800);
-    assert.equal(app.win.scrollY, 700, "Horizontal scene navigation reanchors a partially released vertical stage");
+    assert.equal(app.viewport.scrollLeft, 1600);
+    assert.equal(app.win.scrollY, 1400, "Upward navigation from a partial ending returns to the final scene first");
 });
 
 test("native horizontal chapter animations settle symmetrically forward and backward without runway interference", (context) => {
@@ -426,16 +460,38 @@ test("a fractional native horizontal stop finishes at the nearest snap target be
     assert.equal(app.viewport.style.scrollSnapType, "x mandatory");
 });
 
-test("scroll settling leaves final-day release and Summary vertical scrolling untouched", (context) => {
+test("Summary and Comments retain native vertical wheel scrolling in both directions", (context) => {
     const app = mount(context);
-    for (const position of [1400, 1550, 1950, 2300, 2800]) {
+    const text = new Surface("ending-text");
+    text.parentElement = app.ending;
+    for (const position of [app.ending.documentTop + 350, app.comments.documentTop + 350]) {
         app.nativeScroll(position);
-        const completed = app.verticalScrolls.length;
-        app.nativeScrollEnd();
-        assert.equal(app.win.scrollY, position);
-        assert.equal(app.verticalScrolls.length, completed);
-        assert.equal(app.wheel(500).prevented, false, "Downward scrolling after the final scene stays native");
+        const before = app.verticalScrolls.length;
+        assert.equal(app.wheel(900, text).prevented, false);
+        assert.equal(app.wheel(-900, text).prevented, false);
+        assert.equal(app.verticalScrolls.length, before);
     }
+});
+
+test("returning from the ending to the already aligned final scene animates vertically", (context) => {
+    const app = mount(context);
+    app.result.jump("day-1-part-2");
+    app.horizontalEnd();
+    app.nativeScroll(app.ending.documentTop + 350);
+    app.result.jump("day-1-part-2");
+    assert.equal(app.viewport.scrollLeft, 1600);
+    assert.equal(app.win.scrollY, 1400);
+    assert.equal(app.verticalBehaviors.at(-1), "smooth");
+});
+
+test("upward wheel at the ending boundary returns smoothly to the final scene", (context) => {
+    const app = mount(context);
+    app.result.jump("day-1-part-2");
+    app.horizontalEnd();
+    app.nativeScroll(app.ending.documentTop - 62);
+    assert.equal(app.wheel(-500).prevented, true);
+    assert.equal(app.win.scrollY, 1400);
+    assert.equal(app.verticalBehaviors.at(-1), "smooth");
 });
 
 test("Enter and Space on native links and buttons keep their normal activation behavior", (context) => {
@@ -510,4 +566,47 @@ test("middle-button gestures outside desktop story navigation retain native beha
     app.track.listeners.get("mousedown")?.(event as never);
     assert.equal(event.prevented, false);
     assert.deepEqual(app.viewport.scrolls, []);
+});
+
+test("rapid horizontal and vertical wheel bursts stay captured while a scene travels", (context) => {
+    const app = mount(context);
+    for (const index of Array.from({ length: 40 }, (_, index) => index)) {
+        assert.equal(app.wheel(1800, app.target, index % 2 ? { deltaX: 2000, deltaY: 0 } : {}).prevented, true);
+        app.horizontalProgress(100 + index);
+    }
+    assert.equal(app.viewport.smoothTarget, 800, "A burst cannot bypass the next scene");
+    app.horizontalEnd();
+    assert.equal(app.viewport.scrollLeft, 800);
+});
+
+test("wheel on an expanded map collapses it and advances the story", (context) => {
+    const app = mount(context);
+    app.target.kind = "map";
+    app.target.dataset.storyMapExpanded = "true";
+    assert.equal(app.wheel(500).prevented, true);
+    assert.ok(app.dispatched.includes("story-map-collapse"));
+    app.horizontalEnd();
+    assert.equal(app.viewport.scrollLeft, 800);
+});
+
+test("resizing keeps the selected scene aligned instead of exposing adjacent scenes", (context) => {
+    const app = mount(context);
+    app.result.jump("day-1");
+    app.horizontalEnd();
+    app.viewport.clientWidth = 1100;
+    app.viewport.clientHeight = 900;
+    app.scenes.forEach((scene, index) => {
+        scene.offsetLeft = index * 1100;
+    });
+    app.resize();
+    assert.equal(app.viewport.scrollLeft, 1100);
+    assert.equal(app.win.scrollY, 900);
+});
+
+test("comments links and scrolling select the Comments chapter", (context) => {
+    const app = mount(context);
+    app.result.jump("comments");
+    assert.equal(app.states.at(-1), "comments");
+    app.nativeScroll(app.comments.documentTop);
+    assert.equal(app.states.at(-1), "comments");
 });

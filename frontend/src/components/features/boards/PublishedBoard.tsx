@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { ArrowRight, Copy, MessageCircle } from "lucide-react";
-import BackLink from "@/components/ui/BackLink";
+import ChapterBar from "@/components/ui/ChapterBar";
 import ScrollCue from "@/components/ui/ScrollCue";
 import ActivityDetailsDialog from "./ActivityDetailsDialog";
 import BoardComments from "./BoardComments";
@@ -65,6 +65,7 @@ export default function PublishedBoard({
     const [signInToSave, setSignInToSave] = useState(false);
     const [focusedActivity, setFocusedActivity] = useState<string>();
     const [hoveredActivity, setHoveredActivity] = useState<string>();
+    const mapZoom = useRef<number | undefined>(undefined);
     const mapSession = useRef<ReturnType<typeof loadMapboxMapSession> | null>(null);
     const session = useCallback(() => {
         mapSession.current ??= loadMapboxMapSession().catch((error) => {
@@ -288,6 +289,7 @@ export default function PublishedBoard({
             days={days}
             filter={mapFilter}
             session={session}
+            userZoom={mapZoom}
             activeId={highlighted}
             fill
             focusFirst={mapFilter !== "all"}
@@ -301,32 +303,16 @@ export default function PublishedBoard({
 
     return (
         <article className="relative min-w-0 break-words">
-            <nav
-                aria-label="Story chapters"
-                className="border-line bg-background/95 sticky top-0 z-30 flex h-[52px] max-w-full items-center gap-1 overflow-x-auto border-b px-3 backdrop-blur-sm sm:px-6"
-            >
-                {[
+            <ChapterBar
+                chapters={[
                     { id: "overview", title: "Overview" },
                     ...days.map((day) => ({ id: `day-${day.number}`, title: `Day ${day.number}` })),
                     { id: "ending", title: "Summary" },
                     { id: "comments", title: "Comments" }
-                ].map((chapter) => (
-                    <a
-                        key={chapter.id}
-                        href={`#${chapter.id}`}
-                        aria-current={currentChapter === chapter.id ? "location" : undefined}
-                        onClick={(event) => {
-                            if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.button === 0) {
-                                event.preventDefault();
-                                jump(chapter.id);
-                            }
-                        }}
-                        className="hover:bg-faint aria-[current=location]:bg-foreground aria-[current=location]:text-background shrink-0 rounded-full px-4 py-2 text-xs transition-colors focus-visible:outline-2"
-                    >
-                        {chapter.title}
-                    </a>
-                ))}
-            </nav>
+                ]}
+                current={currentChapter}
+                onNavigate={jump}
+            />
             <div ref={trackRef} className={desktop ? "relative min-h-0" : ""}>
                 <div
                     ref={viewportRef}
@@ -335,7 +321,7 @@ export default function PublishedBoard({
                     tabIndex={desktop ? 0 : undefined}
                     className={
                         desktop
-                            ? "@container sticky top-[52px] h-[calc(100dvh-52px)] min-w-0 snap-x snap-mandatory [scrollbar-width:none] overflow-x-auto overflow-y-hidden overscroll-x-contain focus-visible:outline-2 focus-visible:-outline-offset-2 [&::-webkit-scrollbar]:hidden"
+                            ? "@container sticky top-[62px] h-[calc(100dvh-62px)] min-w-0 snap-x snap-mandatory [scrollbar-width:none] overflow-x-auto overflow-y-hidden overscroll-x-contain focus-visible:outline-2 focus-visible:-outline-offset-2 [&::-webkit-scrollbar]:hidden"
                             : "min-w-0"
                     }
                 >
@@ -355,7 +341,6 @@ export default function PublishedBoard({
                                             : "min-w-0 flex-1"
                                     }
                                 >
-                                    <BackLink fallbackHref="/boards" className={desktop ? "mb-5" : "mb-8"} />
                                     <div data-story-author-row className="mb-4 flex flex-wrap items-center gap-3">
                                         <Link
                                             href={`/profile/${encodeURIComponent(author.id)}`}
@@ -374,7 +359,7 @@ export default function PublishedBoard({
                                             </div>
                                         </Link>
                                         <p className="text-muted-foreground text-[10px] tracking-[0.2em] uppercase">
-                                            A travel story by{" "}
+                                            A BOARD CREATED BY{" "}
                                             <Link
                                                 href={`/profile/${encodeURIComponent(author.id)}`}
                                                 className="underline underline-offset-4"
@@ -382,7 +367,7 @@ export default function PublishedBoard({
                                                 @{author.name}
                                             </Link>
                                         </p>
-                                        <div className="ml-auto flex flex-wrap items-center gap-2">
+                                        <div className="ml-4 flex flex-wrap items-center gap-2">
                                             {saveAction("overview")}
                                         </div>
                                     </div>
@@ -419,12 +404,15 @@ export default function PublishedBoard({
                                             </ul>
                                         ) : null}
                                     </div>
-                                    {!desktop ? <div className="@container mt-6 min-w-0">{stats}</div> : null}
+                                    <div
+                                        className={`@container mt-3 w-full max-w-md min-w-0 [&_dd]:text-2xl [&_dl]:gap-x-4 [&_dl]:py-3 [&_dt]:mt-1 [&_svg]:size-4 ${desktop ? "[&_dl]:grid-cols-4" : ""}`}
+                                    >
+                                        {stats}
+                                    </div>
                                 </div>
                                 {desktop ? (
                                     <>
                                         <div className="col-[1/4] row-[4/7] self-end">{journeyMap("all")}</div>
-                                        <div className="@container col-[4/7] row-[4/7] min-w-0 self-end">{stats}</div>
                                     </>
                                 ) : null}
                                 {board.coverImage ? (
@@ -516,7 +504,14 @@ export default function PublishedBoard({
                 remixAction={remixAction}
                 actionFeedback={actionFeedback("ending")}
                 journeyMap={
-                    <StoryMap days={days} filter="all" session={session} expanded onOpen={setSelectedActivity} />
+                    <StoryMap
+                        days={days}
+                        filter="all"
+                        session={session}
+                        userZoom={mapZoom}
+                        expanded
+                        onOpen={setSelectedActivity}
+                    />
                 }
                 jump={jump}
                 onOpenActivity={setSelectedActivity}

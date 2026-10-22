@@ -27,7 +27,7 @@ export default function StoryMapControls({ map }: { map: ReactNode }) {
             const width = Math.max(origin.width, Math.min(bounds.right - origin.left - 24, bounds.width * 0.6));
             const height = Math.max(
                 origin.height,
-                Math.min(origin.bottom - Math.max(bounds.top, 52) - 24, bounds.height * 0.8)
+                Math.min(origin.bottom - Math.max(bounds.top, 62) - 24, bounds.height * 0.8)
             );
             setSize({ width, height });
             restore();
@@ -64,11 +64,14 @@ export default function StoryMapControls({ map }: { map: ReactNode }) {
             setExpanded(false);
             button.current?.focus({ preventScroll: true });
         };
+        const collapse = () => setExpanded(false);
+        window.addEventListener("story-map-collapse", collapse);
         measure();
         const observer = new ResizeObserver(measure);
         observer.observe(scene);
         window.addEventListener("keydown", close);
         return () => {
+            window.removeEventListener("story-map-collapse", collapse);
             observer.disconnect();
             window.removeEventListener("keydown", close);
             restore();

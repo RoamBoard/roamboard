@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import BoardCardTilt from "./cards/BoardCardTilt";
 import type { BoardImage } from "@/types/board";
 
 export function StoryPhotoCredit({ image }: { image: BoardImage }) {
@@ -80,45 +79,39 @@ export default function StoryPhoto({
                       : `min(100%, ${image.width || 800}px)`
             }}
         >
-            <BoardCardTilt
-                active={!thumbnail}
-                lift={3}
-                className={`cursor-pointer ${fillFrame ? "flex min-h-0 flex-1" : ""}`}
+            <button
+                type="button"
+                onClick={onOpen}
+                aria-label={`Enlarge ${image.alt}`}
+                className={`relative block w-full cursor-pointer overflow-hidden outline-offset-4 transition-transform hover:scale-[1.015] focus-visible:scale-[1.015] focus-visible:outline-2 motion-reduce:transform-none ${fillFrame ? "min-h-0 flex-1" : ""}`}
+                style={{ aspectRatio: displayRatio }}
             >
-                <button
-                    type="button"
-                    onClick={onOpen}
-                    aria-label={`Enlarge ${image.alt}`}
-                    className={`relative block w-full cursor-pointer overflow-hidden outline-offset-4 transition-shadow hover:shadow-lg focus-visible:outline-2 motion-reduce:transform-none ${fillFrame ? "min-h-0 flex-1" : ""}`}
-                    style={{ aspectRatio: displayRatio }}
-                >
-                    <span
-                        aria-hidden="true"
-                        className="border-foreground/25 dark:border-foreground/30 pointer-events-none absolute inset-0 z-10 border"
+                <span
+                    aria-hidden="true"
+                    className="border-foreground/25 dark:border-foreground/30 pointer-events-none absolute inset-0 z-10 border"
+                />
+                {failed ? (
+                    <span className="text-muted-foreground p-4 text-xs">Saved photo unavailable</span>
+                ) : (
+                    <Image
+                        src={image.url}
+                        alt={image.alt}
+                        fill
+                        sizes={thumbnail ? "(max-width: 640px) 40vw, 192px" : "(max-width: 1024px) 80vw, 50vw"}
+                        unoptimized
+                        loading={eager ? "eager" : "lazy"}
+                        onError={() => setFailed(true)}
+                        onLoad={(event) => {
+                            if (!image.width || !image.height)
+                                setNaturalSize({
+                                    width: event.currentTarget.naturalWidth,
+                                    height: event.currentTarget.naturalHeight
+                                });
+                        }}
+                        className={`pointer-events-none ${crop ? "object-cover" : "object-scale-down"}`}
                     />
-                    {failed ? (
-                        <span className="text-muted-foreground p-4 text-xs">Saved photo unavailable</span>
-                    ) : (
-                        <Image
-                            src={image.url}
-                            alt={image.alt}
-                            fill
-                            sizes={thumbnail ? "(max-width: 640px) 40vw, 192px" : "(max-width: 1024px) 80vw, 50vw"}
-                            unoptimized
-                            loading={eager ? "eager" : "lazy"}
-                            onError={() => setFailed(true)}
-                            onLoad={(event) => {
-                                if (!image.width || !image.height)
-                                    setNaturalSize({
-                                        width: event.currentTarget.naturalWidth,
-                                        height: event.currentTarget.naturalHeight
-                                    });
-                            }}
-                            className={`pointer-events-none ${crop ? "object-cover" : "object-scale-down"}`}
-                        />
-                    )}
-                </button>
-            </BoardCardTilt>
+                )}
+            </button>
             {!thumbnail ? <StoryPhotoCredit image={image} /> : null}
         </figure>
     );
