@@ -24,7 +24,7 @@ type Props = {
 export default function DiscoverExperience({ hero, journey, mobileJourney, children }: Props) {
     const desktop = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
     const [collapsed, setCollapsed] = useState(false);
-    const [dimensions, setDimensions] = useState({ travel: 0, height: 0 });
+    const [travel, setTravel] = useState(0);
     const section = useRef<HTMLDivElement>(null);
     const intro = useRef<HTMLDivElement>(null);
     const feed = useRef<HTMLDivElement>(null);
@@ -37,31 +37,36 @@ export default function DiscoverExperience({ hero, journey, mobileJourney, child
     }, []);
 
     useEffect(() => {
+        const sectionElement = section.current;
         const introElement = intro.current;
         const feedElement = feed.current;
-        if (!introElement || !feedElement) return;
-        const measure = () =>
-            setDimensions({
-                travel: introElement.scrollWidth,
-                height: feedElement.offsetHeight
-            });
+        if (!desktop || !sectionElement || !introElement || !feedElement) return;
+        const measure = () => {
+            const nextTravel = introElement.scrollWidth;
+            const height = `${feedElement.offsetHeight + nextTravel}px`;
+            if (sectionElement.style.height !== height) sectionElement.style.height = height;
+            setTravel((current) => (current === nextTravel ? current : nextTravel));
+        };
         const observer = new ResizeObserver(measure);
         observer.observe(introElement);
         observer.observe(feedElement);
-        return () => observer.disconnect();
+        return () => {
+            observer.disconnect();
+            sectionElement.style.height = "";
+        };
     }, [desktop]);
 
     useEffect(() => {
         const update = () => {
             const offset = section.current?.offsetTop ?? 0;
             const distance = Math.max(0, window.scrollY - offset);
-            horizontal.set(desktop ? -Math.min(distance, dimensions.travel) : 0);
+            horizontal.set(desktop ? -Math.min(distance, travel) : 0);
             setCollapsed(distance > 48 || (!desktop && carouselTravelled.current));
         };
         update();
         window.addEventListener("scroll", update, { passive: true });
         return () => window.removeEventListener("scroll", update);
-    }, [desktop, dimensions.travel, horizontal]);
+    }, [desktop, travel, horizontal]);
 
     useEffect(() => {
         const state = { frame: 0 };
@@ -69,8 +74,8 @@ export default function DiscoverExperience({ hero, journey, mobileJourney, child
             const hash = window.location.hash;
             // Returning from a collection can measure the intro before its
             // desktop layout settles. Restore again when the travel changes.
-            const signature = `${hash}:${desktop}:${dimensions.travel}`;
-            if (!hash || handledHash.current === signature || (desktop && !dimensions.travel)) return;
+            const signature = `${hash}:${desktop}:${travel}`;
+            if (!hash || handledHash.current === signature || (desktop && !travel)) return;
             const target = document.getElementById(hash.slice(1));
             const feedElement = feed.current;
             if (!target || !feedElement?.contains(target)) return;
@@ -78,9 +83,9 @@ export default function DiscoverExperience({ hero, journey, mobileJourney, child
             state.frame = requestAnimationFrame(() => {
                 const withinFeed = target.getBoundingClientRect().top - feedElement.getBoundingClientRect().top;
                 const top = desktop
-                    ? (section.current?.offsetTop ?? 0) + dimensions.travel + withinFeed - 24
+                    ? (section.current?.offsetTop ?? 0) + travel + withinFeed - 24
                     : window.scrollY + target.getBoundingClientRect().top - 24;
-                horizontal.set(desktop ? -dimensions.travel : 0);
+                horizontal.set(desktop ? -travel : 0);
                 window.scrollTo({ top, behavior: "instant" });
             });
         };
@@ -94,14 +99,14 @@ export default function DiscoverExperience({ hero, journey, mobileJourney, child
             cancelAnimationFrame(state.frame);
             window.removeEventListener("hashchange", onHashChange);
         };
-    }, [desktop, dimensions.travel, horizontal]);
+    }, [desktop, travel, horizontal]);
 
     function revealFeed(event?: MouseEvent) {
         event?.preventDefault();
         const top = desktop
-            ? (section.current?.offsetTop ?? 0) + dimensions.travel
+            ? (section.current?.offsetTop ?? 0) + travel
             : (feed.current?.getBoundingClientRect().top ?? 0) + window.scrollY;
-        horizontal.set(desktop ? -dimensions.travel : 0);
+        horizontal.set(desktop ? -travel : 0);
         window.scrollTo({ top, behavior: "instant" });
         document.getElementById("discover-feed")?.focus({ preventScroll: true });
     }
@@ -121,10 +126,7 @@ export default function DiscoverExperience({ hero, journey, mobileJourney, child
                 Skip to discovery
             </a>
             <div className="@container w-full min-w-0 [--panel-width:100cqw]" onClickCapture={handleAnchor}>
-                <div
-                    ref={section}
-                    style={desktop && dimensions.height ? { height: dimensions.height + dimensions.travel } : undefined}
-                >
+                <div ref={section}>
                     {/* The tall sticky track releases after horizontal travel. The feed then
                         scrolls naturally with the document: no wheel interception or duplicate feed. */}
                     <div className={desktop ? "sticky top-0 w-[var(--panel-width)] overflow-clip" : ""}>
@@ -150,7 +152,7 @@ export default function DiscoverExperience({ hero, journey, mobileJourney, child
                             <div
                                 ref={feed}
                                 onFocusCapture={() => {
-                                    if (desktop && window.scrollY < dimensions.travel) revealFeed();
+                                    if (desktop && window.scrollY < travel) revealFeed();
                                 }}
                             >
                                 {children}

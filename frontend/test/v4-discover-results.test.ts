@@ -218,7 +218,13 @@ test("Discover Featured and RoamFlow both resolve viewer permissions instead of 
     const source = publicDiscover.fromDiscoveryCard(discoveryCard(741));
     function cards(node: ReactNode): Array<Record<string, unknown>> {
         if (!isValidElement<{ children?: ReactNode }>(node)) return [];
-        return node.type === DestinationStoryCard ? [node.props] : Children.toArray(node.props.children).flatMap(cards);
+        if (node.type === DestinationStoryCard) return [node.props];
+        // Resolve the memoized RoamFlow item without changing the ownership assertion below.
+        const memoized = node.type as { type?: (props: { children?: ReactNode }) => ReactNode };
+        if (typeof memoized === "object" && typeof memoized.type === "function") {
+            return cards(memoized.type(node.props));
+        }
+        return Children.toArray(node.props.children).flatMap(cards);
     }
     const featured = cards(FeaturedBoards({ boards: [source], available: true }));
     const captured: { tree?: ReactNode } = {};
