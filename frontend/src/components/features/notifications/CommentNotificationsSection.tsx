@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import CommentNotificationList from "./CommentNotificationList";
 import {
+    clearCommentNotifications,
     commentNotificationHref,
     listCommentNotifications,
     markCommentNotificationRead,
@@ -18,6 +19,9 @@ export default function CommentNotificationsSection({ userId }: { userId: string
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [openingId, setOpeningId] = useState<number | null>(null);
+    const [clearing, setClearing] = useState(false);
+    const [clearError, setClearError] = useState("");
+    const clearingRef = useRef(false);
     const versionRef = useRef(0);
     const userRef = useRef<string | null>(userId);
 
@@ -81,11 +85,41 @@ export default function CommentNotificationsSection({ userId }: { userId: string
         }
     }
 
+    async function clear() {
+        const expectedUserId = userRef.current;
+        if (!expectedUserId || clearingRef.current) return;
+        clearingRef.current = true;
+        setClearing(true);
+        setClearError("");
+        try {
+            await clearCommentNotifications();
+        } catch {
+            if (userRef.current === expectedUserId)
+                setClearError("Could not clear Board comment notifications. Try again.");
+        } finally {
+            clearingRef.current = false;
+            if (userRef.current === expectedUserId) setClearing(false);
+        }
+    }
+
     return (
         <section aria-label="Board comment notifications" className="mt-8">
-            <div className="border-line mb-4 border-b pb-2">
+            <div className="border-line mb-4 flex items-center justify-between gap-3 border-b pb-2">
                 <h2 className="text-12 tracking-label text-muted-foreground font-bold uppercase">Board comments</h2>
+                <button
+                    type="button"
+                    onClick={() => void clear()}
+                    disabled={clearing}
+                    className="text-12 text-muted-foreground hover:text-foreground cursor-pointer underline disabled:cursor-default disabled:opacity-50"
+                >
+                    {clearing ? "Clearing…" : "Mark All as Read"}
+                </button>
             </div>
+            {clearError && (
+                <p role="alert" className="text-12 mb-4 text-red-500">
+                    {clearError}
+                </p>
+            )}
             {error && (
                 <div role="alert" className="text-12 mb-4 flex items-center justify-between text-red-500">
                     <span>{error}</span>

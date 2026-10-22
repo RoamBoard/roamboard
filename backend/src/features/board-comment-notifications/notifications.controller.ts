@@ -10,6 +10,7 @@ export function createNotificationsController(service: NotificationsService): {
     setSubscription: RequestHandler;
     list: RequestHandler;
     markRead: RequestHandler;
+    markAllRead: RequestHandler;
 } {
     return {
         subscription: async (_request, response) => {
@@ -27,8 +28,10 @@ export function createNotificationsController(service: NotificationsService): {
         },
         list: async (_request, response) => {
             const user = response.locals.user as AppUser;
-            const { cursor } = response.locals.query as { cursor?: string };
-            response.set("Cache-Control", "no-store").json(await service.list(user.userId, cursor));
+            const { cursor, unreadOnly } = response.locals.query as { cursor?: string; unreadOnly?: "true" | "false" };
+            response
+                .set("Cache-Control", "no-store")
+                .json(await service.list(user.userId, cursor, unreadOnly === "true"));
         },
         markRead: async (_request, response) => {
             const user = response.locals.user as AppUser;
@@ -36,6 +39,10 @@ export function createNotificationsController(service: NotificationsService): {
             response
                 .set("Cache-Control", "no-store")
                 .json({ data: await service.markRead(user.userId, notificationId) });
+        },
+        markAllRead: async (_request, response) => {
+            const user = response.locals.user as AppUser;
+            response.set("Cache-Control", "no-store").json({ data: await service.markAllRead(user.userId) });
         }
     };
 }

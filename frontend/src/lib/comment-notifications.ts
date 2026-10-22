@@ -76,12 +76,23 @@ export async function setCommentSubscription(boardId: string, enabled: boolean):
     return response.data;
 }
 
-export async function listCommentNotifications(cursor?: string): Promise<CommentNotificationPage> {
-    const path = `/users/me/comment-notifications${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`;
+export async function listCommentNotifications(cursor?: string, unreadOnly = false): Promise<CommentNotificationPage> {
+    const query = [cursor ? `cursor=${encodeURIComponent(cursor)}` : null, unreadOnly ? "unreadOnly=true" : null]
+        .filter(Boolean)
+        .join("&");
+    const path = `/users/me/comment-notifications${query ? `?${query}` : ""}`;
     const response = await apiRequest<CommentNotificationPage>(path);
     if (!Array.isArray(response.data) || !response.meta)
         throw new Error("The notification response was incomplete. Please try again.");
     return response;
+}
+
+export async function clearCommentNotifications(): Promise<{ unreadCount: number }> {
+    const response = await apiRequest<{ data: { unreadCount: number } }>("/users/me/comment-notifications/read-all", {
+        method: "POST"
+    });
+    notifyCommentNotificationUpdate();
+    return response.data;
 }
 
 export async function markCommentNotificationRead(

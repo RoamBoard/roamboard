@@ -5,6 +5,8 @@ import { requireSessionUser } from "../../middleware/session-user.js";
 import { validateBody, validateParams, validateQuery } from "../../middleware/validate.js";
 import { createNotificationsController } from "./notifications.controller.js";
 import {
+    emptyNotificationBodySchema,
+    emptyNotificationQuerySchema,
     notificationParamsSchema,
     notificationQuerySchema,
     subscriptionBodySchema,
@@ -42,6 +44,15 @@ export function createNotificationsRouter(
         attachUser,
         requireSessionUser,
         controller.list
+    );
+    router.post(
+        "/users/me/comment-notifications/read-all",
+        validateQuery(emptyNotificationQuerySchema),
+        attachUser,
+        requireSessionUser,
+        requireFrontendOrigin,
+        validateBody(emptyNotificationBodySchema),
+        controller.markAllRead
     );
     router.post(
         "/users/me/comment-notifications/:notificationId/read",

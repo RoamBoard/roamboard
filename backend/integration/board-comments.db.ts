@@ -259,6 +259,23 @@ test(
                     ),
                     false
                 );
+
+                const mentionedUnread = await notifications.list("mentioned", null, 20, true);
+                assert.ok(mentionedUnread.some((item) => item.kind === "mention"));
+                const ownerUnreadBeforeClear = await notifications.unreadCount("owner");
+                await client.query("UPDATE board SET visibility = 'collaborators' WHERE board_id = $1", [
+                    mentionsBoardId
+                ]);
+                assert.equal((await notifications.list("mentioned", null, 20)).length, 0);
+                assert.equal(await notifications.unreadCount("mentioned"), 0);
+                await notifications.markAllRead("mentioned");
+                assert.equal(await notifications.unreadCount("owner"), ownerUnreadBeforeClear);
+                await client.query("UPDATE board SET visibility = 'public' WHERE board_id = $1", [mentionsBoardId]);
+                assert.deepEqual(await notifications.list("mentioned", null, 20, true), []);
+                assert.ok((await notifications.list("mentioned", null, 20)).length > 0);
+                await notifications.markAllRead("mentioned");
+                await repository.create(mentionsBoardId, "third", "A new @renamed mention");
+                assert.equal((await notifications.list("mentioned", null, 20, true))[0]?.kind, "mention");
             } finally {
                 await closeDatabase();
                 await client.end();

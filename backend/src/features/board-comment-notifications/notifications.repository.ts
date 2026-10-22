@@ -61,7 +61,7 @@ export function createNotificationsRepository(): NotificationsRepository {
                 [boardId, userId, enabled]
             );
         },
-        async list(userId, cursor, limit) {
+        async list(userId, cursor, limit, unreadOnly = false) {
             const result = await getPool().query<NotificationRow>(
                 `SELECT n.notification_id, b.board_id, b.title, c.comment_id, c.body, n.kind,
                         u.display_name, u.username, u.profile_picture_image_id, n.created_at, n.read_at
@@ -70,6 +70,7 @@ export function createNotificationsRepository(): NotificationsRepository {
                  JOIN board b ON b.board_id = c.board_id
                  JOIN app_user u ON u.user_id = c.author_user_id
                  WHERE n.recipient_user_id = $1 AND ${visibleBoard}
+                   ${unreadOnly ? "AND n.read_at IS NULL" : ""}
                    AND ($2::timestamptz IS NULL OR (n.created_at, n.notification_id) < ($2::timestamptz, $3::int))
                  ORDER BY n.created_at DESC, n.notification_id DESC LIMIT $4`,
                 [userId, cursor?.createdAt ?? null, cursor?.notificationId ?? null, limit]
@@ -97,6 +98,12 @@ export function createNotificationsRepository(): NotificationsRepository {
             );
             const row = result.rows[0];
             return row ? { notificationId: row.notification_id, readAt: row.read_at.toISOString() } : null;
+        },
+        async markAllRead(userId) {
+            await getPool().query(
+                "UPDATE board_comment_notification SET read_at = NOW() WHERE recipient_user_id = $1 AND read_at IS NULL",
+                [userId]
+            );
         }
     };
 }
