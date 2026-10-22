@@ -463,36 +463,39 @@ export default function PublishedBoard({
                             />
                         ))}
                     </div>
-                    {desktop ? (
-                        <ScrollCue
-                            targetId={nextScene}
-                            label="Next story scene"
-                            direction="right"
-                            lines={false}
-                            className="absolute top-1/2 right-3 z-20 -translate-y-1/2"
-                            onClick={(event) => {
-                                if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.button === 0) {
-                                    event.preventDefault();
-                                    jump(nextScene);
-                                }
-                            }}
-                        />
-                    ) : null}
-                    {desktop && previousScene ? (
-                        <ScrollCue
-                            targetId={previousScene}
-                            label="Previous story scene"
-                            direction="left"
-                            lines={false}
-                            className="absolute top-1/2 left-3 z-20 -translate-y-1/2"
-                            onClick={(event) => {
-                                if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.button === 0) {
-                                    event.preventDefault();
-                                    jump(previousScene);
-                                }
-                            }}
-                        />
-                    ) : null}
+                    {desktop
+                        ? [
+                              { target: nextScene, label: "Next story scene", direction: "right", position: "right-3" },
+                              {
+                                  target: previousScene,
+                                  label: "Previous story scene",
+                                  direction: "left",
+                                  position: "left-3"
+                              }
+                          ].map(({ target, label, direction, position }) =>
+                              target ? (
+                                  <ScrollCue
+                                      key={direction}
+                                      targetId={target}
+                                      label={label}
+                                      direction={direction as "left" | "right"}
+                                      lines={false}
+                                      className={`absolute top-1/2 ${position} z-20 -translate-y-1/2`}
+                                      onClick={(event) => {
+                                          if (
+                                              !event.metaKey &&
+                                              !event.ctrlKey &&
+                                              !event.shiftKey &&
+                                              event.button === 0
+                                          ) {
+                                              event.preventDefault();
+                                              jump(target);
+                                          }
+                                      }}
+                                  />
+                              ) : null
+                          )
+                        : null}
                 </div>
             </div>
             <BoardStoryEnding

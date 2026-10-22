@@ -94,19 +94,15 @@ export default function StoryMap({
             state.cancelled = true;
         };
     }, [visible, points.length, session, attempt]);
+    const mapSize = fill ? "h-full w-full" : expanded ? "h-[min(60dvh,32rem)] min-h-72" : "aspect-square w-full";
     return (
         <div ref={container} className={fill ? "relative h-full overflow-hidden" : "relative overflow-hidden"}>
             {!points.length ? (
-                <p
-                    className={`text-muted-foreground grid place-content-center px-4 text-center text-xs ${fill ? "h-full w-full" : expanded ? "h-[min(60dvh,32rem)] min-h-72" : "aspect-square w-full"}`}
-                >
+                <p className={`text-muted-foreground grid place-content-center px-4 text-center text-xs ${mapSize}`}>
                     No saved locations for {filter === "all" ? "this Board" : `Day ${filter}`}.
                 </p>
             ) : error ? (
-                <div
-                    role="alert"
-                    className={`grid place-content-center gap-3 px-4 text-center text-xs ${fill ? "h-full w-full" : expanded ? "h-[min(60dvh,32rem)] min-h-72" : "aspect-square w-full"}`}
-                >
+                <div role="alert" className={`grid place-content-center gap-3 px-4 text-center text-xs ${mapSize}`}>
                     <p>The map is unavailable. Board activities remain available.</p>
                     <button
                         type="button"
@@ -139,25 +135,15 @@ export default function StoryMap({
                               ? points[0]?.id
                               : undefined
                     }
-                    selectedZoom={15}
                     userZoom={userZoom}
-                    className={
-                        fill
-                            ? "h-full w-full"
-                            : expanded
-                              ? "h-[min(60dvh,32rem)] min-h-72 w-full"
-                              : "aspect-square w-full"
-                    }
+                    className={mapSize}
                     onPointClick={(point) => {
                         const activity = activities.find((item) => item.activity.id === point.id)?.activity;
                         if (activity) onOpen(activity);
                     }}
                 />
             ) : (
-                <p
-                    role="status"
-                    className={`text-muted-foreground grid place-content-center text-xs ${fill ? "h-full w-full" : expanded ? "h-[min(60dvh,32rem)] min-h-72" : "aspect-square w-full"}`}
-                >
+                <p role="status" className={`text-muted-foreground grid place-content-center text-xs ${mapSize}`}>
                     Loading map…
                 </p>
             )}

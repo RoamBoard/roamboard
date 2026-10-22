@@ -81,8 +81,9 @@ export default function useStoryScroll(chapterKey: string) {
         const sections = () => [...content.querySelectorAll<HTMLElement>("[data-story-scene]")];
         const gesture = { locked: false, timer: 0, inner: false, last: 0 };
         const synchronized = { left: container.scrollLeft };
+        const currentIndex = () => Math.round(container.scrollLeft / Math.max(1, container.clientWidth));
         const position = {
-            index: Math.round(container.scrollLeft / Math.max(1, container.clientWidth)),
+            index: currentIndex(),
             width: container.clientWidth,
             height: container.clientHeight
         };
@@ -112,7 +113,7 @@ export default function useStoryScroll(chapterKey: string) {
                     synchronized.left = progress * container.clientWidth;
                     container.scrollLeft = synchronized.left;
                 }
-                const scene = sections()[Math.round(container.scrollLeft / Math.max(1, container.clientWidth))];
+                const scene = sections()[currentIndex()];
                 if (scene && wrapper.getBoundingClientRect().bottom > 80) {
                     position.index = sections().indexOf(scene);
                     setSceneId(scene.id);
@@ -128,14 +129,14 @@ export default function useStoryScroll(chapterKey: string) {
         };
         const move = (direction: number) => {
             const scenes = sections();
-            const index = Math.round(container.scrollLeft / Math.max(1, container.clientWidth));
+            const index = currentIndex();
             const next = scenes[index + direction];
             if (next) reveal(next.id);
             else if (direction > 0) reveal("ending");
         };
         const horizontalEnd = () => {
             if (!desktop || !horizontalNavigation.current) return;
-            const index = Math.round(container.scrollLeft / Math.max(1, container.clientWidth));
+            const index = currentIndex();
             const left = index * container.clientWidth;
             if (Math.abs(container.scrollLeft - left) > 1) {
                 container.scrollTo({ left, behavior: behavior() });
@@ -226,7 +227,7 @@ export default function useStoryScroll(chapterKey: string) {
             if (scene && Math.abs(scene.offsetLeft - container.scrollLeft) > container.clientWidth / 2)
                 reveal(scene.id);
         };
-        const observer = new ResizeObserver(() => {
+        const measure = () => {
             const resized = position.width !== container.clientWidth || position.height !== container.clientHeight;
             position.width = container.clientWidth;
             position.height = container.clientHeight;
@@ -239,10 +240,10 @@ export default function useStoryScroll(chapterKey: string) {
                 window.scrollTo({ top: start() + position.index * container.clientHeight, behavior: "instant" });
             }
             update();
-        });
+        };
+        const observer = new ResizeObserver(measure);
         observer.observe(container);
-        container.style.setProperty("--story-width", `${container.clientWidth}px`);
-        if (desktop) wrapper.style.height = `${sections().length * container.clientHeight}px`;
+        measure();
         window.addEventListener("wheel", wheel, { passive: false, capture: true });
         wrapper.addEventListener("keydown", key);
         container.addEventListener("scroll", horizontalScroll, { passive: true });
