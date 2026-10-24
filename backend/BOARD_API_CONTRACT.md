@@ -355,3 +355,11 @@ See the agreed [Board overview story contract](../contracts/board-overview-story
 `npm run db:story` inspects migration status. `npm run db:story -- --apply` first creates and verifies a custom-format
 backup, then applies only 021 in a transaction. Shared-database application and deployment are separate from source
 implementation; consult the migration log before applying.
+
+### Day color refinement (2026-10-25)
+
+Board day writes accept optional nullable `color` matching `^#[0-9a-f]{6}$` (for example `"#b87568"`).
+Reads return the saved color or null. Omission preserves an existing day's color by dayId; a new day without
+a color and explicit null use the indexed frontend default. Remix content retains selected colors. Existing
+authorization, revisions, day numbering and validation errors apply. Migration 023 adds the nullable constrained
+column; it is applied to shared development. See contracts/board-editor-redesign.md for the approved presentation.

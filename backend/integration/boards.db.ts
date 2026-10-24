@@ -50,7 +50,9 @@ test(
                     "011_board_published_at.sql",
                     "013_board_comments.sql",
                     "020_image_deletion.sql",
-                    "021_board_story.sql"
+                    "021_board_story.sql",
+                    "022_activity_photo_context.sql",
+                    "023_board_day_color.sql"
                 ]) {
                     const sql = await readFile(new URL(`../db/migrations/${name}`, import.meta.url), "utf8");
                     await migrationClient.query(sql);
@@ -227,6 +229,37 @@ test(
                 imageIds: [],
                 days: []
             };
+            const colored = await service.create("owner-sub", {
+                ...empty,
+                title: "Color persistence",
+                days: [
+                    { dayNumber: 1, date: null, color: "#c58e76", activities: [] },
+                    { dayNumber: 2, date: null, color: "#8aa6b8", activities: [] },
+                    { dayNumber: 3, date: null, activities: [] }
+                ]
+            });
+            assert.deepEqual(
+                (await service.read(colored.boardId, "owner-sub")).days.map((day) => day.color),
+                ["#c58e76", "#8aa6b8", null]
+            );
+            const recolored = await service.replace("owner-sub", colored.boardId, colored.revision, {
+                ...empty,
+                days: [
+                    { dayId: colored.days[1]!.dayId, dayNumber: 1, date: null, activities: [] },
+                    { dayId: colored.days[0]!.dayId, dayNumber: 2, date: null, color: null, activities: [] },
+                    { dayId: colored.days[2]!.dayId, dayNumber: 3, date: null, color: "#b6a2c5", activities: [] }
+                ]
+            });
+            assert.deepEqual(
+                (await service.read(colored.boardId, "owner-sub")).days.map((day) => day.color),
+                ["#8aa6b8", null, "#b6a2c5"]
+            );
+            await assert.rejects(
+                pool.query("UPDATE board_day SET color = '#FF0000' WHERE day_id = $1", [recolored.days[0]!.dayId]),
+                { code: "23514" }
+            );
+            assert.equal((await service.read(colored.boardId, "owner-sub")).days[0]?.color, "#8aa6b8");
+            await service.delete(colored.boardId, "owner-sub");
             const destination: NonNullable<BoardWrite["destination"]> = {
                 name: "Bali",
                 kind: "region",

@@ -31,7 +31,7 @@ export function getBoardDays(board: Board): PublishedBoardDay[] {
         // Use a custom heading, or build one from the first and last activity.
         const title =
             board.dayTitles?.[number] ?? (first && last && first !== last ? `${first} → ${last}` : (first ?? ""));
-        return { number, date, title, items };
+        return { number, date, title, items, color: board.dayColors?.[number] };
     }).sort((first, second) => first.number - second.number);
 }
 

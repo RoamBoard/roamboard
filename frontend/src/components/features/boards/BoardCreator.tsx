@@ -6,7 +6,7 @@ import BoardDestinationSearch from "./BoardDestinationSearch";
 import type { BoardDestinationDraft } from "@/types/board-creator";
 
 import { activityBatchDefaults } from "@/lib/activity-photo";
-import { movePlannerPin, reorderPlannerPin } from "@/lib/board-planner";
+import { movePlannerPin } from "@/lib/board-planner";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import BoardPreviewSection from "@/components/features/boards/BoardPreviewSection";
@@ -20,7 +20,7 @@ import CreatorProgress from "./CreatorProgress";
 import { toast } from "sonner";
 import CreatorLeaveDialog from "./CreatorLeaveDialog";
 import CreatorDeleteDialog from "./CreatorDeleteDialog";
-import { boardEditorFingerprint, type BoardLeaveNavigation } from "@/lib/board-editor-safety";
+import { publicationErrors, boardEditorFingerprint, type BoardLeaveNavigation } from "@/lib/board-editor-safety";
 import { useBoardLeaveWarning } from "@/lib/use-board-leave-warning";
 import {
     fromBoardDocument,
@@ -143,6 +143,7 @@ export default function BoardCreator({
     const [message, setMessage] = useState("");
     const [saveMessage, setSaveMessage] = useState("");
     const [saveError, setSaveError] = useState("");
+    const [showValidation, setShowValidation] = useState(false);
     const [tagsLoading, setTagsLoading] = useState(true);
     const [tagsError, setTagsError] = useState("");
     const [savedFingerprint, setSavedFingerprint] = useState<string | null>(null);
@@ -487,7 +488,7 @@ export default function BoardCreator({
 
     function removeActivityImage(imageId: string) {
         const image = images.find((item) => item.id === imageId);
-        if (image?.uploadedImageId === coverImageId) assignActivityImage(imageId, null);
+        if (image?.source === "upload") assignActivityImage(imageId, null);
         else removeImage(imageId);
     }
 
@@ -521,16 +522,31 @@ export default function BoardCreator({
         setDays((current) => movePlannerPin(current, pinId, dayId, time, index));
     }
 
+    const validationErrors = showValidation ? publicationErrors(payload) : [];
+    function fieldError(field: string) {
+        const error = validationErrors.find((item) => item.field === field);
+        return error ? (
+            <p id={field + "-error"} role="alert" className="mt-2 mb-4 text-sm text-red-600 dark:text-red-400">
+                {error.message}
+            </p>
+        ) : null;
+    }
     async function save(status: BoardStatus) {
         if (saveInFlight.current || editorDisabled || uploading) return;
         if ((preferenceLoading || preferenceError) && !visibilityTouched.current) {
             setSaveError("Wait for Board preferences or choose a visibility option above before saving.");
             return;
         }
-        if (status === "published" && !destination) {
-            setSaveError("Choose a main destination in Board Basics before publishing.");
-            document.getElementById("board-basics")?.scrollIntoView({ behavior: "smooth" });
-            return;
+        if (status === "published") {
+            setShowValidation(true);
+            const errors = publicationErrors(payload);
+            if (errors.length) {
+                setSaveError("");
+                history.replaceState(history.state, "", `#${errors[0].field}`);
+                window.dispatchEvent(new HashChangeEvent("hashchange"));
+                document.getElementById(errors[0].field)?.focus({ preventScroll: true });
+                return;
+            }
         }
         saveInFlight.current = true;
         setSaving(status);
@@ -703,11 +719,20 @@ export default function BoardCreator({
                                         </label>
                                         <input
                                             id="board-title"
+                                            aria-invalid={validationErrors.some(
+                                                (error) => error.field === "board-title"
+                                            )}
+                                            aria-describedby={
+                                                validationErrors.some((error) => error.field === "board-title")
+                                                    ? "board-title-error"
+                                                    : undefined
+                                            }
                                             value={title}
                                             onChange={(event) => setTitle(event.target.value)}
                                             placeholder="Your next chapter"
                                             className="font-display border-line focus:border-foreground mt-2 mb-8 min-h-16 w-full border-b bg-transparent pb-4 text-4xl font-bold tracking-tight outline-none lg:text-5xl"
                                         />
+                                        {fieldError("board-title")}
                                         <div id="board-destination" tabIndex={-1} className="scroll-mt-36">
                                             <BoardDestinationSearch
                                                 key={`${savedBoard?.boardId ?? "new"}-${destinationGeneration}`}
@@ -720,6 +745,7 @@ export default function BoardCreator({
                                                 }}
                                             />
                                         </div>
+                                        {fieldError("board-destination")}
                                         <label className="text-foreground/80 text-20 sm:text-24 block max-w-3xl min-w-0 font-bold">
                                             Description
                                             <textarea
@@ -767,6 +793,7 @@ export default function BoardCreator({
                                     showCover={false}
                                     showDropZone={initialBoardId === undefined && initialMode === "smart"}
                                 />
+                                {fieldError("day-plan")}
                                 <DayPlanner
                                     destination={destination}
                                     openActivityId={mapActivityId}
@@ -780,21 +807,16 @@ export default function BoardCreator({
                                             current.length >= 31 ? current : [...current, newDay(current.length + 1)]
                                         )
                                     }
+                                    onDayColorChange={(id, color) =>
+                                        setDays((current) =>
+                                            current.map((day) => (day.id === id ? { ...day, color } : day))
+                                        )
+                                    }
                                     onRemoveDay={removeDay}
                                     onAddPin={addPin}
                                     onUpdatePin={updatePin}
                                     onMovePin={movePin}
-                                    onReorderPin={(pinId, direction) =>
-                                        setDays((current) => reorderPlannerPin(current, pinId, direction))
-                                    }
                                     onRemovePin={removePin}
-                                    onImageMetadataChange={(imageId, metadata) =>
-                                        setImages((current) =>
-                                            current.map((image) =>
-                                                image.uploadedImageId === imageId ? { ...image, ...metadata } : image
-                                            )
-                                        )
-                                    }
                                     onRemoveActivityImage={removeActivityImage}
                                     onAddActivityImage={addActivityImage}
                                     onAssignActivityImage={assignActivityImage}
@@ -820,7 +842,7 @@ export default function BoardCreator({
                                     title="The finishing touches"
                                     description="Choose who can come along, and help your journey find its people."
                                 />
-                                <div className="grid gap-12 lg:grid-cols-2">
+                                <div className="mx-auto grid w-full max-w-4xl gap-10">
                                     <div>
                                         {" "}
                                         <BoardDiscoveryDetails
@@ -848,7 +870,7 @@ export default function BoardCreator({
                                             }}
                                         />
                                     </div>{" "}
-                                    <div className="mb-8 max-w-lg">
+                                    <div className="mb-8">
                                         <label className="flex cursor-pointer items-start gap-3 text-sm">
                                             <input
                                                 type="checkbox"

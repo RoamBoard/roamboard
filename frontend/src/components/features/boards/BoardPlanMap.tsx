@@ -1,10 +1,11 @@
 "use client";
+import { dayColor } from "@/lib/day-color";
 import { useEffect, useMemo, useState } from "react";
 import CreatorSectionIntro from "./CreatorSectionIntro";
 import { MapPin } from "lucide-react";
 import InteractiveMap from "@/components/features/providers/InteractiveMap";
 import { loadMapboxMapSession } from "@/lib/providers";
-import { dayColors, type BoardDayDraft } from "@/types/board-creator";
+import { type BoardDayDraft } from "@/types/board-creator";
 const noRoute: Array<[number, number]> = [];
 
 export default function BoardPlanMap({
@@ -35,7 +36,7 @@ export default function BoardPlanMap({
                                         type: activity.category,
                                         latitude: activity.location.latitude,
                                         longitude: activity.location.longitude,
-                                        color: dayColors[index % dayColors.length],
+                                        color: dayColor(day, index),
                                         sequence: sequence + 1
                                     }
                                 ]
@@ -79,12 +80,19 @@ export default function BoardPlanMap({
                         type="button"
                         aria-pressed={activeDay === day.id}
                         onClick={() => setSelectedDay(day.id)}
+                        style={{
+                            borderColor: dayColor(day, index),
+                            backgroundColor:
+                                activeDay === day.id
+                                    ? `color-mix(in srgb, ${dayColor(day, index)} 15%, var(--background))`
+                                    : undefined
+                        }}
                         className="border-line aria-pressed:border-foreground inline-flex min-h-10 items-center gap-2 rounded-full border px-4 text-xs"
                     >
                         <span
                             aria-hidden="true"
                             className="size-2 rounded-full"
-                            style={{ backgroundColor: dayColors[index % dayColors.length] }}
+                            style={{ backgroundColor: dayColor(day, index) }}
                         />
                         Day {day.dayNumber}
                     </button>

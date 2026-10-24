@@ -762,3 +762,16 @@ empty location details. Activity fields and attachments are staged until Save ac
 Optional regional Unsplash suggestions require explicit selection, retain credit and persist illustration context
 through migration 022. Provider failures preserve uploads. Independent editor regressions and isolated database tests
 cover core behavior; live-provider accuracy and browser visual/touch acceptance remain pending.
+
+### Board editor refinement
+
+CreatorProgress reuses ChapterBar without numeric chapter labels; section intros omit numbers/rules. BoardEditorRail
+uses shared ScrollArrow controls at applicable edges. BoardPhotoStrip reuses the Board library Carousel with drag,
+arrow and horizontal wheel support; day plans stack vertically on mobile. Uploaded photo removal inside an activity
+detaches it, preserving the Board upload and cover choices. Explicit Board-gallery removal still removes the reference.
+Creator galleries and cover/activity dialogs reuse StoryGallery/ImageZoomDialog through EditorPhotoGallery.
+Day colors persist through Board writes and remixes (migration 023), with 30 choices and theme variants shared by
+day cards, map filters and pins. Activity dragging shows an insertion gap and preserves time; keyboard Up/Down
+reorders and Shift+Left/Right changes day. The former day/move controls and photo reread action are removed.
+Publish attempts retain inline validation across chapters and reveal the first invalid field. Backend authority
+remains unchanged. Browser visual/touch and live-provider acceptance require separate review.

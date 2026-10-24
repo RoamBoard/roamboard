@@ -63,6 +63,7 @@ function source(): BoardDocument {
             dayId: 100 + dayNumber,
             dayNumber,
             date: "2026-10-01",
+            color: dayNumber === 1 ? "#c58e76" : null,
             activities: [0, 1].map((position) => ({
                 activityId: dayNumber * 1000 + position,
                 position,
@@ -164,6 +165,7 @@ test("Preparing a saved Board keeps its itinerary and photos without creating a 
     );
     for (const [index, day] of prepared.days.entries()) {
         assert.equal(day.date, null);
+        assert.equal(day.color, board.days[index]!.color, "Remixing preserves the chosen day color");
         assert.equal("dayId" in day, false);
         for (const [position, activity] of day.activities.entries()) {
             assert.equal("activityId" in activity, false);

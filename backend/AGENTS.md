@@ -228,3 +228,11 @@ Opt-in preferPlace pin lookups and authenticated illustrative-photo discovery/se
 and bounded requests. Migration 022 stores nullable external illustration context; it was applied to shared
 development on 2026-10-24 after a verified backup. Run db:editor to inspect status; never replay older migrations.
 Named locationless activities retain existing Board publication validation. Smart Create remains new-Board-only.
+
+### Board editor refinement
+
+Migration 023_board_day_color.sql adds optional nullable day colors; applied to shared development after a verified
+backup on 2026-10-25. Do not replay it. Board replacement preserves omitted colors by dayId; explicit null resets,
+and remix retains colors. Geoapify category search supports nearby/near-me phrases and explicit category: name
+queries in one existing quota reservation; ordinary names/addresses retain full-text geocoding. Global searches
+explicitly disable backend-IP country bias. See the editor contract and migration log.

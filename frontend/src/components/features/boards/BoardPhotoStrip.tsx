@@ -1,41 +1,62 @@
 "use client";
-
-import { useRef, type ReactNode } from "react";
-import { ArrowLeft, ArrowRight } from "lucide-react";
-
-export default function BoardPhotoStrip({ label, children }: { label: string; children: ReactNode }) {
-    const strip = useRef<HTMLUListElement>(null);
-    function scroll(direction: number) {
-        const element = strip.current;
-        if (!element) return;
-        element.scrollBy({
-            left: direction * Math.max(120, element.clientWidth * 0.8),
-            behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth"
-        });
-    }
+import { useState, type ReactNode } from "react";
+import { Carousel, CarouselContent, CarouselNext, CarouselPrevious, type CarouselApi } from "@/components/ui/carousel";
+import { scrollBoardLibrary } from "@/lib/board-library-scroll";
+export default function BoardPhotoStrip({
+    label,
+    children,
+    days = false
+}: {
+    label: string;
+    children: ReactNode;
+    days?: boolean;
+}) {
+    const [api, setApi] = useState<CarouselApi>();
     return (
-        <div className="min-w-0">
-            <ul ref={strip} aria-label={label} className="mt-3 flex snap-x gap-3 overflow-x-auto pb-2">
+        <Carousel
+            aria-label={label}
+            setApi={setApi}
+            opts={{
+                align: "start",
+                dragFree: true,
+                containScroll: "trimSnaps",
+                breakpoints: days ? { "(max-width: 767px)": { active: false } } : undefined,
+                watchDrag: (_api, event) =>
+                    !(
+                        event.target instanceof Element &&
+                        event.target.closest("[draggable=true], input, select, textarea")
+                    )
+            }}
+            className="min-w-0"
+            onWheel={(event) => {
+                if (
+                    !api ||
+                    event.ctrlKey ||
+                    event.metaKey ||
+                    (days && !window.matchMedia("(min-width: 768px)").matches)
+                )
+                    return;
+                const delta = event.deltaX || (event.shiftKey ? event.deltaY : 0);
+                if (!delta) return;
+                const length = api.internalEngine().limit.length;
+                if (length > 0) scrollBoardLibrary(api, api.scrollProgress() + delta / length);
+            }}
+        >
+            <CarouselContent
+                as="ul"
+                aria-label={label}
+                className={`mt-3 gap-4 pb-3 ${days ? "flex-col md:flex-row md:gap-8" : ""}`}
+            >
                 {children}
-            </ul>
-            <div role="group" aria-label={`${label} navigation`} className="mt-2 flex justify-end gap-2">
-                <button
-                    type="button"
-                    aria-label={`Previous ${label.toLowerCase()}`}
-                    onClick={() => scroll(-1)}
-                    className="border-line hover:bg-faint grid size-10 place-items-center rounded-full border"
-                >
-                    <ArrowLeft aria-hidden="true" size={16} />
-                </button>
-                <button
-                    type="button"
-                    aria-label={`Next ${label.toLowerCase()}`}
-                    onClick={() => scroll(1)}
-                    className="border-line hover:bg-faint grid size-10 place-items-center rounded-full border"
-                >
-                    <ArrowRight aria-hidden="true" size={16} />
-                </button>
+            </CarouselContent>
+            <div
+                role="group"
+                aria-label={`${label} navigation`}
+                className={`my-4 flex justify-center gap-3 ${days ? "hidden md:flex" : ""}`}
+            >
+                <CarouselPrevious aria-label={`Previous ${label.toLowerCase()}`} />
+                <CarouselNext aria-label={`Next ${label.toLowerCase()}`} />
             </div>
-        </div>
+        </Carousel>
     );
 }

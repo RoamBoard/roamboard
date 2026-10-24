@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Expand, MapPin, Minimize2 } from "lucide-react";
+import { Expand, Minimize2 } from "lucide-react";
 import InteractiveMap from "@/components/features/providers/InteractiveMap";
 import { loadMapboxMapSession, reverseBoardLocationProvider } from "@/lib/providers";
 import type { PinLocation } from "@/types/board-creator";
@@ -22,7 +22,6 @@ export default function ActivityPinMap({
     onChange: (location: PinLocation | null) => void;
 }) {
     const [expanded, setExpanded] = useState(false);
-    const [placing, setPlacing] = useState(false);
     const [token, setToken] = useState<string>();
     const [error, setError] = useState("");
     const [retry, setRetry] = useState(0);
@@ -52,7 +51,7 @@ export default function ActivityPinMap({
         requestRef.current.version++;
     }, [editVersion]);
     async function place(latitude: number, longitude: number) {
-        if (disabled || !placing) return;
+        if (disabled) return;
         const version = ++requestRef.current.version;
         const pin: PinLocation = {
             name: "",
@@ -99,7 +98,6 @@ export default function ActivityPinMap({
                 if (event.key === "Escape" && expanded) {
                     event.stopPropagation();
                     setExpanded(false);
-                    setPlacing(false);
                 }
             }}
         >
@@ -126,9 +124,7 @@ export default function ActivityPinMap({
                         fillHeight
                         onMapClick={place}
                         onPointDrag={
-                            expanded && placing
-                                ? (_id, latitude, longitude) => void place(latitude, longitude)
-                                : undefined
+                            !disabled ? (_id, latitude, longitude) => void place(latitude, longitude) : undefined
                         }
                     />
                 ) : (
@@ -136,14 +132,12 @@ export default function ActivityPinMap({
                         {error || "Loading map…"}
                     </p>
                 )}
-                {!expanded ? <div className="absolute inset-0" aria-hidden="true" /> : null}
                 <button
                     type="button"
                     disabled={disabled}
                     aria-label={expanded ? "Minimize activity map" : "Expand activity map"}
                     onClick={() => {
                         setExpanded(!expanded);
-                        setPlacing(false);
                     }}
                     className="bg-background absolute top-3 left-3 grid size-10 place-items-center rounded-full shadow-sm"
                 >
@@ -151,19 +145,7 @@ export default function ActivityPinMap({
                 </button>
             </div>
             <div className="flex flex-wrap items-center gap-3 px-4 py-2">
-                <button
-                    type="button"
-                    disabled={disabled}
-                    aria-pressed={placing}
-                    onClick={() => {
-                        setExpanded(true);
-                        setPlacing(!placing);
-                    }}
-                    className="inline-flex min-h-10 items-center gap-2 text-xs"
-                >
-                    <MapPin size={14} />
-                    {placing ? "Click the map to place your pin" : location ? "Move pin" : "Place a pin"}
-                </button>
+                <p className="text-muted-foreground text-xs">Click the map to place or move a pin.</p>
                 {location ? (
                     <button
                         type="button"

@@ -127,34 +127,32 @@ export function CarouselItem({ className = "", ...props }: ComponentProps<"div">
 }
 
 const controlClass =
-    "border-line bg-background inline-flex size-11 items-center justify-center rounded-full border transition-colors hover:bg-faint focus-visible:outline-2 focus-visible:outline-offset-4 disabled:cursor-default disabled:opacity-30 motion-reduce:transition-none";
-export function CarouselPrevious({ className = "", ...props }: ComponentProps<"button">) {
-    const { scrollPrev, canScrollPrev } = useCarousel();
+    "border-line bg-background text-foreground inline-flex size-11 items-center justify-center rounded-full border transition-[transform,background-color] hover:scale-110 hover:bg-faint focus-visible:scale-110 focus-visible:outline-2 focus-visible:outline-offset-4 disabled:cursor-default disabled:opacity-30 motion-reduce:transition-none motion-reduce:transform-none";
+export function ScrollArrow({
+    direction,
+    className = "",
+    ...props
+}: ComponentProps<"button"> & { direction: "previous" | "next" }) {
     return (
         <button
             type="button"
             className={`${controlClass} ${className}`}
-            onClick={scrollPrev}
-            disabled={!canScrollPrev}
-            aria-label="Previous slide"
+            aria-label={direction === "previous" ? "Previous slide" : "Next slide"}
             {...props}
         >
-            <ArrowLeft size={18} aria-hidden="true" />
+            {direction === "previous" ? (
+                <ArrowLeft size={18} aria-hidden="true" />
+            ) : (
+                <ArrowRight size={18} aria-hidden="true" />
+            )}
         </button>
     );
 }
+export function CarouselPrevious({ className = "", ...props }: ComponentProps<"button">) {
+    const { scrollPrev, canScrollPrev } = useCarousel();
+    return ScrollArrow({ direction: "previous", className, onClick: scrollPrev, disabled: !canScrollPrev, ...props });
+}
 export function CarouselNext({ className = "", ...props }: ComponentProps<"button">) {
     const { scrollNext, canScrollNext } = useCarousel();
-    return (
-        <button
-            type="button"
-            className={`${controlClass} ${className}`}
-            onClick={scrollNext}
-            disabled={!canScrollNext}
-            aria-label="Next slide"
-            {...props}
-        >
-            <ArrowRight size={18} aria-hidden="true" />
-        </button>
-    );
+    return ScrollArrow({ direction: "next", className, onClick: scrollNext, disabled: !canScrollNext, ...props });
 }

@@ -1,3 +1,6 @@
+"use client";
+import { useEffect, useState } from "react";
+import ChapterBar from "@/components/ui/ChapterBar";
 import type { BoardStatus } from "@/types/board-creator";
 import BackLink from "@/components/ui/BackLink";
 
@@ -16,33 +19,42 @@ export default function CreatorProgress({
     uploading: boolean;
     backHref?: string;
 }) {
+    const [current, setCurrent] = useState("board-basics");
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                const visible = entries.find((entry) => entry.isIntersecting);
+                if (visible) setCurrent(visible.target.id);
+            },
+            { threshold: 0.5 }
+        );
+        document.querySelectorAll("[data-editor-section]").forEach((section) => observer.observe(section));
+        return () => observer.disconnect();
+    }, []);
     return (
-        <div className="border-line bg-background sticky top-[var(--app-header-height,0px)] z-30 flex items-center gap-5 border-b px-4 py-3 sm:gap-8 sm:px-8">
+        <div className="border-line bg-background sticky top-0 z-30 flex items-center gap-5 border-b px-4 sm:gap-8 sm:px-8">
             {backHref ? <BackLink fallbackHref={backHref} className="shrink-0" /> : null}
             <div className="mx-auto flex max-w-[90rem] min-w-0 flex-1 flex-wrap items-center justify-between gap-x-8 gap-y-2">
                 <div className="min-w-0 flex-1">
-                    <nav aria-label="Board editor chapters" className="min-w-0 flex-1 overflow-x-auto">
-                        <ol className="flex gap-5 text-[11px] whitespace-nowrap sm:gap-7 sm:text-xs">
-                            {[
-                                ["board-basics", "01 Basics"],
-                                ["day-plan", "02 Day plan"],
-                                ["board-map", "03 Map"],
-                                ["details-discovery", "04 Details"],
-                                ["board-preview", "05 Overview"]
-                            ].map(([id, label]) => (
-                                <li key={id}>
-                                    <a
-                                        href={`#${id}`}
-                                        className="text-muted-foreground hover:text-foreground inline-flex min-h-11 items-center focus-visible:outline-2 focus-visible:outline-offset-[-2px]"
-                                    >
-                                        {label}
-                                    </a>
-                                </li>
-                            ))}
-                        </ol>
-                    </nav>
+                    <ChapterBar
+                        embedded
+                        current={current}
+                        chapters={[
+                            { id: "board-basics", title: "Basics" },
+                            { id: "day-plan", title: "Day plan" },
+                            { id: "board-map", title: "Map" },
+                            { id: "details-discovery", title: "Details" },
+                            { id: "board-preview", title: "Overview" }
+                        ]}
+                        onNavigate={(id) => {
+                            setCurrent(id);
+                            history.replaceState(history.state, "", `#${id}`);
+                            document.getElementById(id)?.focus({ preventScroll: true });
+                            window.dispatchEvent(new HashChangeEvent("hashchange"));
+                        }}
+                    />
                 </div>
-                <p className="text-muted-foreground text-[11px]">
+                <p role="status" className="text-muted-foreground sr-only text-[11px] md:not-sr-only">
                     {loading
                         ? "Loading Board…"
                         : saving

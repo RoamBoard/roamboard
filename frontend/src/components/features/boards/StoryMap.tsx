@@ -1,9 +1,10 @@
 "use client";
+import { dayColor } from "@/lib/day-color";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import InteractiveMap from "@/components/features/providers/InteractiveMap";
 import { loadMapboxMapSession } from "@/lib/providers";
-import { dayColors } from "@/types/board-creator";
+
 import type { BoardActivity } from "@/types/board";
 import type { PublishedBoardDay } from "@/types/published-board";
 
@@ -54,7 +55,7 @@ export default function StoryMap({
                                       latitude: item.location.latitude,
                                       longitude: item.location.longitude,
                                       sequence: index + 1,
-                                      color: dayColors[dayIndex % dayColors.length]
+                                      color: dayColor(day, dayIndex)
                                   }
                               }
                           ]

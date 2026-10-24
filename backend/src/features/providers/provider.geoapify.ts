@@ -181,13 +181,19 @@ export async function searchGeoapify(
     proximity?: { latitude: number; longitude: number },
     areasOnly = false
 ): Promise<DestinationResult[]> {
-    const intent = categoryIntent(query);
+    const nearbyQuery = query.trim().replace(/\s+(?:near me|nearby)$/i, "");
+    const named = nearbyQuery.match(/^([^:]+):\s*(.+)$/);
+    const category = categoryIntent(nearbyQuery) ?? (named ? categoryIntent(named[1]!) : null);
+    const namedPlace = named && category ? named[2]!.trim() : "";
+    const intent = !areasOnly && proximity ? category : null;
     const url = new URL(
         proximity && intent ? "https://api.geoapify.com/v2/places" : "https://api.geoapify.com/v1/geocode/search"
     );
     if (proximity && intent) url.searchParams.set("categories", intent);
     else url.searchParams.set("text", query);
+    if (intent && namedPlace) url.searchParams.set("name", namedPlace);
     if (proximity) url.searchParams.set("bias", `proximity:${proximity.longitude},${proximity.latitude}`);
+    else url.searchParams.set("bias", "countrycode:none");
     url.searchParams.set("limit", String(limit));
     if (country) {
         const alpha2 = toAlpha2CountryCode(country);

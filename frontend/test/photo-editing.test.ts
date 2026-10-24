@@ -82,10 +82,10 @@ test("uploads distinguish unassigned photos from activity photos and keep croppi
             onRemove() {}
         })
     );
-    assert.match(markup, /1 photo is not linked to an activity/);
+    assert.match(markup, /aria-label="Available to attach"/);
     assert.match(markup, /Linked to an activity/);
-    assert.match(markup, /Not linked to an activity/);
-    assert.equal((markup.match(/Crop \/ resize/g) ?? []).length, 2);
+    assert.match(markup, /aria-label="Linked to an activity"/);
+    assert.equal((markup.match(/aria-label="Crop photo \d+"/g) ?? []).length, 2);
     assert.doesNotMatch(markup, /Add activity photos in Smart Create below/);
 });
 test("a constrained aspect crop does not shrink below the saved crop limits", () => {

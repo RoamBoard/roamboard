@@ -217,17 +217,16 @@ async function writeChildren(client: PoolClient, boardId: number, userId: string
         let dayId = day.dayId;
         if (dayId === undefined) {
             const inserted = await client.query<{ day_id: number }>(
-                `INSERT INTO board_day (board_id, day_number, calendar_date)
-                 VALUES ($1, $2, $3) RETURNING day_id`,
-                [boardId, day.dayNumber, day.date]
+                `INSERT INTO board_day (board_id, day_number, calendar_date, color)
+                 VALUES ($1, $2, $3, $4) RETURNING day_id`,
+                [boardId, day.dayNumber, day.date, day.color ?? null]
             );
             dayId = inserted.rows[0]!.day_id;
         } else {
-            await client.query("UPDATE board_day SET day_number = $1, calendar_date = $2 WHERE day_id = $3", [
-                day.dayNumber,
-                day.date,
-                dayId
-            ]);
+            await client.query(
+                "UPDATE board_day SET day_number = $1, calendar_date = $2, color = $4 WHERE day_id = $3",
+                [day.dayNumber, day.date, dayId, day.color ?? null]
+            );
         }
         dayIds.push(dayId);
         for (const activity of day.activities) {
@@ -427,8 +426,13 @@ async function readBoardDocument(
          WHERE bt.board_id = $1 ORDER BY t.tag_name`,
         [boardId]
     );
-    const dayResult = await client.query<{ day_id: number; day_number: number; date: string | null }>(
-        `SELECT day_id, day_number, to_char(calendar_date, 'YYYY-MM-DD') AS date
+    const dayResult = await client.query<{
+        day_id: number;
+        day_number: number;
+        date: string | null;
+        color: string | null;
+    }>(
+        `SELECT day_id, day_number, color, to_char(calendar_date, 'YYYY-MM-DD') AS date
          FROM board_day WHERE board_id = $1 ORDER BY day_number`,
         [boardId]
     );
@@ -499,6 +503,7 @@ async function readBoardDocument(
             dayId: row.day_id,
             dayNumber: row.day_number,
             date: row.date,
+            color: row.color,
             activities: [] as BoardDocument["days"][number]["activities"]
         };
         dayMap.set(row.day_id, day);

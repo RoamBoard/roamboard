@@ -600,7 +600,7 @@ test("activity location search biases category queries near the board without re
     assert.equal(urls[1]?.searchParams.get("bias"), "proximity:115.1,-8.8");
     assert.equal(urls[2]?.pathname, "/v1/geocode/search");
     assert.equal(urls[2]?.searchParams.get("text"), "Bali beach");
-    assert.equal(urls[2]?.searchParams.has("bias"), false);
+    assert.equal(urls[2]?.searchParams.get("bias"), "countrycode:none");
     assert.ok(urls.every((url) => !url.searchParams.has("filter")));
     assert.deepEqual(
         policies,

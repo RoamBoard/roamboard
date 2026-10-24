@@ -390,3 +390,11 @@ acceptance remain pending; further design feedback will update this contract bef
 
 Provider reference checked on 2026-10-24:
 [Mapbox Search Box restrictions](https://docs.mapbox.com/api/search/search-box/#search-box-api-restrictions-and-limits).
+
+## Editor refinement agreed 2026-10-25
+
+The requesting user approved saving day colors, with the same colors on map filters and activity pins and soft light/dark variants. Existing authorization, revisions, provider budgets, photo ownership and staged activity saves remain in effect.
+
+Day objects in Board create/replace/read and remix content add optional nullable `color`, a lowercase six-digit hex string (for example `"#b87568"`). Omission on an existing day preserves its saved color by dayId; omission on a new day and explicit null use the default indexed palette. Unknown fields and malformed colors return the existing validation error. New clients send color or null. Migration 023 adds nullable board_day.color with the same format constraint. The frontend offers 30 colors and derives light/dark display variants without changing saved identity. No existing rows are recolored.
+
+Activity photo removal detaches uploaded images while retaining them in the Board image collection and cover choices. Only explicit Board photo removal removes a Board reference. Publishing collects field errors and reveals the first invalid chapter, retaining all other inline errors. Shared chapter navigation, drag carousels, photo zoom, and direct map clicks replace editor-specific controls. Geoapify remains the permanent location source.

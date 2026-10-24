@@ -82,6 +82,7 @@ export type BoardWriteRequest = {
     days: Array<{
         dayId?: number;
         dayNumber: number;
+        color?: string | null;
         date: string | null;
         activities: Array<{
             activityId?: number;
@@ -259,6 +260,7 @@ export function toBoardWrite(
         days: draft.days.map((day) => ({
             ...(day.serverDayId ? { dayId: day.serverDayId } : {}),
             dayNumber: day.dayNumber,
+            color: day.color ?? null,
             date: day.date,
             activities: day.pins.map((pin, position) => {
                 const pinImages = uploaded
@@ -322,6 +324,7 @@ export function fromBoardDocument(board: PreparedBoardCopy): {
         id: crypto.randomUUID(),
         serverDayId: day.dayId,
         dayNumber: day.dayNumber,
+        color: day.color ?? null,
         date: day.date,
         pins: day.activities.map((activity) => {
             const id = crypto.randomUUID();

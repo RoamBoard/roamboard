@@ -28,6 +28,7 @@ export type PublishedBoardState = {
 
 // One day after the board's items have been grouped for display.
 export type PublishedBoardDay = {
+    color?: string | null;
     number: number;
     date?: string;
     title: string;

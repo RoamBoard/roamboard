@@ -145,7 +145,10 @@ export default function InteractiveMap({
             // Mapbox positions the outer element with a transform; rotate only the inner pin.
             const pin = document.createElement("div");
             pin.className = "provider-map-pin";
-            if (point.color) pin.style.backgroundColor = point.color;
+            if (point.color) {
+                pin.style.backgroundColor = point.color;
+                pin.style.color = "#161616";
+            }
             const label = document.createElement("span");
             label.textContent = String(point.sequence ?? index + 1);
             pin.append(label);
@@ -217,7 +220,7 @@ export default function InteractiveMap({
             const pin = element.querySelector<HTMLElement>(".provider-map-pin");
             if (pin) {
                 pin.style.backgroundColor = selected ? "#e7e7e7" : (points[index]?.color ?? "#161616");
-                pin.style.color = selected ? "#161616" : "#ffffff";
+                pin.style.color = selected || points[index]?.color ? "#161616" : "#ffffff";
                 pin.style.borderColor = selected ? "#161616" : "#ffffff";
             }
         });

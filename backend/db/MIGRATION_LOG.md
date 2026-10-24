@@ -226,3 +226,13 @@ pg_restore --list. Adds nullable constrained activity.external_image_context; ex
 Isolated-schema tests verify save/read, omitted-context preservation, explicit clearing, identity replacement,
 remix copying and invalid JSON rejection. Existing shared Board/photo data was not rewritten.
 Backup: backend/backups/pre-022-2026-10-24T160627312Z.dump (Git-ignored). Restore/off-machine retention not tested.
+
+## Saved day colors ? 2026-10-25
+
+The requesting user approved persisted day colors for cards, map filters and pins. Applied only
+023_board_day_color.sql to configured shared development in a transaction under advisory lock 160023, after
+a custom-format backup verified with pg_restore --list. All 160 existing day rows retain null colors; no Board
+content or image references were rewritten. Backup: backend/backups/pre-023-2026-10-24T230939147Z.dump
+(Git-ignored; UTC filename). Restore and off-machine retention were not tested. Isolated-schema integration
+tests cover create/read/reorder, omitted-color preservation, explicit reset and the database hex constraint.
+Do not reapply 023 to shared development; other environments require it before running the updated Board repository.

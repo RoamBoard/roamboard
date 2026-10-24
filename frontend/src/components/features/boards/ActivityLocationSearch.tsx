@@ -67,7 +67,7 @@ export default function ActivityLocationSearch({
                 .finally(() => {
                     if (!controller.signal.aborted) setBusy(false);
                 });
-        }, 600);
+        }, 350);
         return () => {
             window.clearTimeout(timer);
             controller.abort();
@@ -171,7 +171,7 @@ export default function ActivityLocationSearch({
             </div>
             <p id={id + "-hint"} className="text-muted-foreground mt-2 text-[11px] leading-relaxed">
                 {proximity
-                    ? "Nearby places are preferred. You can still search any destination."
+                    ? "Try a place name, cafes, museums, or cafe: Starbucks. Nearby places are preferred."
                     : "Search any place or address. Add an area or city to narrow it down."}
             </p>
             {busy ? (

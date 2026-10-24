@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test, { type TestContext } from "node:test";
 import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import BoardEditorRail from "../src/components/features/boards/BoardEditorRail";
 
 // Small DOM doubles exercise the registered production handlers; browser layout still needs visual QA.
@@ -64,6 +65,10 @@ function mount(context: TestContext, desktop = true, reduced = false) {
     for (const [key, value] of Object.entries({
         Element: Surface,
         HTMLElement: Surface,
+        ResizeObserver: class {
+            observe() {}
+            disconnect() {}
+        },
         window: browser,
         document: doc,
         getComputedStyle: (surface: Surface) => ({ overflowY: surface.overflowY, overflowX: surface.overflowX })
@@ -71,7 +76,7 @@ function mount(context: TestContext, desktop = true, reduced = false) {
         previous.set(key, Object.getOwnPropertyDescriptor(globalThis, key));
         Object.defineProperty(globalThis, key, { configurable: true, value });
     }
-    BoardEditorRail({ children: null });
+    renderToStaticMarkup(React.createElement(BoardEditorRail, undefined, null));
     const cleanups = effects.map((effect) => effect());
     context.after(() => {
         cleanups.forEach((cleanup) => cleanup?.());

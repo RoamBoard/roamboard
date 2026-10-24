@@ -1,10 +1,13 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
+import { dayColor } from "@/lib/day-color";
 
+import { useState } from "react";
+import EditorPhotoGallery from "./EditorPhotoGallery";
 import BoardPreviewDiagram from "./BoardPreviewDiagram";
 import { createBoardPreview } from "@/lib/board-creation-preview";
 import { usePhotoUrls } from "@/lib/use-photo-urls";
-import { dayColors, type BoardCreatorPayload } from "@/types/board-creator";
+import { type BoardCreatorPayload } from "@/types/board-creator";
 
 type Props = {
     board: BoardCreatorPayload;
@@ -16,6 +19,7 @@ const editLink =
     "text-muted-foreground hover:text-foreground mt-2 inline-flex min-h-11 items-center text-[11px] underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4";
 
 export default function BoardCreationPreview({ board: sourceBoard, author, editable = true }: Props) {
+    const [galleryIndex, setGalleryIndex] = useState<number | null>(null);
     const photoUrl = usePhotoUrls();
     const board = {
         ...sourceBoard,
@@ -30,6 +34,9 @@ export default function BoardCreationPreview({ board: sourceBoard, author, edita
     const uploadedCount = board.images.filter((image) => image.source === "upload").length;
     return (
         <article aria-label="Board preview" className="@container min-w-0">
+            {galleryIndex !== null ? (
+                <EditorPhotoGallery images={board.images} index={galleryIndex} onClose={() => setGalleryIndex(null)} />
+            ) : null}
             <BoardPreviewDiagram preview={preview} editable={editable} mainDestination={Boolean(board.destination)} />
             <div className="text-muted-foreground mt-12 flex flex-wrap justify-between gap-x-6 gap-y-2 text-[11px] leading-relaxed">
                 <p>Live preview · updates as you edit</p>
@@ -48,7 +55,7 @@ export default function BoardCreationPreview({ board: sourceBoard, author, edita
                         <section
                             key={day.id}
                             className="min-w-0 border-t pt-4"
-                            style={{ borderColor: dayColors[index % dayColors.length] }}
+                            style={{ borderColor: dayColor(day, index) }}
                         >
                             <h4 className="text-foreground/80 text-base font-bold">Day {day.dayNumber}</h4>
                             {day.date ? <p className="text-muted-foreground mt-1 text-xs">{day.date}</p> : null}
@@ -86,13 +93,23 @@ export default function BoardCreationPreview({ board: sourceBoard, author, edita
                                                         (a.activityOrder ?? a.order) - (b.activityOrder ?? b.order)
                                                 )
                                                 .map((image) => (
-                                                    <img
+                                                    <button
+                                                        type="button"
                                                         key={image.id}
-                                                        src={image.thumbnailUrl}
-                                                        alt={`${pin.title} photo`}
-                                                        loading="lazy"
-                                                        className="size-16 object-cover"
-                                                    />
+                                                        aria-label={`Enlarge ${pin.title} photo`}
+                                                        onClick={() =>
+                                                            setGalleryIndex(
+                                                                board.images.findIndex((item) => item.id === image.id)
+                                                            )
+                                                        }
+                                                    >
+                                                        <img
+                                                            src={image.thumbnailUrl}
+                                                            alt={`${pin.title} photo`}
+                                                            loading="lazy"
+                                                            className="size-16 rounded-lg object-cover"
+                                                        />
+                                                    </button>
                                                 ))}
                                         </div>
                                     </li>
@@ -121,12 +138,21 @@ export default function BoardCreationPreview({ board: sourceBoard, author, edita
                     {preview.photos.map((image) => (
                         <li key={image.id} className="min-w-0">
                             <figure>
-                                <img
-                                    src={image.thumbnailUrl}
-                                    alt="Board photo"
-                                    loading="lazy"
-                                    className="aspect-square w-full object-cover"
-                                />
+                                <button
+                                    type="button"
+                                    aria-label="Enlarge Board photo"
+                                    className="block w-full overflow-hidden rounded-2xl"
+                                    onClick={() =>
+                                        setGalleryIndex(board.images.findIndex((item) => item.id === image.id))
+                                    }
+                                >
+                                    <img
+                                        src={image.thumbnailUrl}
+                                        alt="Board photo"
+                                        loading="lazy"
+                                        className="aspect-square w-full object-cover"
+                                    />
+                                </button>
                                 <figcaption className="text-muted-foreground mt-2 text-[11px] leading-relaxed [overflow-wrap:anywhere]">
                                     {image === preview.cover ? (
                                         <p className="text-foreground">Selected Board cover</p>

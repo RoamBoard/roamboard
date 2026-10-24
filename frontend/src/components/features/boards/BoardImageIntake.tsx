@@ -8,7 +8,9 @@ import { usePhotoUrls } from "@/lib/use-photo-urls";
 import BoardCoverHero from "@/components/features/boards/BoardCoverHero";
 import BoardCoverDialog from "./BoardCoverDialog";
 
-import { Upload } from "lucide-react";
+import BoardPhotoStrip from "./BoardPhotoStrip";
+import EditorPhotoGallery from "./EditorPhotoGallery";
+import { Crop, Link2, Link2Off, Trash2, Upload } from "lucide-react";
 import { uploadBoardImage, suggestBoardPhotos } from "@/lib/board-creator-api";
 import { uploadBoardImageBatch } from "@/lib/board-image-upload";
 import { toast } from "sonner";
@@ -122,6 +124,7 @@ export default function BoardImageIntake({
 }: Props) {
     const photoUrl = usePhotoUrls();
     const [editingPhoto, setEditingPhoto] = useState<number | null>(null);
+    const [galleryIndex, setGalleryIndex] = useState<number | null>(null);
     const [choosingCover, setChoosingCover] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const uploadId = useId();
@@ -137,10 +140,9 @@ export default function BoardImageIntake({
     const [error, setError] = useState("");
 
     const uploadedPhotos = images.filter((image) => image.source === "upload");
-    const unassignedPhotos = uploadedPhotos.filter((image) => !image.pinId);
     const cover = images.find((image) => image.uploadedImageId === coverImageId);
 
-    async function upload(files: File[]) {
+    async function upload(files: File[], asCover = false) {
         if (disabled || uploadLock.current || files.length === 0) return;
         if (files.length > MAX_IMAGES) {
             setError("Choose up to 30 photos per batch. You can upload another batch afterwards.");
@@ -189,6 +191,7 @@ export default function BoardImageIntake({
                                 "Place lookup failed. Photos are uploaded; review their GPS suggestions or assign them manually.";
                     }
                 }
+                if (prepared.length && (asCover || showCover)) onSelectCover(prepared[0]!.image.uploadedImageId!);
                 if (prepared.length)
                     onUploaded(showDropZone ? prepared : prepared.map((item) => ({ ...item, suggestedPin: null })));
                 if (failures.length) {
@@ -227,6 +230,13 @@ export default function BoardImageIntake({
 
     return (
         <>
+            {galleryIndex !== null ? (
+                <EditorPhotoGallery
+                    images={uploadedPhotos}
+                    index={galleryIndex}
+                    onClose={() => setGalleryIndex(null)}
+                />
+            ) : null}
             {choosingCover ? (
                 <BoardCoverDialog
                     images={images}
@@ -261,16 +271,51 @@ export default function BoardImageIntake({
                     onChange={(event) => void upload(Array.from(event.target.files ?? []))}
                 />
                 {showCover ? (
-                    <div className="group/cover relative mx-auto w-full">
+                    <div
+                        className={`group/cover relative mx-auto w-full rounded-[2rem] ${dragging ? "outline-foreground outline-2" : ""}`}
+                        onDragOver={(event) => {
+                            if (
+                                disabled ||
+                                busy ||
+                                (!event.dataTransfer.types.includes("Files") &&
+                                    !event.dataTransfer.types.includes(BOARD_PHOTO_DRAG_TYPE))
+                            )
+                                return;
+                            event.preventDefault();
+                            setDragging(true);
+                        }}
+                        onDragLeave={() => setDragging(false)}
+                        onDrop={(event) => {
+                            event.preventDefault();
+                            setDragging(false);
+                            if (disabled || busy) return;
+                            const id = Number(event.dataTransfer.getData(BOARD_PHOTO_DRAG_TYPE));
+                            if (images.some((image) => image.uploadedImageId === id)) onSelectCover(id);
+                            else void upload(Array.from(event.dataTransfer.files), true);
+                        }}
+                    >
                         <BoardCoverHero
                             coverUrl={cover ? photoUrl(cover.url) : undefined}
                             loading={loading}
                             disabled={disabled || busy}
-                            onChooseImages={() => setChoosingCover(true)}
+                            onChooseImages={() =>
+                                uploadedPhotos.length ? setChoosingCover(true) : inputRef.current?.click()
+                            }
                         />
                     </div>
                 ) : null}
                 {children}
+                {!showCover && !showDropZone ? (
+                    <button
+                        type="button"
+                        disabled={disabled || busy}
+                        onClick={() => inputRef.current?.click()}
+                        className="group/action my-4 inline-flex min-h-11 items-center gap-3 text-sm"
+                    >
+                        <Upload className="border-line size-10 rounded-full border p-2.5 transition-transform group-hover/action:scale-110 motion-reduce:transition-none" />{" "}
+                        Add photos
+                    </button>
+                ) : null}
                 <div
                     className={`relative mx-auto w-full transition-colors motion-reduce:transition-none ${showDropZone ? "mb-8" : ""} ${dragging ? "bg-foreground/[0.04] outline-foreground/50 outline-1 outline-offset-8 outline-dashed" : ""}`}
                     onDragOver={(event) => {
@@ -309,7 +354,7 @@ export default function BoardImageIntake({
                                     id="image-intake-heading"
                                     className="font-display text-3xl leading-none font-bold tracking-[-0.035em]"
                                 >
-                                    Let your photos tell the story
+                                    Smart Create
                                 </h2>
                                 <p className="text-muted-foreground mt-3 max-w-xl text-xs leading-relaxed sm:text-sm">
                                     Already back from your trip? Drop in your activity photos. We will try to fill in
@@ -319,10 +364,14 @@ export default function BoardImageIntake({
                                     type="button"
                                     disabled={disabled || busy}
                                     onClick={() => inputRef.current?.click()}
-                                    className="text-foreground mt-5 inline-flex min-h-11 cursor-pointer items-center gap-2 px-3 text-xs underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 disabled:cursor-not-allowed disabled:opacity-40"
+                                    className="group/action text-foreground mt-5 inline-flex min-h-11 cursor-pointer items-center gap-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-4 disabled:cursor-not-allowed disabled:opacity-40"
                                 >
-                                    <Upload aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
-                                    {busy ? "Uploading images..." : images.length ? "Add photos" : "Choose photos"}
+                                    <Upload
+                                        aria-hidden="true"
+                                        className="border-line size-10 rounded-full border p-2.5 transition-transform group-hover/action:scale-110 group-focus-visible/action:scale-110 motion-reduce:transition-none"
+                                        strokeWidth={1.5}
+                                    />
+                                    {busy ? "Uploading images..." : "Add photos"}
                                 </button>
                                 <p className="text-muted-foreground mt-1 text-[11px]">
                                     Up to 30 photos per batch. Adding more later? Start with the first days of your
@@ -353,92 +402,83 @@ export default function BoardImageIntake({
                     </p>
                 ) : null}
                 {showGallery && uploadedPhotos.length > 0 ? (
-                    <p className="text-11 text-graphite mx-auto mt-4 w-full">
-                        {unassignedPhotos.length
-                            ? `${unassignedPhotos.length} ${unassignedPhotos.length === 1 ? "photo is" : "photos are"} not linked to an activity. Open an activity to attach photos.`
-                            : "All uploaded photos are linked to activities."}
-                    </p>
-                ) : null}
-                {showGallery && uploadedPhotos.length > 0 ? (
-                    <ul
-                        className="mx-auto mt-5 mb-16 flex w-full snap-x gap-3 overflow-x-auto pb-2"
-                        aria-label="Uploaded Board images"
-                    >
-                        {uploadedPhotos.map((image, index) => (
-                            <li key={image.id} className="group/photo relative w-24 shrink-0 snap-start">
-                                <img
-                                    src={photoUrl(image.thumbnailUrl)}
-                                    loading="lazy"
-                                    decoding="async"
-                                    width={96}
-                                    height={96}
-                                    alt={`Board image ${index + 1}`}
-                                    className={
-                                        showDropZone && !disabled && !busy
-                                            ? "aspect-square w-full cursor-grab object-cover active:cursor-grabbing"
-                                            : "aspect-square w-full object-cover"
-                                    }
-                                    draggable={showDropZone && !disabled && !busy}
-                                    onDragStart={(event) => {
-                                        if (!showDropZone || disabled || busy || !image.uploadedImageId) {
-                                            event.preventDefault();
-                                            return;
-                                        }
-                                        event.dataTransfer.setData(
-                                            BOARD_PHOTO_DRAG_TYPE,
-                                            String(image.uploadedImageId)
-                                        );
-                                        event.dataTransfer.effectAllowed = "move";
-                                        setDragging(true);
-                                    }}
-                                    onDragEnd={() => setDragging(false)}
-                                />
-                                {showDropZone && !disabled && !busy ? (
-                                    <span className="bg-background/95 pointer-events-none absolute inset-x-0 top-12 px-1 py-1 text-center text-[10px] leading-tight opacity-0 transition-opacity group-hover/photo:opacity-100 motion-reduce:transition-none">
-                                        Drag to Smart Create to use as cover
-                                    </span>
-                                ) : null}
-                                {image.uploadedImageId === coverImageId ? (
-                                    <span className="text-9 mt-1 block font-bold">Board cover</span>
-                                ) : (
+                    <div className="my-8">
+                        <BoardPhotoStrip label="Uploaded Board images">
+                            {uploadedPhotos.map((image, index) => (
+                                <li key={image.id} className="group/photo relative w-56 min-w-0 shrink-0">
                                     <button
                                         type="button"
-                                        disabled={disabled || busy}
-                                        onClick={() => onSelectCover(image.uploadedImageId!)}
-                                        data-board-cover-choice=""
-                                        className="text-9 mt-1 block underline disabled:opacity-40"
+                                        onClick={() => setGalleryIndex(index)}
+                                        aria-label={`Enlarge Board photo ${index + 1}`}
+                                        className="block w-full overflow-hidden rounded-2xl focus-visible:outline-2"
                                     >
-                                        Set as cover
+                                        <img
+                                            src={photoUrl(image.thumbnailUrl)}
+                                            loading="lazy"
+                                            decoding="async"
+                                            width={224}
+                                            height={224}
+                                            alt={`Board image ${index + 1}`}
+                                            draggable={false}
+                                            className="aspect-square w-full object-cover transition-transform duration-300 group-hover/photo:scale-[1.03] motion-reduce:transition-none"
+                                        />
                                     </button>
-                                )}
-                                {image.uploadedImageId ? (
-                                    <button
-                                        type="button"
-                                        disabled={disabled || busy}
-                                        className="mt-1 block text-[10px] underline"
-                                        onClick={() => setEditingPhoto(image.uploadedImageId!)}
-                                    >
-                                        Crop / resize
-                                    </button>
-                                ) : null}
-                                <span className="text-muted-foreground mt-1 block text-[10px]">
-                                    {image.pinId ? "Linked to an activity" : "Not linked to an activity"}
-                                </span>
-                                {image.capturedAt === null ? (
-                                    <span className="text-9 text-graphite mt-1 block">No metadata available</span>
-                                ) : null}
-                                <button
-                                    type="button"
-                                    disabled={disabled || busy}
-                                    onClick={() => onRemove(image.id)}
-                                    className="bg-background/90 text-14 absolute top-1 right-1 grid size-6 place-items-center disabled:opacity-40"
-                                    aria-label={`Remove image ${index + 1}`}
-                                >
-                                    ×
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
+                                    <div className="editor-photo-actions">
+                                        {image.uploadedImageId ? (
+                                            <button
+                                                type="button"
+                                                disabled={disabled || busy}
+                                                className="editor-icon-action"
+                                                aria-label={`Crop photo ${index + 1}`}
+                                                title="Crop"
+                                                onClick={() => setEditingPhoto(image.uploadedImageId!)}
+                                            >
+                                                <Crop size={16} />
+                                            </button>
+                                        ) : null}
+                                        <button
+                                            type="button"
+                                            disabled={disabled || busy}
+                                            onClick={() => onRemove(image.id)}
+                                            className="editor-icon-action"
+                                            aria-label={`Remove image ${index + 1}`}
+                                            title="Remove from Board"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                    <div className="mt-3 flex items-center justify-between gap-3 px-1 text-xs">
+                                        <button
+                                            type="button"
+                                            disabled={disabled || busy}
+                                            aria-pressed={image.uploadedImageId === coverImageId}
+                                            onClick={() => onSelectCover(image.uploadedImageId!)}
+                                            data-board-cover-choice=""
+                                            draggable={!disabled && !busy}
+                                            onDragStart={(event) => {
+                                                event.dataTransfer.setData(
+                                                    BOARD_PHOTO_DRAG_TYPE,
+                                                    String(image.uploadedImageId)
+                                                );
+                                                event.dataTransfer.effectAllowed = "copy";
+                                            }}
+                                            className="min-h-10 underline underline-offset-4 disabled:opacity-40"
+                                        >
+                                            {image.uploadedImageId === coverImageId ? "Board cover" : "Set as cover"}
+                                        </button>
+                                        <span
+                                            role="img"
+                                            aria-label={image.pinId ? "Linked to an activity" : "Available to attach"}
+                                            title={image.pinId ? "Linked to an activity" : "Available to attach"}
+                                            className="text-muted-foreground"
+                                        >
+                                            {image.pinId ? <Link2 size={16} /> : <Link2Off size={16} />}
+                                        </span>
+                                    </div>
+                                </li>
+                            ))}
+                        </BoardPhotoStrip>
+                    </div>
                 ) : null}
             </section>
         </>

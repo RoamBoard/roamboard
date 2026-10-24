@@ -1,4 +1,35 @@
-export const dayColors = ["#d4664b", "#376b78", "#8b6f47", "#80648a", "#4f7557", "#b07639"] as const;
+export const dayColors = [
+    "#b87568",
+    "#b98a62",
+    "#b69b62",
+    "#a5a064",
+    "#82996b",
+    "#649a80",
+    "#639b97",
+    "#64949f",
+    "#6d88aa",
+    "#7d7fa9",
+    "#947da7",
+    "#a77996",
+    "#bb8290",
+    "#a96960",
+    "#a77c57",
+    "#a28e56",
+    "#8c955e",
+    "#6f8c65",
+    "#568d79",
+    "#538b90",
+    "#5a80a0",
+    "#7273a0",
+    "#8b6d98",
+    "#a06b86",
+    "#c19783",
+    "#b6a07c",
+    "#98aa8b",
+    "#8eaaa6",
+    "#969fb8",
+    "#b09aae"
+] as const;
 
 export type BoardStatus = "draft" | "published";
 
@@ -50,6 +81,7 @@ export type BoardPinDraft = {
 export type BoardDayDraft = {
     id: string;
     serverDayId?: number;
+    color?: string | null;
     dayNumber: number;
     date: string | null;
     pins: BoardPinDraft[];

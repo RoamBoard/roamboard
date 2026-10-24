@@ -115,6 +115,7 @@ export function createBoardsService(
                 })),
                 days: source.days.map((day) => ({
                     dayNumber: day.dayNumber,
+                    color: day.color ?? null,
                     date: null,
                     activities: day.activities.map((activity) => ({
                         position: activity.position,
@@ -177,6 +178,11 @@ export function createBoardsService(
                 fillerImagesEnabled: input.fillerImagesEnabled ?? current?.fillerImagesEnabled ?? false,
                 days: input.days.map((day) => ({
                     ...day,
+                    color:
+                        day.color === undefined
+                            ? (current?.days.find((previous) => previous.dayId === day.dayId && day.dayId !== undefined)
+                                  ?.color ?? null)
+                            : day.color,
                     activities: day.activities.map((activity) => {
                         const previous = current?.days
                             .flatMap((item) => item.activities)

@@ -73,6 +73,11 @@ const daySchema = z
     .object({
         dayId: id.optional(),
         dayNumber: z.number().int().positive().max(31),
+        color: z
+            .string()
+            .regex(/^#[0-9a-f]{6}$/)
+            .nullable()
+            .optional(),
         date: dateSchema.nullable(),
         activities: z.array(activitySchema)
     })

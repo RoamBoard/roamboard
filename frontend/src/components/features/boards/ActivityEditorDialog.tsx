@@ -3,6 +3,8 @@
 
 import { activityNoteError, activityNoteLength } from "@/lib/activity-note";
 
+import { ArrowLeft, ArrowRight, Crop, Trash2, Upload } from "lucide-react";
+import EditorPhotoGallery from "./EditorPhotoGallery";
 import { useEffect, useId, useRef, useState } from "react";
 
 import PhotoEditorDialog from "@/components/images/PhotoEditorDialog";
@@ -14,7 +16,7 @@ import PinCategoryIcon from "@/components/ui/PinCategoryIcon";
 import { pinCategories } from "@/lib/board-options";
 import ActivityLocationSearch from "./ActivityLocationSearch";
 import BoardPhotoStrip from "./BoardPhotoStrip";
-import { refreshBoardPhotoLocation, suggestBoardPhotos, type SmartPhotoSuggestion } from "@/lib/board-creator-api";
+import { suggestBoardPhotos, type SmartPhotoSuggestion } from "@/lib/board-creator-api";
 import ActivityPhotoSuggestions from "./ActivityPhotoSuggestions";
 import ActivityPinMap from "./ActivityPinMap";
 import { uploadBoardImageBatch } from "@/lib/board-image-upload";
@@ -25,12 +27,6 @@ import { findActivityPhoto } from "@/lib/providers";
 import { activityBatchDefaults, fillActivityFromPhoto, photoActivityLocation } from "@/lib/activity-photo";
 
 type Props = {
-    placement?: {
-        days: Array<{ id: string; dayNumber: number; pins: BoardPinDraft[] }>;
-        dayId: string;
-        onMove: (dayId: string) => void;
-        onReorder: (direction: -1 | 1) => void;
-    };
     mode?: "create" | "edit";
     dayNumber?: number;
     proximity?: { latitude: number; longitude: number } | null;
@@ -46,16 +42,11 @@ type Props = {
     onAssignImage: (imageId: string, pinId: string | null) => void;
     onSetCover: (pinId: string, imageId: number | null) => void;
     onReorderImage: (pinId: string, imageId: string, direction: -1 | 1) => void;
-    onMetadataChange?: (
-        imageId: number,
-        metadata: { capturedAt: string | null; latitude: number | null; longitude: number | null }
-    ) => void;
 };
 
 function ActivityEditorContent({
     originalImages,
     pin,
-    placement,
     mode = "edit",
     dayNumber,
     proximity,
@@ -68,14 +59,14 @@ function ActivityEditorContent({
     onAddImage,
     onAssignImage,
     onRemoveImage,
-    onReorderImage,
-    onMetadataChange
+    onReorderImage
 }: Props & { originalImages: BoardImageDraft[] }) {
     const photoUrl = usePhotoUrls();
+    const [galleryIndex, setGalleryIndex] = useState<number | null>(null);
     const [editingPhoto, setEditingPhoto] = useState<number | null>(null);
     const dialogRef = useRef<HTMLDivElement>(null);
     const [confirmation, setConfirmation] = useState<"discard" | "delete" | null>(null);
-    useDialogFocus(dialogRef, requestClose, confirmation === null && editingPhoto === null);
+    useDialogFocus(dialogRef, requestClose, confirmation === null && editingPhoto === null && galleryIndex === null);
     const inputRef = useRef<HTMLInputElement>(null);
     const [draft, setDraft] = useState(pin);
     const [searchArea, setSearchArea] = useState<{ latitude: number; longitude: number } | null | undefined>(
@@ -89,7 +80,6 @@ function ActivityEditorContent({
     } | null>(null);
     const [photoSearching, setPhotoSearching] = useState(false);
     const [skipAutomaticPhoto, setSkipAutomaticPhoto] = useState(false);
-    const [refreshing, setRefreshing] = useState(false);
     const [locationVersion, setLocationVersion] = useState(0);
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState("");
@@ -115,9 +105,9 @@ function ActivityEditorContent({
         draft.coverImageId !== pin.coverImageId ||
         JSON.stringify(images.filter((image) => image.pinId === pin.id)) !==
             JSON.stringify(originalImages.filter((image) => image.pinId === pin.id));
-    useBoardLeaveWarning(changed || uploading || refreshing);
+    useBoardLeaveWarning(changed || uploading);
     function requestClose() {
-        if (uploadLock.current || refreshing) {
+        if (uploadLock.current) {
             setError("Wait for activity image uploads to finish before closing.");
             return;
         }
@@ -291,6 +281,13 @@ function ActivityEditorContent({
 
     return (
         <>
+            {galleryIndex !== null ? (
+                <EditorPhotoGallery
+                    images={[...visibleImages, ...availableImages]}
+                    index={galleryIndex}
+                    onClose={() => setGalleryIndex(null)}
+                />
+            ) : null}
             {editingPhoto !== null ? (
                 <PhotoEditorDialog imageId={editingPhoto} onClose={() => setEditingPhoto(null)} />
             ) : null}
@@ -307,7 +304,7 @@ function ActivityEditorContent({
                 />
             ) : null}
             <div
-                inert={confirmation !== null || editingPhoto !== null}
+                inert={confirmation !== null || editingPhoto !== null || galleryIndex !== null}
                 className="fixed inset-0 z-50 grid place-items-center bg-black/45 p-4"
                 role="presentation"
                 onMouseDown={(event) => {
@@ -324,11 +321,8 @@ function ActivityEditorContent({
                 >
                     <div className="flex items-start justify-between">
                         <div>
-                            <p className="text-10 tracking-label text-stone font-bold uppercase">
-                                {mode === "create" ? `Day ${dayNumber} / Add activity` : "Edit activity"}
-                            </p>
-                            <h2 id="edit-activity-heading" className="font-display text-30 mt-2 font-bold">
-                                {draft.title || "A place in your day"}
+                            <h2 id="edit-activity-heading" className="font-display text-30 font-bold">
+                                {mode === "create" ? "Add Activity" : "Edit Activity"}
                             </h2>
                         </div>
                         <button
@@ -350,13 +344,27 @@ function ActivityEditorContent({
                                 </p>
                                 {cover ? (
                                     <figure className="mt-6">
-                                        <img
-                                            src={photoUrl(cover.url)}
-                                            decoding="async"
-                                            onError={() => setError("The activity image could not load.")}
-                                            alt={`Image for ${pin.title}`}
-                                            className="aspect-video w-full object-cover"
-                                        />
+                                        <button
+                                            type="button"
+                                            aria-label="Enlarge activity cover"
+                                            className="block w-full overflow-hidden rounded-2xl"
+                                            onClick={() =>
+                                                setGalleryIndex(
+                                                    Math.max(
+                                                        0,
+                                                        visibleImages.findIndex((image) => image.id === cover.id)
+                                                    )
+                                                )
+                                            }
+                                        >
+                                            <img
+                                                src={photoUrl(cover.url)}
+                                                decoding="async"
+                                                onError={() => setError("The activity image could not load.")}
+                                                alt={`Image for ${pin.title}`}
+                                                className="aspect-video w-full object-cover"
+                                            />
+                                        </button>
                                         {cover.credit && cover.creditUrl && cover.sourceUrl ? (
                                             <figcaption className="text-10 text-stone mt-1">
                                                 Photo by{" "}
@@ -391,19 +399,19 @@ function ActivityEditorContent({
                                 />
                                 <button
                                     type="button"
-                                    disabled={uploading || refreshing || remainingUploads === 0}
+                                    disabled={uploading || remainingUploads === 0}
                                     onClick={() => inputRef.current?.click()}
-                                    className="border-line hover:border-foreground text-muted-foreground mt-4 flex min-h-32 w-full items-center justify-center rounded-xl border border-dashed px-5 py-5 text-sm disabled:opacity-40"
+                                    className="group/action text-foreground mt-4 flex min-h-11 items-center gap-3 text-sm disabled:opacity-40"
                                     onDragOver={(event) => {
                                         event.preventDefault();
                                     }}
                                     onDrop={(event) => {
                                         event.preventDefault();
-                                        if (!uploading && !refreshing)
-                                            void upload(Array.from(event.dataTransfer.files));
+                                        if (!uploading) void upload(Array.from(event.dataTransfer.files));
                                     }}
                                 >
-                                    {uploading ? "Uploading..." : "Upload activity images (up to 5 per batch)"}
+                                    <Upload className="border-line size-10 rounded-full border p-2.5 transition-transform group-hover/action:scale-110 motion-reduce:transition-none" />
+                                    {uploading ? "Uploading..." : "Add photos"}
                                 </button>
                                 <p className="text-muted-foreground mt-3 text-[11px] leading-relaxed">
                                     Saved crop/resize edits apply everywhere this photo is used, even if you cancel this
@@ -416,25 +424,31 @@ function ActivityEditorContent({
                                     ) : null}
                                     <ul className="mt-3 grid grid-cols-2 gap-3">
                                         {visibleImages.map((item, index) => (
-                                            <li
-                                                key={item.id}
-                                                className="group/photo relative overflow-hidden rounded-2xl"
-                                            >
-                                                <img
-                                                    src={photoUrl(item.thumbnailUrl)}
-                                                    loading="lazy"
-                                                    decoding="async"
-                                                    alt={`${pin.title} image ${index + 1}`}
-                                                    className="aspect-square w-full object-cover"
-                                                />
+                                            <li key={item.id} className="group/photo relative min-w-0">
+                                                <button
+                                                    type="button"
+                                                    aria-label={`Enlarge activity photo ${index + 1}`}
+                                                    className="block w-full overflow-hidden rounded-2xl"
+                                                    onClick={() => setGalleryIndex(index)}
+                                                >
+                                                    <img
+                                                        src={photoUrl(item.thumbnailUrl)}
+                                                        loading="lazy"
+                                                        decoding="async"
+                                                        alt={`${pin.title} image ${index + 1}`}
+                                                        className="aspect-square w-full object-cover"
+                                                    />
+                                                </button>
                                                 {item.uploadedImageId ? (
                                                     <button
                                                         type="button"
-                                                        disabled={uploading || refreshing}
-                                                        className="bg-background/95 absolute top-2 left-2 min-h-9 rounded-full px-3 text-[11px] opacity-100 focus-visible:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within/photo:opacity-100 [@media(hover:hover)]:group-hover/photo:opacity-100"
+                                                        disabled={uploading}
+                                                        className="editor-icon-action absolute top-2 left-2 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within/photo:opacity-100 [@media(hover:hover)]:group-hover/photo:opacity-100"
+                                                        aria-label={`Crop photo ${index + 1}`}
+                                                        title="Crop"
                                                         onClick={() => setEditingPhoto(item.uploadedImageId!)}
                                                     >
-                                                        Crop / resize
+                                                        <Crop size={16} />
                                                     </button>
                                                 ) : null}
                                                 {item.id === cover?.id ? (
@@ -442,7 +456,7 @@ function ActivityEditorContent({
                                                 ) : (
                                                     <button
                                                         type="button"
-                                                        disabled={uploading || refreshing}
+                                                        disabled={uploading}
                                                         onClick={() => {
                                                             const nextCoverId = item.uploadedImageId ?? null;
                                                             fieldEdits.current.cover = true;
@@ -466,7 +480,7 @@ function ActivityEditorContent({
                                                             aria-label={`Move image ${index + 1} earlier`}
                                                             className="underline disabled:opacity-40"
                                                         >
-                                                            Earlier
+                                                            <ArrowLeft size={16} />
                                                         </button>
                                                         <button
                                                             type="button"
@@ -475,7 +489,7 @@ function ActivityEditorContent({
                                                             aria-label={`Move image ${index + 1} later`}
                                                             className="underline disabled:opacity-40"
                                                         >
-                                                            Later
+                                                            <ArrowRight size={16} />
                                                         </button>
                                                         <button
                                                             type="button"
@@ -492,11 +506,11 @@ function ActivityEditorContent({
                                                                         ).coverImageId
                                                                     }));
                                                             }}
-                                                            disabled={uploading || refreshing}
+                                                            disabled={uploading}
                                                             aria-label={`Delete image ${index + 1}`}
-                                                            className="bg-background/95 absolute top-2 right-2 min-h-9 rounded-full px-3 opacity-100 focus-visible:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within/photo:opacity-100 [@media(hover:hover)]:group-hover/photo:opacity-100"
+                                                            className="editor-icon-action absolute top-2 right-2 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within/photo:opacity-100 [@media(hover:hover)]:group-hover/photo:opacity-100"
                                                         >
-                                                            Delete
+                                                            <Trash2 size={16} />
                                                         </button>
                                                     </div>
                                                 ) : (
@@ -509,9 +523,9 @@ function ActivityEditorContent({
                                                             setAutomaticImage(null);
                                                             setSkipAutomaticPhoto(true);
                                                         }}
-                                                        className="bg-background/95 absolute top-2 right-2 min-h-9 rounded-full px-3 text-xs"
+                                                        className="editor-icon-action absolute top-2 right-2 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within/photo:opacity-100 [@media(hover:hover)]:group-hover/photo:opacity-100"
                                                     >
-                                                        Delete
+                                                        <Trash2 size={16} />
                                                     </button>
                                                 )}
                                             </li>
@@ -523,16 +537,27 @@ function ActivityEditorContent({
                                         <h3 className="text-12 font-bold">Attach a Board upload</h3>
                                         <BoardPhotoStrip label="Board uploaded images">
                                             {availableImages.map((item) => (
-                                                <li key={item.id} className="w-24 shrink-0 snap-start">
-                                                    <img
-                                                        src={photoUrl(item.thumbnailUrl)}
-                                                        loading="lazy"
-                                                        decoding="async"
-                                                        width={96}
-                                                        height={96}
-                                                        alt="Board upload"
-                                                        className="aspect-square w-full object-cover"
-                                                    />
+                                                <li key={item.id} className="w-40 shrink-0">
+                                                    <button
+                                                        type="button"
+                                                        aria-label="Enlarge Board upload"
+                                                        className="block w-full overflow-hidden rounded-xl"
+                                                        onClick={() => {
+                                                            setGalleryIndex(
+                                                                visibleImages.length + availableImages.indexOf(item)
+                                                            );
+                                                        }}
+                                                    >
+                                                        <img
+                                                            src={photoUrl(item.thumbnailUrl)}
+                                                            loading="lazy"
+                                                            decoding="async"
+                                                            width={96}
+                                                            height={96}
+                                                            alt="Board upload"
+                                                            className="aspect-square w-full object-cover"
+                                                        />
+                                                    </button>
                                                     <button
                                                         type="button"
                                                         onClick={() => onAssignImage(item.id, pin.id)}
@@ -626,7 +651,7 @@ function ActivityEditorContent({
                                 proximity={searchArea}
                                 key={locationVersion}
                                 value={draft.location}
-                                disabled={uploading || refreshing}
+                                disabled={uploading}
                                 onSearchEdited={() => {
                                     fieldEdits.current.location = true;
                                     editRevision.current++;
@@ -661,7 +686,7 @@ function ActivityEditorContent({
                                 editVersion={locationEditVersion}
                                 location={draft.location}
                                 proximity={searchArea}
-                                disabled={uploading || refreshing}
+                                disabled={uploading}
                                 onChange={(location) => {
                                     fieldEdits.current.location = true;
                                     editRevision.current++;
@@ -701,110 +726,12 @@ function ActivityEditorContent({
                                     A location is optional. Activities without a pin appear in your itinerary only.
                                 </p>
                             )}
-                            {activityImages.some((image) => image.uploadedImageId) ? (
-                                <button
-                                    type="button"
-                                    disabled={uploading || refreshing}
-                                    className="text-muted-foreground mt-4 min-h-9 text-xs underline underline-offset-4 disabled:opacity-40"
-                                    onClick={async () => {
-                                        const image = [...activityImages]
-                                            .sort((first, second) => first.order - second.order)
-                                            .find((item) => item.uploadedImageId);
-                                        if (!image?.uploadedImageId) return;
-                                        const revision = editRevision.current;
-                                        setAutomaticImage(null);
-                                        setRefreshing(true);
-                                        setError("");
-                                        try {
-                                            const result = await refreshBoardPhotoLocation(image.uploadedImageId);
-                                            onMetadataChange?.(image.uploadedImageId, {
-                                                capturedAt: result.capturedAt,
-                                                latitude: result.latitude,
-                                                longitude: result.longitude
-                                            });
-                                            setPhotoSuggestion({
-                                                image: {
-                                                    ...image,
-                                                    capturedAt: result.capturedAt,
-                                                    latitude: result.latitude,
-                                                    longitude: result.longitude
-                                                },
-                                                suggestion: result
-                                            });
-                                            if (revision !== editRevision.current) return;
-                                            if (result.latitude !== null && result.longitude !== null)
-                                                setSearchArea({
-                                                    latitude: result.latitude,
-                                                    longitude: result.longitude
-                                                });
-                                            if (result.location) {
-                                                const place = result.location;
-                                                setDraft((current) => ({
-                                                    ...current,
-                                                    title:
-                                                        current.title ||
-                                                        place.detail ||
-                                                        (place.type !== "unknown" && place.type !== "address"
-                                                            ? place.label
-                                                            : ""),
-                                                    category: fieldEdits.current.category
-                                                        ? current.category
-                                                        : result.category,
-                                                    location: {
-                                                        name:
-                                                            place.detail ||
-                                                            (place.type !== "unknown" && place.type !== "address"
-                                                                ? place.label
-                                                                : ""),
-                                                        address: place.address ?? "",
-                                                        latitude: result.latitude ?? place.latitude,
-                                                        longitude: result.longitude ?? place.longitude,
-                                                        country: place.country,
-                                                        countryCode: place.countryCode,
-                                                        city: place.city,
-                                                        mapboxId: place.id
-                                                    }
-                                                }));
-                                                setLocationVersion((current) => current + 1);
-                                            } else if (result.latitude !== null && result.longitude !== null) {
-                                                const { latitude, longitude } = result;
-                                                setDraft((current) => ({
-                                                    ...current,
-                                                    title: current.title,
-                                                    location: {
-                                                        name: "",
-                                                        address: "",
-                                                        latitude,
-                                                        longitude,
-                                                        country: null,
-                                                        countryCode: null,
-                                                        city: null,
-                                                        mapboxId: null
-                                                    }
-                                                }));
-                                                setLocationVersion((current) => current + 1);
-                                            }
-                                            if (result.warning) setError(result.warning);
-                                        } catch (caught) {
-                                            setError(
-                                                caught instanceof Error
-                                                    ? caught.message
-                                                    : "Could not re-read this photo. Search for its location instead."
-                                            );
-                                        } finally {
-                                            setRefreshing(false);
-                                        }
-                                    }}
-                                >
-                                    {refreshing ? "Reading photo location..." : "Re-read photo location"}
-                                </button>
-                            ) : null}
                             {photoSuggestion &&
                             draft.location &&
                             photoActivityLocation(photoSuggestion.image, photoSuggestion.suggestion) ? (
                                 <button
                                     type="button"
-                                    disabled={uploading || refreshing}
+                                    disabled={uploading}
                                     className="mt-3 text-xs underline underline-offset-4"
                                     onClick={() => {
                                         const location = photoActivityLocation(
@@ -847,7 +774,7 @@ function ActivityEditorContent({
                                 Time
                                 <input
                                     type="time"
-                                    disabled={uploading || refreshing}
+                                    disabled={uploading}
                                     value={draft.time}
                                     onChange={(event) => {
                                         fieldEdits.current.time = true;
@@ -861,7 +788,7 @@ function ActivityEditorContent({
                                 <span className="border-line mt-2 flex items-center gap-3 border-b py-2">
                                     <PinCategoryIcon category={draft.category} />
                                     <select
-                                        disabled={uploading || refreshing}
+                                        disabled={uploading}
                                         value={draft.category}
                                         onChange={(event) => {
                                             fieldEdits.current.category = true;
@@ -881,7 +808,7 @@ function ActivityEditorContent({
                             <label className="text-12 text-graphite mt-5 block">
                                 Notes
                                 <textarea
-                                    disabled={uploading || refreshing}
+                                    disabled={uploading}
                                     rows={4}
                                     value={draft.description}
                                     onChange={(event) =>
@@ -901,60 +828,11 @@ function ActivityEditorContent({
                                     {activityNoteError(draft.description, pin.description)}
                                 </p>
                             ) : null}
-                            {placement ? (
-                                <section className="border-line mt-6 border-t pt-4" aria-label="Arrange activity">
-                                    <label className="text-muted-foreground block text-xs">
-                                        Day
-                                        <select
-                                            className="border-line text-foreground mt-2 block min-h-11 w-full border-b bg-transparent"
-                                            value={placement.dayId}
-                                            onChange={(event) => placement.onMove(event.target.value)}
-                                        >
-                                            {placement.days.map((day) => (
-                                                <option key={day.id} value={day.id}>
-                                                    Day {day.dayNumber}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </label>
-                                    <div className="mt-3 flex gap-4">
-                                        <button
-                                            type="button"
-                                            disabled={
-                                                uploading ||
-                                                refreshing ||
-                                                placement.days.find((day) => day.id === placement.dayId)?.pins[0]
-                                                    ?.id === pin.id
-                                            }
-                                            className="min-h-9 text-xs underline disabled:opacity-40"
-                                            onClick={() => placement.onReorder(-1)}
-                                        >
-                                            Move earlier
-                                        </button>
-                                        <button
-                                            type="button"
-                                            disabled={
-                                                uploading ||
-                                                refreshing ||
-                                                placement.days.find((day) => day.id === placement.dayId)?.pins.at(-1)
-                                                    ?.id === pin.id
-                                            }
-                                            className="min-h-9 text-xs underline disabled:opacity-40"
-                                            onClick={() => placement.onReorder(1)}
-                                        >
-                                            Move later
-                                        </button>
-                                    </div>
-                                </section>
-                            ) : null}
-                            {draft.location ? (
-                                <p className="text-12 text-muted-foreground mt-4 leading-5">{draft.location.address}</p>
-                            ) : null}
                             <div className="mt-8 flex flex-wrap justify-between gap-3">
                                 {mode === "edit" ? (
                                     <button
                                         type="button"
-                                        disabled={uploading || refreshing}
+                                        disabled={uploading}
                                         onClick={() => setConfirmation("delete")}
                                         className="border-line text-13 border px-5 py-3"
                                     >
@@ -966,9 +844,7 @@ function ActivityEditorContent({
                                 <button
                                     type="button"
                                     disabled={
-                                        uploading ||
-                                        refreshing ||
-                                        Boolean(activityNoteError(draft.description, pin.description))
+                                        uploading || Boolean(activityNoteError(draft.description, pin.description))
                                     }
                                     onClick={() => {
                                         if (activityNoteError(draft.description, pin.description)) return;
@@ -1059,7 +935,7 @@ export default function ActivityEditorDialog(props: Props) {
                 props.onSave(pin);
                 removed.current.forEach((id) => {
                     props.onAssignImage(id, null);
-                    props.onRemoveImage?.(id);
+                    if (props.images.find((image) => image.id === id)?.source !== "upload") props.onRemoveImage?.(id);
                 });
                 [...mediaRef.current]
                     .sort((a, b) => (a.activityOrder ?? a.order) - (b.activityOrder ?? b.order))

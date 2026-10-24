@@ -1,14 +1,36 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { ScrollArrow } from "@/components/ui/carousel";
 
 export default function BoardEditorRail({ children }: { children: ReactNode }) {
     const viewport = useRef<HTMLDivElement>(null);
+    const [position, setPosition] = useState({ previous: false, next: true });
+    function navigate(direction: number) {
+        const rail = viewport.current;
+        if (!rail) return;
+        const sections = Array.from(rail.querySelectorAll<HTMLElement>("[data-editor-section]"));
+        const index = Math.round(rail.scrollLeft / rail.clientWidth);
+        const next = sections[index + direction];
+        if (next) {
+            history.replaceState(history.state, "", `#${next.id}`);
+            next.focus({ preventScroll: true });
+            window.dispatchEvent(new HashChangeEvent("hashchange"));
+        }
+    }
 
     useEffect(() => {
         const rail = viewport.current;
         if (!rail) return;
         const desktop = window.matchMedia("(min-width: 768px)");
+        const updatePosition = () =>
+            setPosition({
+                previous: rail.scrollLeft > 2,
+                next: rail.scrollLeft < rail.scrollWidth - rail.clientWidth - 2
+            });
+        rail.addEventListener("scroll", updatePosition, { passive: true });
+        const resize = new ResizeObserver(updatePosition);
+        resize.observe(rail);
         const gesture = { last: 0, inner: false, lockedUntil: 0 };
         const reveal = (target: HTMLElement) => {
             const section = target.closest<HTMLElement>("[data-editor-section]");
@@ -91,12 +113,35 @@ export default function BoardEditorRail({ children }: { children: ReactNode }) {
             rail.removeEventListener("wheel", wheel);
             rail.removeEventListener("focusin", focus);
             window.removeEventListener("hashchange", hash);
+            rail.removeEventListener("scroll", updatePosition);
+            resize.disconnect();
         };
     }, []);
 
     return (
-        <div ref={viewport} className="board-editor-rail" aria-label="Board editor sections">
-            {children}
+        <div className="relative">
+            <div ref={viewport} className="board-editor-rail" aria-label="Board editor sections">
+                {children}
+            </div>
+            <div
+                className="pointer-events-none absolute inset-x-2 top-1/2 z-20 hidden justify-between md:flex"
+                aria-label="Board editor section navigation"
+            >
+                <ScrollArrow
+                    direction="previous"
+                    aria-label="Previous editor section"
+                    disabled={!position.previous}
+                    onClick={() => navigate(-1)}
+                    className={`pointer-events-auto ${position.previous ? "" : "invisible"}`}
+                />
+                <ScrollArrow
+                    direction="next"
+                    aria-label="Next editor section"
+                    disabled={!position.next}
+                    onClick={() => navigate(1)}
+                    className={`pointer-events-auto ${position.next ? "" : "invisible"}`}
+                />
+            </div>
         </div>
     );
 }

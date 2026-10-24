@@ -7,13 +7,36 @@ import request from "supertest";
 import { createApp } from "../src/app.js";
 import type { AuthRepository, GoogleVerifier } from "../src/features/auth/auth.types.js";
 import type { BoardWrite } from "../src/features/boards/boards.schemas.js";
-import { canReadBoard } from "../src/features/boards/boards.service.js";
+import { canReadBoard, createBoardsService } from "../src/features/boards/boards.service.js";
 import type { BoardDocument, BoardRepository } from "../src/features/boards/boards.types.js";
 import { AppError } from "../src/shared/app-error.js";
 
 const origin = "http://localhost:3000";
 const ownerCookie = "roamboard_session=owner-token";
 const otherCookie = "roamboard_session=other-token";
+
+test("service preserves omitted day colors by identity across reordering and honors explicit reset", async () => {
+    const service = createBoardsService(fakeBoards());
+    const first = await service.create("owner", {
+        ...emptyDraft,
+        days: [
+            { dayNumber: 1, date: null, color: "#c58e76", activities: [] },
+            { dayNumber: 2, date: null, color: "#8aa6b8", activities: [] }
+        ]
+    });
+    const saved = await service.replace("owner", first.boardId, first.revision, {
+        ...emptyDraft,
+        days: [
+            { dayId: first.days[1]!.dayId, dayNumber: 1, date: null, activities: [] },
+            { dayId: first.days[0]!.dayId, dayNumber: 2, date: null, color: null, activities: [] },
+            { dayNumber: 3, date: null, activities: [] }
+        ]
+    });
+    assert.equal(saved.days[0]?.color, "#8aa6b8");
+    assert.equal(saved.days[1]?.color, null);
+    assert.equal(saved.days[2]?.color ?? null, null, "New days must not inherit colors from removed positions");
+    assert.equal(first.days[0]?.color, "#c58e76", "Replacing a Board must preserve the previously returned document");
+});
 
 function fakeAuth(): {
     repository: AuthRepository;

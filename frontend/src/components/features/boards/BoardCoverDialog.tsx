@@ -2,7 +2,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { X } from "lucide-react";
+import EditorPhotoGallery from "./EditorPhotoGallery";
+import { Crop, Trash2, Upload, X } from "lucide-react";
 import { useDialogFocus } from "@/lib/use-dialog-focus";
 import { usePhotoUrls } from "@/lib/use-photo-urls";
 import PhotoEditorDialog from "@/components/images/PhotoEditorDialog";
@@ -25,15 +26,19 @@ export default function BoardCoverDialog({
     onRemove?: (id: string) => void;
 }) {
     const dialog = useRef<HTMLDivElement>(null);
+    const [galleryIndex, setGalleryIndex] = useState<number | null>(null);
     const [editing, setEditing] = useState<number | null>(null);
     const photoUrl = usePhotoUrls();
-    useDialogFocus(dialog, onClose, editing === null);
+    useDialogFocus(dialog, onClose, editing === null && galleryIndex === null);
     const uploads = images.filter((image) => image.source === "upload" && image.uploadedImageId);
     const cover = uploads.find((image) => image.uploadedImageId === coverImageId);
     return (
         <>
+            {galleryIndex !== null ? (
+                <EditorPhotoGallery images={uploads} index={galleryIndex} onClose={() => setGalleryIndex(null)} />
+            ) : null}
             <div
-                inert={editing !== null}
+                inert={editing !== null || galleryIndex !== null}
                 className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/60 p-4"
                 onClick={(event) => {
                     if (event.target === event.currentTarget && editing === null) onClose();
@@ -62,18 +67,29 @@ export default function BoardCoverDialog({
                     </header>
                     {cover ? (
                         <div>
-                            <img
-                                src={photoUrl(cover.url)}
-                                alt="Selected Board cover"
-                                decoding="async"
-                                className="aspect-[4/3] w-full rounded-2xl object-cover"
-                            />
+                            <button
+                                type="button"
+                                className="block w-full"
+                                aria-label="Enlarge Board cover"
+                                onClick={() => setGalleryIndex(uploads.indexOf(cover))}
+                            >
+                                <img
+                                    src={photoUrl(cover.url)}
+                                    alt="Selected Board cover"
+                                    decoding="async"
+                                    className="aspect-[4/3] w-full rounded-2xl object-cover"
+                                />
+                            </button>
                             <button
                                 type="button"
                                 onClick={() => setEditing(cover.uploadedImageId!)}
-                                className="mt-4 min-h-11 text-sm underline underline-offset-4"
+                                className="group/action mt-4 inline-flex min-h-11 items-center gap-3 text-sm"
                             >
-                                Crop / resize cover
+                                <Crop
+                                    size={18}
+                                    className="transition-transform group-hover/action:scale-110 motion-reduce:transition-none"
+                                />{" "}
+                                Crop cover
                             </button>
                         </div>
                     ) : (
@@ -82,44 +98,52 @@ export default function BoardCoverDialog({
                     {uploads.length ? (
                         <BoardPhotoStrip label="Board cover photos">
                             {uploads.map((image, index) => (
-                                <li key={image.id} className="group/photo relative w-28 shrink-0 snap-start">
+                                <li key={image.id} className="group/photo relative w-48 min-w-0 shrink-0">
                                     <button
                                         type="button"
-                                        aria-label={`Use photo ${index + 1} as Board cover`}
-                                        aria-pressed={image.uploadedImageId === coverImageId}
-                                        onClick={() => onSelect(image.uploadedImageId!)}
-                                        className="aria-pressed:outline-foreground w-full outline-offset-2 aria-pressed:outline-2"
+                                        aria-label={`Enlarge Board photo ${index + 1}`}
+                                        onClick={() => setGalleryIndex(index)}
+                                        className="block w-full overflow-hidden rounded-2xl focus-visible:outline-2"
                                     >
                                         <img
                                             src={photoUrl(image.thumbnailUrl)}
                                             loading="lazy"
                                             decoding="async"
-                                            width={112}
-                                            height={112}
+                                            width={192}
+                                            height={192}
                                             alt={`Board photo ${index + 1}`}
-                                            className="aspect-square w-full object-cover"
+                                            draggable={false}
+                                            className="aspect-square w-full object-cover transition-transform duration-300 group-hover/photo:scale-[1.03] motion-reduce:transition-none"
                                         />
-                                        <span className="mt-2 block text-xs">
-                                            {image.uploadedImageId === coverImageId ? "Board cover" : "Use as cover"}
-                                        </span>
                                     </button>
-                                    <div className="absolute inset-x-1 top-1 flex justify-between gap-1 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within/photo:opacity-100 [@media(hover:hover)]:group-hover/photo:opacity-100">
+                                    <button
+                                        type="button"
+                                        aria-label={`Use photo ${index + 1} as Board cover`}
+                                        aria-pressed={image.uploadedImageId === coverImageId}
+                                        onClick={() => onSelect(image.uploadedImageId!)}
+                                        className="mt-2 min-h-11 text-xs underline underline-offset-4"
+                                    >
+                                        {image.uploadedImageId === coverImageId ? "Board cover" : "Use as cover"}
+                                    </button>
+                                    <div className="editor-photo-actions">
                                         <button
                                             type="button"
-                                            aria-label={`Crop / resize photo ${index + 1}`}
+                                            aria-label={`Crop photo ${index + 1}`}
+                                            title="Crop"
                                             onClick={() => setEditing(image.uploadedImageId!)}
-                                            className="bg-background/95 min-h-9 rounded-full px-2 text-[10px]"
+                                            className="editor-icon-action"
                                         >
-                                            Crop / resize
+                                            <Crop size={16} />
                                         </button>
                                         {onRemove ? (
                                             <button
                                                 type="button"
                                                 aria-label={`Delete photo ${index + 1}`}
+                                                title="Remove from Board"
                                                 onClick={() => onRemove(image.id)}
-                                                className="bg-background/95 min-h-9 rounded-full px-2 text-[10px]"
+                                                className="editor-icon-action"
                                             >
-                                                Delete
+                                                <Trash2 size={16} />
                                             </button>
                                         ) : null}
                                     </div>
@@ -127,8 +151,16 @@ export default function BoardCoverDialog({
                             ))}
                         </BoardPhotoStrip>
                     ) : null}
-                    <button type="button" onClick={onUpload} className="border-line mt-6 min-h-11 border px-5 text-sm">
-                        Upload another photo
+                    <button
+                        type="button"
+                        onClick={onUpload}
+                        className="group/action mt-6 inline-flex min-h-11 items-center gap-3 text-sm"
+                    >
+                        <Upload
+                            size={20}
+                            className="border-line size-10 rounded-full border p-2 transition-transform group-hover/action:scale-110 motion-reduce:transition-none"
+                        />{" "}
+                        Add photos
                     </button>
                 </div>
             </div>

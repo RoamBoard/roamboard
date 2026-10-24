@@ -279,9 +279,9 @@ test("attached uploads expose named keyboard crop and delete buttons", () => {
     }
     const markup = renderToStaticMarkup(createElement(Probe));
     const buttons = markup.match(/<button\b[^>]*>[\s\S]*?<\/button>/g) ?? [];
-    const crop = buttons.find((button) => /crop\s*\/\s*resize/i.test(button));
+    const crop = buttons.find((button) => /aria-label="Crop (?:photo|image) /i.test(button));
     const remove = buttons.find((button) => /delete (?:photo|image)|remove (?:photo|image)/i.test(button));
-    assert.ok(crop, "Crop/resize must be a named native button, available to keyboard and assistive technology");
+    assert.ok(crop, "Crop must be a named native button, available to keyboard and assistive technology");
     assert.ok(remove, "Photo deletion must be a named native button");
     assert.doesNotMatch(crop, /tabindex="-1"|aria-hidden="true"[^>]*>\s*Crop/i);
     assert.doesNotMatch(remove, /tabindex="-1"/);
