@@ -7,7 +7,7 @@ import PhotoEditorDialog from "@/components/images/PhotoEditorDialog";
 import { usePhotoUrls } from "@/lib/use-photo-urls";
 import BoardCoverHero from "@/components/features/boards/BoardCoverHero";
 import BoardCoverDialog from "./BoardCoverDialog";
-import CreatorUploadArtwork from "@/components/features/boards/CreatorUploadArtwork";
+
 import { Upload } from "lucide-react";
 import { uploadBoardImage, suggestBoardPhotos } from "@/lib/board-creator-api";
 import { uploadBoardImageBatch } from "@/lib/board-image-upload";
@@ -32,6 +32,8 @@ type Props = {
     disabled?: boolean;
     loading?: boolean;
     showDropZone?: boolean;
+    showCover?: boolean;
+    showGallery?: boolean;
     onUploadingChange?: (uploading: boolean) => void;
     onUploadPromise?: (promise: Promise<unknown>) => void;
     onSelectCover: (imageId: number) => void;
@@ -110,6 +112,8 @@ export default function BoardImageIntake({
     disabled = false,
     loading = false,
     showDropZone = true,
+    showCover = true,
+    showGallery = true,
     onUploadingChange,
     onUploadPromise,
     onSelectCover,
@@ -227,6 +231,7 @@ export default function BoardImageIntake({
                 <BoardCoverDialog
                     images={images}
                     coverImageId={coverImageId}
+                    onRemove={onRemove}
                     onSelect={onSelectCover}
                     onClose={() => setChoosingCover(false)}
                     onUpload={() => {
@@ -239,7 +244,7 @@ export default function BoardImageIntake({
                 <PhotoEditorDialog imageId={editingPhoto} onClose={() => setEditingPhoto(null)} />
             ) : null}
             <section
-                id="board-images"
+                id={showCover ? "board-images" : "plan-images"}
                 tabIndex={-1}
                 aria-label="Board setup and images"
                 aria-busy={busy || loading}
@@ -255,17 +260,19 @@ export default function BoardImageIntake({
                     disabled={disabled || busy}
                     onChange={(event) => void upload(Array.from(event.target.files ?? []))}
                 />
-                <div className="group/cover relative mx-auto w-[92%] max-w-[78rem] sm:w-[80%]">
-                    <BoardCoverHero
-                        coverUrl={cover ? photoUrl(cover.url) : undefined}
-                        loading={loading}
-                        disabled={disabled || busy}
-                        onChooseImages={() => setChoosingCover(true)}
-                    />
-                </div>
+                {showCover ? (
+                    <div className="group/cover relative mx-auto w-full">
+                        <BoardCoverHero
+                            coverUrl={cover ? photoUrl(cover.url) : undefined}
+                            loading={loading}
+                            disabled={disabled || busy}
+                            onChooseImages={() => setChoosingCover(true)}
+                        />
+                    </div>
+                ) : null}
                 {children}
                 <div
-                    className={`relative mx-auto w-[92%] max-w-[78rem] transition-colors motion-reduce:transition-none sm:w-[80%] ${showDropZone ? "mb-16 sm:mb-24" : ""} ${dragging ? "bg-foreground/[0.04] outline-foreground/50 outline-1 outline-offset-8 outline-dashed" : ""}`}
+                    className={`relative mx-auto w-full transition-colors motion-reduce:transition-none ${showDropZone ? "mb-8" : ""} ${dragging ? "bg-foreground/[0.04] outline-foreground/50 outline-1 outline-offset-8 outline-dashed" : ""}`}
                     onDragOver={(event) => {
                         if (!showDropZone) return;
                         const existingPhoto = event.dataTransfer.types.includes(BOARD_PHOTO_DRAG_TYPE);
@@ -296,16 +303,15 @@ export default function BoardImageIntake({
                     }}
                 >
                     {showDropZone ? (
-                        <header className="relative isolate min-h-[26rem] overflow-hidden px-4 pt-10 pb-48 text-center sm:min-h-[32rem] sm:pt-12 sm:pb-64">
-                            <CreatorUploadArtwork />
-                            <div className="relative mx-auto max-w-xl">
+                        <header className="border-line bg-faint/40 relative overflow-hidden rounded-3xl border border-dashed px-6 py-8 text-left sm:px-10">
+                            <div className="relative max-w-2xl">
                                 <h2
                                     id="image-intake-heading"
-                                    className="font-display text-[clamp(2rem,4.5vw,4.5rem)] leading-none font-bold tracking-[-0.035em]"
+                                    className="font-display text-3xl leading-none font-bold tracking-[-0.035em]"
                                 >
-                                    SMART CREATE
+                                    Let your photos tell the story
                                 </h2>
-                                <p className="text-muted-foreground mx-auto mt-4 max-w-sm text-xs leading-relaxed sm:text-sm">
+                                <p className="text-muted-foreground mt-3 max-w-xl text-xs leading-relaxed sm:text-sm">
                                     Already back from your trip? Drop in your activity photos. We will try to fill in
                                     your day plan from location and date details. You can edit every suggestion.
                                 </p>
@@ -336,32 +342,26 @@ export default function BoardImageIntake({
                 </div>
 
                 {busy ? (
-                    <p
-                        role="status"
-                        className="text-muted-foreground mx-auto mt-4 w-[92%] max-w-[78rem] text-center text-xs sm:w-[80%]"
-                    >
+                    <p role="status" className="text-muted-foreground mx-auto mt-4 w-full text-center text-xs">
                         Uploading images…
                     </p>
                 ) : null}
 
                 {error ? (
-                    <p
-                        className="text-14 mx-auto mt-4 w-[92%] max-w-[78rem] text-center break-words sm:w-[80%]"
-                        role="alert"
-                    >
+                    <p className="text-14 mx-auto mt-4 w-full text-center break-words" role="alert">
                         {error}
                     </p>
                 ) : null}
-                {uploadedPhotos.length > 0 ? (
-                    <p className="text-11 text-graphite mx-auto mt-4 w-[92%] max-w-[78rem] sm:w-[80%]">
+                {showGallery && uploadedPhotos.length > 0 ? (
+                    <p className="text-11 text-graphite mx-auto mt-4 w-full">
                         {unassignedPhotos.length
                             ? `${unassignedPhotos.length} ${unassignedPhotos.length === 1 ? "photo is" : "photos are"} not linked to an activity. Open an activity to attach photos.`
                             : "All uploaded photos are linked to activities."}
                     </p>
                 ) : null}
-                {uploadedPhotos.length > 0 ? (
+                {showGallery && uploadedPhotos.length > 0 ? (
                     <ul
-                        className="mx-auto mt-5 mb-16 flex w-[92%] max-w-[78rem] snap-x gap-3 overflow-x-auto pb-2 sm:w-[80%]"
+                        className="mx-auto mt-5 mb-16 flex w-full snap-x gap-3 overflow-x-auto pb-2"
                         aria-label="Uploaded Board images"
                     >
                         {uploadedPhotos.map((image, index) => (

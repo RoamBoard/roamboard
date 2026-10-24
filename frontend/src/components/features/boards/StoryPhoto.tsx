@@ -8,6 +8,9 @@ export function StoryPhotoCredit({ image }: { image: BoardImage }) {
     if (!image.photographer) return null;
     return (
         <figcaption className="text-muted-foreground mt-2 max-w-full truncate text-[10px] leading-relaxed">
+            {image.context ? (
+                <span className="mb-1 block">Illustrative photo ? {image.context.locationLabel}</span>
+            ) : null}
             Photo by{" "}
             {image.photographerUrl ? (
                 <a

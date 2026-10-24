@@ -174,7 +174,32 @@ export function createBoardsService(
             const validated = await validateDocument(repository, {
                 ...input,
                 destination,
-                fillerImagesEnabled: input.fillerImagesEnabled ?? current?.fillerImagesEnabled ?? false
+                fillerImagesEnabled: input.fillerImagesEnabled ?? current?.fillerImagesEnabled ?? false,
+                days: input.days.map((day) => ({
+                    ...day,
+                    activities: day.activities.map((activity) => {
+                        const previous = current?.days
+                            .flatMap((item) => item.activities)
+                            .find(
+                                (item) => item.activityId === activity.activityId && activity.activityId !== undefined
+                            )?.externalImage;
+                        const external = activity.externalImage;
+                        return {
+                            ...activity,
+                            externalImage:
+                                external && external.context === undefined
+                                    ? {
+                                          ...external,
+                                          context:
+                                              previous?.provider === external.provider &&
+                                              previous.providerImageId === external.providerImageId
+                                                  ? (previous.context ?? null)
+                                                  : null
+                                      }
+                                    : external
+                        };
+                    })
+                }))
             });
             if (!owner && input.isCompleted !== undefined) {
                 if (current?.isCompleted !== input.isCompleted)

@@ -55,7 +55,7 @@ export default function PlannerDayColumn({
             }}
             data-planner-day
             aria-labelledby={`day-${day.id}`}
-            className="group/day border-line relative min-h-[26rem] w-[min(25rem,calc(100vw-6rem))] shrink-0 snap-start border-t"
+            className="group/day border-line bg-faint/20 relative min-h-[26rem] w-full shrink-0 snap-start rounded-3xl border p-4 md:w-[min(25rem,calc(100vw-6rem))]"
         >
             <button
                 type="button"

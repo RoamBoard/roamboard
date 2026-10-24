@@ -49,6 +49,7 @@ export function toPublishedBoardData(document: BoardDocument): PublishedBoardDat
             const externalImages: BoardImage[] = external
                 ? [
                       {
+                          context: external.context ?? null,
                           id: `unsplash-${external.providerImageId}`,
                           url: external.url,
                           alt: activity.title,

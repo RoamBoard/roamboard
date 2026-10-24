@@ -17,7 +17,7 @@ export default function CreatorProgress({
     backHref?: string;
 }) {
     return (
-        <div className="border-line bg-background sticky top-0 z-30 flex items-center gap-5 border-b px-4 py-3 sm:gap-8 sm:px-8">
+        <div className="border-line bg-background sticky top-[var(--app-header-height,0px)] z-30 flex items-center gap-5 border-b px-4 py-3 sm:gap-8 sm:px-8">
             {backHref ? <BackLink fallbackHref={backHref} className="shrink-0" /> : null}
             <div className="mx-auto flex max-w-[90rem] min-w-0 flex-1 flex-wrap items-center justify-between gap-x-8 gap-y-2">
                 <div className="min-w-0 flex-1">
@@ -28,8 +28,7 @@ export default function CreatorProgress({
                                 ["day-plan", "02 Day plan"],
                                 ["board-map", "03 Map"],
                                 ["details-discovery", "04 Details"],
-                                ["board-preview", "05 Preview"],
-                                ["publish", "06 Publish"]
+                                ["board-preview", "05 Overview"]
                             ].map(([id, label]) => (
                                 <li key={id}>
                                     <a

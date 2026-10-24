@@ -32,6 +32,7 @@ export type BoardLocation = {
 };
 
 export type BoardImage = {
+    context?: import("./board-creator").PhotoContext | null;
     id: string;
     url: string;
     alt: string;

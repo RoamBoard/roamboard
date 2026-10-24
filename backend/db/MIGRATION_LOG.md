@@ -218,3 +218,11 @@ not replayed. The migration itself does not delete existing image files; cleanup
 
 Backup: `backend/backups/pre-020-2026-10-20T211321781Z.dump` (226,181 bytes, Git-ignored).
 `pg_restore --list` verified the archive; restoration and off-machine retention were not tested.
+
+## Activity illustration context ? 2026-10-24
+
+Applied only 022_activity_photo_context.sql in a transaction after a custom-format backup verified with
+pg_restore --list. Adds nullable constrained activity.external_image_context; existing rows remain null.
+Isolated-schema tests verify save/read, omitted-context preservation, explicit clearing, identity replacement,
+remix copying and invalid JSON rejection. Existing shared Board/photo data was not rewritten.
+Backup: backend/backups/pre-022-2026-10-24T160627312Z.dump (Git-ignored). Restore/off-machine retention not tested.

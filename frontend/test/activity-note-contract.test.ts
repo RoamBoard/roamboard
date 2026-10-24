@@ -66,7 +66,7 @@ function editNote(original: string, replacement?: string, time?: string) {
     const stage = { value: 0 };
     const rendered: { nodes: ReturnType<typeof elements> } = { nodes: [] };
     function Probe() {
-        const tree = ActivityEditorDialog({
+        const wrapper = ActivityEditorDialog({
             pin: { ...pin, description: original },
             images: [],
             remainingUploads: 30,
@@ -78,6 +78,10 @@ function editNote(original: string, replacement?: string, time?: string) {
             onSetCover() {},
             onReorderImage() {}
         });
+        const tree =
+            typeof wrapper.type === "function"
+                ? (wrapper.type as (props: unknown) => ReactNode)(wrapper.props)
+                : wrapper;
         const nodes = elements(tree);
         rendered.nodes = nodes;
         if (stage.value === 0 && (replacement !== undefined || time !== undefined)) {

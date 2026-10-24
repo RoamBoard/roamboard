@@ -20,6 +20,7 @@ type Props = {
     className?: string;
     points: MapPoint[];
     routeGeometry: Array<[number, number]>;
+    onPointDrag?: (id: string, latitude: number, longitude: number) => void;
     onMapClick?: (latitude: number, longitude: number) => void;
     onPointClick?: (point: MapPoint) => void;
     onError?: () => void;
@@ -38,6 +39,7 @@ export default function InteractiveMap({
     token,
     points,
     routeGeometry,
+    onPointDrag,
     onMapClick,
     onPointClick,
     onError,
@@ -54,6 +56,10 @@ export default function InteractiveMap({
     const containerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<MapboxMap | null>(null);
     const markersRef = useRef<Marker[]>([]);
+    const onPointDragRef = useRef(onPointDrag);
+    useEffect(() => {
+        onPointDragRef.current = onPointDrag;
+    }, [onPointDrag]);
     const onMapClickRef = useRef(onMapClick);
     const onPointClickRef = useRef(onPointClick);
     const onErrorRef = useRef(onError);
@@ -114,9 +120,7 @@ export default function InteractiveMap({
                 });
                 setMapReady(true);
             });
-            if (onMapClickRef.current) {
-                map.on("click", (event) => onMapClickRef.current?.(event.lngLat.lat, event.lngLat.lng));
-            }
+            map.on("click", (event) => onMapClickRef.current?.(event.lngLat.lat, event.lngLat.lng));
             map.on("error", (event) => {
                 setMapError(event.error?.message ?? "The Mapbox map could not load.");
                 onErrorRef.current?.();
@@ -172,7 +176,15 @@ export default function InteractiveMap({
             const angle = (position / colocated.length) * Math.PI * 2;
             const offset: [number, number] =
                 colocated.length > 1 ? [Math.cos(angle) * 22, Math.sin(angle) * 22] : [0, 0];
-            return new mapboxgl.Marker({ element, offset }).setLngLat([point.longitude, point.latitude]).addTo(map);
+            const marker = new mapboxgl.Marker({ element, offset, draggable: Boolean(onPointDrag) })
+                .setLngLat([point.longitude, point.latitude])
+                .addTo(map);
+            if (onPointDrag)
+                marker.on("dragend", () => {
+                    const position = marker.getLngLat();
+                    onPointDragRef.current?.(point.id, position.lat, position.lng);
+                });
+            return marker;
         });
         if (points.length === 1 && points[0]) {
             map.easeTo({
@@ -192,7 +204,7 @@ export default function InteractiveMap({
             else if (width > 0 && height > 0)
                 map.fitBounds(bounds, { padding: Math.min(64, width / 4, height / 4), maxZoom: 14 });
         }
-    }, [points, mapReady, userZoom]);
+    }, [onPointDrag, points, mapReady, userZoom]);
 
     useEffect(() => {
         const point = points.find((item) => item.id === selectedPointId);

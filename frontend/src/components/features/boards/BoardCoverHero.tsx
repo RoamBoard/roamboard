@@ -12,7 +12,7 @@ type Props = {
 export default function BoardCoverHero({ coverUrl, disabled, loading = false, onChooseImages }: Props) {
     return (
         <figure className="relative">
-            <div className="bg-faint relative aspect-[2.42] overflow-hidden rounded-b-[50%_100%]">
+            <div className="bg-faint relative aspect-[4/3] overflow-hidden rounded-[2rem]">
                 {loading ? (
                     <div className="bg-faint absolute inset-0 animate-pulse motion-reduce:animate-none" />
                 ) : coverUrl ? (

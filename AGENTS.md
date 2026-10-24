@@ -24,6 +24,11 @@ and wire it into the requested page as part of the task. Do not ask teammates to
 their coding agent can perform with the configured environment. Missing credentials or attribution must be reported
 honestly; never invent persisted IDs. See [`contracts/image-library.md`](contracts/image-library.md).
 
+## Responsive navigation
+
+Desktop horizontal scrolling translates to vertical scrolling on mobile. Apply this pattern to new or redesigned
+Roamboard pages; preserve section order and access to the same content.
+
 ## Formatting
 
 Use the root [`.prettierrc`](.prettierrc) as the single source of truth for frontend and backend formatting. Do not add nested Prettier configurations or override its rules manually. This includes TypeScript, TSX, JavaScript, JSON, CSS, and Markdown. The configured print width is 120 to keep longer imports, type declarations, and function signatures together where Prettier allows. SQL files are excluded from Prettier; preserve their existing formatting.

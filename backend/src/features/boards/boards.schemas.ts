@@ -28,7 +28,16 @@ const externalImageSchema = z
         url: httpsUrl,
         photographer: z.string().min(1).max(500),
         photographerUrl: httpsUrl.nullable(),
-        sourceUrl: httpsUrl.nullable()
+        sourceUrl: httpsUrl.nullable(),
+        context: z
+            .object({
+                kind: z.literal("illustrative"),
+                scope: z.enum(["nearby", "region"]),
+                locationLabel: z.string().trim().min(1).max(500)
+            })
+            .strict()
+            .nullable()
+            .optional()
     })
     .strict();
 

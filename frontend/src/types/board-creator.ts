@@ -55,7 +55,10 @@ export type BoardDayDraft = {
     pins: BoardPinDraft[];
 };
 
+export type PhotoContext = { kind: "illustrative"; scope: "nearby" | "region"; locationLabel: string };
+
 export type BoardImageDraft = {
+    context?: PhotoContext | null;
     id: string;
     uploadedImageId?: number;
     pinId: string | null;

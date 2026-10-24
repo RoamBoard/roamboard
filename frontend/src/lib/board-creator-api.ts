@@ -104,6 +104,7 @@ export type BoardWriteRequest = {
             uploadedImageIds: number[];
             coverImageId: number | null;
             externalImage: {
+                context?: import("@/types/board-creator").PhotoContext | null;
                 provider: "unsplash";
                 providerImageId: string;
                 url: string;
@@ -301,7 +302,8 @@ export function toBoardWrite(
                               url: external.url,
                               photographer: external.credit ?? "Unknown",
                               photographerUrl: external.creditUrl,
-                              sourceUrl: external.sourceUrl
+                              sourceUrl: external.sourceUrl,
+                              context: external.context ?? null
                           }
                         : null
                 };
@@ -384,6 +386,7 @@ export function fromBoardDocument(board: PreparedBoardCopy): {
             images.push({
                 id: crypto.randomUUID(),
                 pinId: pinIds.get(activity)!,
+                context: activity.externalImage.context ?? null,
                 publicId: activity.externalImage.providerImageId,
                 source: "unsplash",
                 url: activity.externalImage.url,

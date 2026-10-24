@@ -25,6 +25,7 @@ type Props = {
     onMovePin: (pinId: string, dayId: string, time: string, index?: number) => void;
     onReorderPin: (pinId: string, direction: -1 | 1) => void;
     onRemovePin: (pinId: string) => void;
+    onRemoveActivityImage?: (id: string) => void;
     onAddActivityImage: (image: BoardImageDraft) => void;
     onImageMetadataChange?: (
         imageId: number,
@@ -54,6 +55,7 @@ export default function DayPlanner({
     onMovePin,
     onReorderPin,
     onRemovePin,
+    onRemoveActivityImage,
     onAddActivityImage,
     onImageMetadataChange,
     onAssignActivityImage,
@@ -101,7 +103,7 @@ export default function DayPlanner({
                 <p className="text-muted-foreground text-xs">
                     {days.length} {days.length === 1 ? "day" : "days"} to make your own
                 </p>
-                <div className="flex gap-1">
+                <div className="hidden gap-1 md:flex">
                     <button
                         type="button"
                         onClick={() =>
@@ -132,7 +134,7 @@ export default function DayPlanner({
             </div>
             <div
                 ref={stripRef}
-                className="flex snap-x snap-proximity items-stretch gap-7 overflow-x-auto overscroll-x-contain pb-6 sm:gap-10"
+                className="flex flex-col items-stretch gap-7 pb-6 md:snap-x md:snap-proximity md:flex-row md:gap-10 md:overflow-x-auto md:overscroll-x-contain"
                 aria-label="Board day plans"
             >
                 {days.map((day, dayIndex) => (
@@ -162,7 +164,7 @@ export default function DayPlanner({
                     type="button"
                     disabled={disabled || days.length >= 31}
                     onClick={onAddDay}
-                    className="border-line text-muted-foreground hover:border-foreground hover:text-foreground mt-0 flex min-h-64 w-28 shrink-0 snap-start flex-col items-center justify-center gap-4 border border-dashed text-xs focus-visible:outline-2 focus-visible:outline-offset-2 sm:w-32"
+                    className="border-line text-muted-foreground hover:border-foreground hover:text-foreground mt-0 flex min-h-32 w-full shrink-0 snap-start flex-col items-center justify-center gap-4 border border-dashed text-xs focus-visible:outline-2 focus-visible:outline-offset-2 sm:w-32 md:min-h-64 md:w-28"
                 >
                     <Plus size={28} strokeWidth={1} aria-hidden="true" />
                     {days.length >= 31 ? "31-day maximum" : "add day"}
@@ -179,6 +181,7 @@ export default function DayPlanner({
 
             {dialogDay ? (
                 <AddActivityDialog
+                    onRemoveImage={onRemoveActivityImage}
                     images={images}
                     onAddImage={onAddActivityImage}
                     onAssignImage={onAssignActivityImage}
@@ -206,8 +209,9 @@ export default function DayPlanner({
                     proximity={editingPin.location ?? boardLocation}
                     pin={editingPin}
                     onUploadingChange={onActivityUploadingChange}
+                    onRemoveImage={onRemoveActivityImage}
                     images={images}
-                    remainingUploads={30}
+                    remainingUploads={5}
                     onClose={() => {
                         setEditingPinId(null);
                         onActivityOpened?.();

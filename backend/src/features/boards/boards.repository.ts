@@ -251,7 +251,8 @@ async function writeChildren(client: PoolClient, boardId: number, userId: string
                 external?.url ?? null,
                 external?.photographer ?? null,
                 external?.photographerUrl ?? null,
-                external?.sourceUrl ?? null
+                external?.sourceUrl ?? null,
+                external?.context ? JSON.stringify(external.context) : null
             ];
             let activityId = activity.activityId;
             if (activityId === undefined) {
@@ -259,7 +260,7 @@ async function writeChildren(client: PoolClient, boardId: number, userId: string
                     `INSERT INTO activity (day_number, activity_time, board_id, position, title, note,
                       location_id, type, cover_image_id, day_id, source, location_confirmed,
                       external_image_provider, external_image_id, external_image_url,
-                      external_image_photographer, external_image_photographer_url, external_image_source_url)
+                      external_image_photographer, external_image_photographer_url, external_image_source_url, external_image_context)
                      VALUES (${values.map((_, index) => `$${index + 1}`).join(",")})
                      RETURNING activity_id`,
                     values
@@ -272,8 +273,9 @@ async function writeChildren(client: PoolClient, boardId: number, userId: string
                       location_id=$7, type=$8, cover_image_id=$9, day_id=$10, source=$11,
                       location_confirmed=$12, external_image_provider=$13, external_image_id=$14,
                       external_image_url=$15, external_image_photographer=$16,
-                      external_image_photographer_url=$17, external_image_source_url=$18
-                     WHERE activity_id=$19 AND board_id=$3`,
+                      external_image_photographer_url=$17, external_image_source_url=$18,
+                      external_image_context=$19::jsonb
+                     WHERE activity_id=$20 AND board_id=$3`,
                     [...values, activityId]
                 );
             }
@@ -449,6 +451,9 @@ async function readBoardDocument(
             external_image_photographer: string | null;
             external_image_photographer_url: string | null;
             external_image_source_url: string | null;
+            external_image_context: NonNullable<
+                BoardWrite["days"][number]["activities"][number]["externalImage"]
+            >["context"];
         } & LocationRow
     >(
         `SELECT a.*, l.name, l.latitude, l.longitude, l.address, l.city, l.country,
@@ -522,7 +527,8 @@ async function readBoardDocument(
                           url: row.external_image_url!,
                           photographer: row.external_image_photographer!,
                           photographerUrl: row.external_image_photographer_url,
-                          sourceUrl: row.external_image_source_url
+                          sourceUrl: row.external_image_source_url,
+                          context: row.external_image_context ?? null
                       }
                     : null
         });

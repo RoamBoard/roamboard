@@ -431,7 +431,7 @@ test("editor progress never labels modified or pending content as saved and keep
         assert.match(markup, expected);
         if (props.dirty || props.uploading || props.saving || props.loading)
             assert.doesNotMatch(markup, /All changes saved/);
-        for (const href of ["#board-basics", "#day-plan", "#details-discovery", "#board-preview", "#publish"])
+        for (const href of ["#board-basics", "#day-plan", "#board-map", "#details-discovery", "#board-preview"])
             assert.ok(markup.includes(`href="${href}"`));
     }
 });

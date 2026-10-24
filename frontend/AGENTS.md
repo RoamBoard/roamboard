@@ -287,11 +287,13 @@ creation choices. `BoardCreationChoices` shows separate New Board, Continue a Bo
 New Board opens `/boards/new`; there is no expanding submenu. A normal click briefly expands and fades the selected
 circle before navigation. Modifier clicks and reduced-motion preferences retain native navigation; Escape cancels
 the pending transition. All new Boards use the same curved-cover
-editor, including old `/boards/new?mode=scratch` links. The cover and title come first, followed by 01 Board Basics. Main destination sits before the description, reusing
+editor, including old `/boards/new?mode=scratch` links. The editor now uses five sections: Basics, Day plan, Map, Details and discovery, and Overview with save/publish.
+Desktop wheel gestures snap sideways after a section finishes scrolling; mobile presents vertical sections.
+The cover and title live in Basics. Main destination sits before the description, reusing
 Home's destination search store with permanent Geoapify locality results. Its saved city/region/country and country
 code round-trip through Board writes and provide the activity-search fallback area.
-Smart Create sits between 01 and 02, explaining editable metadata suggestions for photos from completed trips.
-Circuit traces rise from underneath its broad photo drop area, with hover guidance and a highlighted drag target.
+Smart Create sits in Day plan for new Boards only, explaining editable metadata suggestions for photos from completed trips.
+The redesigned intake uses a compact rounded photo-drop panel with hover guidance and a highlighted drag target.
 The top cover retains its image picker. Uploaded thumbnails can be dragged into this
 area to select the Board cover; the existing Set as cover buttons remain the keyboard/touch alternative.
 There is no creation mode switch. Reopened drafts and published edits retain plain cover uploads without the
@@ -307,8 +309,8 @@ supporting text. Existing Boards lock editing while loading and remain locked af
 The planner uses naturally sized day columns with photo cards and circular category controls. Normal vertical wheel
 input scrolls the webpage, including over days and the shared map; horizontal gestures, Shift-wheel and arrows browse
 days. Blank day space is a native keyboard-accessible add-activity target behind the content. AddActivityDialog and
-ActivityEditorDialog share Geoapify location search, category suggestions, time and notes. Adding or saving requires
-a selected location, without manual coordinate inputs; legacy unlocated activities can still load. Current day or
+ActivityEditorDialog share Geoapify location search, category suggestions, time and notes. Named activities may be saved without a location. Search uses Geoapify; the expandable Mapbox activity map supports
+manual pins and editable location names without coordinate inputs. Current day or
 Board coordinates softly bias search without restricting worldwide destinations or boosting arbitrary categories.
 Smart Create activities can publish without individual saves; their editable photo locations appear in previews immediately. Explicit Re-read photo location stages corrected original GPS/name, using
 an honest raw-GPS fallback on lookup failure. BoardPlanMap follows the days in its own chapter with all located
@@ -751,3 +753,12 @@ same country or within 25 km, using the destination collection context. Browser 
 
 Discover vibe routes also embed BoardCollectionGrid with their fixed tag. Discover Featured and RoamFlow use the same
 permission-resolving card as other Discover lists; unknown ownership exposes no bookmark, and resolved owners get Edit.
+
+## Board editor redesign first iteration
+
+See [the agreed editor contract](../contracts/board-editor-redesign.md). Activity uploads accept five photos per batch
+with repeat batches; earliest capture selects an initial cover, later batches preserve covers, and earliest GPS fills
+empty location details. Activity fields and attachments are staged until Save activity; crop Save remains immediate.
+Optional regional Unsplash suggestions require explicit selection, retain credit and persist illustration context
+through migration 022. Provider failures preserve uploads. Independent editor regressions and isolated database tests
+cover core behavior; live-provider accuracy and browser visual/touch acceptance remain pending.

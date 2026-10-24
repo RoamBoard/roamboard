@@ -33,6 +33,8 @@ export const providerReverseSchema = z
         longitude: z.coerce.number().finite().min(-180).max(180)
     })
     .strict();
+export const boardReverseSchema = providerReverseSchema.extend({ preferPlace: z.literal("true").optional() });
+
 export const cloudinaryDeliverySchema = z
     .object({
         publicId: z.string().trim().min(1).max(300),
@@ -103,3 +105,38 @@ export const areaSuggestionSchema = z
     })
     .strict();
 export type AreaSuggestionRequest = z.infer<typeof areaSuggestionSchema>;
+
+export const photoSuggestionSchema = z
+    .object({
+        name: z.string().trim().min(2).max(160),
+        category: z.enum([
+            "landmark",
+            "culture",
+            "museum",
+            "restaurant",
+            "cafe",
+            "bar",
+            "shopping",
+            "park",
+            "nature",
+            "hike",
+            "beach",
+            "neighborhood",
+            "city",
+            "address",
+            "stay",
+            "transit",
+            "event",
+            "activity",
+            "other"
+        ]),
+        latitude: photoCoordinate.pipe(z.number().finite().min(-90).max(90)),
+        longitude: photoCoordinate.pipe(z.number().finite().min(-180).max(180)),
+        city: z.string().trim().max(160).optional(),
+        countryCode: z.string().refine(isCountryCode, "Choose an existing country").optional()
+    })
+    .strict();
+export const photoSelectionSchema = photoSuggestionSchema.extend({
+    photoId: z.string().regex(/^[A-Za-z0-9_-]{1,80}$/)
+});
+export type PhotoSuggestionRequest = z.infer<typeof photoSuggestionSchema>;

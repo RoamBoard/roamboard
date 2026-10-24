@@ -26,7 +26,7 @@ export function createProviderRouter(controller: ProviderController, attachUser:
         validateQuery(schemas.boardDestinationSearchSchema),
         controller.mapboxDestinationSearch
     );
-    router.get("/locations/reverse", validateQuery(schemas.providerReverseSchema), controller.mapboxBoardReverse);
+    router.get("/locations/reverse", validateQuery(schemas.boardReverseSchema), controller.mapboxBoardReverse);
     router.post("/mapbox/map-session", requireFrontendOrigin, controller.mapboxMapSession);
     router.get("/mapbox/search", validateQuery(schemas.providerSearchSchema), controller.mapboxSearch);
     router.get("/mapbox/reverse", validateQuery(schemas.providerReverseSchema), controller.mapboxReverse);
@@ -48,6 +48,21 @@ export function createProviderRouter(controller: ProviderController, attachUser:
         requireFrontendOrigin,
         validateBody(schemas.activityPhotoSchema),
         controller.selectActivityPhoto
+    );
+    router.get(
+        "/unsplash/activity-photo-suggestions",
+        attachUser,
+        requireSessionUser,
+        validateQuery(schemas.photoSuggestionSchema),
+        controller.photoSuggestions
+    );
+    router.post(
+        "/unsplash/activity-photo-suggestions/select",
+        attachUser,
+        requireSessionUser,
+        requireFrontendOrigin,
+        validateBody(schemas.photoSelectionSchema),
+        controller.selectPhotoSuggestion
     );
     router.get("/unsplash/search", validateQuery(schemas.unsplashSearchSchema), controller.unsplashSearch);
     router.get(

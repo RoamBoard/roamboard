@@ -1,3 +1,4 @@
+import type { PhotoSuggestionRequest } from "./provider.schemas.js";
 import type { ActivityPhotoRequest } from "./provider.schemas.js";
 import type { RequestHandler } from "express";
 
@@ -26,6 +27,8 @@ export interface ProviderController {
     mapboxReverse: RequestHandler;
     mapboxBoardReverse: RequestHandler;
     mapboxRoute: RequestHandler;
+    photoSuggestions: RequestHandler;
+    selectPhotoSuggestion: RequestHandler;
     unsplashSearch: RequestHandler;
     unsplashActivityPhoto: RequestHandler;
     selectActivityPhoto: RequestHandler;
@@ -67,6 +70,9 @@ export function createProviderController(service: ProviderService): ProviderCont
             const query = res.locals.query as BoardDestinationSearchRequest;
             res.json({ data: await service.mapboxDestinationSearch(query.country, query.city, query.limit) });
         },
+        photoSuggestions: async (_req, res) =>
+            res.json({ data: await service.photoSuggestions(res.locals.query as PhotoSuggestionRequest) }),
+        selectPhotoSuggestion: async (req, res) => res.json({ data: await service.selectPhotoSuggestion(req.body) }),
         unsplashSearch: search(service.unsplashSearch),
         unsplashActivityPhoto: async (_req, res) =>
             res.json({ data: await service.unsplashActivityPhoto(res.locals.query as ActivityPhotoRequest) }),
@@ -94,7 +100,13 @@ export function createProviderController(service: ProviderService): ProviderCont
         },
         mapboxBoardReverse: async (req, res) => {
             const query = res.locals.query as ProviderReverseRequest;
-            res.json({ data: await service.mapboxBoardReverse(query.latitude, query.longitude) });
+            res.json({
+                data: await service.mapboxBoardReverse(
+                    query.latitude,
+                    query.longitude,
+                    (query as ProviderReverseRequest & { preferPlace?: string }).preferPlace === "true"
+                )
+            });
         },
         mapboxRoute: async (req, res) => {
             const body = req.body as MapboxRouteRequest;

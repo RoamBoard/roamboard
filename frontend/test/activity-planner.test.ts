@@ -54,7 +54,13 @@ function elements(node: ReactNode): Array<{ type: unknown; props: ElementProps }
 function capture(render: () => ReactNode, afterRender?: (nodes: ReturnType<typeof elements>) => void) {
     const holder: { tree?: ReactNode } = {};
     function Probe() {
-        holder.tree = render();
+        const wrapper = render();
+        holder.tree =
+            isValidElement(wrapper) &&
+            typeof wrapper.type === "function" &&
+            wrapper.type.name === "ActivityEditorContent"
+                ? (wrapper.type as (props: unknown) => ReactNode)(wrapper.props)
+                : wrapper;
         afterRender?.(elements(holder.tree));
         return holder.tree;
     }
@@ -113,7 +119,7 @@ test("new activities offer location, time, category and note without manual coor
     const submit = nodes.find((node) => node.type === "button" && node.props.children === "Add to Day 1");
     assert.ok(submit);
     submit.props.onClick?.();
-    assert.deepEqual(added, [], "Typing a query alone must not create an activity without a selected location");
+    assert.deepEqual(added, [], "An activity still needs a title even when it has no selected location");
 });
 
 test("saving an existing activity preserves raw photo GPS and photo source until explicitly changed", () => {
@@ -357,13 +363,15 @@ test("new activity media stays unassigned until the activity is saved", () => {
     const holder: { props?: ComponentProps<typeof ActivityEditorDialog> } = {};
     const stage = { uploaded: false };
     capture(() => {
-        const dialog = AddActivityDialog({
-            day,
-            onClose() {},
-            onAdd: (_dayId, pin) => saved.push(pin),
-            onAddImage: (image) => added.push(image),
-            onAssignImage: (imageId, pinId) => assigned.push([imageId, pinId])
-        });
+        const dialog = ActivityEditorDialog(
+            AddActivityDialog({
+                day,
+                onClose() {},
+                onAdd: (_dayId, pin) => saved.push(pin),
+                onAddImage: (image) => added.push(image),
+                onAssignImage: (imageId, pinId) => assigned.push([imageId, pinId])
+            }).props
+        );
         holder.props = dialog.props;
         if (!stage.uploaded) {
             stage.uploaded = true;
@@ -420,13 +428,15 @@ test("the image order chosen while creating an activity is preserved when its st
     const holder: { props?: ComponentProps<typeof ActivityEditorDialog> } = {};
     const stage = { value: 0 };
     capture(() => {
-        const dialog = AddActivityDialog({
-            day,
-            onClose() {},
-            onAdd() {},
-            onAddImage() {},
-            onAssignImage: (id) => assigned.push(id)
-        });
+        const dialog = ActivityEditorDialog(
+            AddActivityDialog({
+                day,
+                onClose() {},
+                onAdd() {},
+                onAddImage() {},
+                onAssignImage: (id) => assigned.push(id)
+            }).props
+        );
         holder.props = dialog.props;
         if (stage.value === 0) {
             stage.value = 1;
@@ -461,7 +471,7 @@ test("the image order chosen while creating an activity is preserved when its st
     assert.deepEqual(assigned, ["new-2", "new-1"]);
 });
 
-test("the map has chapter 03 between planning and details with six ordered navigation chapters", async () => {
+test("the map has chapter 03 between planning and details with five ordered navigation chapters", async () => {
     const page = await NewBoardPage({ searchParams: Promise.resolve({}) });
     const markup = renderToStaticMarkup(
         createElement(
@@ -480,7 +490,7 @@ test("the map has chapter 03 between planning and details with six ordered navig
             page.props.children
         )
     );
-    const chapterIds = ["board-basics", "day-plan", "board-map", "details-discovery", "board-preview", "publish"];
+    const chapterIds = ["board-basics", "day-plan", "board-map", "details-discovery", "board-preview"];
     for (const [index, id] of chapterIds.entries()) {
         const offset = markup.indexOf(`id="${id}"`);
         assert.ok(offset >= 0, `Chapter ${id} should exist`);
@@ -488,5 +498,6 @@ test("the map has chapter 03 between planning and details with six ordered navig
     }
     assert.equal((markup.match(/id="board-map"/g) ?? []).length, 1);
     assert.match(markup, /href="#board-map"/);
-    assert.match(markup, /06 Publish/);
+    assert.match(markup, /05 Overview/);
+    assert.doesNotMatch(markup, /href="#publish"/);
 });

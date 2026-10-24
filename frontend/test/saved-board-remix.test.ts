@@ -542,7 +542,11 @@ test("Prepared activities and their photos survive creator editing and first Sav
     );
     assert.deepEqual(
         draft.days[1]!.activities.map((activity) => activity.externalImage),
-        prepared.days[1]!.activities.map((activity) => activity.externalImage)
+        prepared.days[1]!.activities.map((activity) =>
+            activity.externalImage
+                ? { ...activity.externalImage, context: activity.externalImage.context ?? null }
+                : null
+        )
     );
     assert.equal(draft.days[0]!.activities[0]!.coverImageId, 120);
     assert.equal(draft.coverImageId, 130);

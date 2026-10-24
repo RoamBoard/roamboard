@@ -487,3 +487,11 @@ feedback remain unchanged. See [Cloudinary crop coordinates](https://cloudinary.
 GET /api/v1/providers/unsplash/search accepts limit 1 to 20 (default 5). Other provider search limits remain unchanged.
 Board decorative spaces share destination/country results rather than making exact hotel/POI requests. Shared
 Unsplash request quotas are unchanged; rendering illustrations does not persist them as activity images.
+
+## Board editor illustration suggestions
+
+Migration 022 and the endpoints/limits in [the editor redesign contract](../contracts/board-editor-redesign.md) are
+implemented for the first iteration. GET /providers/locations/reverse?preferPlace=true opts into POI-first pin
+suggestions without changing existing callers. Signed-in GET /providers/unsplash/activity-photo-suggestions discovers
+nearby/regional illustrations; exact-Origin POST /providers/unsplash/activity-photo-suggestions/select revalidates
+the canonical photo and records selection. No quota caps were raised. Live provider accuracy remains unverified.

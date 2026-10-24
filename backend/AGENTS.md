@@ -220,3 +220,11 @@ Publishing now requires an explicit destination, while drafts may omit it. Publi
 property validate against the stored destination. POST /providers/locations/suggest-area requires session/Origin and
 3 to 100 activity points, finds a clear majority area and makes at most one quota-managed Geoapify reverse city/state
 lookup. It does not mutate Boards or overwrite chosen destinations.
+
+## Board editor redesign
+
+[The editor contract](../contracts/board-editor-redesign.md) keeps Geoapify for saved locations and Mapbox for maps.
+Opt-in preferPlace pin lookups and authenticated illustrative-photo discovery/selection use unchanged shared quotas
+and bounded requests. Migration 022 stores nullable external illustration context; it was applied to shared
+development on 2026-10-24 after a verified backup. Run db:editor to inspect status; never replay older migrations.
+Named locationless activities retain existing Board publication validation. Smart Create remains new-Board-only.

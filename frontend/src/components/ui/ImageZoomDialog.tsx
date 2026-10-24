@@ -431,6 +431,11 @@ export default function ImageZoomDialog({ images, initialIndex = 0, onClose }: P
             {currentImage.photographer ? (
                 <footer className="z-10 flex w-full justify-center bg-gradient-to-t from-black/80 to-transparent px-4 pt-2 pb-4">
                     <p className="text-12 rounded-[2px] bg-black/60 px-4 py-1.5 text-white/80 backdrop-blur-xs">
+                        {currentImage.context ? (
+                            <span className="mb-1 block text-center">
+                                Illustrative photo ? {currentImage.context.locationLabel}
+                            </span>
+                        ) : null}
                         Photo by{" "}
                         {currentImage.photographerUrl ? (
                             <a

@@ -54,9 +54,9 @@ function controlTag(markup: string, selector: string): string {
     return tag;
 }
 
-test("new Boards place Smart Create after Board Basics and before the day planner", async () => {
+test("new Boards place Smart Create in the day-plan chapter after Board Basics", async () => {
     const markup = editorMarkup(await NewBoardPage({ searchParams: Promise.resolve({}) }));
-    assert.match(markup, /SMART CREATE/);
+    assert.match(markup, /Let your photos tell the story/);
     assert.match(markup, /You can edit every suggestion/);
     assert.match(markup, /Choose photos/);
     assert.doesNotMatch(markup, /Switch to|Intelligence Engine/);
@@ -64,11 +64,11 @@ test("new Boards place Smart Create after Board Basics and before the day planne
     assert.doesNotMatch(markup, /Add activity photos in Smart Create below/);
     assert.match(markup, /Already back from your trip/);
     const sections = [
+        'id="board-basics"',
         'aria-label="Edit Board cover"',
         'id="board-title"',
-        'id="board-basics"',
-        'id="image-intake-heading"',
-        'id="day-plan"'
+        'id="day-plan"',
+        'id="image-intake-heading"'
     ];
     for (const [index, section] of sections.entries()) {
         assert.ok(markup.includes(section));
