@@ -16,6 +16,7 @@ function text(value: unknown): string {
 interface GeoapifyResult extends DestinationResult {
     area: string;
     poiName: string;
+    region: string;
 }
 
 function poiType(category: string, raw: Record<string, unknown>): string {
@@ -120,6 +121,7 @@ async function request(url: URL, key: string, observe?: QuotaObserver): Promise<
                 country: text(p.country) || null,
                 countryCode: toCountryCode(code),
                 city: city || null,
+                region: text(p.state) || text(p.region),
                 area,
                 poiName
             }
@@ -179,13 +181,19 @@ export async function searchGeoapify(
     proximity?: { latitude: number; longitude: number },
     areasOnly = false
 ): Promise<DestinationResult[]> {
-    const intent = categoryIntent(query);
+    const nearbyQuery = query.trim().replace(/\s+(?:near me|nearby)$/i, "");
+    const named = nearbyQuery.match(/^([^:]+):\s*(.+)$/);
+    const category = categoryIntent(nearbyQuery) ?? (named ? categoryIntent(named[1]!) : null);
+    const namedPlace = named && category ? named[2]!.trim() : "";
+    const intent = !areasOnly && proximity ? category : null;
     const url = new URL(
         proximity && intent ? "https://api.geoapify.com/v2/places" : "https://api.geoapify.com/v1/geocode/search"
     );
     if (proximity && intent) url.searchParams.set("categories", intent);
     else url.searchParams.set("text", query);
+    if (intent && namedPlace) url.searchParams.set("name", namedPlace);
     if (proximity) url.searchParams.set("bias", `proximity:${proximity.longitude},${proximity.latitude}`);
+    else url.searchParams.set("bias", "countrycode:none");
     url.searchParams.set("limit", String(limit));
     if (country) {
         const alpha2 = toAlpha2CountryCode(country);
@@ -299,4 +307,26 @@ export async function reverseGeoapifyArea(
     return place?.countryCode && ["place", "city", "state", "county", "region"].includes(place.placeType)
         ? place
         : null;
+}
+
+export async function resolvePhotoArea(latitude: number, longitude: number, key: string, observe?: QuotaObserver) {
+    const url = new URL("https://api.geoapify.com/v1/geocode/reverse");
+    url.searchParams.set("lat", String(latitude));
+    url.searchParams.set("lon", String(longitude));
+    url.searchParams.set("limit", "1");
+    const [place] = await request(url, key, observe);
+    return place
+        ? { city: place.city, region: place.region, country: place.country, countryCode: place.countryCode }
+        : null;
+}
+export async function suggestPinName(
+    latitude: number,
+    longitude: number,
+    key: string,
+    run: <T>(operation: (observe?: QuotaObserver) => Promise<T>) => Promise<T>
+): Promise<MapboxLocation | null> {
+    const poi = await run((observe) => nearbyPhotoPlace(latitude, longitude, key, observe));
+    if (poi) return poi;
+    const place = await run((observe) => reverseGeoapify(latitude, longitude, key, observe));
+    return place.detail || (place.type !== "unknown" && place.label !== place.country) ? place : null;
 }

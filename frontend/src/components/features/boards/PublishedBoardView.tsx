@@ -1,4 +1,5 @@
 "use client";
+import { dayColor } from "@/lib/day-color";
 
 import { LibraryImg } from "@/components/images/LibraryImage";
 import Link from "next/link";
@@ -8,7 +9,6 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import PinCategoryIcon from "@/components/ui/PinCategoryIcon";
 import { fromBoardDocument, loadBoardDocument, type BoardDocument } from "@/lib/board-creator-api";
 import { useDialogFocus } from "@/lib/use-dialog-focus";
-import { dayColors } from "@/types/board-creator";
 
 export type ActiveImageDetail = {
     id?: string;
@@ -351,14 +351,14 @@ export default function PublishedBoardView({
 
                 <main className="space-y-12">
                     {restored.days.map((day, dayIndex) => {
-                        const dayColor = dayColors[dayIndex % dayColors.length];
+                        const color = dayColor(day, dayIndex);
                         return (
                             <section
                                 key={day.id}
                                 aria-labelledby={`day-heading-${day.id}`}
                                 className="border-line border-t pt-6"
                                 style={{
-                                    borderTopColor: dayColor,
+                                    borderTopColor: color,
                                     borderTopWidth: 3
                                 }}
                             >

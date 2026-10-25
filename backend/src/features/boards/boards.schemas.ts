@@ -1,5 +1,6 @@
 import { isCountryCode } from "../../shared/countries.js";
 import { z } from "zod";
+import { imageEditSchema } from "../images/images.schemas.js";
 
 const id = z.number().int().positive();
 const optionalText = z.string().max(500).nullable();
@@ -28,9 +29,40 @@ const externalImageSchema = z
         url: httpsUrl,
         photographer: z.string().min(1).max(500),
         photographerUrl: httpsUrl.nullable(),
-        sourceUrl: httpsUrl.nullable()
+        sourceUrl: httpsUrl.nullable(),
+        context: z
+            .object({
+                kind: z.literal("illustrative"),
+                scope: z.enum(["nearby", "region"]),
+                locationLabel: z.string().trim().min(1).max(500)
+            })
+            .strict()
+            .nullable()
+            .optional()
     })
     .strict();
+
+export const activityPhotoSchema = z.discriminatedUnion("source", [
+    z.object({ source: z.literal("upload"), imageId: id }).strict(),
+    externalImageSchema
+        .omit({ provider: true })
+        .extend({
+            source: z.literal("unsplash"),
+            thumbnailUrl: httpsUrl,
+            alt: z.string().max(2000),
+            width: z.number().int().positive(),
+            height: z.number().int().positive(),
+            presentation: imageEditSchema.nullable().optional()
+        })
+        .strict()
+]);
+export const coverPhotoSchema = z.discriminatedUnion("source", [
+    z.object({ source: z.literal("upload"), imageId: id }).strict(),
+    z.object({ source: z.literal("unsplash"), providerImageId: z.string().min(1).max(500) }).strict()
+]);
+export type ActivityPhoto = z.infer<typeof activityPhotoSchema>;
+export type CoverPhoto = z.infer<typeof coverPhotoSchema>;
+export const legacyMediaPresence = Symbol("legacyMediaPresence");
 
 const activitySchema = z
     .object({
@@ -46,11 +78,64 @@ const activitySchema = z
         source: z.enum(["manual", "mapbox", "geoapify", "photo"]),
         location: locationSchema.nullable(),
         locationConfirmed: z.boolean(),
-        uploadedImageIds: z.array(id),
+        uploadedImageIds: z.array(id).optional(),
+        photos: z.array(activityPhotoSchema).optional(),
+        coverPhoto: coverPhotoSchema.nullable().optional(),
         coverImageId: id.nullable().optional(),
-        externalImage: externalImageSchema.nullable()
+        externalImage: externalImageSchema.nullable().optional()
     })
-    .strict();
+    .strict()
+    .superRefine((value, context) => {
+        if (
+            value.photos !== undefined &&
+            [value.uploadedImageIds, value.externalImage, value.coverImageId].some((field) => field !== undefined)
+        )
+            context.addIssue({ code: "custom", message: "Use photos without legacy media fields" });
+        if (value.photos) {
+            const keys = value.photos.map((photo) =>
+                photo.source === "upload" ? `upload:${photo.imageId}` : `unsplash:${photo.providerImageId}`
+            );
+            if (new Set(keys).size !== keys.length)
+                context.addIssue({ code: "custom", message: "Duplicate activity photo" });
+            for (const photo of value.photos)
+                if (
+                    photo.source === "unsplash" &&
+                    [photo.url, photo.thumbnailUrl].some((url) => new URL(url).hostname !== "images.unsplash.com")
+                )
+                    context.addIssue({ code: "custom", message: "Use canonical Unsplash URLs" });
+            if (
+                value.coverPhoto &&
+                !keys.includes(
+                    value.coverPhoto.source === "upload"
+                        ? `upload:${value.coverPhoto.imageId}`
+                        : `unsplash:${value.coverPhoto.providerImageId}`
+                )
+            )
+                context.addIssue({ code: "custom", message: "Cover must be attached" });
+        }
+    })
+    .transform((value) => {
+        const external = value.photos?.find((photo) => photo.source === "unsplash");
+        return {
+            ...value,
+            ...(value.uploadedImageIds === undefined || value.externalImage === undefined
+                ? {
+                      [legacyMediaPresence]: {
+                          uploads: value.uploadedImageIds !== undefined,
+                          external: value.externalImage !== undefined
+                      }
+                  }
+                : {}),
+            uploadedImageIds: value.photos
+                ? value.photos.flatMap((photo) => (photo.source === "upload" ? [photo.imageId] : []))
+                : (value.uploadedImageIds ?? []),
+            externalImage: value.photos
+                ? external
+                    ? { ...external, provider: "unsplash" as const }
+                    : null
+                : (value.externalImage ?? null)
+        };
+    });
 
 const dateSchema = z
     .string()
@@ -64,6 +149,11 @@ const daySchema = z
     .object({
         dayId: id.optional(),
         dayNumber: z.number().int().positive().max(31),
+        color: z
+            .string()
+            .regex(/^#[0-9a-f]{6}$/)
+            .nullable()
+            .optional(),
         date: dateSchema.nullable(),
         activities: z.array(activitySchema)
     })

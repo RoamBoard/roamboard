@@ -1,10 +1,12 @@
 "use client";
+import BoardEditorRail from "./BoardEditorRail";
 import BoardPlanMap from "./BoardPlanMap";
 import { suggestMainDestination } from "@/lib/board-creator-api";
 import BoardDestinationSearch from "./BoardDestinationSearch";
 import type { BoardDestinationDraft } from "@/types/board-creator";
 
-import { movePlannerPin, reorderPlannerPin } from "@/lib/board-planner";
+import { activityBatchDefaults } from "@/lib/activity-photo";
+import { movePlannerPin } from "@/lib/board-planner";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import BoardPreviewSection from "@/components/features/boards/BoardPreviewSection";
@@ -18,7 +20,7 @@ import CreatorProgress from "./CreatorProgress";
 import { toast } from "sonner";
 import CreatorLeaveDialog from "./CreatorLeaveDialog";
 import CreatorDeleteDialog from "./CreatorDeleteDialog";
-import { boardEditorFingerprint, type BoardLeaveNavigation } from "@/lib/board-editor-safety";
+import { publicationErrors, boardEditorFingerprint, type BoardLeaveNavigation } from "@/lib/board-editor-safety";
 import { useBoardLeaveWarning } from "@/lib/use-board-leave-warning";
 import {
     fromBoardDocument,
@@ -43,10 +45,6 @@ import SmartCreateReviewDialog from "./SmartCreateReviewDialog";
 import { loadProfile } from "@/lib/profile";
 import { findCountry } from "@/lib/countries";
 import type { StartingPlace } from "@/lib/destination-places";
-
-const chapterClasses =
-    "mx-auto grid w-full max-w-[96rem] scroll-mt-36 gap-8 px-5 pb-20 sm:gap-10 sm:px-8 lg:grid-cols-[21rem_minmax(0,1fr)] lg:gap-16 lg:px-12 lg:pb-28";
-const fullChapterClasses = `${chapterClasses} lg:min-h-[min(70rem,100svh)]`;
 
 function newDay(dayNumber: number, date: string | null = null): BoardDayDraft {
     return { id: crypto.randomUUID(), dayNumber, date, pins: [] };
@@ -145,6 +143,7 @@ export default function BoardCreator({
     const [message, setMessage] = useState("");
     const [saveMessage, setSaveMessage] = useState("");
     const [saveError, setSaveError] = useState("");
+    const [showValidation, setShowValidation] = useState(false);
     const [tagsLoading, setTagsLoading] = useState(true);
     const [tagsError, setTagsError] = useState("");
     const [savedFingerprint, setSavedFingerprint] = useState<string | null>(null);
@@ -390,12 +389,19 @@ export default function BoardCreator({
         setImages((current) =>
             current.filter((item) => item.id !== imageId).map((item, order) => ({ ...item, order }))
         );
-        if (image?.uploadedImageId)
+        if (image)
             setDays((current) =>
                 current.map((day) => ({
                     ...day,
                     pins: day.pins.map((pin) =>
-                        pin.coverImageId === image.uploadedImageId ? { ...pin, coverImageId: null } : pin
+                        pin.id === image.pinId &&
+                        (image.source === "upload"
+                            ? pin.coverImageId === image.uploadedImageId ||
+                              (pin.coverPhoto?.source === "upload" && pin.coverPhoto.imageId === image.uploadedImageId)
+                            : pin.coverPhoto?.source === "unsplash" &&
+                              pin.coverPhoto.providerImageId === image.publicId)
+                            ? { ...pin, coverImageId: null, coverPhoto: null }
+                            : pin
                     )
                 }))
             );
@@ -457,6 +463,26 @@ export default function BoardCreator({
     }
 
     function assignActivityImage(imageId: string, pinId: string | null) {
+        const moving = images.find((image) => image.id === imageId);
+        if (moving?.pinId && moving.pinId !== pinId) {
+            const replacement = activityBatchDefaults(
+                images.filter((image) => image.pinId === moving.pinId && image.id !== imageId)
+            ).coverImageId;
+            setDays((current) =>
+                current.map((day) => ({
+                    ...day,
+                    pins: day.pins.map((pin) =>
+                        pin.id === moving.pinId && pin.coverImageId === moving.uploadedImageId
+                            ? {
+                                  ...pin,
+                                  coverImageId: replacement,
+                                  coverPhoto: replacement ? { source: "upload" as const, imageId: replacement } : null
+                              }
+                            : pin
+                    )
+                }))
+            );
+        }
         setImages((current) => {
             const nextPosition = current.filter((item) => item.pinId === pinId).length;
             return current.map((image) =>
@@ -471,19 +497,16 @@ export default function BoardCreator({
         });
     }
 
-    function setActivityCover(pinId: string, imageId: number | null) {
-        setDays((current) =>
-            current.map((day) => ({
-                ...day,
-                pins: day.pins.map((pin) => (pin.id === pinId ? { ...pin, coverImageId: imageId } : pin))
-            }))
-        );
+    function removeActivityImage(imageId: string) {
+        const image = images.find((item) => item.id === imageId);
+        if (image?.source === "upload") assignActivityImage(imageId, null);
+        else removeImage(imageId);
     }
 
     function reorderActivityImage(pinId: string, imageId: string, direction: -1 | 1) {
         setImages((current) => {
             const activityImages = current
-                .filter((image) => image.pinId === pinId && image.source === "upload")
+                .filter((image) => image.pinId === pinId)
                 .sort((first, second) => (first.activityOrder ?? first.order) - (second.activityOrder ?? second.order));
             const index = activityImages.findIndex((image) => image.id === imageId);
             const other = activityImages[index + direction];
@@ -501,16 +524,31 @@ export default function BoardCreator({
         setDays((current) => movePlannerPin(current, pinId, dayId, time, index));
     }
 
+    const validationErrors = showValidation ? publicationErrors(payload) : [];
+    function fieldError(field: string) {
+        const error = validationErrors.find((item) => item.field === field);
+        return error ? (
+            <p id={field + "-error"} role="alert" className="mt-2 mb-4 text-sm text-red-600 dark:text-red-400">
+                {error.message}
+            </p>
+        ) : null;
+    }
     async function save(status: BoardStatus) {
         if (saveInFlight.current || editorDisabled || uploading) return;
         if ((preferenceLoading || preferenceError) && !visibilityTouched.current) {
             setSaveError("Wait for Board preferences or choose a visibility option above before saving.");
             return;
         }
-        if (status === "published" && !destination) {
-            setSaveError("Choose a main destination in Board Basics before publishing.");
-            document.getElementById("board-basics")?.scrollIntoView({ behavior: "smooth" });
-            return;
+        if (status === "published") {
+            setShowValidation(true);
+            const errors = publicationErrors(payload);
+            if (errors.length) {
+                setSaveError("");
+                history.replaceState(history.state, "", `#${errors[0].field}`);
+                window.dispatchEvent(new HashChangeEvent("hashchange"));
+                document.getElementById(errors[0].field)?.focus({ preventScroll: true });
+                return;
+            }
         }
         saveInFlight.current = true;
         setSaving(status);
@@ -648,256 +686,276 @@ export default function BoardCreator({
                         </button>
                     </div>
                 )}
-                <fieldset
-                    disabled={editorDisabled}
-                    aria-busy={draftLoading}
-                    className="m-0 min-w-0 border-0 p-0 disabled:pointer-events-none disabled:opacity-80"
-                >
-                    <BoardImageIntake
-                        images={images.filter((image) => image.source === "upload")}
-                        coverImageId={coverImageId}
-                        disabled={editorDisabled || activityUploading}
-                        loading={draftLoading}
-                        showDropZone={initialBoardId === undefined && initialMode === "smart"}
-                        onUploadingChange={setBoardUploading}
-                        onUploadPromise={(promise) => {
-                            pendingUploadRef.current = promise;
-                        }}
-                        onSelectCover={setSelectedCoverImageId}
-                        onUploaded={handleUploads}
-                        onRemove={removeImage}
+                <BoardEditorRail>
+                    <fieldset
+                        disabled={editorDisabled}
+                        aria-busy={draftLoading}
+                        className="contents disabled:pointer-events-none disabled:opacity-80"
                     >
-                        <div className="mx-auto mt-10 max-w-4xl px-5 text-center sm:mt-12">
-                            <p className="font-display text-muted-foreground text-xs uppercase sm:text-sm lg:text-base">
-                                {initialBoardId === undefined
-                                    ? "Board creator"
-                                    : expectedStatus === "published"
-                                      ? "Board editor"
-                                      : "Board draft"}
-                            </p>
-                            <label htmlFor="board-title" className="sr-only">
-                                Board title
-                            </label>
-                            <input
-                                id="board-title"
-                                style={{ scrollMarginTop: "9rem" }}
-                                value={title}
-                                onChange={(event) => setTitle(event.target.value)}
-                                placeholder={draftLoading ? "LOADING BOARD…" : "BOARD TITLE"}
-                                className="font-display placeholder:text-foreground focus-visible:outline-foreground mt-3 min-h-12 w-full min-w-0 bg-transparent py-1 text-center text-[clamp(1.75rem,3.8vw,4rem)] leading-[1.02] font-bold tracking-[-0.035em] uppercase focus-visible:outline-1 focus-visible:outline-offset-4"
-                            />
-                        </div>
-
-                        {message ? (
-                            <p
-                                className="border-foreground text-13 mx-auto mt-7 max-w-3xl border-l-2 pl-4"
-                                role="status"
-                            >
-                                {message}
-                            </p>
-                        ) : null}
-                        {draftLoading ? (
-                            <p className="text-13 mx-auto mt-7 max-w-3xl" role="status">
-                                Loading Board...
-                            </p>
-                        ) : null}
-                        {error ? (
-                            <p
-                                className="border-foreground text-13 mx-auto mt-7 max-w-3xl border-l-2 pl-4"
-                                role="alert"
-                            >
-                                {error}
-                            </p>
-                        ) : null}
-
-                        <section
-                            id="board-basics"
-                            className={`${chapterClasses} mt-20 sm:mt-28 lg:mt-36 lg:min-h-[22rem]`}
-                        >
-                            <CreatorSectionIntro
-                                number="01"
-                                title="BOARD BASICS"
-                                description="Let’s start with the essentials to set the scene for everything you’re about to plan."
-                            />
-                            <div className="max-w-3xl min-w-0">
-                                <div id="board-destination" tabIndex={-1} className="scroll-mt-36">
-                                    <BoardDestinationSearch
-                                        key={`${savedBoard?.boardId ?? "new"}-${destinationGeneration}`}
-                                        value={destination}
-                                        suggested={destinationSuggested}
-                                        onChange={(place) => {
-                                            destinationTouched.current = true;
-                                            setDestinationSuggested(false);
-                                            setDestination(place);
+                        <section id="board-basics" tabIndex={-1} data-editor-section>
+                            <div className="mx-auto max-w-6xl">
+                                <CreatorSectionIntro
+                                    title="Set the scene"
+                                    description="Every journey starts somewhere. Give yours a name and a view."
+                                />
+                                <div className="grid items-start gap-10 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
+                                    <BoardImageIntake
+                                        images={uploadedImages}
+                                        coverImageId={coverImageId}
+                                        disabled={editorDisabled || activityUploading || boardUploading}
+                                        loading={draftLoading}
+                                        onUploadingChange={setBoardUploading}
+                                        onUploadPromise={(promise) => {
+                                            pendingUploadRef.current = promise;
                                         }}
+                                        onSelectCover={setSelectedCoverImageId}
+                                        onUploaded={handleUploads}
+                                        onRemove={removeImage}
+                                        showDropZone={false}
+                                        showGallery={false}
                                     />
+                                    <div className="min-w-0">
+                                        <label htmlFor="board-title" className="text-muted-foreground text-xs">
+                                            Board title
+                                        </label>
+                                        <input
+                                            id="board-title"
+                                            aria-invalid={validationErrors.some(
+                                                (error) => error.field === "board-title"
+                                            )}
+                                            aria-describedby={
+                                                validationErrors.some((error) => error.field === "board-title")
+                                                    ? "board-title-error"
+                                                    : undefined
+                                            }
+                                            value={title}
+                                            onChange={(event) => setTitle(event.target.value)}
+                                            placeholder="Your next chapter"
+                                            className="font-display border-line focus:border-foreground mt-2 mb-1 min-h-16 w-full border-b bg-transparent pb-4 text-4xl font-bold tracking-tight outline-none lg:text-5xl"
+                                        />
+                                        {fieldError("board-title")}
+                                        <div
+                                            id="board-destination"
+                                            tabIndex={-1}
+                                            className="mt-6 scroll-mt-36 [&>div]:mb-0"
+                                        >
+                                            <BoardDestinationSearch
+                                                key={`${savedBoard?.boardId ?? "new"}-${destinationGeneration}`}
+                                                value={destination}
+                                                suggested={destinationSuggested}
+                                                onChange={(place) => {
+                                                    destinationTouched.current = true;
+                                                    setDestinationSuggested(false);
+                                                    setDestination(place);
+                                                }}
+                                            />
+                                        </div>
+                                        {fieldError("board-destination")}
+                                        <label className="text-foreground/80 text-20 sm:text-24 block max-w-3xl min-w-0 font-bold">
+                                            Description
+                                            <textarea
+                                                id="board-description"
+                                                value={description}
+                                                onChange={(event) => setDescription(event.target.value)}
+                                                placeholder="What makes this journey yours?"
+                                                rows={3}
+                                                className="border-line text-foreground font-body text-14 placeholder:text-muted-foreground focus:border-foreground focus-visible:outline-foreground mt-3 w-full resize-y border-0 border-b bg-transparent py-3 leading-6 font-normal focus-visible:outline-1 focus-visible:outline-offset-4 sm:text-base"
+                                            />
+                                        </label>
+                                    </div>
                                 </div>
-                                <label className="text-foreground/80 text-20 sm:text-24 block max-w-3xl min-w-0 font-bold">
-                                    Description
-                                    <textarea
-                                        id="board-description"
-                                        value={description}
-                                        onChange={(event) => setDescription(event.target.value)}
-                                        placeholder="type here..."
-                                        rows={7}
-                                        className="border-line text-foreground font-body text-14 placeholder:text-muted-foreground focus:border-foreground focus-visible:outline-foreground mt-3 w-full resize-y border-0 border-b bg-transparent py-3 leading-6 font-normal focus-visible:outline-1 focus-visible:outline-offset-4 sm:text-base"
-                                    />
-                                </label>
+                                {message ? (
+                                    <p role="status" className="mt-6 text-sm">
+                                        {message}
+                                    </p>
+                                ) : null}
+                                {error ? (
+                                    <p role="alert" className="mt-6 text-sm">
+                                        {error}
+                                    </p>
+                                ) : null}
                             </div>
                         </section>
-                    </BoardImageIntake>
-
-                    <section
-                        id="day-plan"
-                        tabIndex={-1}
-                        className="mx-auto w-full max-w-[96rem] scroll-mt-36 px-5 pb-20 sm:px-8 lg:px-12 lg:pb-28"
-                    >
-                        <CreatorSectionIntro
-                            number="02"
-                            title="Build your day plan"
-                            description="Add and arrange your activities. Click an open space in a day to add a location."
-                        />
-                        <div className="min-w-0">
-                            <DayPlanner
-                                destination={destination}
-                                openActivityId={mapActivityId}
-                                onActivityOpened={() => setMapActivityId(null)}
-                                disabled={editorDisabled || boardUploading}
-                                onActivityUploadingChange={setActivityUploading}
-                                days={days}
-                                images={images}
-                                onAddDay={() =>
-                                    setDays((current) =>
-                                        current.length >= 31 ? current : [...current, newDay(current.length + 1)]
-                                    )
-                                }
-                                onRemoveDay={removeDay}
-                                onAddPin={addPin}
-                                onUpdatePin={updatePin}
-                                onMovePin={movePin}
-                                onReorderPin={(pinId, direction) =>
-                                    setDays((current) => reorderPlannerPin(current, pinId, direction))
-                                }
-                                onRemovePin={removePin}
-                                onImageMetadataChange={(imageId, metadata) =>
-                                    setImages((current) =>
-                                        current.map((image) =>
-                                            image.uploadedImageId === imageId ? { ...image, ...metadata } : image
+                        <section id="day-plan" tabIndex={-1} data-editor-section>
+                            <div className="mx-auto max-w-[96rem]">
+                                <CreatorSectionIntro
+                                    title="Make room for the memorable"
+                                    description="Build each day around the places, pauses and little discoveries that matter."
+                                />
+                                <BoardImageIntake
+                                    images={uploadedImages}
+                                    coverImageId={coverImageId}
+                                    disabled={editorDisabled || activityUploading || boardUploading}
+                                    loading={draftLoading}
+                                    onUploadingChange={setBoardUploading}
+                                    onUploadPromise={(promise) => {
+                                        pendingUploadRef.current = promise;
+                                    }}
+                                    onSelectCover={setSelectedCoverImageId}
+                                    onUploaded={handleUploads}
+                                    onRemove={removeImage}
+                                    showCover={false}
+                                    showDropZone={initialBoardId === undefined && initialMode === "smart"}
+                                />
+                                {fieldError("day-plan")}
+                                <DayPlanner
+                                    destination={destination}
+                                    openActivityId={mapActivityId}
+                                    onActivityOpened={() => setMapActivityId(null)}
+                                    disabled={editorDisabled || boardUploading}
+                                    onActivityUploadingChange={setActivityUploading}
+                                    days={days}
+                                    images={images}
+                                    onAddDay={() =>
+                                        setDays((current) =>
+                                            current.length >= 31 ? current : [...current, newDay(current.length + 1)]
                                         )
+                                    }
+                                    onDayColorChange={(id, color) =>
+                                        setDays((current) =>
+                                            current.map((day) => (day.id === id ? { ...day, color } : day))
+                                        )
+                                    }
+                                    onRemoveDay={removeDay}
+                                    onAddPin={addPin}
+                                    onUpdatePin={updatePin}
+                                    onMovePin={movePin}
+                                    onRemovePin={removePin}
+                                    onRemoveActivityImage={removeActivityImage}
+                                    onAddActivityImage={addActivityImage}
+                                    onUpdateActivityImage={(updated) =>
+                                        setImages((current) =>
+                                            current.map((image) => (image.id === updated.id ? updated : image))
+                                        )
+                                    }
+                                    onAssignActivityImage={assignActivityImage}
+                                    onReorderActivityImage={reorderActivityImage}
+                                />
+                            </div>
+                        </section>
+                        <section id="board-map" tabIndex={-1} data-editor-section>
+                            <div className="mx-auto h-full max-w-6xl">
+                                <BoardPlanMap
+                                    days={days}
+                                    onOpenActivity={(activityId) => {
+                                        if (!editorDisabled && !boardUploading) {
+                                            document.getElementById("board-map")?.focus({ preventScroll: true });
+                                            setMapActivityId(activityId);
+                                        }
+                                    }}
+                                />
+                            </div>
+                        </section>
+                        <section id="details-discovery" tabIndex={-1} data-editor-section>
+                            <div className="mx-auto max-w-5xl">
+                                <CreatorSectionIntro
+                                    title="The finishing touches"
+                                    description="Choose who can come along, and help your journey find its people."
+                                />
+                                <div className="mx-auto grid w-full max-w-4xl gap-10">
+                                    <div>
+                                        {" "}
+                                        <BoardDiscoveryDetails
+                                            tags={tags}
+                                            allowedTags={allowedTags.map((tag) => tag.name)}
+                                            visibility={visibility}
+                                            canChangeVisibility={savedBoard?.permissions.canManageBoard ?? true}
+                                            disabled={editorDisabled}
+                                            tagsLoading={tagsLoading}
+                                            tagsError={tagsError}
+                                            onRetryTags={() => {
+                                                setTagsLoading(true);
+                                                setTagsError("");
+                                                void loadTags();
+                                            }}
+                                            onTagsChange={setTags}
+                                            onVisibilityChange={(value) => {
+                                                visibilityTouched.current = true;
+                                                setVisibility(value);
+                                                if (preferenceError) {
+                                                    setPreferenceError(false);
+                                                    setError("");
+                                                }
+                                                setSaveError("");
+                                            }}
+                                        />
+                                    </div>{" "}
+                                    <div className="mb-8">
+                                        <label className="flex cursor-pointer items-start gap-3 text-sm">
+                                            <input
+                                                type="checkbox"
+                                                checked={fillerImagesEnabled}
+                                                disabled={editorDisabled}
+                                                onChange={(event) => setFillerImagesEnabled(event.target.checked)}
+                                                className="mt-1 size-4"
+                                            />
+                                            <span>
+                                                Include destination illustrations
+                                                <span className="text-muted-foreground mt-2 block text-xs">
+                                                    Up to three credited destination photos, separate from your activity
+                                                    photos.
+                                                </span>
+                                            </span>
+                                        </label>
+                                        {new Set(uploadedImages.map((image) => image.uploadedImageId ?? image.id))
+                                            .size < 3 ? (
+                                            <p className="text-muted-foreground mt-4 text-xs">
+                                                Bring your story to life by adding photos or enabling destination
+                                                illustrations. You can also publish without photos.
+                                            </p>
+                                        ) : null}
+                                        {savedBoard?.fillerImagesEnabled &&
+                                        ["partial", "unavailable"].includes(savedBoard.fillerImageStatus ?? "") ? (
+                                            <p role="status" className="mt-4 text-xs">
+                                                Your Board was saved. Some destination illustrations are unavailable; a
+                                                later save can try again.
+                                            </p>
+                                        ) : null}
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </fieldset>
+                    <section id="board-preview" tabIndex={-1} data-editor-section>
+                        <div className="mx-auto max-w-6xl">
+                            <CreatorSectionIntro
+                                title="Your journey, together"
+                                description="Take one last look. Keep it for later, or let the world in."
+                            />
+                            <BoardPreviewSection
+                                board={{ ...payload, status: savedBoard?.status ?? "draft" }}
+                                author={savedBoard?.author.username ?? previewAuthor}
+                                editable={!editorDisabled}
+                                embedded
+                                onRemovePhoto={(id) => {
+                                    const image = images.find((item) => item.id === id);
+                                    if (image?.pinId && image.source === "upload") assignActivityImage(id, null);
+                                    else removeImage(id);
+                                }}
+                                onUpdatePhoto={(updated) =>
+                                    setImages((current) =>
+                                        current.map((image) => (image.id === updated.id ? updated : image))
                                     )
                                 }
-                                onAddActivityImage={addActivityImage}
-                                onAssignActivityImage={assignActivityImage}
-                                onSetActivityCover={setActivityCover}
-                                onReorderActivityImage={reorderActivityImage}
+                                onEditActivity={setMapActivityId}
                             />
+                            <div id="publish" className="border-line mt-10 border-t pt-8">
+                                {" "}
+                                <BoardPublishPanel
+                                    expectedStatus={expectedStatus}
+                                    savedBoard={savedBoard}
+                                    disabled={editorDisabled}
+                                    saving={saving}
+                                    uploading={uploading}
+                                    message={saveMessage}
+                                    error={saveError}
+                                    onSave={(status) => void save(status)}
+                                    onDelete={() => setDeleteOpen(true)}
+                                />
+                            </div>
                         </div>
                     </section>
-
-                    <section
-                        id="board-map"
-                        className="mx-auto w-full max-w-[96rem] scroll-mt-36 px-5 pb-20 sm:px-8 lg:px-12 lg:pb-28"
-                    >
-                        <BoardPlanMap
-                            days={days}
-                            onOpenActivity={(activityId) => {
-                                if (editorDisabled || boardUploading) return;
-                                setMapActivityId(activityId);
-                            }}
-                        />
-                    </section>
-
-                    <section id="details-discovery" className={fullChapterClasses}>
-                        <CreatorSectionIntro
-                            number="04"
-                            title="DETAILS & DISCOVERY"
-                            description="Give your Board more context to keep plans organized and make it easier for others to discover."
-                        />
-                        <div className="min-w-0 lg:self-center">
-                            <BoardDiscoveryDetails
-                                tags={tags}
-                                allowedTags={allowedTags.map((tag) => tag.name)}
-                                visibility={visibility}
-                                canChangeVisibility={savedBoard?.permissions.canManageBoard ?? true}
-                                disabled={editorDisabled}
-                                tagsLoading={tagsLoading}
-                                tagsError={tagsError}
-                                onRetryTags={() => {
-                                    setTagsLoading(true);
-                                    setTagsError("");
-                                    void loadTags();
-                                }}
-                                onTagsChange={setTags}
-                                onVisibilityChange={(value) => {
-                                    visibilityTouched.current = true;
-                                    setVisibility(value);
-                                    if (preferenceError) {
-                                        setPreferenceError(false);
-                                        setError("");
-                                    }
-                                    setSaveError("");
-                                }}
-                            />
-                        </div>
-                    </section>
-                </fieldset>
-
-                <BoardPreviewSection
-                    board={{ ...payload, status: savedBoard?.status ?? "draft" }}
-                    author={savedBoard?.author.username ?? previewAuthor}
-                    editable={!editorDisabled}
-                />
-
-                <section id="publish" className={`${fullChapterClasses} mb-20 sm:mb-32`}>
-                    <CreatorSectionIntro
-                        number="06"
-                        title="PUBLISH"
-                        description="Save it for yourself, or share it if you feel like it."
-                    />
-                    <div className="mb-8 max-w-lg">
-                        <label className="flex cursor-pointer items-start gap-3 text-sm">
-                            <input
-                                type="checkbox"
-                                checked={fillerImagesEnabled}
-                                disabled={editorDisabled}
-                                onChange={(event) => setFillerImagesEnabled(event.target.checked)}
-                                className="mt-1 size-4"
-                            />
-                            <span>
-                                Include destination illustrations
-                                <span className="text-muted-foreground mt-2 block text-xs">
-                                    Up to three credited destination photos, separate from your activity photos.
-                                </span>
-                            </span>
-                        </label>
-                        {new Set(uploadedImages.map((image) => image.uploadedImageId ?? image.id)).size < 3 ? (
-                            <p className="text-muted-foreground mt-4 text-xs">
-                                Bring your story to life by adding photos or enabling destination illustrations. You can
-                                also publish without photos.
-                            </p>
-                        ) : null}
-                        {savedBoard?.fillerImagesEnabled &&
-                        ["partial", "unavailable"].includes(savedBoard.fillerImageStatus ?? "") ? (
-                            <p role="status" className="mt-4 text-xs">
-                                Your Board was saved. Some destination illustrations are unavailable; a later save can
-                                try again.
-                            </p>
-                        ) : null}
-                    </div>
-                    <div className="min-w-0 lg:-translate-x-[19.25%] lg:self-center">
-                        <BoardPublishPanel
-                            expectedStatus={expectedStatus}
-                            savedBoard={savedBoard}
-                            disabled={editorDisabled}
-                            saving={saving}
-                            uploading={uploading}
-                            message={saveMessage}
-                            error={saveError}
-                            onSave={(status) => void save(status)}
-                            onDelete={() => setDeleteOpen(true)}
-                        />
-                    </div>
-                </section>
+                </BoardEditorRail>
             </div>
         </article>
     );

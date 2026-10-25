@@ -1,3 +1,4 @@
+import { resolveActivityPhotos, photoKey } from "./boards.photos.js";
 import { prepareFillerPool } from "./boards.fillers.js";
 import { AppError } from "../../shared/app-error.js";
 import { boardImageIds, type ImageCleanup } from "../images/images.cleanup.js";
@@ -18,7 +19,7 @@ function normalize(input: BoardWrite): BoardWrite {
         days: input.days.map((day) => ({
             ...day,
             activities: day.activities.map((activity) => ({
-                ...activity,
+                ...resolveActivityPhotos(activity),
                 locationConfirmed: activity.source === "photo" && activity.location ? true : activity.locationConfirmed,
                 note: activity.note?.trim() || null
             }))
@@ -28,6 +29,20 @@ function normalize(input: BoardWrite): BoardWrite {
 
 async function validateDocument(repository: BoardRepository, input: BoardWrite): Promise<BoardWrite> {
     if (input.days.length > 31) invalid();
+    for (const activity of input.days.flatMap((day) => day.activities)) {
+        if (
+            activity.coverImageId !== undefined &&
+            activity.coverImageId !== null &&
+            !activity.uploadedImageIds.includes(activity.coverImageId)
+        )
+            invalid();
+        if (
+            activity.coverPhoto &&
+            activity.photos &&
+            !activity.photos.some((photo) => photoKey(photo) === photoKey(activity.coverPhoto!))
+        )
+            invalid();
+    }
     const normalized = normalize(input);
     if (new Set(input.tagIds).size !== input.tagIds.length) invalid();
     if (new Set(input.imageIds).size !== input.imageIds.length) invalid();
@@ -52,6 +67,11 @@ async function validateDocument(repository: BoardRepository, input: BoardWrite):
         }
         day.activities.forEach((activity, position) => {
             if (activity.position !== position) invalid();
+            if (
+                activity.coverPhoto &&
+                !activity.photos?.some((photo) => photoKey(photo) === photoKey(activity.coverPhoto!))
+            )
+                invalid();
             if (!allowedCategories.has(activity.category)) invalid();
             if (activity.activityId !== undefined) {
                 if (activityIds.has(activity.activityId)) invalid();
@@ -115,6 +135,7 @@ export function createBoardsService(
                 })),
                 days: source.days.map((day) => ({
                     dayNumber: day.dayNumber,
+                    color: day.color ?? null,
                     date: null,
                     activities: day.activities.map((activity) => ({
                         position: activity.position,
@@ -125,6 +146,13 @@ export function createBoardsService(
                         source: activity.source,
                         location: activity.location,
                         locationConfirmed: activity.locationConfirmed,
+                        photos: activity.photos?.map((photo) =>
+                            photo.source === "upload" ? { ...photo, imageId: ids.get(photo.imageId)! } : photo
+                        ),
+                        coverPhoto:
+                            activity.coverPhoto?.source === "upload"
+                                ? { ...activity.coverPhoto, imageId: ids.get(activity.coverPhoto.imageId)! }
+                                : activity.coverPhoto,
                         externalImage: activity.externalImage,
                         uploadedImageIds: activity.uploadedImageIds.map((id) => ids.get(id)!),
                         coverImageId: remap(activity.coverImageId)
@@ -174,7 +202,23 @@ export function createBoardsService(
             const validated = await validateDocument(repository, {
                 ...input,
                 destination,
-                fillerImagesEnabled: input.fillerImagesEnabled ?? current?.fillerImagesEnabled ?? false
+                fillerImagesEnabled: input.fillerImagesEnabled ?? current?.fillerImagesEnabled ?? false,
+                days: input.days.map((day) => ({
+                    ...day,
+                    color:
+                        day.color === undefined
+                            ? (current?.days.find((previous) => previous.dayId === day.dayId && day.dayId !== undefined)
+                                  ?.color ?? null)
+                            : day.color,
+                    activities: day.activities.map((activity) => {
+                        const previous = current?.days
+                            .flatMap((item) => item.activities)
+                            .find(
+                                (item) => item.activityId === activity.activityId && activity.activityId !== undefined
+                            );
+                        return resolveActivityPhotos(activity, previous);
+                    })
+                }))
             });
             if (!owner && input.isCompleted !== undefined) {
                 if (current?.isCompleted !== input.isCompleted)

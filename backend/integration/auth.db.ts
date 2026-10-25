@@ -38,7 +38,9 @@ test(
                 "008_board_destination.sql",
                 "009_image_presentation.sql",
                 "010_guest_accounts.sql",
-                "011_board_published_at.sql"
+                "011_board_published_at.sql",
+                "020_image_deletion.sql",
+                "021_board_story.sql"
             ]) {
                 await getPool().query(
                     await readFile(new URL(`../db/migrations/${migration}`, import.meta.url), "utf8")
@@ -122,7 +124,10 @@ test(
             await repository.saveGoogleDefaults("first", "Ada", "Ada Lovelace", photo);
             const defaulted = await repository.findUserById("first");
             assert.equal(defaulted?.displayName, "Ada Lovelace");
-            assert.match(defaulted?.profilePictureUrl ?? "", /^\/api\/v1\/images\/\d+\/content\?variant=thumbnail$/);
+            const profilePhoto = new URL(defaulted?.profilePictureUrl ?? "", "http://localhost");
+            assert.match(profilePhoto.pathname, /^\/api\/v1\/images\/\d+\/content$/);
+            assert.equal(profilePhoto.searchParams.get("variant"), "thumbnail");
+            assert.equal(profilePhoto.searchParams.get("profileHandle"), defaulted?.username);
             await getPool().query("UPDATE app_user SET display_name='Countess Ada' WHERE user_id='first'");
             await repository.saveGoogleDefaults("first", "Ada", "Ada Lovelace", {
                 ...photo,

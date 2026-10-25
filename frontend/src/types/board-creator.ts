@@ -1,4 +1,35 @@
-export const dayColors = ["#d4664b", "#376b78", "#8b6f47", "#80648a", "#4f7557", "#b07639"] as const;
+export const dayColors = [
+    "#df524b",
+    "#df7134",
+    "#d99026",
+    "#b89b21",
+    "#85a72d",
+    "#4ca34b",
+    "#299e72",
+    "#219d91",
+    "#259bac",
+    "#338fca",
+    "#527ee0",
+    "#716cdd",
+    "#9261cf",
+    "#b65aba",
+    "#cd559b",
+    "#d34e79",
+    "#bf6552",
+    "#b47c37",
+    "#a39a35",
+    "#65a643",
+    "#33945b",
+    "#239b81",
+    "#248e9e",
+    "#428bb5",
+    "#687fd2",
+    "#896fce",
+    "#ab6bc5",
+    "#ca6baa",
+    "#d9788f",
+    "#c18a5c"
+] as const;
 
 export type BoardStatus = "draft" | "published";
 
@@ -38,6 +69,7 @@ export type BoardPinDraft = {
     id: string;
     serverActivityId?: number;
     coverImageId?: number | null;
+    coverPhoto?: { source: "upload"; imageId: number } | { source: "unsplash"; providerImageId: string } | null;
     order: number;
     time: string;
     title: string;
@@ -50,12 +82,18 @@ export type BoardPinDraft = {
 export type BoardDayDraft = {
     id: string;
     serverDayId?: number;
+    color?: string | null;
     dayNumber: number;
     date: string | null;
     pins: BoardPinDraft[];
 };
 
+export type PhotoContext = { kind: "illustrative"; scope: "nearby" | "region"; locationLabel: string };
+
 export type BoardImageDraft = {
+    presentation?: import("@/lib/photo-editing").PhotoEdit | null;
+    alt?: string;
+    context?: PhotoContext | null;
     id: string;
     uploadedImageId?: number;
     pinId: string | null;

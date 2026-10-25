@@ -70,6 +70,12 @@ function input(): BoardWrite {
 }
 
 function write(document: BoardDocument): BoardWrite {
+    const days = structuredClone(document.days);
+    for (const day of days)
+        for (const activity of day.activities) {
+            delete activity.photos;
+            delete activity.coverPhoto;
+        }
     return {
         title: document.title,
         description: document.description,
@@ -81,7 +87,7 @@ function write(document: BoardDocument): BoardWrite {
         coverImageId: document.coverImageId,
         tagIds: document.tagIds,
         imageIds: document.imageIds,
-        days: document.days
+        days
     };
 }
 
@@ -176,6 +182,65 @@ test(
             ('story-owner', 'story_owner', 'Owner'), ('story-author', 'story_author', 'Author'),
             ('story-editor', 'story_editor', 'Editor')`);
             const repository = createBoardsRepository();
+
+            await context.test(
+                "activity illustration context survives saves, omission and remixes and clears explicitly",
+                async () => {
+                    const service = createBoardsService(repository);
+                    const body = input();
+                    body.fillerImagesEnabled = false;
+                    const activity = body.days[0]!.activities[0]!;
+                    const illustration = {
+                        kind: "illustrative" as const,
+                        scope: "region" as const,
+                        locationLabel: "Kyoto, Japan"
+                    };
+                    activity.externalImage = {
+                        provider: "unsplash",
+                        providerImageId: "regional-photo",
+                        url: "https://images.unsplash.com/regional-photo",
+                        photographer: "Photographer",
+                        photographerUrl: "https://unsplash.com/@photographer",
+                        sourceUrl: "https://unsplash.com/photos/regional-photo",
+                        context: illustration
+                    };
+                    const board = await service.create("story-owner", body);
+                    assert.deepEqual(board.days[0]!.activities[0]!.externalImage?.context, illustration);
+                    const legacy = write(board);
+                    delete legacy.days[0]!.activities[0]!.externalImage!.context;
+                    const retained = await service.replace("story-owner", board.boardId, board.revision, legacy);
+                    assert.deepEqual(retained.days[0]!.activities[0]!.externalImage?.context, illustration);
+                    await pool.query("INSERT INTO saved_boards (user_id, board_id) VALUES ('story-author', $1)", [
+                        board.boardId
+                    ]);
+                    const remix = await service.prepareRemix("story-author", board.boardId);
+                    assert.deepEqual(remix.days[0]!.activities[0]!.externalImage?.context, illustration);
+                    await assert.rejects(
+                        pool.query("UPDATE activity SET external_image_context=$1 WHERE board_id=$2", [
+                            JSON.stringify({ ...illustration, kind: null }),
+                            board.boardId
+                        ]),
+                        { code: "23514" }
+                    );
+                    await assert.rejects(
+                        pool.query("UPDATE activity SET external_image_context=$1 WHERE board_id=$2", [
+                            JSON.stringify({ ...illustration, extra: true }),
+                            board.boardId
+                        ]),
+                        { code: "23514" }
+                    );
+                    const cleared = write(retained);
+                    cleared.days[0]!.activities[0]!.externalImage!.context = null;
+                    const saved = await service.replace("story-owner", retained.boardId, retained.revision, cleared);
+                    assert.equal(saved.days[0]!.activities[0]!.externalImage?.context, null);
+                    const renamed = write(saved);
+                    renamed.days[0]!.activities[0]!.externalImage!.providerImageId = "another-photo";
+                    delete renamed.days[0]!.activities[0]!.externalImage!.context;
+                    const replaced = await service.replace("story-owner", saved.boardId, saved.revision, renamed);
+                    assert.equal(replaced.days[0]!.activities[0]!.externalImage?.context, null);
+                    await service.delete(board.boardId, "story-owner");
+                }
+            );
 
             await context.test(
                 "drafts default off, opt-in waits for publication, and provider failure still commits the preference",

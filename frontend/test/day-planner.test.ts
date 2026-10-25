@@ -202,15 +202,14 @@ function plannerMarkup(overrides: Partial<ComponentProps<typeof DayPlanner>> = {
             days: days(),
             images: [],
             onAddDay: () => {},
+            onDayColorChange: () => {},
             onRemoveDay: () => {},
             onAddPin: () => {},
             onUpdatePin: () => {},
             onMovePin: () => {},
-            onReorderPin: () => {},
             onRemovePin: () => {},
             onAddActivityImage: () => {},
             onAssignActivityImage: () => {},
-            onSetActivityCover: () => {},
             onReorderActivityImage: () => {},
             ...overrides
         })
@@ -239,6 +238,24 @@ test("the selected uploaded activity cover is used instead of the first attached
 test("an explicitly external activity cover retains its Unsplash thumbnail", () => {
     const day = { ...days()[0], pins: [{ ...pin("A", "09:00", 0), coverImageId: null }] };
     const markup = plannerMarkup({ days: [day], images: [image(500, "A"), image(501, "A", "unsplash")] });
+    assert.match(markup, /src="https:\/\/images\.example\.test\/501\/thumb"/);
+    assert.doesNotMatch(markup, /src="https:\/\/images\.example\.test\/500\/thumb"/);
+});
+
+test("the selected second Unsplash cover supplies the planner thumbnail ahead of earlier external photos", () => {
+    const first = image(500, "A", "unsplash");
+    const second = image(501, "A", "unsplash");
+    const day = {
+        ...days()[0],
+        pins: [
+            {
+                ...pin("A", "09:00", 0),
+                coverImageId: null,
+                coverPhoto: { source: "unsplash" as const, providerImageId: second.publicId }
+            }
+        ]
+    };
+    const markup = plannerMarkup({ days: [day], images: [first, second] });
     assert.match(markup, /src="https:\/\/images\.example\.test\/501\/thumb"/);
     assert.doesNotMatch(markup, /src="https:\/\/images\.example\.test\/500\/thumb"/);
 });

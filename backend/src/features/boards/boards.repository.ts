@@ -1,3 +1,5 @@
+import { photoKey } from "./boards.photos.js";
+import type { ActivityPhoto } from "./boards.schemas.js";
 import { destinationKey } from "./boards.fillers.js";
 import type { FillerPool, FillerImage } from "./boards.types.js";
 import type { ImagePresentationEdit } from "../images/images.schemas.js";
@@ -202,8 +204,8 @@ async function writeChildren(client: PoolClient, boardId: number, userId: string
         day.activities.flatMap((activity) => (activity.activityId === undefined ? [] : [activity.activityId]))
     );
     await client.query(
-        `DELETE FROM activity_image USING activity a
-         WHERE activity_image.activity_id = a.activity_id AND a.board_id = $1`,
+        `DELETE FROM activity_photo USING activity a
+         WHERE activity_photo.activity_id = a.activity_id AND a.board_id = $1`,
         [boardId]
     );
     await client.query("DELETE FROM activity WHERE board_id = $1 AND activity_id <> ALL($2::int[])", [
@@ -212,22 +214,21 @@ async function writeChildren(client: PoolClient, boardId: number, userId: string
     ]);
 
     const dayIds: number[] = [];
-    const imageLinks: Array<{ imageId: number; activityId: number; position: number }> = [];
+    const photoLinks: Array<{ activityId: number; position: number; photo: ActivityPhoto; isCover: boolean }> = [];
     for (const day of input.days) {
         let dayId = day.dayId;
         if (dayId === undefined) {
             const inserted = await client.query<{ day_id: number }>(
-                `INSERT INTO board_day (board_id, day_number, calendar_date)
-                 VALUES ($1, $2, $3) RETURNING day_id`,
-                [boardId, day.dayNumber, day.date]
+                `INSERT INTO board_day (board_id, day_number, calendar_date, color)
+                 VALUES ($1, $2, $3, $4) RETURNING day_id`,
+                [boardId, day.dayNumber, day.date, day.color ?? null]
             );
             dayId = inserted.rows[0]!.day_id;
         } else {
-            await client.query("UPDATE board_day SET day_number = $1, calendar_date = $2 WHERE day_id = $3", [
-                day.dayNumber,
-                day.date,
-                dayId
-            ]);
+            await client.query(
+                "UPDATE board_day SET day_number = $1, calendar_date = $2, color = $4 WHERE day_id = $3",
+                [day.dayNumber, day.date, dayId, day.color ?? null]
+            );
         }
         dayIds.push(dayId);
         for (const activity of day.activities) {
@@ -251,7 +252,8 @@ async function writeChildren(client: PoolClient, boardId: number, userId: string
                 external?.url ?? null,
                 external?.photographer ?? null,
                 external?.photographerUrl ?? null,
-                external?.sourceUrl ?? null
+                external?.sourceUrl ?? null,
+                external?.context ? JSON.stringify(external.context) : null
             ];
             let activityId = activity.activityId;
             if (activityId === undefined) {
@@ -259,7 +261,7 @@ async function writeChildren(client: PoolClient, boardId: number, userId: string
                     `INSERT INTO activity (day_number, activity_time, board_id, position, title, note,
                       location_id, type, cover_image_id, day_id, source, location_confirmed,
                       external_image_provider, external_image_id, external_image_url,
-                      external_image_photographer, external_image_photographer_url, external_image_source_url)
+                      external_image_photographer, external_image_photographer_url, external_image_source_url, external_image_context)
                      VALUES (${values.map((_, index) => `$${index + 1}`).join(",")})
                      RETURNING activity_id`,
                     values
@@ -272,13 +274,19 @@ async function writeChildren(client: PoolClient, boardId: number, userId: string
                       location_id=$7, type=$8, cover_image_id=$9, day_id=$10, source=$11,
                       location_confirmed=$12, external_image_provider=$13, external_image_id=$14,
                       external_image_url=$15, external_image_photographer=$16,
-                      external_image_photographer_url=$17, external_image_source_url=$18
-                     WHERE activity_id=$19 AND board_id=$3`,
+                      external_image_photographer_url=$17, external_image_source_url=$18,
+                      external_image_context=$19::jsonb
+                     WHERE activity_id=$20 AND board_id=$3`,
                     [...values, activityId]
                 );
             }
-            activity.uploadedImageIds.forEach((imageId, position) =>
-                imageLinks.push({ imageId, activityId, position })
+            activity.photos?.forEach((photo, position) =>
+                photoLinks.push({
+                    activityId: activityId!,
+                    position,
+                    photo,
+                    isCover: Boolean(activity.coverPhoto && photoKey(photo) === photoKey(activity.coverPhoto))
+                })
             );
         }
     }
@@ -303,17 +311,14 @@ async function writeChildren(client: PoolClient, boardId: number, userId: string
             input.imageIds
         ]);
     }
-    if (imageLinks.length) {
+    if (photoLinks.length)
         await client.query(
-            `INSERT INTO activity_image (uploaded_image_id, activity_id, position)
-             SELECT * FROM UNNEST($1::int[], $2::int[], $3::int[])`,
-            [
-                imageLinks.map((link) => link.imageId),
-                imageLinks.map((link) => link.activityId),
-                imageLinks.map((link) => link.position)
-            ]
+            `INSERT INTO activity_photo(activity_id, position, source, uploaded_image_id, external_photo, is_cover)
+         SELECT (entry->>'activityId')::int, (entry->>'position')::int, entry->'photo'->>'source',
+         (entry->'photo'->>'imageId')::int, CASE WHEN entry->'photo'->>'source'='unsplash' THEN entry->'photo' ELSE NULL END,
+         (entry->>'isCover')::boolean FROM jsonb_array_elements($1::jsonb) entry`,
+            [JSON.stringify(photoLinks)]
         );
-    }
     await client.query("UPDATE board SET cover_image_id = $1 WHERE board_id = $2", [
         input.coverImageId === undefined ? (input.imageIds[0] ?? null) : input.coverImageId,
         boardId
@@ -425,8 +430,13 @@ async function readBoardDocument(
          WHERE bt.board_id = $1 ORDER BY t.tag_name`,
         [boardId]
     );
-    const dayResult = await client.query<{ day_id: number; day_number: number; date: string | null }>(
-        `SELECT day_id, day_number, to_char(calendar_date, 'YYYY-MM-DD') AS date
+    const dayResult = await client.query<{
+        day_id: number;
+        day_number: number;
+        date: string | null;
+        color: string | null;
+    }>(
+        `SELECT day_id, day_number, color, to_char(calendar_date, 'YYYY-MM-DD') AS date
          FROM board_day WHERE board_id = $1 ORDER BY day_number`,
         [boardId]
     );
@@ -449,6 +459,9 @@ async function readBoardDocument(
             external_image_photographer: string | null;
             external_image_photographer_url: string | null;
             external_image_source_url: string | null;
+            external_image_context: NonNullable<
+                BoardWrite["days"][number]["activities"][number]["externalImage"]
+            >["context"];
         } & LocationRow
     >(
         `SELECT a.*, l.name, l.latitude, l.longitude, l.address, l.city, l.country,
@@ -482,6 +495,32 @@ async function readBoardDocument(
          WHERE a.board_id = $1 ORDER BY ai.activity_id, ai.position`,
         [boardId]
     );
+    const photoResult = await client.query<{
+        activity_id: number;
+        source: "upload" | "unsplash";
+        uploaded_image_id: number | null;
+        external_photo: ActivityPhoto | null;
+        is_cover: boolean;
+    }>(
+        "SELECT p.* FROM activity_photo p JOIN activity a USING(activity_id) WHERE a.board_id=$1 ORDER BY p.activity_id,p.position",
+        [boardId]
+    );
+    const media = new Map<
+        number,
+        { photos: ActivityPhoto[]; coverPhoto: import("./boards.schemas.js").CoverPhoto | null }
+    >();
+    for (const row of photoResult.rows) {
+        const entry = media.get(row.activity_id) ?? { photos: [], coverPhoto: null };
+        const photo: ActivityPhoto =
+            row.source === "upload" ? { source: "upload", imageId: row.uploaded_image_id! } : row.external_photo!;
+        entry.photos.push(photo);
+        if (row.is_cover)
+            entry.coverPhoto =
+                photo.source === "upload"
+                    ? { source: "upload", imageId: photo.imageId }
+                    : { source: "unsplash", providerImageId: photo.providerImageId };
+        media.set(row.activity_id, entry);
+    }
     const activityImages = new Map<number, number[]>();
     for (const row of activityImageResult.rows) {
         const ids = activityImages.get(row.activity_id) ?? [];
@@ -494,6 +533,7 @@ async function readBoardDocument(
             dayId: row.day_id,
             dayNumber: row.day_number,
             date: row.date,
+            color: row.color,
             activities: [] as BoardDocument["days"][number]["activities"]
         };
         dayMap.set(row.day_id, day);
@@ -512,6 +552,8 @@ async function readBoardDocument(
             source: row.source,
             location: row.location_id === null ? null : locationFromRow(row),
             locationConfirmed: row.location_confirmed,
+            photos: media.get(row.activity_id)?.photos ?? [],
+            coverPhoto: media.get(row.activity_id)?.coverPhoto ?? null,
             uploadedImageIds: activityImages.get(row.activity_id) ?? [],
             coverImageId: row.cover_image_id,
             externalImage:
@@ -522,7 +564,8 @@ async function readBoardDocument(
                           url: row.external_image_url!,
                           photographer: row.external_image_photographer!,
                           photographerUrl: row.external_image_photographer_url,
-                          sourceUrl: row.external_image_source_url
+                          sourceUrl: row.external_image_source_url,
+                          context: row.external_image_context ?? null
                       }
                     : null
         });

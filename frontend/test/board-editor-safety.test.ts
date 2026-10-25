@@ -431,7 +431,7 @@ test("editor progress never labels modified or pending content as saved and keep
         assert.match(markup, expected);
         if (props.dirty || props.uploading || props.saving || props.loading)
             assert.doesNotMatch(markup, /All changes saved/);
-        for (const href of ["#board-basics", "#day-plan", "#details-discovery", "#board-preview", "#publish"])
+        for (const href of ["#board-basics", "#day-plan", "#board-map", "#details-discovery", "#board-preview"])
             assert.ok(markup.includes(`href="${href}"`));
     }
 });
@@ -508,8 +508,15 @@ test("a partial photo batch retains successful uploads in input order through re
     const files = ["first.jpg", "intent-denied.jpg", "storage-denied.jpg", "completion-denied.jpg", "last.jpg"].map(
         (name) => new File(["photo bytes"], name, { type: "image/jpeg" })
     );
-    const pending = uploadBoardImageBatch(files);
+    const completed: number[] = [];
+    const laterUpload = deferred<void>();
+    const pending = uploadBoardImageBatch(files, (asset) => {
+        completed.push(asset.imageId);
+        if (asset.imageId === 505) laterUpload.resolve();
+    });
     await firstStarted.promise;
+    await laterUpload.promise;
+    assert.deepEqual(completed, [505]);
     firstCompletion.resolve(
         Response.json({
             data: {
@@ -527,6 +534,7 @@ test("a partial photo batch retains successful uploads in input order through re
         result.assets.map((asset) => asset.imageId),
         [501, 505]
     );
+    assert.deepEqual([...completed].sort(), [501, 505]);
     assert.equal(result.assets[0].capturedAt, "2026-06-04T09:00:00Z");
     assert.equal(result.assets[0].latitude, 59.32);
     assert.match(result.assets[0].url, /^https?:\/\/[^/]+\/images\/501\/content$/);

@@ -59,6 +59,22 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     return (await requestEnvelope<T>(path, init)).data;
 }
 
+export type ActivityPhotoWrite =
+    | { source: "upload"; imageId: number }
+    | {
+          source: "unsplash";
+          providerImageId: string;
+          url: string;
+          thumbnailUrl: string;
+          alt: string;
+          width: number;
+          height: number;
+          photographer: string;
+          photographerUrl: string | null;
+          sourceUrl: string | null;
+          context?: import("@/types/board-creator").PhotoContext | null;
+          presentation?: import("./photo-editing").PhotoEdit | null;
+      };
 export type BoardWriteRequest = {
     fillerImagesEnabled?: boolean;
     destination?: {
@@ -82,6 +98,7 @@ export type BoardWriteRequest = {
     days: Array<{
         dayId?: number;
         dayNumber: number;
+        color?: string | null;
         date: string | null;
         activities: Array<{
             activityId?: number;
@@ -101,9 +118,12 @@ export type BoardWriteRequest = {
                 externalPlaceId: string | null;
             } | null;
             locationConfirmed: boolean;
+            photos?: ActivityPhotoWrite[];
+            coverPhoto?: BoardPinDraft["coverPhoto"];
             uploadedImageIds: number[];
             coverImageId: number | null;
             externalImage: {
+                context?: import("@/types/board-creator").PhotoContext | null;
                 provider: "unsplash";
                 providerImageId: string;
                 url: string;
@@ -213,14 +233,28 @@ export const prepareBoardRemix = (boardId: number) =>
     request<PreparedBoardCopy>(`/api/v1/boards/${boardId}/remix-content`, { method: "POST" });
 
 export function saveBoardDocument(input: BoardWriteRequest, board?: BoardDocument | null): Promise<BoardDocument> {
+    const body = {
+        ...input,
+        days: input.days.map((day) => ({
+            ...day,
+            activities: day.activities.map((activity) => {
+                if (!activity.photos) return activity;
+                return Object.fromEntries(
+                    Object.entries(activity).filter(
+                        ([key]) => !["uploadedImageIds", "externalImage", "coverImageId"].includes(key)
+                    )
+                );
+            })
+        }))
+    };
     return board
         ? request<BoardDocument>(`/api/v1/boards/${board.boardId}`, {
               method: "PUT",
-              body: JSON.stringify({ ...input, revision: board.revision })
+              body: JSON.stringify({ ...body, revision: board.revision })
           })
         : request<BoardDocument>("/api/v1/boards", {
               method: "POST",
-              body: JSON.stringify(input)
+              body: JSON.stringify(body)
           });
 }
 
@@ -258,6 +292,7 @@ export function toBoardWrite(
         days: draft.days.map((day) => ({
             ...(day.serverDayId ? { dayId: day.serverDayId } : {}),
             dayNumber: day.dayNumber,
+            color: day.color ?? null,
             date: day.date,
             activities: day.pins.map((pin, position) => {
                 const pinImages = uploaded
@@ -286,6 +321,42 @@ export function toBoardWrite(
                           }
                         : null,
                     locationConfirmed: pin.location !== null,
+                    photos: draft.images
+                        .filter((image) => image.pinId === pin.id)
+                        .sort((a, b) => (a.activityOrder ?? a.order) - (b.activityOrder ?? b.order))
+                        .map((image): ActivityPhotoWrite =>
+                            image.source === "upload"
+                                ? { source: "upload", imageId: image.uploadedImageId! }
+                                : {
+                                      source: "unsplash",
+                                      providerImageId: image.publicId,
+                                      url: image.url,
+                                      thumbnailUrl: image.thumbnailUrl,
+                                      alt: image.alt ?? pin.title,
+                                      width: image.width || 1,
+                                      height: image.height || 1,
+                                      photographer: image.credit ?? "Unsplash photographer",
+                                      photographerUrl: image.creditUrl,
+                                      sourceUrl: image.sourceUrl,
+                                      context: image.context ?? null,
+                                      presentation: image.presentation ?? null
+                                  }
+                        ),
+                    coverPhoto:
+                        pin.coverPhoto &&
+                        draft.images.some(
+                            (image) =>
+                                image.pinId === pin.id &&
+                                (pin.coverPhoto?.source === "upload"
+                                    ? image.uploadedImageId === pin.coverPhoto.imageId
+                                    : image.publicId === pin.coverPhoto?.providerImageId)
+                        )
+                            ? pin.coverPhoto
+                            : pin.coverImageId && pinImages.some((image) => image.uploadedImageId === pin.coverImageId)
+                              ? { source: "upload", imageId: pin.coverImageId }
+                              : external
+                                ? { source: "unsplash", providerImageId: external.publicId }
+                                : null,
                     uploadedImageIds: pinImages.map((image) => image.uploadedImageId!),
                     coverImageId:
                         pin.coverImageId === undefined
@@ -301,7 +372,8 @@ export function toBoardWrite(
                               url: external.url,
                               photographer: external.credit ?? "Unknown",
                               photographerUrl: external.creditUrl,
-                              sourceUrl: external.sourceUrl
+                              sourceUrl: external.sourceUrl,
+                              context: external.context ?? null
                           }
                         : null
                 };
@@ -320,6 +392,7 @@ export function fromBoardDocument(board: PreparedBoardCopy): {
         id: crypto.randomUUID(),
         serverDayId: day.dayId,
         dayNumber: day.dayNumber,
+        color: day.color ?? null,
         date: day.date,
         pins: day.activities.map((activity) => {
             const id = crypto.randomUUID();
@@ -328,6 +401,7 @@ export function fromBoardDocument(board: PreparedBoardCopy): {
                 id,
                 serverActivityId: activity.activityId,
                 coverImageId: activity.coverImageId,
+                coverPhoto: activity.coverPhoto,
                 order: activity.position,
                 time: activity.activityTime ?? "",
                 title: activity.title,
@@ -352,7 +426,14 @@ export function fromBoardDocument(board: PreparedBoardCopy): {
     const ownerByImage = new Map<number, { pinId: string; order: number }>();
     for (const day of board.days)
         for (const activity of day.activities) {
-            activity.uploadedImageIds.forEach((imageId, order) =>
+            (activity.photos
+                ? activity.photos
+                      .map((photo, order) => ({ photo, order }))
+                      .flatMap(({ photo, order }) =>
+                          photo.source === "upload" ? [{ imageId: photo.imageId, order }] : []
+                      )
+                : activity.uploadedImageIds.map((imageId, order) => ({ imageId, order }))
+            ).forEach(({ imageId, order }) =>
                 ownerByImage.set(imageId, {
                     pinId: pinIds.get(activity)!,
                     order
@@ -380,23 +461,43 @@ export function fromBoardDocument(board: PreparedBoardCopy): {
     }));
     for (const day of board.days)
         for (const activity of day.activities) {
-            if (!activity.externalImage) continue;
-            images.push({
-                id: crypto.randomUUID(),
-                pinId: pinIds.get(activity)!,
-                publicId: activity.externalImage.providerImageId,
-                source: "unsplash",
-                url: activity.externalImage.url,
-                thumbnailUrl: activity.externalImage.url,
-                width: 0,
-                height: 0,
-                capturedAt: null,
-                latitude: null,
-                longitude: null,
-                order: images.length,
-                credit: activity.externalImage.photographer,
-                creditUrl: activity.externalImage.photographerUrl,
-                sourceUrl: activity.externalImage.sourceUrl
+            const photos =
+                activity.photos ??
+                (activity.externalImage
+                    ? [
+                          {
+                              ...activity.externalImage,
+                              source: "unsplash" as const,
+                              thumbnailUrl: activity.externalImage.url,
+                              alt: activity.title,
+                              width: 1,
+                              height: 1
+                          }
+                      ]
+                    : []);
+            photos.forEach((photo, index) => {
+                if (photo.source !== "unsplash") return;
+                images.push({
+                    id: crypto.randomUUID(),
+                    pinId: pinIds.get(activity)!,
+                    publicId: photo.providerImageId,
+                    source: "unsplash",
+                    url: photo.url,
+                    thumbnailUrl: photo.thumbnailUrl,
+                    alt: photo.alt,
+                    width: photo.width,
+                    height: photo.height,
+                    context: photo.context ?? null,
+                    presentation: "presentation" in photo ? photo.presentation : null,
+                    capturedAt: null,
+                    latitude: null,
+                    longitude: null,
+                    order: images.length,
+                    activityOrder: index,
+                    credit: photo.photographer,
+                    creditUrl: photo.photographerUrl,
+                    sourceUrl: photo.sourceUrl
+                });
             });
         }
     const destination: BoardDestinationDraft | null = board.destination
@@ -551,12 +652,6 @@ export async function suggestBoardPhotos(imageIds: number[]): Promise<SmartPhoto
         body: JSON.stringify({ imageIds })
     });
     return result.photos;
-}
-
-export function refreshBoardPhotoLocation(
-    imageId: number
-): Promise<SmartPhotoSuggestion & { capturedAt: string | null; latitude: number | null; longitude: number | null }> {
-    return request("/api/v1/images/" + imageId + "/refresh-location", { method: "POST" });
 }
 
 export async function suggestMainDestination(

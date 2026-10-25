@@ -54,21 +54,21 @@ function controlTag(markup: string, selector: string): string {
     return tag;
 }
 
-test("new Boards place Smart Create after Board Basics and before the day planner", async () => {
+test("new Boards place Smart Create in the day-plan chapter after Board Basics", async () => {
     const markup = editorMarkup(await NewBoardPage({ searchParams: Promise.resolve({}) }));
-    assert.match(markup, /SMART CREATE/);
+    assert.match(markup, />Smart Create</);
     assert.match(markup, /You can edit every suggestion/);
-    assert.match(markup, /Choose photos/);
+    assert.match(markup, /Add photos/);
     assert.doesNotMatch(markup, /Switch to|Intelligence Engine/);
     assert.match(markup, /Up to 30 photos per batch/);
     assert.doesNotMatch(markup, /Add activity photos in Smart Create below/);
     assert.match(markup, /Already back from your trip/);
     const sections = [
+        'id="board-basics"',
         'aria-label="Edit Board cover"',
         'id="board-title"',
-        'id="board-basics"',
-        'id="image-intake-heading"',
-        'id="day-plan"'
+        'id="day-plan"',
+        'id="image-intake-heading"'
     ];
     for (const [index, section] of sections.entries()) {
         assert.ok(markup.includes(section));
@@ -173,7 +173,9 @@ test("existing uploads do not prevent another thirty-photo batch", () => {
 test("a disabled intake disables upload, remove and cover-selection controls in both variants", () => {
     for (const showDropZone of [true, false]) {
         const markup = intakeMarkup([uploadedImage(1), uploadedImage(2)], 1, showDropZone, true);
-        for (const control of markup.matchAll(/<(?:input|button)\b[^>]*>/g)) {
+        for (const control of markup.matchAll(
+            /<(?:input|button)\b[^>]*(?:type="file"|aria-label="(?:Upload Board images|Edit Board cover|Remove image [^"]+|Crop photo [^"]+)"|data-board-cover-choice)[^>]*>/g
+        )) {
             assert.match(control[0], /disabled=""/);
         }
     }

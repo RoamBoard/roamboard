@@ -1,5 +1,8 @@
+import { searchManualPhotos, selectManualPhoto } from "./provider.manual-photos.js";
 import { suggestActivityArea } from "./provider.area-suggestion.js";
 import type { AreaSuggestionRequest } from "./provider.schemas.js";
+import { discoverPhotoSuggestions, selectPhotoSuggestion, type SuggestedPhoto } from "./provider.photo-suggestions.js";
+import type { PhotoSuggestionRequest } from "./provider.schemas.js";
 import { findActivityPhoto, requestActivityPhoto } from "./provider.activity-photo.js";
 import type { ActivityPhotoRequest } from "./provider.schemas.js";
 const env = process.env;
@@ -7,7 +10,13 @@ import { AppError } from "../../shared/app-error.js";
 import { searchMapboxPlaces } from "../destinations/destination.providers.js";
 import type { DestinationResult } from "../destinations/destination.types.js";
 import type { QuotaService } from "../quotas/quota.service.js";
-import { searchGeoapify, reverseGeoapify, reverseGeoapifyArea } from "./provider.geoapify.js";
+import {
+    searchGeoapify,
+    reverseGeoapify,
+    reverseGeoapifyArea,
+    suggestPinName,
+    resolvePhotoArea
+} from "./provider.geoapify.js";
 import { loadCloudinaryAssets, loadCloudinaryMetadata, uploadCloudinaryImage } from "./provider.cloudinary.js";
 import {
     fetchGooglePlaceDetails,
@@ -33,6 +42,8 @@ import type {
 } from "./provider.types.js";
 
 export interface ProviderService {
+    manualPhotoSearch(query: string, page: number): ReturnType<typeof searchManualPhotos>;
+    manualPhotoSelect(photoId: string): ReturnType<typeof selectManualPhoto>;
     suggestBoardArea(input: AreaSuggestionRequest): Promise<DestinationResult | null>;
     config(): ProviderConfig;
     mapboxMapSession(): Promise<MapboxMapSession>;
@@ -45,9 +56,11 @@ export interface ProviderService {
     ): Promise<DestinationResult[]>;
     mapboxDestinationSearch(country: string, city: string, limit: number): Promise<DestinationResult[]>;
     mapboxReverse(latitude: number, longitude: number): Promise<MapboxLocation>;
-    mapboxBoardReverse(latitude: number, longitude: number): Promise<MapboxLocation>;
+    mapboxBoardReverse(latitude: number, longitude: number, preferPlace?: boolean): Promise<MapboxLocation | null>;
     mapboxRoute(points: RoutePoint[], profile: RouteProfile): Promise<ProviderRoute>;
     unsplashActivityPhoto(input: ActivityPhotoRequest, select?: boolean): Promise<ProviderPhoto | null>;
+    photoSuggestions(input: PhotoSuggestionRequest): Promise<SuggestedPhoto[]>;
+    selectPhotoSuggestion(input: PhotoSuggestionRequest & { photoId: string }): Promise<SuggestedPhoto>;
     unsplashSearch(query: string, limit: number): Promise<ProviderPhoto[]>;
     googlePlacesSearch(query: string, limit: number): Promise<ProviderPlace[]>;
     googlePlaceDetails(placeId: string): Promise<GooglePlaceDetails>;
@@ -91,6 +104,22 @@ export function createProviderService(
     googlePlaceReferences: GooglePlaceReferenceRepository
 ): ProviderService {
     return {
+        manualPhotoSearch: (query, page) =>
+            callProvider("Unsplash", () =>
+                searchManualPhotos(query, page, (path) =>
+                    quota.run("unsplash.requests", (observe) =>
+                        requestActivityPhoto(path, required(env.UNSPLASH_ACCESS_KEY, "Unsplash"), observe)
+                    )
+                )
+            ),
+        manualPhotoSelect: (photoId) =>
+            callProvider("Unsplash", () =>
+                selectManualPhoto(photoId, (path) =>
+                    quota.run("unsplash.requests", (observe) =>
+                        requestActivityPhoto(path, required(env.UNSPLASH_ACCESS_KEY, "Unsplash"), observe)
+                    )
+                )
+            ),
         config: () => ({
             mapbox: {
                 configured: Boolean(env.MAPBOX_ACCESS_TOKEN && publicMapboxToken()?.startsWith("pk."))
@@ -154,8 +183,12 @@ export function createProviderService(
                 quota.run("mapbox.geocoding", (observe) => reverseMapbox(latitude, longitude, token, false, observe))
             );
         },
-        mapboxBoardReverse: async (latitude, longitude) => {
+        mapboxBoardReverse: async (latitude, longitude, preferPlace = false) => {
             const key = required(env.GEOAPIFY_API_KEY, "Geoapify saved-location search");
+            if (preferPlace)
+                return callProvider("Geoapify", () =>
+                    suggestPinName(latitude, longitude, key, (operation) => quota.run("geoapify.geocoding", operation))
+                );
             return callProvider("Geoapify", () =>
                 quota.run("geoapify.geocoding", (observe) => reverseGeoapify(latitude, longitude, key, observe))
             );
@@ -177,6 +210,34 @@ export function createProviderService(
                         }),
                     select
                 )
+            );
+        },
+        photoSuggestions: async (input) => {
+            const key = required(env.UNSPLASH_ACCESS_KEY, "Unsplash"),
+                geo = required(env.GEOAPIFY_API_KEY, "Geoapify");
+            return callProvider("Unsplash", () =>
+                discoverPhotoSuggestions(input, {
+                    request: (path) =>
+                        quota.run("unsplash.requests", (observe) => requestActivityPhoto(path, key, observe)),
+                    area: (point) =>
+                        quota.run("geoapify.geocoding", (observe) =>
+                            resolvePhotoArea(point.latitude, point.longitude, geo, observe)
+                        )
+                })
+            );
+        },
+        selectPhotoSuggestion: async (input) => {
+            const key = required(env.UNSPLASH_ACCESS_KEY, "Unsplash"),
+                geo = required(env.GEOAPIFY_API_KEY, "Geoapify");
+            return callProvider("Unsplash", () =>
+                selectPhotoSuggestion(input, {
+                    request: (path) =>
+                        quota.run("unsplash.requests", (observe) => requestActivityPhoto(path, key, observe)),
+                    area: (point) =>
+                        quota.run("geoapify.geocoding", (observe) =>
+                            resolvePhotoArea(point.latitude, point.longitude, geo, observe)
+                        )
+                })
             );
         },
         unsplashSearch: async (query, limit) => {

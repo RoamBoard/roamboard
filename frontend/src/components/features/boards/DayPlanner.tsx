@@ -1,13 +1,15 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
+import { createPortal } from "react-dom";
 
+import BoardPhotoStrip from "./BoardPhotoStrip";
 import AddActivityDialog from "./AddActivityDialog";
 import ActivityEditorDialog from "./ActivityEditorDialog";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 import PlannerDayColumn from "@/components/features/boards/PlannerDayColumn";
-import { ArrowLeft, ArrowRight, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { type BoardDayDraft, type BoardImageDraft, type BoardPinDraft } from "@/types/board-creator";
 
 type Props = {
@@ -19,25 +21,18 @@ type Props = {
     days: BoardDayDraft[];
     images: BoardImageDraft[];
     onAddDay: () => void;
+    onDayColorChange: (dayId: string, color: string) => void;
     onRemoveDay: (dayId: string) => void;
     onAddPin: (dayId: string, pin: BoardPinDraft, image: BoardImageDraft | null) => void;
     onUpdatePin: (pin: BoardPinDraft) => void;
     onMovePin: (pinId: string, dayId: string, time: string, index?: number) => void;
-    onReorderPin: (pinId: string, direction: -1 | 1) => void;
     onRemovePin: (pinId: string) => void;
+    onRemoveActivityImage?: (id: string) => void;
     onAddActivityImage: (image: BoardImageDraft) => void;
-    onImageMetadataChange?: (
-        imageId: number,
-        metadata: { capturedAt: string | null; latitude: number | null; longitude: number | null }
-    ) => void;
+    onUpdateActivityImage?: (image: BoardImageDraft) => void;
     onAssignActivityImage: (imageId: string, pinId: string | null) => void;
-    onSetActivityCover: (pinId: string, imageId: number | null) => void;
     onReorderActivityImage: (pinId: string, imageId: string, direction: -1 | 1) => void;
 };
-
-function scrollBehavior(): ScrollBehavior {
-    return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
-}
 
 export default function DayPlanner({
     destination,
@@ -48,23 +43,23 @@ export default function DayPlanner({
     days,
     images,
     onAddDay,
+    onDayColorChange,
     onRemoveDay,
     onAddPin,
     onUpdatePin,
     onMovePin,
-    onReorderPin,
     onRemovePin,
+    onRemoveActivityImage,
     onAddActivityImage,
-    onImageMetadataChange,
+    onUpdateActivityImage,
     onAssignActivityImage,
-    onSetActivityCover,
     onReorderActivityImage
 }: Props) {
-    const stripRef = useRef<HTMLDivElement>(null);
     const [dialogDayId, setDialogDayId] = useState<string | null>(null);
     const [editingPinId, setEditingPinId] = useState<string | null>(null);
     const [removingDayId, setRemovingDayId] = useState<string | null>(null);
     const [announcement, setAnnouncement] = useState("");
+    const [dragTarget, setDragTarget] = useState<{ dayId: string; index: number } | null>(null);
     const dialogDay = openActivityId ? null : (days.find((day) => day.id === dialogDayId) ?? null);
     const editingPin =
         days.flatMap((day) => day.pins).find((pin) => pin.id === (openActivityId ?? editingPinId)) ?? null;
@@ -92,6 +87,34 @@ export default function DayPlanner({
         });
     }
 
+    const activityDialog = editingPin ? (
+        <ActivityEditorDialog
+            proximity={editingPin.location ?? boardLocation}
+            pin={editingPin}
+            onUploadingChange={onActivityUploadingChange}
+            onRemoveImage={onRemoveActivityImage}
+            images={images}
+            remainingUploads={5}
+            onClose={() => {
+                setEditingPinId(null);
+                onActivityOpened?.();
+            }}
+            onSave={(updated) => {
+                onUpdatePin(updated);
+            }}
+            onDelete={() => {
+                onRemovePin(editingPin.id);
+                onActivityOpened?.();
+                setAnnouncement(`${editingPin.title} removed. Attached photos remain available.`);
+                setEditingPinId(null);
+            }}
+            onAddImage={onAddActivityImage}
+            onUpdateImage={onUpdateActivityImage}
+            onAssignImage={onAssignActivityImage}
+            onReorderImage={onReorderActivityImage}
+        />
+    ) : null;
+
     return (
         <fieldset
             disabled={disabled}
@@ -101,52 +124,22 @@ export default function DayPlanner({
                 <p className="text-muted-foreground text-xs">
                     {days.length} {days.length === 1 ? "day" : "days"} to make your own
                 </p>
-                <div className="flex gap-1">
-                    <button
-                        type="button"
-                        onClick={() =>
-                            stripRef.current?.scrollBy({
-                                left: -stripRef.current.clientWidth * 0.85,
-                                behavior: scrollBehavior()
-                            })
-                        }
-                        className="border-line hover:bg-faint grid size-11 place-items-center rounded-full border focus-visible:outline-2 focus-visible:outline-offset-2"
-                        aria-label="Previous days"
-                    >
-                        <ArrowLeft size={16} strokeWidth={1.5} />
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() =>
-                            stripRef.current?.scrollBy({
-                                left: stripRef.current.clientWidth * 0.85,
-                                behavior: scrollBehavior()
-                            })
-                        }
-                        className="border-line hover:bg-faint grid size-11 place-items-center rounded-full border focus-visible:outline-2 focus-visible:outline-offset-2"
-                        aria-label="Next days"
-                    >
-                        <ArrowRight size={16} strokeWidth={1.5} />
-                    </button>
-                </div>
             </div>
-            <div
-                ref={stripRef}
-                className="flex snap-x snap-proximity items-stretch gap-7 overflow-x-auto overscroll-x-contain pb-6 sm:gap-10"
-                aria-label="Board day plans"
-            >
+            <BoardPhotoStrip label="Board day plans" days>
                 {days.map((day, dayIndex) => (
                     <PlannerDayColumn
                         key={day.id}
                         day={day}
                         dayIndex={dayIndex}
+                        dragTarget={dragTarget}
+                        onDragTargetChange={setDragTarget}
+                        onColorChange={(color) => onDayColorChange(day.id, color)}
                         images={images}
                         onOpenPin={openExistingPin}
                         onAdd={() => setDialogDayId(day.id)}
                         onRemoveDay={() => requestRemoveDay(day)}
                         days={days}
                         disabled={disabled}
-                        onUpdatePin={onUpdatePin}
                         onMovePin={(pinId, dayId, time, index) => {
                             if (disabled) return;
                             onMovePin(pinId, dayId, time, index);
@@ -158,20 +151,22 @@ export default function DayPlanner({
                         }}
                     />
                 ))}
-                <button
-                    type="button"
-                    disabled={disabled || days.length >= 31}
-                    onClick={onAddDay}
-                    className="border-line text-muted-foreground hover:border-foreground hover:text-foreground mt-0 flex min-h-64 w-28 shrink-0 snap-start flex-col items-center justify-center gap-4 border border-dashed text-xs focus-visible:outline-2 focus-visible:outline-offset-2 sm:w-32"
-                >
-                    <Plus size={28} strokeWidth={1} aria-hidden="true" />
-                    {days.length >= 31 ? "31-day maximum" : "add day"}
-                </button>
-            </div>
-            <p className="text-muted-foreground mt-2 max-w-xl text-[11px] leading-relaxed">
-                Drag activities to change day and time in 30-minute steps. Open an activity to change its day or order
-                without changing its time. Scroll the page to browse activities; swipe sideways or Shift-scroll to
-                browse days.
+                <li className="w-full shrink-0 sm:w-32 md:w-28">
+                    <button
+                        type="button"
+                        disabled={disabled || days.length >= 31}
+                        onClick={onAddDay}
+                        className="border-line text-muted-foreground hover:border-foreground hover:text-foreground mt-0 flex h-full min-h-32 w-full flex-col items-center justify-center gap-4 border border-dashed text-xs focus-visible:outline-2 focus-visible:outline-offset-2 md:min-h-64"
+                    >
+                        <Plus size={28} strokeWidth={1} aria-hidden="true" />
+                        {days.length >= 31 ? "31-day maximum" : "add day"}
+                    </button>
+                </li>
+            </BoardPhotoStrip>
+            <p id="activity-drag-hint" className="text-muted-foreground mt-2 max-w-xl text-[11px] leading-relaxed">
+                Drag the grip on an activity to move it within a day or to another day. Use the arrow keys on a focused
+                activity to reorder; Shift + arrow moves between days. Drag empty space or use the arrows to browse
+                days.
             </p>
             <p role="status" className="sr-only">
                 {announcement}
@@ -179,8 +174,10 @@ export default function DayPlanner({
 
             {dialogDay ? (
                 <AddActivityDialog
+                    onRemoveImage={onRemoveActivityImage}
                     images={images}
                     onAddImage={onAddActivityImage}
+                    onUpdateImage={onUpdateActivityImage}
                     onAssignImage={onAssignActivityImage}
                     onUploadingChange={onActivityUploadingChange}
                     proximity={dialogDay.pins.find((activity) => activity.location)?.location ?? boardLocation}
@@ -192,42 +189,9 @@ export default function DayPlanner({
                     onClose={() => setDialogDayId(null)}
                 />
             ) : null}
-            {editingPin ? (
-                <ActivityEditorDialog
-                    placement={{
-                        days,
-                        dayId: days.find((day) => day.pins.some((pin) => pin.id === editingPin.id))!.id,
-                        onMove: (dayId) => {
-                            const target = days.find((day) => day.id === dayId);
-                            if (target) onMovePin(editingPin.id, dayId, editingPin.time, target.pins.length);
-                        },
-                        onReorder: (direction) => onReorderPin(editingPin.id, direction)
-                    }}
-                    proximity={editingPin.location ?? boardLocation}
-                    pin={editingPin}
-                    onUploadingChange={onActivityUploadingChange}
-                    images={images}
-                    remainingUploads={30}
-                    onClose={() => {
-                        setEditingPinId(null);
-                        onActivityOpened?.();
-                    }}
-                    onSave={(updated) => {
-                        onUpdatePin(updated);
-                    }}
-                    onDelete={() => {
-                        onRemovePin(editingPin.id);
-                        onActivityOpened?.();
-                        setAnnouncement(`${editingPin.title} removed. Attached photos remain available.`);
-                        setEditingPinId(null);
-                    }}
-                    onMetadataChange={onImageMetadataChange}
-                    onAddImage={onAddActivityImage}
-                    onAssignImage={onAssignActivityImage}
-                    onSetCover={onSetActivityCover}
-                    onReorderImage={onReorderActivityImage}
-                />
-            ) : null}
+            {activityDialog && typeof document !== "undefined"
+                ? createPortal(activityDialog, document.body)
+                : activityDialog}
             {removingDay ? (
                 <ConfirmDialog
                     title={`Remove day ${removingDay.dayNumber}?`}

@@ -287,11 +287,13 @@ creation choices. `BoardCreationChoices` shows separate New Board, Continue a Bo
 New Board opens `/boards/new`; there is no expanding submenu. A normal click briefly expands and fades the selected
 circle before navigation. Modifier clicks and reduced-motion preferences retain native navigation; Escape cancels
 the pending transition. All new Boards use the same curved-cover
-editor, including old `/boards/new?mode=scratch` links. The cover and title come first, followed by 01 Board Basics. Main destination sits before the description, reusing
+editor, including old `/boards/new?mode=scratch` links. The editor now uses five sections: Basics, Day plan, Map, Details and discovery, and Overview with save/publish.
+Desktop wheel gestures snap sideways after a section finishes scrolling; mobile presents vertical sections.
+The cover and title live in Basics. Main destination sits before the description, reusing
 Home's destination search store with permanent Geoapify locality results. Its saved city/region/country and country
 code round-trip through Board writes and provide the activity-search fallback area.
-Smart Create sits between 01 and 02, explaining editable metadata suggestions for photos from completed trips.
-Circuit traces rise from underneath its broad photo drop area, with hover guidance and a highlighted drag target.
+Smart Create sits in Day plan for new Boards only, explaining editable metadata suggestions for photos from completed trips.
+The redesigned intake uses a compact rounded photo-drop panel with hover guidance and a highlighted drag target.
 The top cover retains its image picker. Uploaded thumbnails can be dragged into this
 area to select the Board cover; the existing Set as cover buttons remain the keyboard/touch alternative.
 There is no creation mode switch. Reopened drafts and published edits retain plain cover uploads without the
@@ -307,8 +309,8 @@ supporting text. Existing Boards lock editing while loading and remain locked af
 The planner uses naturally sized day columns with photo cards and circular category controls. Normal vertical wheel
 input scrolls the webpage, including over days and the shared map; horizontal gestures, Shift-wheel and arrows browse
 days. Blank day space is a native keyboard-accessible add-activity target behind the content. AddActivityDialog and
-ActivityEditorDialog share Geoapify location search, category suggestions, time and notes. Adding or saving requires
-a selected location, without manual coordinate inputs; legacy unlocated activities can still load. Current day or
+ActivityEditorDialog share Geoapify location search, category suggestions, time and notes. Named activities may be saved without a location. Search uses Geoapify; the expandable Mapbox activity map supports
+manual pins and editable location names without coordinate inputs. Current day or
 Board coordinates softly bias search without restricting worldwide destinations or boosting arbitrary categories.
 Smart Create activities can publish without individual saves; their editable photo locations appear in previews immediately. Explicit Re-read photo location stages corrected original GPS/name, using
 an honest raw-GPS fallback on lookup failure. BoardPlanMap follows the days in its own chapter with all located
@@ -686,11 +688,14 @@ there provide a keyboard alternative to dragging. The upload strip shows an unas
 assignment status, excluding stock photos.
 
 PhotoEditorDialog is shared by Board uploads, activity uploads and profile pictures. It offers draggable and
-keyboard-adjustable crop bounds, aspect presets and resize limits, without rotation or format conversion. It edits
+keyboard-adjustable crop bounds and aspect presets with automatic output sizing, without rotation or format conversion. It edits
 presentation settings through the protected image API, retaining the original and GPS/time. Reset restores original
 presentation. Saves apply to every use of that uploaded image and use an image revision to reject stale edits.
 The owner-only editor source is bounded to 4096px; ordinary delivery keeps its display/thumbnail bounds. Preview
 URLs update after saves. Modal focus, loading, failure, discard and leave-warning states are explicit.
+Crop actions use the existing editor icon styling and theme colors. Editor photo credits reuse StoryPhotoCredit.
+The shared enlarged viewer uses one 75% black overlay; empty stage clicks close it. Shared arrows follow the photo's
+displayed width and zoom, clamping to the viewport edge when necessary. Reduced motion uses CSS media queries.
 
 Publishing requires a main destination; incomplete drafts remain saveable. Three or more located activities can
 autofill an empty destination through a majority-area suggestion. Manual selections and explicit clearing stop
@@ -751,3 +756,48 @@ same country or within 25 km, using the destination collection context. Browser 
 
 Discover vibe routes also embed BoardCollectionGrid with their fixed tag. Discover Featured and RoamFlow use the same
 permission-resolving card as other Discover lists; unknown ownership exposes no bookmark, and resolved owners get Edit.
+
+## Board editor redesign first iteration
+
+See [the agreed editor contract](../contracts/board-editor-redesign.md). Activity uploads accept five photos per batch
+with repeat batches; earliest capture selects an initial cover, later batches preserve covers, and earliest GPS fills
+empty location details. Activity fields and attachments are staged until Save activity; crop Save remains immediate.
+Optional regional Unsplash suggestions require explicit selection, retain credit and persist illustration context
+through migration 022. Provider failures preserve uploads. Independent editor regressions and isolated database tests
+cover core behavior; live-provider accuracy and browser visual/touch acceptance remain pending.
+
+### Board editor refinement
+
+CreatorProgress reuses ChapterBar without numeric chapter labels; section intros omit numbers/rules. BoardEditorRail
+uses shared ScrollArrow controls at applicable edges. BoardPhotoStrip reuses the Board library Carousel with drag,
+arrow and horizontal wheel support; day plans stack vertically on mobile. Uploaded photo removal inside an activity
+detaches it, preserving the Board upload and cover choices. Explicit Board-gallery removal still removes the reference.
+Creator galleries and cover/activity dialogs reuse StoryGallery/ImageZoomDialog through EditorPhotoGallery.
+Day colors persist through Board writes and remixes (migration 023), with 30 choices and theme variants shared by
+day cards, map filters and pins. Activity dragging shows an insertion gap and preserves time; keyboard Up/Down
+reorders and Shift+Left/Right changes day. The former day/move controls and photo reread action are removed.
+Publish attempts retain inline validation across chapters and reveal the first invalid field. Backend authority
+remains unchanged. Browser visual/touch and live-provider acceptance require separate review.
+
+### Board editor second refinement
+
+The editor offers explicit paginated Unsplash search, multiple external photos beside uploads and per-activity
+external crops. Save serializes the ordered photos/coverPhoto contract without legacy media fields; reads retain
+legacy compatibility. External crops use Unsplash-hosted delivery and preserve credit; upload crops still save
+through the protected image API. Review full itinerary starts expanded, includes larger photo strips and Other
+Board photos, and reuses shared crop/remove/zoom controls. Activity removal detaches uploaded photos from the
+activity and preserves the Board gallery. Stronger 30-color choices retain existing saved colors; day tint is 6%.
+Native dragstart is captured before Embla can cancel it. Actual browser checks cover within/across-day dragging,
+backdrop click consumption and desktop map/details viewport fit. Physical touch and live provider acceptance remain
+pending. Migration 024 is required before using the new backend media repository; see its migration log.
+
+### Board editor photo performance and Summary review
+
+The third refinement uses all-photo day grids followed by compact activity lists in the default-open Review full
+Board section, preserving saved activity/photo order without the published Summary three-photo cap. Attached
+activity photos reuse BoardPhotoStrip with overflow-only arrows and the shared draggable progress scrollbar.
+Photo hover/focus stays active over overlay actions and respects reduced motion. Cropped external thumbnails
+cap both source dimensions at 640px; larger crop/viewer delivery remains separate. Review photos are grouped once
+and offscreen day layouts use content visibility. Protected uploads retain private no-store delivery and access checks.
+Map activity dialogs portal outside chapter layout and restore focus to Map, avoiding focus-driven chapter navigation.
+Manual Unsplash selection sends explicit application/json through the existing API; no new migration is required.

@@ -2,16 +2,18 @@
 export default function ChapterBar({
     chapters,
     current,
-    onNavigate
+    onNavigate,
+    embedded = false
 }: {
     chapters: { id: string; title: string }[];
     current: string;
     onNavigate: (id: string) => void;
+    embedded?: boolean;
 }) {
     return (
         <nav
             aria-label="Story chapters"
-            className="border-line bg-background/95 sticky top-[var(--app-header-height,0px)] z-30 flex h-[62px] max-w-full items-center gap-1 overflow-x-auto border-b px-3 backdrop-blur-sm sm:px-6"
+            className={`flex h-[62px] max-w-full items-center gap-1 overflow-x-auto ${embedded ? "" : "border-line bg-background/95 sticky top-[var(--app-header-height,0px)] z-30 border-b px-3 backdrop-blur-sm sm:px-6"}`}
         >
             {chapters.map(({ id, title }) => (
                 <a

@@ -4,19 +4,19 @@ import type { ActivityPhotoRequest } from "./provider.schemas.js";
 import type { ProviderPhoto } from "./provider.types.js";
 
 type Json = Record<string, unknown>;
-const object = (value: unknown): Json =>
+export const object = (value: unknown): Json =>
     value && typeof value === "object" && !Array.isArray(value) ? (value as Json) : {};
-const text = (value: unknown): string => (typeof value === "string" ? value : "");
-const normalized = (value: string) =>
+export const text = (value: unknown): string => (typeof value === "string" ? value : "");
+export const normalized = (value: string) =>
     value
         .normalize("NFKD")
         .replace(/\p{M}/gu, "")
         .toLowerCase()
         .replace(/[^\p{L}\p{N}]+/gu, " ")
         .trim();
-const includesPlace = (haystack: string, needle: string) =>
+export const includesPlace = (haystack: string, needle: string) =>
     Boolean(needle) && ` ${normalized(haystack)} `.includes(` ${normalized(needle)} `);
-function distance(lat: number, lon: number, target: ActivityPhotoRequest): number {
+export function distance(lat: number, lon: number, target: ActivityPhotoRequest): number {
     const rad = Math.PI / 180;
     const h =
         Math.sin(((lat - target.latitude) * rad) / 2) ** 2 +
@@ -54,7 +54,7 @@ export function matchesActivityPhoto(photo: Json, target: ActivityPhotoRequest):
     const context = [target.city, target.country].filter((value) => value && normalized(value) !== place);
     return context.some((value) => includesPlace(evidence, value!));
 }
-function photoResult(raw: Json): ProviderPhoto | null {
+export function photoResult(raw: Json): ProviderPhoto | null {
     const urls = object(raw.urls),
         user = object(raw.user),
         links = object(raw.links),

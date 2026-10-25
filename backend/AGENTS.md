@@ -220,3 +220,30 @@ Publishing now requires an explicit destination, while drafts may omit it. Publi
 property validate against the stored destination. POST /providers/locations/suggest-area requires session/Origin and
 3 to 100 activity points, finds a clear majority area and makes at most one quota-managed Geoapify reverse city/state
 lookup. It does not mutate Boards or overwrite chosen destinations.
+
+## Board editor redesign
+
+[The editor contract](../contracts/board-editor-redesign.md) keeps Geoapify for saved locations and Mapbox for maps.
+Opt-in preferPlace pin lookups and authenticated illustrative-photo discovery/selection use unchanged shared quotas
+and bounded requests. Migration 022 stores nullable external illustration context; it was applied to shared
+development on 2026-10-24 after a verified backup. Run db:editor to inspect status; never replay older migrations.
+Named locationless activities retain existing Board publication validation. Smart Create remains new-Board-only.
+
+### Board editor refinement
+
+Migration 023_board_day_color.sql adds optional nullable day colors; applied to shared development after a verified
+backup on 2026-10-25. Do not replay it. Board replacement preserves omitted colors by dayId; explicit null resets,
+and remix retains colors. Geoapify category search supports nearby/near-me phrases and explicit category: name
+queries in one existing quota reservation; ordinary names/addresses retain full-text geocoding. Global searches
+explicitly disable backend-IP country bias. See the editor contract and migration log.
+
+## Mixed activity media refinement
+
+Activity media now use ordered photos and coverPhoto for mixed uploads and multiple Unsplash selections.
+Legacy fields remain compatible projections; new HTTP writes cannot mix the two representations. Migration 024
+moves attachments into canonical activity_photo and keeps activity_image as an upload-only view for protected
+image access and cleanup. It preserves historical covers, context and original upload records. Isolated PostgreSQL
+migration/save/read/remix tests pass. Migration 024 is applied to shared development after a verified backup; do not reapply it.
+Manual Unsplash search and canonical selection reuse existing provider authentication, Origin checks and quotas.
+External crop presentation is per activity; protected upload crops retain their existing global behavior.
+See BOARD_API_CONTRACT.md and ../contracts/board-editor-redesign.md.

@@ -32,6 +32,8 @@ export type BoardLocation = {
 };
 
 export type BoardImage = {
+    presentation?: import("@/lib/photo-editing").PhotoEdit | null;
+    context?: import("./board-creator").PhotoContext | null;
     id: string;
     url: string;
     alt: string;
@@ -107,6 +109,7 @@ export type Board = {
     // Saved day numbers include empty days and may have gaps.
     dayNumbers?: number[];
     // Saved calendar dates belong to days, including days with no activities.
+    dayColors?: Record<number, string>;
     dayDates?: Record<number, string>;
     // Optional headings for numbered days, such as "Shibuya to Shinjuku".
     dayTitles?: Record<number, string>;

@@ -123,7 +123,6 @@ export const searchBoardLocationProvider = (
         signal
     });
 };
-export const searchBoardMapboxProvider = searchBoardLocationProvider;
 
 export const searchBoardDestinations = (countryCode: string, city: string) => {
     const params = new URLSearchParams({
@@ -139,11 +138,10 @@ export const reverseMapboxProvider = (latitude: string, longitude: string) =>
         `/api/v1/providers/mapbox/reverse?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}`
     );
 
-export const reverseBoardLocationProvider = (latitude: string, longitude: string) =>
+export const reverseBoardLocationProvider = (latitude: string, longitude: string, preferPlace = false) =>
     request<MapboxLocation>(
-        `/api/v1/providers/locations/reverse?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}`
+        `/api/v1/providers/locations/reverse?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}${preferPlace ? "&preferPlace=true" : ""}`
     );
-export const reverseBoardMapboxProvider = reverseBoardLocationProvider;
 
 export const routeMapboxProvider = (
     points: Array<{ latitude: number; longitude: number }>,
@@ -274,3 +272,50 @@ export async function searchBoardAreas(
         )
         .slice(0, 5);
 }
+
+export type ActivityPhotoSuggestion = ProviderPhoto & { context: import("@/types/board-creator").PhotoContext };
+export type ActivityPhotoSuggestionTarget = {
+    name: string;
+    category: import("@/types/board-creator").PinCategory;
+    latitude: number;
+    longitude: number;
+    city?: string;
+    countryCode?: string;
+};
+export const findActivityPhotoSuggestions = (target: ActivityPhotoSuggestionTarget, signal?: AbortSignal) =>
+    request<ActivityPhotoSuggestion[]>(
+        "/api/v1/providers/unsplash/activity-photo-suggestions?" +
+            new URLSearchParams(Object.entries(target).map(([key, value]) => [key, String(value)])),
+        { signal }
+    );
+export const selectActivityPhotoSuggestion = (
+    target: ActivityPhotoSuggestionTarget,
+    photoId: string,
+    signal?: AbortSignal
+) =>
+    request<ActivityPhotoSuggestion>("/api/v1/providers/unsplash/activity-photo-suggestions/select", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...target, photoId }),
+        signal
+    });
+
+export type ManualPhotoPage = {
+    query: string;
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+    photos: ProviderPhoto[];
+};
+export const searchActivityPhotos = (query: string, page: number, signal?: AbortSignal) =>
+    request<ManualPhotoPage>(`/api/v1/providers/unsplash/activity-search?q=${encodeURIComponent(query)}&page=${page}`, {
+        signal
+    });
+export const selectManualActivityPhoto = (photoId: string, signal?: AbortSignal) =>
+    request<ProviderPhoto & { context: null }>("/api/v1/providers/unsplash/activity-photos/select", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ photoId }),
+        signal
+    });

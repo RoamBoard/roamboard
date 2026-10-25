@@ -1,10 +1,11 @@
 "use client";
+import { dayColor } from "@/lib/day-color";
 import { useEffect, useMemo, useState } from "react";
 import CreatorSectionIntro from "./CreatorSectionIntro";
 import { MapPin } from "lucide-react";
 import InteractiveMap from "@/components/features/providers/InteractiveMap";
 import { loadMapboxMapSession } from "@/lib/providers";
-import { dayColors, type BoardDayDraft } from "@/types/board-creator";
+import { type BoardDayDraft } from "@/types/board-creator";
 const noRoute: Array<[number, number]> = [];
 
 export default function BoardPlanMap({
@@ -35,7 +36,7 @@ export default function BoardPlanMap({
                                         type: activity.category,
                                         latitude: activity.location.latitude,
                                         longitude: activity.location.longitude,
-                                        color: dayColors[index % dayColors.length],
+                                        color: dayColor(day, index),
                                         sequence: sequence + 1
                                     }
                                 ]
@@ -58,13 +59,16 @@ export default function BoardPlanMap({
         return () => controller.abort();
     }, [hasPlaces, retry]);
     return (
-        <section aria-label="Board map" className="border-line border-t pt-8">
+        <section aria-label="Board map" className="flex h-full min-h-[32rem] flex-col md:min-h-0">
             <CreatorSectionIntro
-                number="03"
                 title="MAP"
                 description="Explore your days by colour. Select an activity on the map to view or edit it."
             />
-            <div role="group" aria-label="Show activities by day" className="mb-5 flex flex-wrap gap-2">
+            <div
+                role="group"
+                aria-label="Show activities by day"
+                className="mb-4 flex shrink-0 gap-2 overflow-x-auto pb-1 [&>button]:shrink-0"
+            >
                 <button
                     type="button"
                     aria-pressed={!activeDay}
@@ -79,18 +83,25 @@ export default function BoardPlanMap({
                         type="button"
                         aria-pressed={activeDay === day.id}
                         onClick={() => setSelectedDay(day.id)}
+                        style={{
+                            borderColor: dayColor(day, index),
+                            backgroundColor:
+                                activeDay === day.id
+                                    ? `color-mix(in srgb, ${dayColor(day, index)} 15%, var(--background))`
+                                    : undefined
+                        }}
                         className="border-line aria-pressed:border-foreground inline-flex min-h-10 items-center gap-2 rounded-full border px-4 text-xs"
                     >
                         <span
                             aria-hidden="true"
                             className="size-2 rounded-full"
-                            style={{ backgroundColor: dayColors[index % dayColors.length] }}
+                            style={{ backgroundColor: dayColor(day, index) }}
                         />
                         Day {day.dayNumber}
                     </button>
                 ))}
             </div>
-            <div className="bg-faint relative overflow-hidden rounded-[1.25rem]">
+            <div className="bg-faint relative min-h-32 flex-1 overflow-hidden rounded-[1.25rem]">
                 {!points.length ? (
                     <div className="text-muted-foreground grid min-h-64 place-content-center justify-items-center gap-4 px-6 text-center">
                         <MapPin aria-hidden="true" className="size-7" strokeWidth={1} />
@@ -121,7 +132,8 @@ export default function BoardPlanMap({
                         points={points}
                         routeGeometry={noRoute}
                         cooperativeGestures
-                        className="aspect-[16/9] min-h-56 w-full sm:min-h-80"
+                        fillHeight
+                        className="h-full w-full"
                         onPointClick={(point) => onOpenActivity(point.id)}
                     />
                 ) : (

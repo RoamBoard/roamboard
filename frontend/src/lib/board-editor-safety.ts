@@ -3,6 +3,23 @@ import type { BoardCreatorPayload } from "@/types/board-creator";
 
 export type BoardLeaveNavigation = "back" | "replace" | "push";
 
+export function publicationErrors(board: BoardCreatorPayload): Array<{
+    field: "board-title" | "board-destination" | "day-plan";
+    message: string;
+}> {
+    const errors: ReturnType<typeof publicationErrors> = [];
+    if (!board.title.trim()) errors.push({ field: "board-title", message: "Your Board is missing a title." });
+    else if (board.title.length > 500)
+        errors.push({ field: "board-title", message: "Keep your Board title under 501 characters." });
+    if (!board.destination)
+        errors.push({ field: "board-destination", message: "Choose a main destination for your Board." });
+    const activities = board.days.flatMap((day) => day.pins);
+    if (!activities.length) errors.push({ field: "day-plan", message: "Add at least one activity to your day plan." });
+    else if (!activities.some((activity) => activity.location))
+        errors.push({ field: "day-plan", message: "Add a location to at least one activity before publishing." });
+    return errors;
+}
+
 // Compare persisted meaning, not transient editor IDs or refreshed protected-image URLs.
 export function boardEditorFingerprint(board: BoardCreatorPayload): string {
     const write = toBoardWrite(

@@ -30,7 +30,7 @@ export default function BoardDiscoveryDetails({
     onVisibilityChange
 }: Props) {
     return (
-        <div className="grid min-w-0 gap-20 sm:gap-28">
+        <div className="grid min-w-0 gap-10 sm:gap-12">
             <BoardTagPicker
                 values={tags}
                 suggestions={allowedTags}

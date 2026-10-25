@@ -400,3 +400,311 @@ select optgroup {
     border-radius: 999px;
     background: var(--foreground);
 }
+
+.board-editor-rail {
+    position: relative;
+    min-width: 0;
+}
+
+.board-editor-rail [data-editor-section] {
+    min-width: 0;
+    scroll-margin-top: 76px;
+    padding: clamp(1.5rem, 4vw, 4rem);
+}
+
+@media (min-width: 768px) {
+    .board-editor-rail {
+        display: flex;
+        height: calc(100dvh - var(--app-header-height, 0px) - 63px);
+        overflow-x: auto;
+        overflow-y: hidden;
+        scroll-snap-type: x mandatory;
+        scrollbar-width: none;
+    }
+
+    .board-editor-rail::-webkit-scrollbar {
+        display: none;
+    }
+
+    .board-editor-rail [data-editor-section] {
+        flex: 0 0 100%;
+        width: 100%;
+        height: 100%;
+        overflow-y: auto;
+        scroll-snap-align: start;
+        scroll-snap-stop: always;
+        padding-inline: max(4rem, 4vw);
+    }
+}
+
+/* Saved palette identities have theme-specific display variants. */
+:root {
+    --day-b87568: #b87568;
+    --day-b98a62: #b98a62;
+    --day-b69b62: #b69b62;
+    --day-a5a064: #a5a064;
+    --day-82996b: #82996b;
+    --day-649a80: #649a80;
+    --day-639b97: #639b97;
+    --day-64949f: #64949f;
+    --day-6d88aa: #6d88aa;
+    --day-7d7fa9: #7d7fa9;
+    --day-947da7: #947da7;
+    --day-a77996: #a77996;
+    --day-bb8290: #bb8290;
+    --day-a96960: #a96960;
+    --day-a77c57: #a77c57;
+    --day-a28e56: #a28e56;
+    --day-8c955e: #8c955e;
+    --day-6f8c65: #6f8c65;
+    --day-568d79: #568d79;
+    --day-538b90: #538b90;
+    --day-5a80a0: #5a80a0;
+    --day-7273a0: #7273a0;
+    --day-8b6d98: #8b6d98;
+    --day-a06b86: #a06b86;
+    --day-c19783: #c19783;
+    --day-b6a07c: #b6a07c;
+    --day-98aa8b: #98aa8b;
+    --day-8eaaa6: #8eaaa6;
+    --day-969fb8: #969fb8;
+    --day-b09aae: #b09aae;
+}
+.dark {
+    --day-b87568: color-mix(in srgb, #b87568 72%, white);
+    --day-b98a62: color-mix(in srgb, #b98a62 72%, white);
+    --day-b69b62: color-mix(in srgb, #b69b62 72%, white);
+    --day-a5a064: color-mix(in srgb, #a5a064 72%, white);
+    --day-82996b: color-mix(in srgb, #82996b 72%, white);
+    --day-649a80: color-mix(in srgb, #649a80 72%, white);
+    --day-639b97: color-mix(in srgb, #639b97 72%, white);
+    --day-64949f: color-mix(in srgb, #64949f 72%, white);
+    --day-6d88aa: color-mix(in srgb, #6d88aa 72%, white);
+    --day-7d7fa9: color-mix(in srgb, #7d7fa9 72%, white);
+    --day-947da7: color-mix(in srgb, #947da7 72%, white);
+    --day-a77996: color-mix(in srgb, #a77996 72%, white);
+    --day-bb8290: color-mix(in srgb, #bb8290 72%, white);
+    --day-a96960: color-mix(in srgb, #a96960 72%, white);
+    --day-a77c57: color-mix(in srgb, #a77c57 72%, white);
+    --day-a28e56: color-mix(in srgb, #a28e56 72%, white);
+    --day-8c955e: color-mix(in srgb, #8c955e 72%, white);
+    --day-6f8c65: color-mix(in srgb, #6f8c65 72%, white);
+    --day-568d79: color-mix(in srgb, #568d79 72%, white);
+    --day-538b90: color-mix(in srgb, #538b90 72%, white);
+    --day-5a80a0: color-mix(in srgb, #5a80a0 72%, white);
+    --day-7273a0: color-mix(in srgb, #7273a0 72%, white);
+    --day-8b6d98: color-mix(in srgb, #8b6d98 72%, white);
+    --day-a06b86: color-mix(in srgb, #a06b86 72%, white);
+    --day-c19783: color-mix(in srgb, #c19783 72%, white);
+    --day-b6a07c: color-mix(in srgb, #b6a07c 72%, white);
+    --day-98aa8b: color-mix(in srgb, #98aa8b 72%, white);
+    --day-8eaaa6: color-mix(in srgb, #8eaaa6 72%, white);
+    --day-969fb8: color-mix(in srgb, #969fb8 72%, white);
+    --day-b09aae: color-mix(in srgb, #b09aae 72%, white);
+}
+
+.editor-photo-actions {
+    @apply absolute inset-x-3 top-3 flex items-center justify-between gap-2;
+}
+.editor-icon-action {
+    @apply bg-background/95 text-foreground grid size-10 shrink-0 place-items-center rounded-full focus-visible:outline-2 disabled:opacity-40;
+    transition:
+        transform 140ms cubic-bezier(0.16, 1, 0.3, 1),
+        opacity 140ms ease-out;
+}
+@media (hover: hover) {
+    .group\/photo .editor-photo-actions {
+        opacity: 0;
+        transition: opacity 200ms;
+    }
+    .group\/photo:hover .editor-photo-actions,
+    .group\/photo:focus-within .editor-photo-actions {
+        opacity: 1;
+    }
+}
+
+.editor-photo-card {
+    transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    transform-origin: center;
+    cursor: pointer;
+}
+.group\/photo:hover .editor-photo-card,
+.group\/photo:focus-within .editor-photo-card,
+.editor-photo-card:hover,
+.editor-photo-card:focus-visible {
+    transform: scale(1.025);
+    z-index: 1;
+}
+.provider-map-pin {
+    transition: transform 180ms ease;
+}
+.mapboxgl-marker:hover,
+.mapboxgl-marker:focus-visible {
+    z-index: 5;
+}
+.mapboxgl-marker:hover .provider-map-pin,
+.mapboxgl-marker:focus-visible .provider-map-pin {
+    transform: rotate(-45deg) scale(1.15);
+}
+.provider-pin-tooltip {
+    position: absolute;
+    bottom: calc(100% + 12px);
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 140px;
+    max-width: 220px;
+    background: var(--background);
+    color: var(--foreground);
+    padding: 10px 14px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px #0002;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 180ms;
+    font: 12px var(--font-body);
+}
+.provider-pin-tooltip small {
+    display: block;
+    margin-top: 5px;
+    color: var(--muted-foreground);
+}
+.mapboxgl-marker:hover .provider-pin-tooltip,
+.mapboxgl-marker:focus-visible .provider-pin-tooltip {
+    opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+    .editor-photo-card,
+    .provider-map-pin,
+    .provider-pin-tooltip {
+        transition: none;
+    }
+    .editor-photo-card:hover,
+    .editor-photo-card:focus-visible {
+        transform: none;
+    }
+}
+
+/* Stronger palette choices; existing saved colors keep their display definitions above. */
+:root {
+    --day-df524b: #df524b;
+    --day-df7134: #df7134;
+    --day-d99026: #d99026;
+    --day-b89b21: #b89b21;
+    --day-85a72d: #85a72d;
+    --day-4ca34b: #4ca34b;
+    --day-299e72: #299e72;
+    --day-219d91: #219d91;
+    --day-259bac: #259bac;
+    --day-338fca: #338fca;
+    --day-527ee0: #527ee0;
+    --day-716cdd: #716cdd;
+    --day-9261cf: #9261cf;
+    --day-b65aba: #b65aba;
+    --day-cd559b: #cd559b;
+    --day-d34e79: #d34e79;
+    --day-bf6552: #bf6552;
+    --day-b47c37: #b47c37;
+    --day-a39a35: #a39a35;
+    --day-65a643: #65a643;
+    --day-33945b: #33945b;
+    --day-239b81: #239b81;
+    --day-248e9e: #248e9e;
+    --day-428bb5: #428bb5;
+    --day-687fd2: #687fd2;
+    --day-896fce: #896fce;
+    --day-ab6bc5: #ab6bc5;
+    --day-ca6baa: #ca6baa;
+    --day-d9788f: #d9788f;
+    --day-c18a5c: #c18a5c;
+}
+.dark {
+    --day-df524b: color-mix(in srgb, #df524b 92%, white);
+    --day-df7134: color-mix(in srgb, #df7134 92%, white);
+    --day-d99026: color-mix(in srgb, #d99026 92%, white);
+    --day-b89b21: color-mix(in srgb, #b89b21 92%, white);
+    --day-85a72d: color-mix(in srgb, #85a72d 92%, white);
+    --day-4ca34b: color-mix(in srgb, #4ca34b 92%, white);
+    --day-299e72: color-mix(in srgb, #299e72 92%, white);
+    --day-219d91: color-mix(in srgb, #219d91 92%, white);
+    --day-259bac: color-mix(in srgb, #259bac 92%, white);
+    --day-338fca: color-mix(in srgb, #338fca 92%, white);
+    --day-527ee0: color-mix(in srgb, #527ee0 92%, white);
+    --day-716cdd: color-mix(in srgb, #716cdd 92%, white);
+    --day-9261cf: color-mix(in srgb, #9261cf 92%, white);
+    --day-b65aba: color-mix(in srgb, #b65aba 92%, white);
+    --day-cd559b: color-mix(in srgb, #cd559b 92%, white);
+    --day-d34e79: color-mix(in srgb, #d34e79 92%, white);
+    --day-bf6552: color-mix(in srgb, #bf6552 92%, white);
+    --day-b47c37: color-mix(in srgb, #b47c37 92%, white);
+    --day-a39a35: color-mix(in srgb, #a39a35 92%, white);
+    --day-65a643: color-mix(in srgb, #65a643 92%, white);
+    --day-33945b: color-mix(in srgb, #33945b 92%, white);
+    --day-239b81: color-mix(in srgb, #239b81 92%, white);
+    --day-248e9e: color-mix(in srgb, #248e9e 92%, white);
+    --day-428bb5: color-mix(in srgb, #428bb5 92%, white);
+    --day-687fd2: color-mix(in srgb, #687fd2 92%, white);
+    --day-896fce: color-mix(in srgb, #896fce 92%, white);
+    --day-ab6bc5: color-mix(in srgb, #ab6bc5 92%, white);
+    --day-ca6baa: color-mix(in srgb, #ca6baa 92%, white);
+    --day-d9788f: color-mix(in srgb, #d9788f 92%, white);
+    --day-c18a5c: color-mix(in srgb, #c18a5c 92%, white);
+}
+
+.group\/photo button:not(:disabled),
+.editor-icon-action:not(:disabled) {
+    cursor: pointer;
+}
+.editor-icon-action:hover,
+.editor-icon-action:focus-visible {
+    transform: scale(1.1);
+}
+.editor-photo-label {
+    opacity: 1;
+}
+@media (hover: hover) {
+    .editor-photo-label {
+        opacity: 0;
+        transition: opacity 140ms ease-out;
+    }
+    .group\/photo:hover .editor-photo-label,
+    .group\/photo:focus-within .editor-photo-label {
+        opacity: 1;
+    }
+}
+.editor-review-day {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 400px;
+}
+
+.editor-photo-actions,
+.group\/photo .editor-icon-action,
+.editor-photo-label {
+    z-index: 10;
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .group\/photo .editor-icon-action {
+        transform: scale(0.92);
+    }
+    .group\/photo:hover .editor-icon-action,
+    .group\/photo:focus-within .editor-icon-action {
+        transform: scale(1);
+    }
+    .group\/photo .editor-icon-action:hover,
+    .group\/photo .editor-icon-action:focus-visible {
+        transform: scale(1.1);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .editor-icon-action,
+    .editor-photo-label {
+        transition: none;
+    }
+    .group\/photo:hover .editor-photo-card,
+    .group\/photo:focus-within .editor-photo-card,
+    .editor-icon-action:hover,
+    .editor-icon-action:focus-visible {
+        transform: none;
+    }
+}
