@@ -68,10 +68,17 @@ function harness(context: TestContext) {
             new Promise<Response>((resolve) => requests.push({ url: new URL(String(input)), init, resolve }))
     );
     const selected: ProviderPhoto[] = [];
+    const previews: Array<{ photos: ProviderPhoto[]; index: number }> = [];
     const selectedIds: string[] = [];
     function render() {
         cursor.index = 0;
-        return nodes(ActivityPhotoSearch({ selectedIds, onSelect: (value) => selected.push(value) }));
+        return nodes(
+            ActivityPhotoSearch({
+                selectedIds,
+                onSelect: (value) => selected.push(value),
+                onPreview: (photos, index) => previews.push({ photos, index })
+            })
+        );
     }
     function change(value: string) {
         render()
@@ -105,9 +112,22 @@ function harness(context: TestContext) {
         requests,
         selected,
         selectedIds,
+        previews,
         unmount: () => cleanups.forEach((cleanup) => cleanup())
     };
 }
+
+test("previewing a search result delegates the ordered photos and clicked index to the activity editor", async (context) => {
+    const ui = harness(context);
+    ui.change("boats");
+    ui.submit();
+    const photos = [photo("first"), photo("second")];
+    await ui.respond(0, { query: "boats", page: 1, pageSize: 12, total: 2, totalPages: 1, photos });
+    ui.button(/^Enlarge second photo$/).onClick?.();
+    assert.deepEqual(ui.previews, [{ photos, index: 1 }]);
+    assert.deepEqual(ui.selected, []);
+    assert.equal(ui.requests.length, 1, "Previewing must not select a photo or spend provider quota");
+});
 
 test("manual photo search waits for submit and pagination retains submitted words while a new query resets page one", async (context) => {
     const ui = harness(context);

@@ -8,22 +8,22 @@ import {
     type ManualPhotoPage,
     type ProviderPhoto
 } from "@/lib/providers";
-import StoryGallery from "./StoryGallery";
 
 export default function ActivityPhotoSearch({
     selectedIds,
     onSelect,
+    onPreview,
     disabled = false
 }: {
     selectedIds: string[];
     onSelect: (photo: ProviderPhoto) => void;
+    onPreview: (photos: ProviderPhoto[], index: number) => void;
     disabled?: boolean;
 }) {
     const [query, setQuery] = useState("");
     const [result, setResult] = useState<ManualPhotoPage | null>(null);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState("");
-    const [zoom, setZoom] = useState<number | null>(null);
     const pending = useRef<AbortController | null>(null);
     useEffect(() => () => pending.current?.abort(), []);
     async function search(page = 1, words = query.trim()) {
@@ -119,7 +119,7 @@ export default function ActivityPhotoSearch({
                         <button
                             type="button"
                             aria-label={`Enlarge ${photo.alt}`}
-                            onClick={() => setZoom(index)}
+                            onClick={() => onPreview(result!.photos, index)}
                             className="editor-photo-card block w-full overflow-hidden rounded-xl"
                         >
                             <img
@@ -172,16 +172,6 @@ export default function ActivityPhotoSearch({
                         Next &rarr;
                     </button>
                 </div>
-            ) : null}
-            {zoom !== null ? (
-                <StoryGallery
-                    placements={(result?.photos ?? []).map((photo) => ({
-                        id: photo.id,
-                        image: { ...photo, source: "application" as const }
-                    }))}
-                    initialIndex={zoom}
-                    onClose={() => setZoom(null)}
-                />
             ) : null}
         </section>
     );

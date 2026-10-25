@@ -24,12 +24,26 @@ export default function BoardPhotoStrip({
                 visible: viewport / (viewport + length)
             });
         };
+        const wheel = (event: WheelEvent) => {
+            if (event.ctrlKey || event.metaKey || (days && !window.matchMedia("(min-width: 768px)").matches)) return;
+            const delta =
+                Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.shiftKey ? event.deltaY : 0;
+            const length = api.internalEngine().limit.length;
+            const progress = Math.max(0, Math.min(1, api.scrollProgress()));
+            if (!delta || length <= 0 || (delta < 0 ? progress <= 0 : progress >= 1)) return;
+            // Run before the outer rail's native listener; React wheel handlers run too late.
+            event.preventDefault();
+            scrollBoardLibrary(api, progress + delta / length);
+        };
+        const viewport = api.rootNode();
+        viewport.addEventListener("wheel", wheel, { passive: false });
         update();
         api.on("scroll", update).on("reInit", update).on("select", update);
         return () => {
+            viewport.removeEventListener("wheel", wheel);
             api.off("scroll", update).off("reInit", update).off("select", update);
         };
-    }, [api]);
+    }, [api, days]);
     return (
         <Carousel
             aria-label={label}
@@ -46,19 +60,6 @@ export default function BoardPhotoStrip({
                     )
             }}
             className="min-w-0"
-            onWheel={(event) => {
-                if (
-                    !api ||
-                    event.ctrlKey ||
-                    event.metaKey ||
-                    (days && !window.matchMedia("(min-width: 768px)").matches)
-                )
-                    return;
-                const delta = event.deltaX || (event.shiftKey ? event.deltaY : 0);
-                if (!delta) return;
-                const length = api.internalEngine().limit.length;
-                if (length > 0) scrollBoardLibrary(api, api.scrollProgress() + delta / length);
-            }}
         >
             <CarouselContent
                 as="ul"

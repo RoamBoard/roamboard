@@ -394,8 +394,12 @@ export default function BoardCreator({
                 current.map((day) => ({
                     ...day,
                     pins: day.pins.map((pin) =>
-                        pin.coverImageId === image.uploadedImageId ||
-                        (pin.coverPhoto?.source === "unsplash" && pin.coverPhoto.providerImageId === image.publicId)
+                        pin.id === image.pinId &&
+                        (image.source === "upload"
+                            ? pin.coverImageId === image.uploadedImageId ||
+                              (pin.coverPhoto?.source === "upload" && pin.coverPhoto.imageId === image.uploadedImageId)
+                            : pin.coverPhoto?.source === "unsplash" &&
+                              pin.coverPhoto.providerImageId === image.publicId)
                             ? { ...pin, coverImageId: null, coverPhoto: null }
                             : pin
                     )

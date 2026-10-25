@@ -1,10 +1,20 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { Children, createElement, isValidElement, type ReactNode, type ReactElement } from "react";
+import React, {
+    Children,
+    createElement,
+    isValidElement,
+    type ReactNode,
+    type ReactElement,
+    type ComponentProps
+} from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import BoardCreationPreview from "../src/components/features/boards/BoardCreationPreview";
 import BoardPhotoStrip from "../src/components/features/boards/BoardPhotoStrip";
 import CroppedPhoto from "../src/components/images/CroppedPhoto";
+import BoardCreator from "../src/components/features/boards/BoardCreator";
+import BoardPreviewSection from "../src/components/features/boards/BoardPreviewSection";
+import { toBoardWrite } from "../src/lib/board-creator-api";
 import type { BoardCreatorPayload, BoardImageDraft, BoardPinDraft } from "../src/types/board-creator";
 
 type Props = {
@@ -68,6 +78,62 @@ function pin(id: string, time: string, order: number): BoardPinDraft {
             mapboxId: null
         }
     };
+}
+
+for (const removed of ["shared-cover", "other-photo"] as const) {
+    test(`removing ${removed} only changes the owning activity's selected cover`, (context) => {
+        const cover = { source: "unsplash", providerImageId: "shared" } as const;
+        const images = [
+            photo("shared-cover", "first", 0, "shared"),
+            photo("other-photo", "first", 1),
+            photo("second-first", "second", 0),
+            photo("second-cover", "second", 1, "shared")
+        ];
+        const days = [
+            {
+                id: "day",
+                dayNumber: 1,
+                date: null,
+                pins: [
+                    { ...pin("first", "09:00", 0), coverPhoto: cover },
+                    { ...pin("second", "10:00", 1), coverPhoto: cover }
+                ]
+            }
+        ];
+        const originalUseState = React.useState;
+        const seed = { images: false };
+        context.mock.method(React, "useState", ((initial?: unknown) => {
+            const value = typeof initial === "function" ? initial() : initial;
+            if (Array.isArray(value) && value.length === 0 && !seed.images) {
+                seed.images = true;
+                return originalUseState(images);
+            }
+            return originalUseState(Array.isArray(value) && value[0]?.pins ? days : value);
+        }) as typeof React.useState);
+        const state: { removed: boolean; board?: BoardCreatorPayload } = { removed: false };
+        function Probe() {
+            seed.images = false;
+            const tree = BoardCreator({ initialMode: "scratch" });
+            const preview = nodes(tree).find((node) => node.type === BoardPreviewSection) as
+                ReactElement<ComponentProps<typeof BoardPreviewSection>> | undefined;
+            assert.ok(preview);
+            state.board = preview.props.board;
+            if (!state.removed) {
+                state.removed = true;
+                preview.props.onRemovePhoto?.(removed);
+            }
+            return null;
+        }
+        renderToStaticMarkup(createElement(Probe));
+        assert.ok(state.board);
+        const activities = state.board.days[0].pins;
+        assert.deepEqual(activities[0].coverPhoto, removed === "shared-cover" ? null : cover);
+        assert.deepEqual(activities[1].coverPhoto, cover);
+        assert.ok(!state.board.images.some((image) => image.id === removed));
+        assert.ok(state.board.images.some((image) => image.id === "second-cover"));
+        const savedActivities = toBoardWrite(state.board, []).days[0].activities;
+        assert.deepEqual(savedActivities[1].coverPhoto, cover, "Saving must retain the second activity's chosen cover");
+    });
 }
 
 test("full Board review uses complete day galleries in saved activity/photo order with compact editable rows", () => {

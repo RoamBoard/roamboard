@@ -4,7 +4,8 @@
 import { activityNoteError, activityNoteLength } from "@/lib/activity-note";
 
 import { ArrowLeft, ArrowRight, Crop, Trash2, Upload } from "lucide-react";
-import EditorPhotoGallery, { editorPhoto } from "./EditorPhotoGallery";
+import { editorPhoto } from "./EditorPhotoGallery";
+import StoryGallery, { type StoryPlacement } from "./StoryGallery";
 import { StoryPhotoCredit } from "./StoryPhoto";
 import { useEffect, useId, useRef, useState } from "react";
 
@@ -66,7 +67,7 @@ function ActivityEditorContent({
     onReorderImage
 }: Props & { originalImages: BoardImageDraft[] }) {
     const photoUrl = usePhotoUrls();
-    const [galleryIndex, setGalleryIndex] = useState<number | null>(null);
+    const [gallery, setGallery] = useState<{ placements: StoryPlacement[]; index: number } | null>(null);
     const [editingExternal, setEditingExternal] = useState<BoardImageDraft | null>(null);
     const [editingPhoto, setEditingPhoto] = useState<number | null>(null);
     const dialogRef = useRef<HTMLDivElement>(null);
@@ -74,7 +75,7 @@ function ActivityEditorContent({
     useDialogFocus(
         dialogRef,
         requestClose,
-        confirmation === null && editingPhoto === null && galleryIndex === null && editingExternal === null
+        confirmation === null && editingPhoto === null && gallery === null && editingExternal === null
     );
     const inputRef = useRef<HTMLInputElement>(null);
     const [draft, setDraft] = useState(pin);
@@ -132,6 +133,15 @@ function ActivityEditorContent({
     const matchedAutomaticImage = automaticImage?.locationKey === locationKey ? automaticImage : null;
     const visibleImages = [...activityImages, ...(!hasUpload && matchedAutomaticImage ? [matchedAutomaticImage] : [])];
     const availableImages = images.filter((image) => image.source === "upload" && image.pinId !== pin.id);
+    function openGallery(index: number) {
+        setGallery({
+            placements: [...visibleImages, ...availableImages].map((image) => ({
+                id: image.id,
+                image: { ...editorPhoto(image), url: photoUrl(image.url) }
+            })),
+            index
+        });
+    }
     const chosenPhoto = draft.coverPhoto
         ? visibleImages.find((image) =>
               draft.coverPhoto?.source === "upload"
@@ -303,11 +313,11 @@ function ActivityEditorContent({
                     onClose={() => setEditingExternal(null)}
                 />
             ) : null}
-            {galleryIndex !== null ? (
-                <EditorPhotoGallery
-                    images={[...visibleImages, ...availableImages]}
-                    index={galleryIndex}
-                    onClose={() => setGalleryIndex(null)}
+            {gallery !== null ? (
+                <StoryGallery
+                    placements={gallery.placements}
+                    initialIndex={gallery.index}
+                    onClose={() => setGallery(null)}
                 />
             ) : null}
             {editingPhoto !== null ? (
@@ -326,9 +336,7 @@ function ActivityEditorContent({
                 />
             ) : null}
             <div
-                inert={
-                    confirmation !== null || editingPhoto !== null || galleryIndex !== null || editingExternal !== null
-                }
+                inert={confirmation !== null || editingPhoto !== null || gallery !== null || editingExternal !== null}
                 className="fixed inset-0 z-50 grid place-items-center bg-black/45 p-4"
                 role="presentation"
                 onClick={(event) => {
@@ -374,7 +382,7 @@ function ActivityEditorContent({
                                             aria-label="Enlarge activity cover"
                                             className="editor-photo-card block w-full overflow-hidden rounded-2xl"
                                             onClick={() =>
-                                                setGalleryIndex(
+                                                openGallery(
                                                     Math.max(
                                                         0,
                                                         visibleImages.findIndex((image) => image.id === cover.id)
@@ -436,7 +444,7 @@ function ActivityEditorContent({
                                                     type="button"
                                                     aria-label={`Enlarge activity photo ${index + 1}`}
                                                     className="block w-full overflow-hidden rounded-2xl"
-                                                    onClick={() => setGalleryIndex(index)}
+                                                    onClick={() => openGallery(index)}
                                                 >
                                                     <CroppedPhoto
                                                         thumbnail
@@ -555,7 +563,7 @@ function ActivityEditorContent({
                                                         aria-label="Enlarge Board upload"
                                                         className="editor-photo-card block w-full overflow-hidden rounded-xl"
                                                         onClick={() => {
-                                                            setGalleryIndex(
+                                                            openGallery(
                                                                 visibleImages.length + availableImages.indexOf(item)
                                                             );
                                                         }}
@@ -584,6 +592,15 @@ function ActivityEditorContent({
                                     </section>
                                 ) : null}
                                 <ActivityPhotoSearch
+                                    onPreview={(photos, index) =>
+                                        setGallery({
+                                            placements: photos.map((photo) => ({
+                                                id: photo.id,
+                                                image: { ...photo, source: "application" }
+                                            })),
+                                            index
+                                        })
+                                    }
                                     disabled={uploading}
                                     selectedIds={activityImages
                                         .filter((image) => image.source === "unsplash")

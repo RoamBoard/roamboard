@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { Children, createElement, isValidElement, type ComponentProps, type ReactNode } from "react";
+import React, { Children, createElement, isValidElement, type ComponentProps, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import NewBoardPage from "../src/app/boards/new/page";
@@ -8,6 +8,9 @@ import EditDraftPage from "../src/app/boards/drafts/[boardId]/page";
 import EditPublishedBoardPage from "../src/app/boards/[boardId]/edit/page";
 import ActivityEditorDialog from "../src/components/features/boards/ActivityEditorDialog";
 import ActivityPhotoSuggestions from "../src/components/features/boards/ActivityPhotoSuggestions";
+import ActivityPhotoSearch from "../src/components/features/boards/ActivityPhotoSearch";
+import StoryGallery from "../src/components/features/boards/StoryGallery";
+import ImageZoomDialog from "../src/components/ui/ImageZoomDialog";
 import { activityBatchDefaults, fillActivityFromPhoto } from "../src/lib/activity-photo";
 import { fromBoardDocument, toBoardWrite, type BoardDocument } from "../src/lib/board-creator-api";
 import type { BoardCreatorPayload, BoardImageDraft, BoardPinDraft } from "../src/types/board-creator";
@@ -22,6 +25,74 @@ const freeAfternoon: BoardPinDraft = {
     source: "manual",
     location: null
 };
+
+test("Escape in a search-result gallery closes only the preview, with the activity focus handler paused", (context) => {
+    const browser = new EventTarget();
+    const documentState = { activeElement: null };
+    const cleanups: Array<void | (() => void)> = [];
+    context.after(() => cleanups.forEach((cleanup) => cleanup?.()));
+    for (const [name, value] of Object.entries({ window: browser, document: documentState })) {
+        const original = Object.getOwnPropertyDescriptor(globalThis, name);
+        Object.defineProperty(globalThis, name, { configurable: true, value });
+        context.after(() => {
+            if (original) Object.defineProperty(globalThis, name, original);
+            else Reflect.deleteProperty(globalThis, name);
+        });
+    }
+    const focusEffects: Array<() => void | (() => void)> = [];
+    context.mock.method(
+        React,
+        "useEffect",
+        (effect: () => void | (() => void), dependencies?: React.DependencyList) => {
+            if (
+                dependencies?.[0] &&
+                typeof dependencies[0] === "object" &&
+                "current" in dependencies[0] &&
+                typeof dependencies[1] === "boolean"
+            )
+                focusEffects.push(effect);
+        }
+    );
+    const actions: string[] = [];
+    const state = { opened: false };
+    function Probe() {
+        focusEffects.length = 0;
+        const tree = editorControls({
+            pin: freeAfternoon,
+            images: [],
+            remainingUploads: 5,
+            onClose: () => actions.push("editor"),
+            onDelete() {},
+            onReorderImage() {},
+            onSave() {},
+            onAddImage() {},
+            onAssignImage() {}
+        });
+        const controls = elements(tree);
+        if (!state.opened) {
+            state.opened = true;
+            const search = controls.find((node) => node.type === ActivityPhotoSearch);
+            assert.ok(search);
+            (search.props as ComponentProps<typeof ActivityPhotoSearch>).onPreview([], 0);
+        }
+        const gallery = controls.find((node) => node.type === StoryGallery);
+        if (!gallery) return null;
+        return createElement(ImageZoomDialog, {
+            images: [],
+            onClose: () => {
+                actions.push("preview");
+                (gallery.props as ComponentProps<typeof StoryGallery>).onClose();
+            }
+        });
+    }
+    renderToStaticMarkup(createElement(Probe));
+    assert.equal(focusEffects.length, 2, "Exercise both real dialog focus hooks");
+    cleanups.push(...focusEffects.map((effect) => effect()));
+    const escape = new Event("keydown", { cancelable: true });
+    Object.defineProperty(escape, "key", { value: "Escape" });
+    browser.dispatchEvent(escape);
+    assert.deepEqual(actions, ["preview"]);
+});
 
 test("create, draft edit and published edit expose the same five chapters in reading order", async () => {
     const pages = [

@@ -82,7 +82,7 @@ export default function BoardEditorRail({ children }: { children: ReactNode }) {
                     ancestors(element.parentElement)
                 );
             };
-            if (ancestors(event.target)) {
+            if (event.defaultPrevented || ancestors(event.target)) {
                 gesture.inner = true;
                 return;
             }
