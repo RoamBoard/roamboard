@@ -140,3 +140,11 @@ export const photoSelectionSchema = photoSuggestionSchema.extend({
     photoId: z.string().regex(/^[A-Za-z0-9_-]{1,80}$/)
 });
 export type PhotoSuggestionRequest = z.infer<typeof photoSuggestionSchema>;
+
+export const manualPhotoSearchSchema = z
+    .object({
+        q: z.string().trim().min(1).max(160),
+        page: z.coerce.number().int().positive().max(Number.MAX_SAFE_INTEGER).default(1)
+    })
+    .strict();
+export const manualPhotoSelectionSchema = z.object({ photoId: z.string().regex(/^[A-Za-z0-9_-]{1,80}$/) }).strict();

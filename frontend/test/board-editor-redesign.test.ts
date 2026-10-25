@@ -114,6 +114,60 @@ test("an itinerary activity can save without a map pin and retains its entered t
     assert.deepEqual(actions, ["close"]);
 });
 
+test("changing only an external cover requires discard confirmation even when both legacy upload covers are null", () => {
+    const pin: BoardPinDraft = {
+        ...freeAfternoon,
+        coverImageId: null,
+        coverPhoto: { source: "unsplash", providerImageId: "first" }
+    };
+    const images: BoardImageDraft[] = ["first", "second"].map((id, index) => ({
+        ...photo(index + 1, null),
+        id,
+        publicId: id,
+        uploadedImageId: undefined,
+        source: "unsplash",
+        pinId: pin.id
+    }));
+    const actions: string[] = [];
+    const progress = { stage: 0 };
+    function Probe() {
+        const tree = editorControls({
+            pin,
+            images,
+            remainingUploads: 5,
+            onClose: () => actions.push("closed"),
+            onSave: () => actions.push("saved"),
+            onDelete() {},
+            onAddImage() {},
+            onAssignImage() {},
+            onSetCover() {},
+            onReorderImage() {}
+        });
+        const nodes = elements(tree);
+        if (progress.stage === 0) {
+            progress.stage = 1;
+            const cover = nodes.find(
+                (node) => node.type === "button" && node.props.children === "Set as activity cover"
+            );
+            assert.ok(cover);
+            cover.props.onClick?.();
+        } else if (progress.stage === 1) {
+            progress.stage = 2;
+            const close = nodes.find(
+                (node) =>
+                    node.type === "button" &&
+                    (node.props as { "aria-label"?: string })["aria-label"] === "Close activity editor"
+            );
+            assert.ok(close);
+            close.props.onClick?.();
+        }
+        return tree;
+    }
+    const markup = renderToStaticMarkup(createElement(Probe));
+    assert.match(markup, /Discard activity edits\?/);
+    assert.deepEqual(actions, [], "Cover-only changes must not silently close or save the activity");
+});
+
 test("six-file activity batches are rejected before uploads even when board capacity is larger", async (context) => {
     const requests: string[] = [];
     context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {

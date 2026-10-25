@@ -1,4 +1,4 @@
-import BoardCreationPreview from "./BoardCreationPreview";
+import BoardCreationPreview, { type PreviewPhotoActions } from "./BoardCreationPreview";
 import CreatorSectionIntro from "./CreatorSectionIntro";
 import type { BoardCreatorPayload } from "@/types/board-creator";
 
@@ -6,8 +6,9 @@ export default function BoardPreviewSection({
     board,
     author,
     editable,
-    embedded = false
-}: {
+    embedded = false,
+    ...photoActions
+}: PreviewPhotoActions & {
     board: BoardCreatorPayload;
     author?: string;
     editable?: boolean;
@@ -30,7 +31,7 @@ export default function BoardPreviewSection({
                         />
                     </div>
                 ) : null}
-                <BoardCreationPreview board={board} author={author} editable={editable} />
+                <BoardCreationPreview board={board} author={author} editable={editable} {...photoActions} />
             </div>
         </section>
     );

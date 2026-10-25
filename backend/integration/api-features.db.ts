@@ -50,7 +50,8 @@ test(
                 "020_image_deletion.sql",
                 "021_board_story.sql",
                 "022_activity_photo_context.sql",
-                "023_board_day_color.sql"
+                "023_board_day_color.sql",
+                "024_activity_photos.sql"
             ]) {
                 await pool.query(await readFile(new URL(`../db/migrations/${name}`, import.meta.url), "utf8"));
             }

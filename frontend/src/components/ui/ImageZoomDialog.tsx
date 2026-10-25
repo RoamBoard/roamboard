@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Image from "next/image";
+import CroppedPhoto from "@/components/images/CroppedPhoto";
 import { ChevronLeft, ChevronRight, RotateCcw, X, ZoomIn, ZoomOut } from "lucide-react";
 import LibraryImage from "@/components/images/LibraryImage";
 import { useDialogFocus } from "@/lib/use-dialog-focus";
@@ -361,22 +362,34 @@ export default function ImageZoomDialog({ images, initialIndex = 0, onClose }: P
                             : "motion-safe:transition-transform motion-safe:duration-200 motion-safe:ease-out motion-reduce:transition-none"
                     }`}
                 >
-                    <Photo
-                        key={currentImage.url}
-                        src={currentImage.url}
-                        alt={currentImage.alt}
-                        fill
-                        sizes="95vw"
-                        priority
-                        className="pointer-events-none object-scale-down select-none"
-                        style={{ opacity: largeUrl !== currentImage.url && loadedLarge === largeUrl ? 0 : 1 }}
-                        onLoad={() => {
-                            if (largeUrl === currentImage.url) setLoadedLarge(largeUrl);
-                        }}
-                        onError={() => setFailedDisplay(currentImage.url)}
-                        unoptimized
-                    />
-                    {largeUrl && largeUrl !== currentImage.url ? (
+                    {currentImage.presentation ? (
+                        <CroppedPhoto
+                            src={currentImage.url}
+                            alt={currentImage.alt}
+                            width={currentImage.width}
+                            height={currentImage.height}
+                            presentation={currentImage.presentation}
+                            onError={() => setFailedDisplay(currentImage.url)}
+                            className="max-h-full w-full max-w-full"
+                        />
+                    ) : (
+                        <Photo
+                            key={currentImage.url}
+                            src={currentImage.url}
+                            alt={currentImage.alt}
+                            fill
+                            sizes="95vw"
+                            priority
+                            className="pointer-events-none object-scale-down select-none"
+                            style={{ opacity: largeUrl !== currentImage.url && loadedLarge === largeUrl ? 0 : 1 }}
+                            onLoad={() => {
+                                if (largeUrl === currentImage.url) setLoadedLarge(largeUrl);
+                            }}
+                            onError={() => setFailedDisplay(currentImage.url)}
+                            unoptimized
+                        />
+                    )}
+                    {!currentImage.presentation && largeUrl && largeUrl !== currentImage.url ? (
                         <Photo
                             key={largeUrl}
                             src={largeUrl}

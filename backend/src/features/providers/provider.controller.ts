@@ -17,6 +17,8 @@ import type {
 import type { ProviderService } from "./provider.service.js";
 
 export interface ProviderController {
+    manualPhotoSearch: RequestHandler;
+    manualPhotoSelect: RequestHandler;
     config: RequestHandler;
     mapboxMapSession: RequestHandler;
     mapboxSearch: RequestHandler;
@@ -51,6 +53,11 @@ export function createProviderController(service: ProviderService): ProviderCont
             res.json({ data: await operation(query.q, query.limit) });
         };
     return {
+        manualPhotoSearch: async (_req, res) => {
+            const query = res.locals.query as { q: string; page: number };
+            res.json({ data: await service.manualPhotoSearch(query.q, query.page) });
+        },
+        manualPhotoSelect: async (req, res) => res.json({ data: await service.manualPhotoSelect(req.body.photoId) }),
         config: (_req, res) => res.json({ data: service.config() }),
         mapboxMapSession: async (_req, res) => res.json({ data: await service.mapboxMapSession() }),
         mapboxSearch: search(service.mapboxSearch),

@@ -508,7 +508,8 @@ test("a partial photo batch retains successful uploads in input order through re
     const files = ["first.jpg", "intent-denied.jpg", "storage-denied.jpg", "completion-denied.jpg", "last.jpg"].map(
         (name) => new File(["photo bytes"], name, { type: "image/jpeg" })
     );
-    const pending = uploadBoardImageBatch(files);
+    const completed: number[] = [];
+    const pending = uploadBoardImageBatch(files, (asset) => completed.push(asset.imageId));
     await firstStarted.promise;
     firstCompletion.resolve(
         Response.json({
@@ -527,6 +528,7 @@ test("a partial photo batch retains successful uploads in input order through re
         result.assets.map((asset) => asset.imageId),
         [501, 505]
     );
+    assert.deepEqual([...completed].sort(), [501, 505]);
     assert.equal(result.assets[0].capturedAt, "2026-06-04T09:00:00Z");
     assert.equal(result.assets[0].latitude, 59.32);
     assert.match(result.assets[0].url, /^https?:\/\/[^/]+\/images\/501\/content$/);

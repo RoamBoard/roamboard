@@ -8,6 +8,7 @@ type Props = {
     onAdd: (dayId: string, activity: BoardPinDraft, image: BoardImageDraft | null) => void;
     proximity?: { latitude: number; longitude: number } | null;
     images?: BoardImageDraft[];
+    onUpdateImage?: (image: BoardImageDraft) => void;
     onAddImage?: (image: BoardImageDraft) => void;
     onAssignImage?: (imageId: string, pinId: string | null) => void;
     onRemoveImage?: (id: string) => void;
@@ -20,6 +21,7 @@ export default function AddActivityDialog({
     proximity,
     images = [],
     onAddImage,
+    onUpdateImage,
     onAssignImage,
     onRemoveImage,
     onUploadingChange
@@ -49,6 +51,7 @@ export default function AddActivityDialog({
             onAddImage={(image) => onAddImage?.(image)}
             onAssignImage={(id, pinId) => onAssignImage?.(id, pinId)}
             onRemoveImage={onRemoveImage}
+            onUpdateImage={onUpdateImage}
             onSetCover={() => {}}
             onReorderImage={() => {}}
         />

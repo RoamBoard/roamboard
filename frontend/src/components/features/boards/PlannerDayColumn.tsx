@@ -1,12 +1,11 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { usePhotoUrls } from "@/lib/use-photo-urls";
 import { ChevronRight, GripVertical, Palette, Plus, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
-import { motion, useReducedMotion } from "motion/react";
+
 import { dayColor } from "@/lib/day-color";
-import ActivityCategoryPicker from "@/components/features/boards/ActivityCategoryPicker";
+import CroppedPhoto from "@/components/images/CroppedPhoto";
 import PinCategoryIcon from "@/components/ui/PinCategoryIcon";
 import { dayColors, type BoardDayDraft, type BoardImageDraft, type BoardPinDraft } from "@/types/board-creator";
 
@@ -36,13 +35,11 @@ export default function PlannerDayColumn({
     onAdd,
     onRemoveDay,
     onMovePin,
-    onUpdatePin,
     onColorChange,
     dragTarget,
     onDragTargetChange
 }: Props) {
     const photoUrl = usePhotoUrls();
-    const reducedMotion = useReducedMotion();
     const [choosingColor, setChoosingColor] = useState(false);
     const dropIndex = dragTarget?.dayId === day.id ? dragTarget.index : null;
     const touch = useRef<{ x: number; y: number; moved: boolean } | null>(null);
@@ -84,7 +81,7 @@ export default function PlannerDayColumn({
             }}
             onDragEnd={() => setDropIndex(null)}
             style={{
-                backgroundColor: `color-mix(in srgb, ${color} 10%, var(--background))`,
+                backgroundColor: `color-mix(in srgb, ${color} 6%, var(--background))`,
                 borderColor: dropIndex !== null ? color : undefined
             }}
             data-planner-day={day.id}
@@ -171,13 +168,19 @@ export default function PlannerDayColumn({
                             .filter((image) => image.pinId === pin.id)
                             .sort((a, b) => (a.activityOrder ?? a.order) - (b.activityOrder ?? b.order));
                         const image =
-                            pin.coverImageId === null
+                            (pin.coverPhoto
+                                ? photos.find((photo) =>
+                                      pin.coverPhoto?.source === "upload"
+                                          ? photo.uploadedImageId === pin.coverPhoto.imageId
+                                          : photo.source === "unsplash" &&
+                                            photo.publicId === pin.coverPhoto?.providerImageId
+                                  )
+                                : undefined) ??
+                            (pin.coverImageId === null
                                 ? photos.find((photo) => photo.source === "unsplash")
-                                : (photos.find((photo) => photo.uploadedImageId === pin.coverImageId) ?? photos[0]);
+                                : (photos.find((photo) => photo.uploadedImageId === pin.coverImageId) ?? photos[0]));
                         return (
-                            <motion.li
-                                layout={reducedMotion ? false : "position"}
-                                transition={{ duration: 0.2 }}
+                            <li
                                 data-activity-row
                                 style={{ paddingTop: dropIndex === pinIndex ? 48 : 0 }}
                                 key={pin.id}
@@ -189,18 +192,17 @@ export default function PlannerDayColumn({
                                     }
                                     event.dataTransfer.effectAllowed = "move";
                                     event.dataTransfer.setData("text/roamboard-pin", pin.id);
+                                    // Embla cancels bubbling dragstart events even when watchDrag declines the gesture.
+                                    event.stopPropagation();
                                 }}
-                                className="pointer-events-auto relative mb-5 grid grid-cols-[3rem_minmax(0,1fr)] items-center transition-[padding] duration-200 motion-reduce:transition-none sm:grid-cols-[3.5rem_minmax(0,1fr)]"
+                                className={`pointer-events-auto relative mb-5 grid items-center transition-[padding] duration-200 motion-reduce:transition-none ${pin.time ? "grid-cols-[2.5rem_minmax(0,1fr)]" : "grid-cols-1"}`}
                             >
-                                <time className="text-muted-foreground pr-3 text-right text-[9px] tabular-nums sm:pr-6 sm:text-[10px]">
-                                    {pin.time || "—"}
-                                </time>
+                                {pin.time ? (
+                                    <time className="text-muted-foreground pr-3 text-right text-[9px] tabular-nums sm:pr-6 sm:text-[10px]">
+                                        {pin.time}
+                                    </time>
+                                ) : null}
                                 <div className="relative min-w-0">
-                                    <ActivityCategoryPicker
-                                        pin={pin}
-                                        disabled={disabled}
-                                        onChange={(category) => onUpdatePin({ ...pin, category })}
-                                    />
                                     <button
                                         type="button"
                                         tabIndex={-1}
@@ -289,7 +291,9 @@ export default function PlannerDayColumn({
                                         className="group bg-faint/50 hover:bg-faint relative flex min-h-24 w-full cursor-grab items-stretch overflow-hidden rounded-xl text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 active:cursor-grabbing motion-reduce:transition-none"
                                     >
                                         {image ? (
-                                            <img
+                                            <CroppedPhoto
+                                                thumbnail
+                                                presentation={image.presentation}
                                                 src={photoUrl(image.thumbnailUrl)}
                                                 loading="lazy"
                                                 decoding="async"
@@ -320,7 +324,7 @@ export default function PlannerDayColumn({
                                         />
                                     </button>
                                 </div>
-                            </motion.li>
+                            </li>
                         );
                     })}
                     {dropIndex === day.pins.length && day.pins.length > 0 ? (

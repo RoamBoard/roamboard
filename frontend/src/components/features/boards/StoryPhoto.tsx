@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import CroppedPhoto from "@/components/images/CroppedPhoto";
 import { useState } from "react";
 import type { BoardImage } from "@/types/board";
 
@@ -95,6 +96,17 @@ export default function StoryPhoto({
                 />
                 {failed ? (
                     <span className="text-muted-foreground p-4 text-xs">Saved photo unavailable</span>
+                ) : image.presentation ? (
+                    <CroppedPhoto
+                        thumbnail={thumbnail}
+                        src={image.url}
+                        alt={image.alt}
+                        width={image.width}
+                        height={image.height}
+                        presentation={image.presentation}
+                        onError={() => setFailed(true)}
+                        className="h-full w-full"
+                    />
                 ) : (
                     <Image
                         src={image.url}

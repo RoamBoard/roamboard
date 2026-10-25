@@ -70,6 +70,12 @@ function input(): BoardWrite {
 }
 
 function write(document: BoardDocument): BoardWrite {
+    const days = structuredClone(document.days);
+    for (const day of days)
+        for (const activity of day.activities) {
+            delete activity.photos;
+            delete activity.coverPhoto;
+        }
     return {
         title: document.title,
         description: document.description,
@@ -81,7 +87,7 @@ function write(document: BoardDocument): BoardWrite {
         coverImageId: document.coverImageId,
         tagIds: document.tagIds,
         imageIds: document.imageIds,
-        days: document.days
+        days
     };
 }
 

@@ -26,13 +26,13 @@ function capture(render: () => ReactNode) {
     return { markup, controls: nodes(holder.tree) };
 }
 
-test("photo strip offers named previous and next controls around an accessible draggable image carousel", () => {
+test("an empty photo strip retains its accessible carousel without unused navigation controls", () => {
     const { markup } = capture(() => BoardPhotoStrip({ label: "Board uploads", children: null }));
     assert.match(markup, /aria-roledescription="carousel"/);
     assert.match(markup, /<ul[^>]*aria-label="Board uploads"/);
-    assert.match(markup, /<button[^>]*aria-label="Previous board uploads"/);
-    assert.match(markup, /<button[^>]*aria-label="Next board uploads"/);
-    assert.match(markup, /aria-label="Board uploads navigation"/);
+    assert.doesNotMatch(markup, /aria-label="Previous board uploads"/);
+    assert.doesNotMatch(markup, /aria-label="Next board uploads"/);
+    assert.doesNotMatch(markup, /aria-label="Board uploads navigation"/);
 });
 test("cover picker offers every upload including activity photos, selects a cover and exposes crop controls", () => {
     const images: BoardImageDraft[] = [1, 2].map((id) => ({
@@ -65,7 +65,7 @@ test("cover picker offers every upload including activity photos, selects a cove
     );
     assert.match(markup, /Selected Board cover/);
     assert.match(markup, /Crop cover/);
-    assert.match(markup, /Previous board cover photos/);
+    assert.match(markup, /aria-label="Board cover photos"/);
     const strip = controls.find((node) => node.type === BoardPhotoStrip);
     assert.ok(strip);
     const choices = Children.toArray(strip.props.children).flatMap(nodes);

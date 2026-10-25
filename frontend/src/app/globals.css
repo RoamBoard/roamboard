@@ -507,7 +507,7 @@ select optgroup {
     @apply absolute inset-x-3 top-3 flex items-center justify-between gap-2;
 }
 .editor-icon-action {
-    @apply bg-background/95 text-foreground grid size-10 shrink-0 place-items-center rounded-full transition-[transform,opacity] duration-200 hover:scale-110 focus-visible:scale-110 focus-visible:outline-2 disabled:opacity-40 motion-reduce:transition-none;
+    @apply bg-background/95 text-foreground grid size-10 shrink-0 place-items-center rounded-full transition-[transform,opacity] duration-200 focus-visible:outline-2 disabled:opacity-40 motion-reduce:transition-none;
 }
 @media (hover: hover) {
     .group\/photo .editor-photo-actions {
@@ -521,6 +521,197 @@ select optgroup {
 }
 @media (prefers-reduced-motion: reduce) {
     .editor-icon-action {
+        transform: none;
+    }
+}
+
+.editor-photo-card {
+    transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    transform-origin: center;
+    cursor: pointer;
+}
+.group\/photo:hover .editor-photo-card,
+.group\/photo:focus-within .editor-photo-card,
+.editor-photo-card:hover,
+.editor-photo-card:focus-visible {
+    transform: scale(1.025);
+    z-index: 1;
+}
+.provider-map-pin {
+    transition: transform 180ms ease;
+}
+.mapboxgl-marker:hover,
+.mapboxgl-marker:focus-visible {
+    z-index: 5;
+}
+.mapboxgl-marker:hover .provider-map-pin,
+.mapboxgl-marker:focus-visible .provider-map-pin {
+    transform: rotate(-45deg) scale(1.15);
+}
+.provider-pin-tooltip {
+    position: absolute;
+    bottom: calc(100% + 12px);
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 140px;
+    max-width: 220px;
+    background: var(--background);
+    color: var(--foreground);
+    padding: 10px 14px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px #0002;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 180ms;
+    font: 12px var(--font-body);
+}
+.provider-pin-tooltip small {
+    display: block;
+    margin-top: 5px;
+    color: var(--muted-foreground);
+}
+.mapboxgl-marker:hover .provider-pin-tooltip,
+.mapboxgl-marker:focus-visible .provider-pin-tooltip {
+    opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+    .editor-photo-card,
+    .provider-map-pin,
+    .provider-pin-tooltip {
+        transition: none;
+    }
+    .editor-photo-card:hover,
+    .editor-photo-card:focus-visible {
+        transform: none;
+    }
+}
+
+/* Stronger palette choices; existing saved colors keep their display definitions above. */
+:root {
+    --day-df524b: #df524b;
+    --day-df7134: #df7134;
+    --day-d99026: #d99026;
+    --day-b89b21: #b89b21;
+    --day-85a72d: #85a72d;
+    --day-4ca34b: #4ca34b;
+    --day-299e72: #299e72;
+    --day-219d91: #219d91;
+    --day-259bac: #259bac;
+    --day-338fca: #338fca;
+    --day-527ee0: #527ee0;
+    --day-716cdd: #716cdd;
+    --day-9261cf: #9261cf;
+    --day-b65aba: #b65aba;
+    --day-cd559b: #cd559b;
+    --day-d34e79: #d34e79;
+    --day-bf6552: #bf6552;
+    --day-b47c37: #b47c37;
+    --day-a39a35: #a39a35;
+    --day-65a643: #65a643;
+    --day-33945b: #33945b;
+    --day-239b81: #239b81;
+    --day-248e9e: #248e9e;
+    --day-428bb5: #428bb5;
+    --day-687fd2: #687fd2;
+    --day-896fce: #896fce;
+    --day-ab6bc5: #ab6bc5;
+    --day-ca6baa: #ca6baa;
+    --day-d9788f: #d9788f;
+    --day-c18a5c: #c18a5c;
+}
+.dark {
+    --day-df524b: color-mix(in srgb, #df524b 92%, white);
+    --day-df7134: color-mix(in srgb, #df7134 92%, white);
+    --day-d99026: color-mix(in srgb, #d99026 92%, white);
+    --day-b89b21: color-mix(in srgb, #b89b21 92%, white);
+    --day-85a72d: color-mix(in srgb, #85a72d 92%, white);
+    --day-4ca34b: color-mix(in srgb, #4ca34b 92%, white);
+    --day-299e72: color-mix(in srgb, #299e72 92%, white);
+    --day-219d91: color-mix(in srgb, #219d91 92%, white);
+    --day-259bac: color-mix(in srgb, #259bac 92%, white);
+    --day-338fca: color-mix(in srgb, #338fca 92%, white);
+    --day-527ee0: color-mix(in srgb, #527ee0 92%, white);
+    --day-716cdd: color-mix(in srgb, #716cdd 92%, white);
+    --day-9261cf: color-mix(in srgb, #9261cf 92%, white);
+    --day-b65aba: color-mix(in srgb, #b65aba 92%, white);
+    --day-cd559b: color-mix(in srgb, #cd559b 92%, white);
+    --day-d34e79: color-mix(in srgb, #d34e79 92%, white);
+    --day-bf6552: color-mix(in srgb, #bf6552 92%, white);
+    --day-b47c37: color-mix(in srgb, #b47c37 92%, white);
+    --day-a39a35: color-mix(in srgb, #a39a35 92%, white);
+    --day-65a643: color-mix(in srgb, #65a643 92%, white);
+    --day-33945b: color-mix(in srgb, #33945b 92%, white);
+    --day-239b81: color-mix(in srgb, #239b81 92%, white);
+    --day-248e9e: color-mix(in srgb, #248e9e 92%, white);
+    --day-428bb5: color-mix(in srgb, #428bb5 92%, white);
+    --day-687fd2: color-mix(in srgb, #687fd2 92%, white);
+    --day-896fce: color-mix(in srgb, #896fce 92%, white);
+    --day-ab6bc5: color-mix(in srgb, #ab6bc5 92%, white);
+    --day-ca6baa: color-mix(in srgb, #ca6baa 92%, white);
+    --day-d9788f: color-mix(in srgb, #d9788f 92%, white);
+    --day-c18a5c: color-mix(in srgb, #c18a5c 92%, white);
+}
+
+.group\/photo button:not(:disabled),
+.editor-icon-action:not(:disabled) {
+    cursor: pointer;
+}
+.editor-icon-action {
+    transition:
+        transform 140ms cubic-bezier(0.16, 1, 0.3, 1),
+        opacity 140ms ease-out;
+}
+.editor-icon-action:hover,
+.editor-icon-action:focus-visible {
+    transform: scale(1.1);
+}
+.editor-photo-label {
+    opacity: 1;
+}
+@media (hover: hover) {
+    .editor-photo-label {
+        opacity: 0;
+        transition: opacity 140ms ease-out;
+    }
+    .group\/photo:hover .editor-photo-label,
+    .group\/photo:focus-within .editor-photo-label {
+        opacity: 1;
+    }
+}
+.editor-review-day {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 400px;
+}
+
+.editor-photo-actions,
+.group\/photo .editor-icon-action,
+.editor-photo-label {
+    z-index: 10;
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .group\/photo .editor-icon-action {
+        transform: scale(0.92);
+    }
+    .group\/photo:hover .editor-icon-action,
+    .group\/photo:focus-within .editor-icon-action {
+        transform: scale(1);
+    }
+    .group\/photo .editor-icon-action:hover,
+    .group\/photo .editor-icon-action:focus-visible {
+        transform: scale(1.1);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .editor-icon-action,
+    .editor-photo-label {
+        transition: none;
+    }
+    .group\/photo:hover .editor-photo-card,
+    .group\/photo:focus-within .editor-photo-card,
+    .editor-icon-action:hover,
+    .editor-icon-action:focus-visible {
         transform: none;
     }
 }

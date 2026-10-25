@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { ArrowRight, Copy, MessageCircle } from "lucide-react";
 import ChapterBar from "@/components/ui/ChapterBar";
+import { ScrollArrow } from "@/components/ui/carousel";
 import ScrollCue from "@/components/ui/ScrollCue";
 import ActivityDetailsDialog from "./ActivityDetailsDialog";
 import BoardComments from "./BoardComments";
@@ -317,158 +318,168 @@ export default function PublishedBoard({
                 onNavigate={jump}
             />
             <div ref={trackRef} className={desktop ? "relative min-h-0" : ""}>
-                <div
-                    ref={viewportRef}
-                    role="region"
-                    aria-label="Board story scenes"
-                    tabIndex={desktop ? 0 : undefined}
-                    className={
-                        desktop
-                            ? "@container sticky top-[62px] h-[calc(100dvh-62px)] min-w-0 snap-x snap-mandatory [scrollbar-width:none] overflow-x-auto overflow-y-hidden overscroll-x-contain focus-visible:outline-2 focus-visible:-outline-offset-2 [&::-webkit-scrollbar]:hidden"
-                            : "min-w-0"
-                    }
-                >
-                    <div ref={railRef} className={desktop ? "relative flex h-full w-max" : "relative"}>
-                        <header
-                            id="overview"
-                            data-story-scene
-                            data-story-chapter
-                            tabIndex={-1}
-                            className={`border-line relative min-w-0 outline-none ${desktop ? "h-full w-[var(--story-width)] shrink-0 snap-start snap-always [scrollbar-gutter:stable] overflow-y-auto py-6 pr-24 pl-20" : "scroll-mt-[calc(4rem+var(--app-header-height,0px))] border-b px-6 py-8 sm:px-12"}`}
-                        >
-                            <div className={desktop ? "grid h-full min-h-[48rem] grid-cols-12 grid-rows-6 gap-5" : ""}>
+                <div className={desktop ? "sticky top-[62px] h-[calc(100dvh-62px)]" : ""}>
+                    <div
+                        ref={viewportRef}
+                        role="region"
+                        aria-label="Board story scenes"
+                        tabIndex={desktop ? 0 : undefined}
+                        className={
+                            desktop
+                                ? "@container h-full min-w-0 snap-x snap-mandatory [scrollbar-width:none] overflow-x-auto overflow-y-hidden overscroll-x-contain focus-visible:outline-2 focus-visible:-outline-offset-2 [&::-webkit-scrollbar]:hidden"
+                                : "min-w-0"
+                        }
+                    >
+                        <div ref={railRef} className={desktop ? "relative flex h-full w-max" : "relative"}>
+                            <header
+                                id="overview"
+                                data-story-scene
+                                data-story-chapter
+                                tabIndex={-1}
+                                className={`border-line relative min-w-0 outline-none ${desktop ? "h-full w-[var(--story-width)] shrink-0 snap-start snap-always [scrollbar-gutter:stable] overflow-y-auto py-6 pr-24 pl-20" : "scroll-mt-[calc(4rem+var(--app-header-height,0px))] border-b px-6 py-8 sm:px-12"}`}
+                            >
                                 <div
                                     className={
-                                        desktop
-                                            ? "col-[1/8] row-[1/4] min-h-0 min-w-0 overflow-y-auto overscroll-contain"
-                                            : "min-w-0 flex-1"
+                                        desktop ? "grid h-full min-h-[48rem] grid-cols-12 grid-rows-6 gap-5" : ""
                                     }
                                 >
-                                    <div data-story-author-row className="mb-4 flex flex-wrap items-center gap-3">
-                                        <Link
-                                            href={`/profile/${encodeURIComponent(author.id)}`}
-                                            className="block w-fit shrink-0"
-                                        >
-                                            <div
-                                                role={author.photo ? undefined : "img"}
-                                                aria-label={
-                                                    author.photo
-                                                        ? undefined
-                                                        : `Profile photo placeholder for ${author.name}`
-                                                }
-                                                className="bg-faint size-12 overflow-hidden rounded-full"
-                                            >
-                                                <BoardPhoto image={author.photo} className="size-full" sizes="48px" />
-                                            </div>
-                                        </Link>
-                                        <p className="text-muted-foreground text-[10px] tracking-[0.2em] uppercase">
-                                            A BOARD CREATED BY{" "}
-                                            <Link
-                                                href={`/profile/${encodeURIComponent(author.id)}`}
-                                                className="underline underline-offset-4"
-                                            >
-                                                @{author.name}
-                                            </Link>
-                                        </p>
-                                        <div className="ml-4 flex flex-wrap items-center gap-2">
-                                            {saveAction("overview")}
-                                        </div>
-                                    </div>
-                                    {actionFeedback("overview")}
-                                    <h1 className="font-display max-w-4xl text-[clamp(2.75rem,4.5vw,4.75rem)] leading-[0.95] font-bold tracking-tight uppercase">
-                                        {board.title}
-                                    </h1>
-                                    {board.description ? (
-                                        <p className="text-muted-foreground mt-5 max-w-3xl text-sm leading-relaxed whitespace-pre-line">
-                                            {board.description}
-                                        </p>
-                                    ) : null}
-                                    <div data-story-metadata className="mt-4 flex flex-wrap items-center gap-3">
-                                        <span className="text-muted-foreground text-[10px]">
-                                            Access:{" "}
-                                            {board.visibility === "public"
-                                                ? "Anyone"
-                                                : board.visibility === "friends"
-                                                  ? "Friends and invited members"
-                                                  : board.visibility === "private"
-                                                    ? "Only you"
-                                                    : "Invited members"}
-                                        </span>
-                                        {tagLabels.length ? (
-                                            <ul className="flex flex-wrap gap-2">
-                                                {tagLabels.map((tag) => (
-                                                    <li
-                                                        key={tag}
-                                                        className="border-line rounded-full border px-3 py-1 text-[10px]"
-                                                    >
-                                                        {tag}
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        ) : null}
-                                    </div>
-                                    <div
-                                        className={`@container mt-3 w-full max-w-md min-w-0 [&_dd]:text-2xl [&_dl]:gap-x-4 [&_dl]:py-3 [&_dt]:mt-1 [&_svg]:size-4 ${desktop ? "[&_dl]:grid-cols-4" : ""}`}
-                                    >
-                                        {stats}
-                                    </div>
-                                </div>
-                                {desktop ? (
-                                    <>
-                                        <div className="col-[1/4] row-[4/7] self-end">
-                                            {journeyMap("all", sceneId === "overview")}
-                                        </div>
-                                    </>
-                                ) : null}
-                                {board.coverImage ? (
                                     <div
                                         className={
                                             desktop
-                                                ? "[container-type:size] col-[8/13] row-[1/7] flex h-full min-h-0 min-w-0 items-center justify-center"
-                                                : "[container-type:size] mt-8 flex h-[65dvh] min-h-80 items-center justify-center"
+                                                ? "col-[1/8] row-[1/4] min-h-0 min-w-0 overflow-y-auto overscroll-contain"
+                                                : "min-w-0 flex-1"
                                         }
                                     >
-                                        <StoryPhoto
-                                            image={board.coverImage}
-                                            frame
-                                            preservePortrait
-                                            portraitShape={storySeed(`${board.id}:cover`) % 2 ? "square" : "tall"}
-                                            eager
-                                            onOpen={() => openPhoto("cover")}
-                                        />
+                                        <div data-story-author-row className="mb-4 flex flex-wrap items-center gap-3">
+                                            <Link
+                                                href={`/profile/${encodeURIComponent(author.id)}`}
+                                                className="block w-fit shrink-0"
+                                            >
+                                                <div
+                                                    role={author.photo ? undefined : "img"}
+                                                    aria-label={
+                                                        author.photo
+                                                            ? undefined
+                                                            : `Profile photo placeholder for ${author.name}`
+                                                    }
+                                                    className="bg-faint size-12 overflow-hidden rounded-full"
+                                                >
+                                                    <BoardPhoto
+                                                        image={author.photo}
+                                                        className="size-full"
+                                                        sizes="48px"
+                                                    />
+                                                </div>
+                                            </Link>
+                                            <p className="text-muted-foreground text-[10px] tracking-[0.2em] uppercase">
+                                                A BOARD CREATED BY{" "}
+                                                <Link
+                                                    href={`/profile/${encodeURIComponent(author.id)}`}
+                                                    className="underline underline-offset-4"
+                                                >
+                                                    @{author.name}
+                                                </Link>
+                                            </p>
+                                            <div className="ml-4 flex flex-wrap items-center gap-2">
+                                                {saveAction("overview")}
+                                            </div>
+                                        </div>
+                                        {actionFeedback("overview")}
+                                        <h1 className="font-display max-w-4xl text-[clamp(2.75rem,4.5vw,4.75rem)] leading-[0.95] font-bold tracking-tight uppercase">
+                                            {board.title}
+                                        </h1>
+                                        {board.description ? (
+                                            <p className="text-muted-foreground mt-5 max-w-3xl text-sm leading-relaxed whitespace-pre-line">
+                                                {board.description}
+                                            </p>
+                                        ) : null}
+                                        <div data-story-metadata className="mt-4 flex flex-wrap items-center gap-3">
+                                            <span className="text-muted-foreground text-[10px]">
+                                                Access:{" "}
+                                                {board.visibility === "public"
+                                                    ? "Anyone"
+                                                    : board.visibility === "friends"
+                                                      ? "Friends and invited members"
+                                                      : board.visibility === "private"
+                                                        ? "Only you"
+                                                        : "Invited members"}
+                                            </span>
+                                            {tagLabels.length ? (
+                                                <ul className="flex flex-wrap gap-2">
+                                                    {tagLabels.map((tag) => (
+                                                        <li
+                                                            key={tag}
+                                                            className="border-line rounded-full border px-3 py-1 text-[10px]"
+                                                        >
+                                                            {tag}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            ) : null}
+                                        </div>
+                                        <div
+                                            className={`@container mt-3 w-full max-w-md min-w-0 [&_dd]:text-2xl [&_dl]:gap-x-4 [&_dl]:py-3 [&_dt]:mt-1 [&_svg]:size-4 ${desktop ? "[&_dl]:grid-cols-4" : ""}`}
+                                        >
+                                            {stats}
+                                        </div>
                                     </div>
-                                ) : null}
-                                {!desktop ? (
-                                    <div className="mt-8">{journeyMap("all", sceneId === "overview")}</div>
-                                ) : null}
-                                {!desktop ? (
-                                    <ScrollCue
-                                        targetId={sceneIds[1] ?? "ending"}
-                                        label="Scroll to explore"
-                                        lines={false}
-                                        className="mt-8"
-                                        onClick={(event) => {
-                                            event.preventDefault();
-                                            jump(sceneIds[1] ?? "ending");
-                                        }}
-                                    />
-                                ) : null}
-                            </div>
-                        </header>
+                                    {desktop ? (
+                                        <>
+                                            <div className="col-[1/4] row-[4/7] self-end">
+                                                {journeyMap("all", sceneId === "overview")}
+                                            </div>
+                                        </>
+                                    ) : null}
+                                    {board.coverImage ? (
+                                        <div
+                                            className={
+                                                desktop
+                                                    ? "[container-type:size] col-[8/13] row-[1/7] flex h-full min-h-0 min-w-0 items-center justify-center"
+                                                    : "[container-type:size] mt-8 flex h-[65dvh] min-h-80 items-center justify-center"
+                                            }
+                                        >
+                                            <StoryPhoto
+                                                image={board.coverImage}
+                                                frame
+                                                preservePortrait
+                                                portraitShape={storySeed(`${board.id}:cover`) % 2 ? "square" : "tall"}
+                                                eager
+                                                onOpen={() => openPhoto("cover")}
+                                            />
+                                        </div>
+                                    ) : null}
+                                    {!desktop ? (
+                                        <div className="mt-8">{journeyMap("all", sceneId === "overview")}</div>
+                                    ) : null}
+                                    {!desktop ? (
+                                        <ScrollCue
+                                            targetId={sceneIds[1] ?? "ending"}
+                                            label="Scroll to explore"
+                                            lines={false}
+                                            className="mt-8"
+                                            onClick={(event) => {
+                                                event.preventDefault();
+                                                jump(sceneIds[1] ?? "ending");
+                                            }}
+                                        />
+                                    ) : null}
+                                </div>
+                            </header>
 
-                        {scenes.map((scene) => (
-                            <BoardDayScene
-                                key={scene.id}
-                                scene={scene}
-                                boardId={board.id}
-                                desktop={desktop}
-                                onOpenPhoto={openPhoto}
-                                onOpenActivity={setSelectedActivity}
-                                onHighlight={highlightActivity}
-                                journeyMap={journeyMap(scene.day.number, sceneId === scene.id)}
-                                onLocation={focusLocation}
-                            />
-                        ))}
+                            {scenes.map((scene) => (
+                                <BoardDayScene
+                                    key={scene.id}
+                                    scene={scene}
+                                    boardId={board.id}
+                                    desktop={desktop}
+                                    onOpenPhoto={openPhoto}
+                                    onOpenActivity={setSelectedActivity}
+                                    onHighlight={highlightActivity}
+                                    journeyMap={journeyMap(scene.day.number, sceneId === scene.id)}
+                                    onLocation={focusLocation}
+                                />
+                            ))}
+                        </div>
                     </div>
                     {desktop
                         ? [
@@ -481,24 +492,12 @@ export default function PublishedBoard({
                               }
                           ].map(({ target, label, direction, position }) =>
                               target ? (
-                                  <ScrollCue
+                                  <ScrollArrow
                                       key={direction}
-                                      targetId={target}
-                                      label={label}
-                                      direction={direction as "left" | "right"}
-                                      lines={false}
+                                      aria-label={label}
+                                      direction={direction === "left" ? "previous" : "next"}
                                       className={`absolute top-1/2 ${position} z-20 -translate-y-1/2`}
-                                      onClick={(event) => {
-                                          if (
-                                              !event.metaKey &&
-                                              !event.ctrlKey &&
-                                              !event.shiftKey &&
-                                              event.button === 0
-                                          ) {
-                                              event.preventDefault();
-                                              jump(target);
-                                          }
-                                      }}
+                                      onClick={() => jump(target)}
                                   />
                               ) : null
                           )

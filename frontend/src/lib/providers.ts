@@ -301,3 +301,23 @@ export const selectActivityPhotoSuggestion = (
         body: JSON.stringify({ ...target, photoId }),
         signal
     });
+
+export type ManualPhotoPage = {
+    query: string;
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+    photos: ProviderPhoto[];
+};
+export const searchActivityPhotos = (query: string, page: number, signal?: AbortSignal) =>
+    request<ManualPhotoPage>(`/api/v1/providers/unsplash/activity-search?q=${encodeURIComponent(query)}&page=${page}`, {
+        signal
+    });
+export const selectManualActivityPhoto = (photoId: string, signal?: AbortSignal) =>
+    request<ProviderPhoto & { context: null }>("/api/v1/providers/unsplash/activity-photos/select", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ photoId }),
+        signal
+    });

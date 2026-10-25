@@ -30,6 +30,7 @@ export default function EditorPhotoGallery({
                     photographer: image.credit ?? undefined,
                     photographerUrl: image.creditUrl ?? undefined,
                     sourceUrl: image.sourceUrl ?? undefined,
+                    presentation: image.presentation,
                     context: image.context
                 }
             }))}

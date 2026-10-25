@@ -59,13 +59,17 @@ export default function BoardPlanMap({
         return () => controller.abort();
     }, [hasPlaces, retry]);
     return (
-        <section aria-label="Board map" className="border-line border-t pt-8">
+        <section aria-label="Board map" className="flex h-full min-h-[32rem] flex-col md:min-h-0">
             <CreatorSectionIntro
                 number="03"
                 title="MAP"
                 description="Explore your days by colour. Select an activity on the map to view or edit it."
             />
-            <div role="group" aria-label="Show activities by day" className="mb-5 flex flex-wrap gap-2">
+            <div
+                role="group"
+                aria-label="Show activities by day"
+                className="mb-4 flex shrink-0 gap-2 overflow-x-auto pb-1 [&>button]:shrink-0"
+            >
                 <button
                     type="button"
                     aria-pressed={!activeDay}
@@ -98,7 +102,7 @@ export default function BoardPlanMap({
                     </button>
                 ))}
             </div>
-            <div className="bg-faint relative overflow-hidden rounded-[1.25rem]">
+            <div className="bg-faint relative min-h-32 flex-1 overflow-hidden rounded-[1.25rem]">
                 {!points.length ? (
                     <div className="text-muted-foreground grid min-h-64 place-content-center justify-items-center gap-4 px-6 text-center">
                         <MapPin aria-hidden="true" className="size-7" strokeWidth={1} />
@@ -129,7 +133,8 @@ export default function BoardPlanMap({
                         points={points}
                         routeGeometry={noRoute}
                         cooperativeGestures
-                        className="aspect-[16/9] min-h-56 w-full sm:min-h-80"
+                        fillHeight
+                        className="h-full w-full"
                         onPointClick={(point) => onOpenActivity(point.id)}
                     />
                 ) : (

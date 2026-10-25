@@ -135,6 +135,8 @@ export default function BoardImageIntake({
         },
         [uploadId]
     );
+    const [completedUploads, setCompletedUploads] = useState<Awaited<ReturnType<typeof uploadBoardImage>>[]>([]);
+    const [batchSize, setBatchSize] = useState(0);
     const [busy, setBusy] = useState(false);
     const [dragging, setDragging] = useState(false);
     const [error, setError] = useState("");
@@ -150,12 +152,16 @@ export default function BoardImageIntake({
         }
         uploadLock.current = true;
         toast.loading("Uploading Board images…", { ...creatorToastOptions, id: uploadId });
+        setCompletedUploads([]);
+        setBatchSize(files.length);
         setBusy(true);
         onUploadingChange?.(true);
         setError("");
         const uploadTask = (async () => {
             try {
-                const { assets, failures } = await uploadBoardImageBatch(files);
+                const { assets, failures } = await uploadBoardImageBatch(files, (asset) => {
+                    setCompletedUploads((current) => [...current, asset]);
+                });
                 const prepared = assets.map((asset, index) => prepareUpload(asset, images.length + index));
                 if (showDropZone && prepared.length) {
                     toast.loading("Finding activity suggestions...", { ...creatorToastOptions, id: uploadId });
@@ -396,6 +402,22 @@ export default function BoardImageIntake({
                     </p>
                 ) : null}
 
+                {busy && completedUploads.length > 0 ? (
+                    <ul aria-label="Photos uploaded in this batch" className="mt-4 flex gap-3 overflow-x-auto pb-2">
+                        {completedUploads.map((asset) => (
+                            <li key={asset.imageId} className="shrink-0">
+                                <img
+                                    src={asset.thumbnailUrl}
+                                    alt="Uploaded photo"
+                                    width={96}
+                                    height={96}
+                                    className="size-24 rounded-xl object-cover"
+                                />
+                            </li>
+                        ))}
+                    </ul>
+                ) : null}
+
                 {error ? (
                     <p className="text-14 mx-auto mt-4 w-full text-center break-words" role="alert">
                         {error}
@@ -410,7 +432,7 @@ export default function BoardImageIntake({
                                         type="button"
                                         onClick={() => setGalleryIndex(index)}
                                         aria-label={`Enlarge Board photo ${index + 1}`}
-                                        className="block w-full overflow-hidden rounded-2xl focus-visible:outline-2"
+                                        className="editor-photo-card block w-full overflow-hidden rounded-2xl focus-visible:outline-2"
                                     >
                                         <img
                                             src={photoUrl(image.thumbnailUrl)}
@@ -420,7 +442,7 @@ export default function BoardImageIntake({
                                             height={224}
                                             alt={`Board image ${index + 1}`}
                                             draggable={false}
-                                            className="aspect-square w-full object-cover transition-transform duration-300 group-hover/photo:scale-[1.03] motion-reduce:transition-none"
+                                            className="aspect-square w-full object-cover"
                                         />
                                     </button>
                                     <div className="editor-photo-actions">

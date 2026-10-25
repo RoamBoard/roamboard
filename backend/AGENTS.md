@@ -236,3 +236,14 @@ backup on 2026-10-25. Do not replay it. Board replacement preserves omitted colo
 and remix retains colors. Geoapify category search supports nearby/near-me phrases and explicit category: name
 queries in one existing quota reservation; ordinary names/addresses retain full-text geocoding. Global searches
 explicitly disable backend-IP country bias. See the editor contract and migration log.
+
+## Mixed activity media refinement
+
+Activity media now use ordered photos and coverPhoto for mixed uploads and multiple Unsplash selections.
+Legacy fields remain compatible projections; new HTTP writes cannot mix the two representations. Migration 024
+moves attachments into canonical activity_photo and keeps activity_image as an upload-only view for protected
+image access and cleanup. It preserves historical covers, context and original upload records. Isolated PostgreSQL
+migration/save/read/remix tests pass. Migration 024 is applied to shared development after a verified backup; do not reapply it.
+Manual Unsplash search and canonical selection reuse existing provider authentication, Origin checks and quotas.
+External crop presentation is per activity; protected upload crops retain their existing global behavior.
+See BOARD_API_CONTRACT.md and ../contracts/board-editor-redesign.md.

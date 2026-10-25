@@ -1,3 +1,4 @@
+import { searchManualPhotos, selectManualPhoto } from "./provider.manual-photos.js";
 import { suggestActivityArea } from "./provider.area-suggestion.js";
 import type { AreaSuggestionRequest } from "./provider.schemas.js";
 import { discoverPhotoSuggestions, selectPhotoSuggestion, type SuggestedPhoto } from "./provider.photo-suggestions.js";
@@ -41,6 +42,8 @@ import type {
 } from "./provider.types.js";
 
 export interface ProviderService {
+    manualPhotoSearch(query: string, page: number): ReturnType<typeof searchManualPhotos>;
+    manualPhotoSelect(photoId: string): ReturnType<typeof selectManualPhoto>;
     suggestBoardArea(input: AreaSuggestionRequest): Promise<DestinationResult | null>;
     config(): ProviderConfig;
     mapboxMapSession(): Promise<MapboxMapSession>;
@@ -101,6 +104,22 @@ export function createProviderService(
     googlePlaceReferences: GooglePlaceReferenceRepository
 ): ProviderService {
     return {
+        manualPhotoSearch: (query, page) =>
+            callProvider("Unsplash", () =>
+                searchManualPhotos(query, page, (path) =>
+                    quota.run("unsplash.requests", (observe) =>
+                        requestActivityPhoto(path, required(env.UNSPLASH_ACCESS_KEY, "Unsplash"), observe)
+                    )
+                )
+            ),
+        manualPhotoSelect: (photoId) =>
+            callProvider("Unsplash", () =>
+                selectManualPhoto(photoId, (path) =>
+                    quota.run("unsplash.requests", (observe) =>
+                        requestActivityPhoto(path, required(env.UNSPLASH_ACCESS_KEY, "Unsplash"), observe)
+                    )
+                )
+            ),
         config: () => ({
             mapbox: {
                 configured: Boolean(env.MAPBOX_ACCESS_TOKEN && publicMapboxToken()?.startsWith("pk."))

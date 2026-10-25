@@ -775,3 +775,26 @@ day cards, map filters and pins. Activity dragging shows an insertion gap and pr
 reorders and Shift+Left/Right changes day. The former day/move controls and photo reread action are removed.
 Publish attempts retain inline validation across chapters and reveal the first invalid field. Backend authority
 remains unchanged. Browser visual/touch and live-provider acceptance require separate review.
+
+### Board editor second refinement
+
+The editor offers explicit paginated Unsplash search, multiple external photos beside uploads and per-activity
+external crops. Save serializes the ordered photos/coverPhoto contract without legacy media fields; reads retain
+legacy compatibility. External crops use Unsplash-hosted delivery and preserve credit; upload crops still save
+through the protected image API. Review full itinerary starts expanded, includes larger photo strips and Other
+Board photos, and reuses shared crop/remove/zoom controls. Activity removal detaches uploaded photos from the
+activity and preserves the Board gallery. Stronger 30-color choices retain existing saved colors; day tint is 6%.
+Native dragstart is captured before Embla can cancel it. Actual browser checks cover within/across-day dragging,
+backdrop click consumption and desktop map/details viewport fit. Physical touch and live provider acceptance remain
+pending. Migration 024 is required before using the new backend media repository; see its migration log.
+
+### Board editor photo performance and Summary review
+
+The third refinement uses all-photo day grids followed by compact activity lists in the default-open Review full
+Board section, preserving saved activity/photo order without the published Summary three-photo cap. Attached
+activity photos reuse BoardPhotoStrip with overflow-only arrows and the shared draggable progress scrollbar.
+Photo hover/focus stays active over overlay actions and respects reduced motion. Cropped external thumbnails
+cap both source dimensions at 640px; larger crop/viewer delivery remains separate. Review photos are grouped once
+and offscreen day layouts use content visibility. Protected uploads retain private no-store delivery and access checks.
+Map activity dialogs portal outside chapter layout and restore focus to Map, avoiding focus-driven chapter navigation.
+Manual Unsplash selection sends explicit application/json through the existing API; no new migration is required.

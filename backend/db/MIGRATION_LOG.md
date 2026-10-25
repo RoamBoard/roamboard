@@ -236,3 +236,14 @@ content or image references were rewritten. Backup: backend/backups/pre-023-2026
 (Git-ignored; UTC filename). Restore and off-machine retention were not tested. Isolated-schema integration
 tests cover create/read/reorder, omitted-color preservation, explicit reset and the database hex constraint.
 Do not reapply 023 to shared development; other environments require it before running the updated Board repository.
+
+## Mixed activity photos - 2026-10-25
+
+The requesting user explicitly authorized migration 024_activity_photos.sql. It has passed isolated PostgreSQL
+migration/save/read/remix tests, including historical cover-only uploads and retention of original uploads.
+Applied only 024 to shared development in a transaction under advisory lock 160024 after reopening the
+authorized SSH tunnel. Verified custom-format backup: backend/backups/pre-024-2026-10-25T120240649Z.dump
+(235,673 bytes, Git-ignored; pg_restore --list verified). All 183 original uploads, 148 activity-upload links,
+261 external references, 89 uploaded covers and 162 days were preserved; saved day colors and external context
+were unchanged. Original upload data was not deleted. Do not reapply 024 or rerun 022/023 on shared development.
+Restore and off-machine backup retention were not tested. Updated media repository code requires 024.

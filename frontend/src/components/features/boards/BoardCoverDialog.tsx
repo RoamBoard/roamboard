@@ -69,7 +69,7 @@ export default function BoardCoverDialog({
                         <div>
                             <button
                                 type="button"
-                                className="block w-full"
+                                className="editor-photo-card block w-full"
                                 aria-label="Enlarge Board cover"
                                 onClick={() => setGalleryIndex(uploads.indexOf(cover))}
                             >
@@ -103,7 +103,7 @@ export default function BoardCoverDialog({
                                         type="button"
                                         aria-label={`Enlarge Board photo ${index + 1}`}
                                         onClick={() => setGalleryIndex(index)}
-                                        className="block w-full overflow-hidden rounded-2xl focus-visible:outline-2"
+                                        className="editor-photo-card block w-full overflow-hidden rounded-2xl focus-visible:outline-2"
                                     >
                                         <img
                                             src={photoUrl(image.thumbnailUrl)}
@@ -113,7 +113,7 @@ export default function BoardCoverDialog({
                                             height={192}
                                             alt={`Board photo ${index + 1}`}
                                             draggable={false}
-                                            className="aspect-square w-full object-cover transition-transform duration-300 group-hover/photo:scale-[1.03] motion-reduce:transition-none"
+                                            className="aspect-square w-full object-cover"
                                         />
                                     </button>
                                     <button

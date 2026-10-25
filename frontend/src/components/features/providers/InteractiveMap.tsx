@@ -155,6 +155,16 @@ export default function InteractiveMap({
             element.append(pin);
             element.title = point.label;
             if (onPointClickRef.current) {
+                const tooltip = document.createElement("div");
+                tooltip.className = "provider-pin-tooltip";
+                tooltip.setAttribute("aria-hidden", "true");
+                tooltip.textContent = point.label;
+                const hint = document.createElement("small");
+                hint.textContent = "Click to see more";
+                tooltip.append(hint);
+                element.append(tooltip);
+            }
+            if (onPointClickRef.current) {
                 element.setAttribute("role", "button");
                 element.setAttribute("tabindex", "0");
                 element.setAttribute("aria-label", `Open ${point.label}`);
@@ -219,7 +229,7 @@ export default function InteractiveMap({
             if (onPointClickRef.current) element.setAttribute("aria-pressed", String(selected));
             const pin = element.querySelector<HTMLElement>(".provider-map-pin");
             if (pin) {
-                pin.style.backgroundColor = selected ? "#e7e7e7" : (points[index]?.color ?? "#161616");
+                pin.style.backgroundColor = points[index]?.color ?? (selected ? "#e7e7e7" : "#161616");
                 pin.style.color = selected || points[index]?.color ? "#161616" : "#ffffff";
                 pin.style.borderColor = selected ? "#161616" : "#ffffff";
             }

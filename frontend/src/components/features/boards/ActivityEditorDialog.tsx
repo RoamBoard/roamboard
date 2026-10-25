@@ -7,6 +7,7 @@ import { ArrowLeft, ArrowRight, Crop, Trash2, Upload } from "lucide-react";
 import EditorPhotoGallery from "./EditorPhotoGallery";
 import { useEffect, useId, useRef, useState } from "react";
 
+import CroppedPhoto from "@/components/images/CroppedPhoto";
 import PhotoEditorDialog from "@/components/images/PhotoEditorDialog";
 import { usePhotoUrls } from "@/lib/use-photo-urls";
 import { toast } from "sonner";
@@ -14,6 +15,7 @@ import { useBoardLeaveWarning } from "@/lib/use-board-leave-warning";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import PinCategoryIcon from "@/components/ui/PinCategoryIcon";
 import { pinCategories } from "@/lib/board-options";
+import ActivityPhotoSearch from "./ActivityPhotoSearch";
 import ActivityLocationSearch from "./ActivityLocationSearch";
 import BoardPhotoStrip from "./BoardPhotoStrip";
 import { suggestBoardPhotos, type SmartPhotoSuggestion } from "@/lib/board-creator-api";
@@ -39,6 +41,7 @@ type Props = {
     onSave: (pin: BoardPinDraft) => void;
     onDelete: () => void;
     onAddImage: (image: BoardImageDraft) => void;
+    onUpdateImage?: (image: BoardImageDraft) => void;
     onAssignImage: (imageId: string, pinId: string | null) => void;
     onSetCover: (pinId: string, imageId: number | null) => void;
     onReorderImage: (pinId: string, imageId: string, direction: -1 | 1) => void;
@@ -57,16 +60,22 @@ function ActivityEditorContent({
     onSave,
     onDelete,
     onAddImage,
+    onUpdateImage,
     onAssignImage,
     onRemoveImage,
     onReorderImage
 }: Props & { originalImages: BoardImageDraft[] }) {
     const photoUrl = usePhotoUrls();
     const [galleryIndex, setGalleryIndex] = useState<number | null>(null);
+    const [editingExternal, setEditingExternal] = useState<BoardImageDraft | null>(null);
     const [editingPhoto, setEditingPhoto] = useState<number | null>(null);
     const dialogRef = useRef<HTMLDivElement>(null);
     const [confirmation, setConfirmation] = useState<"discard" | "delete" | null>(null);
-    useDialogFocus(dialogRef, requestClose, confirmation === null && editingPhoto === null && galleryIndex === null);
+    useDialogFocus(
+        dialogRef,
+        requestClose,
+        confirmation === null && editingPhoto === null && galleryIndex === null && editingExternal === null
+    );
     const inputRef = useRef<HTMLInputElement>(null);
     const [draft, setDraft] = useState(pin);
     const [searchArea, setSearchArea] = useState<{ latitude: number; longitude: number } | null | undefined>(
@@ -103,6 +112,7 @@ function ActivityEditorContent({
         JSON.stringify(draft.location) !== JSON.stringify(pin.location) ||
         Boolean(automaticImage) ||
         draft.coverImageId !== pin.coverImageId ||
+        JSON.stringify(draft.coverPhoto) !== JSON.stringify(pin.coverPhoto) ||
         JSON.stringify(images.filter((image) => image.pinId === pin.id)) !==
             JSON.stringify(originalImages.filter((image) => image.pinId === pin.id));
     useBoardLeaveWarning(changed || uploading);
@@ -119,25 +129,31 @@ function ActivityEditorContent({
         .filter((image) => image.pinId === pin.id)
         .sort((first, second) => (first.activityOrder ?? first.order) - (second.activityOrder ?? second.order));
     const hasUpload = activityImages.some((image) => image.source === "upload");
-    const placeChanged = JSON.stringify(draft.location) !== JSON.stringify(pin.location);
     const locationKey = JSON.stringify(draft.location);
     const matchedAutomaticImage = automaticImage?.locationKey === locationKey ? automaticImage : null;
-    const visibleImages = [
-        ...activityImages.filter((image) => image.source !== "unsplash" || (!placeChanged && !matchedAutomaticImage)),
-        ...(!hasUpload && matchedAutomaticImage ? [matchedAutomaticImage] : [])
-    ];
+    const visibleImages = [...activityImages, ...(!hasUpload && matchedAutomaticImage ? [matchedAutomaticImage] : [])];
     const availableImages = images.filter((image) => image.source === "upload" && image.pinId !== pin.id);
+    const chosenPhoto = draft.coverPhoto
+        ? visibleImages.find((image) =>
+              draft.coverPhoto?.source === "upload"
+                  ? image.uploadedImageId === draft.coverPhoto.imageId
+                  : image.source === "unsplash" && image.publicId === draft.coverPhoto?.providerImageId
+          )
+        : undefined;
     const cover =
-        draft.coverImageId === null
-            ? (visibleImages.find((image) => image.source === "unsplash") ?? null)
-            : (visibleImages.find((image) => image.uploadedImageId === draft.coverImageId) ?? visibleImages[0]);
+        chosenPhoto ??
+        (draft.coverPhoto === null
+            ? visibleImages[0]
+            : draft.coverImageId === null
+              ? (visibleImages.find((image) => image.source === "unsplash") ?? null)
+              : (visibleImages.find((image) => image.uploadedImageId === draft.coverImageId) ?? visibleImages[0]));
 
     const locationName = draft.location?.name;
     const latitude = draft.location?.latitude;
     const longitude = draft.location?.longitude;
     const city = draft.location?.city;
     const country = draft.location?.country;
-    const hasSavedPhoto = !placeChanged && activityImages.some((image) => image.source === "unsplash");
+    const hasSavedPhoto = activityImages.some((image) => image.source === "unsplash");
     useEffect(() => {
         if (
             skipAutomaticPhoto ||
@@ -281,6 +297,13 @@ function ActivityEditorContent({
 
     return (
         <>
+            {editingExternal ? (
+                <PhotoEditorDialog
+                    external={editingExternal}
+                    onSaveExternal={(presentation) => onUpdateImage?.({ ...editingExternal, presentation })}
+                    onClose={() => setEditingExternal(null)}
+                />
+            ) : null}
             {galleryIndex !== null ? (
                 <EditorPhotoGallery
                     images={[...visibleImages, ...availableImages]}
@@ -304,10 +327,13 @@ function ActivityEditorContent({
                 />
             ) : null}
             <div
-                inert={confirmation !== null || editingPhoto !== null || galleryIndex !== null}
+                inert={
+                    confirmation !== null || editingPhoto !== null || galleryIndex !== null || editingExternal !== null
+                }
                 className="fixed inset-0 z-50 grid place-items-center bg-black/45 p-4"
                 role="presentation"
-                onMouseDown={(event) => {
+                onClick={(event) => {
+                    event.stopPropagation();
                     if (event.target === event.currentTarget) requestClose();
                 }}
             >
@@ -347,7 +373,7 @@ function ActivityEditorContent({
                                         <button
                                             type="button"
                                             aria-label="Enlarge activity cover"
-                                            className="block w-full overflow-hidden rounded-2xl"
+                                            className="editor-photo-card block w-full overflow-hidden rounded-2xl"
                                             onClick={() =>
                                                 setGalleryIndex(
                                                     Math.max(
@@ -422,31 +448,43 @@ function ActivityEditorContent({
                                     {visibleImages.length === 0 ? (
                                         <p className="text-12 text-graphite mt-2">No images attached yet.</p>
                                     ) : null}
-                                    <ul className="mt-3 grid grid-cols-2 gap-3">
+                                    <BoardPhotoStrip label="Activity images">
                                         {visibleImages.map((item, index) => (
-                                            <li key={item.id} className="group/photo relative min-w-0">
+                                            <li
+                                                key={item.id}
+                                                className="group/photo relative w-36 min-w-0 shrink-0 sm:w-40"
+                                            >
                                                 <button
                                                     type="button"
                                                     aria-label={`Enlarge activity photo ${index + 1}`}
                                                     className="block w-full overflow-hidden rounded-2xl"
                                                     onClick={() => setGalleryIndex(index)}
                                                 >
-                                                    <img
+                                                    <CroppedPhoto
+                                                        thumbnail
+                                                        presentation={item.presentation}
+                                                        width={item.width}
+                                                        height={item.height}
                                                         src={photoUrl(item.thumbnailUrl)}
+                                                        draggable={false}
                                                         loading="lazy"
                                                         decoding="async"
                                                         alt={`${pin.title} image ${index + 1}`}
                                                         className="aspect-square w-full object-cover"
                                                     />
                                                 </button>
-                                                {item.uploadedImageId ? (
+                                                {item.uploadedImageId || item.source === "unsplash" ? (
                                                     <button
                                                         type="button"
                                                         disabled={uploading}
                                                         className="editor-icon-action absolute top-2 left-2 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within/photo:opacity-100 [@media(hover:hover)]:group-hover/photo:opacity-100"
                                                         aria-label={`Crop photo ${index + 1}`}
                                                         title="Crop"
-                                                        onClick={() => setEditingPhoto(item.uploadedImageId!)}
+                                                        onClick={() =>
+                                                            item.uploadedImageId
+                                                                ? setEditingPhoto(item.uploadedImageId)
+                                                                : setEditingExternal(item)
+                                                        }
                                                     >
                                                         <Crop size={16} />
                                                     </button>
@@ -463,7 +501,17 @@ function ActivityEditorContent({
 
                                                             setDraft((current) => ({
                                                                 ...current,
-                                                                coverImageId: nextCoverId
+                                                                coverImageId: nextCoverId,
+                                                                coverPhoto:
+                                                                    item.source === "upload"
+                                                                        ? {
+                                                                              source: "upload",
+                                                                              imageId: item.uploadedImageId!
+                                                                          }
+                                                                        : {
+                                                                              source: "unsplash",
+                                                                              providerImageId: item.publicId
+                                                                          }
                                                             }));
                                                         }}
                                                         className="text-10 mt-2 underline"
@@ -471,77 +519,63 @@ function ActivityEditorContent({
                                                         Set as activity cover
                                                     </button>
                                                 )}
-                                                {item.source === "upload" ? (
-                                                    <div className="text-10 mt-2 flex flex-wrap gap-2">
-                                                        <button
-                                                            type="button"
-                                                            disabled={index === 0}
-                                                            onClick={() => onReorderImage(pin.id, item.id, -1)}
-                                                            aria-label={`Move image ${index + 1} earlier`}
-                                                            className="underline disabled:opacity-40"
-                                                        >
-                                                            <ArrowLeft size={16} />
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            disabled={index === activityImages.length - 1}
-                                                            onClick={() => onReorderImage(pin.id, item.id, 1)}
-                                                            aria-label={`Move image ${index + 1} later`}
-                                                            className="underline disabled:opacity-40"
-                                                        >
-                                                            <ArrowRight size={16} />
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                fieldEdits.current.cover = true;
-                                                                onRemoveImage?.(item.id);
-                                                                if (item.id === cover?.id)
-                                                                    setDraft((current) => ({
-                                                                        ...current,
-                                                                        coverImageId: activityBatchDefaults(
-                                                                            activityImages.filter(
-                                                                                (image) => image.id !== item.id
-                                                                            )
-                                                                        ).coverImageId
-                                                                    }));
-                                                            }}
-                                                            disabled={uploading}
-                                                            aria-label={`Delete image ${index + 1}`}
-                                                            className="editor-icon-action absolute top-2 right-2 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within/photo:opacity-100 [@media(hover:hover)]:group-hover/photo:opacity-100"
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    </div>
-                                                ) : (
+
+                                                <div className="text-10 mt-2 flex flex-wrap gap-2">
                                                     <button
                                                         type="button"
-                                                        aria-label={`Delete image ${index + 1}`}
+                                                        disabled={index === 0}
+                                                        onClick={() => onReorderImage(pin.id, item.id, -1)}
+                                                        aria-label={`Move image ${index + 1} earlier`}
+                                                        className="underline disabled:opacity-40"
+                                                    >
+                                                        <ArrowLeft size={16} />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        disabled={index === activityImages.length - 1}
+                                                        onClick={() => onReorderImage(pin.id, item.id, 1)}
+                                                        aria-label={`Move image ${index + 1} later`}
+                                                        className="underline disabled:opacity-40"
+                                                    >
+                                                        <ArrowRight size={16} />
+                                                    </button>
+                                                    <button
+                                                        type="button"
                                                         onClick={() => {
                                                             fieldEdits.current.cover = true;
                                                             onRemoveImage?.(item.id);
-                                                            setAutomaticImage(null);
-                                                            setSkipAutomaticPhoto(true);
+                                                            if (item.id === cover?.id)
+                                                                setDraft((current) => ({
+                                                                    ...current,
+                                                                    coverPhoto: null,
+                                                                    coverImageId: activityBatchDefaults(
+                                                                        activityImages.filter(
+                                                                            (image) => image.id !== item.id
+                                                                        )
+                                                                    ).coverImageId
+                                                                }));
                                                         }}
+                                                        disabled={uploading}
+                                                        aria-label={`Delete image ${index + 1}`}
                                                         className="editor-icon-action absolute top-2 right-2 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within/photo:opacity-100 [@media(hover:hover)]:group-hover/photo:opacity-100"
                                                     >
                                                         <Trash2 size={16} />
                                                     </button>
-                                                )}
+                                                </div>
                                             </li>
                                         ))}
-                                    </ul>
+                                    </BoardPhotoStrip>
                                 </section>
                                 {availableImages.length > 0 ? (
                                     <section className="mt-5" aria-label="Other uploaded images">
                                         <h3 className="text-12 font-bold">Attach a Board upload</h3>
                                         <BoardPhotoStrip label="Board uploaded images">
                                             {availableImages.map((item) => (
-                                                <li key={item.id} className="w-40 shrink-0">
+                                                <li key={item.id} className="group/photo w-36 shrink-0 sm:w-40">
                                                     <button
                                                         type="button"
                                                         aria-label="Enlarge Board upload"
-                                                        className="block w-full overflow-hidden rounded-xl"
+                                                        className="editor-photo-card block w-full overflow-hidden rounded-xl"
                                                         onClick={() => {
                                                             setGalleryIndex(
                                                                 visibleImages.length + availableImages.indexOf(item)
@@ -550,6 +584,7 @@ function ActivityEditorContent({
                                                     >
                                                         <img
                                                             src={photoUrl(item.thumbnailUrl)}
+                                                            draggable={false}
                                                             loading="lazy"
                                                             decoding="async"
                                                             width={96}
@@ -570,6 +605,43 @@ function ActivityEditorContent({
                                         </BoardPhotoStrip>
                                     </section>
                                 ) : null}
+                                <ActivityPhotoSearch
+                                    disabled={uploading}
+                                    selectedIds={activityImages
+                                        .filter((image) => image.source === "unsplash")
+                                        .map((image) => image.publicId)}
+                                    onSelect={(photo) => {
+                                        setSkipAutomaticPhoto(true);
+                                        setAutomaticImage(null);
+                                        onAddImage({
+                                            id: crypto.randomUUID(),
+                                            pinId: pin.id,
+                                            publicId: photo.id,
+                                            source: "unsplash",
+                                            url: photo.url,
+                                            thumbnailUrl: photo.thumbnailUrl,
+                                            alt: photo.alt,
+                                            width: photo.width,
+                                            height: photo.height,
+                                            presentation: null,
+                                            context: null,
+                                            capturedAt: null,
+                                            latitude: null,
+                                            longitude: null,
+                                            order: images.length,
+                                            activityOrder: activityImages.length,
+                                            credit: photo.photographer,
+                                            creditUrl: photo.photographerUrl,
+                                            sourceUrl: photo.sourceUrl
+                                        });
+                                        if (!visibleImages.length)
+                                            setDraft((current) => ({
+                                                ...current,
+                                                coverPhoto: { source: "unsplash", providerImageId: photo.id },
+                                                coverImageId: null
+                                            }));
+                                    }}
+                                />
                                 <p role="status" className="text-muted-foreground mt-4 text-xs leading-relaxed">
                                     {hasUpload ? "Your uploaded photos are used for this activity." : photoStatus}
                                 </p>
@@ -849,7 +921,7 @@ function ActivityEditorContent({
                                     onClick={() => {
                                         if (activityNoteError(draft.description, pin.description)) return;
                                         if (draft.title.trim() && (!draft.location || draft.location.name.trim())) {
-                                            if (placeChanged || matchedAutomaticImage)
+                                            if (matchedAutomaticImage)
                                                 activityImages
                                                     .filter((image) => image.source === "unsplash")
                                                     .forEach((image) => onRemoveImage?.(image.id));
@@ -896,9 +968,10 @@ export default function ActivityEditorDialog(props: Props) {
             originalImages={props.images}
             images={media}
             onAddImage={(image) => {
-                props.onAddImage({ ...image, pinId: null });
+                if (image.source === "upload") props.onAddImage({ ...image, pinId: null });
                 update([...mediaRef.current, image]);
             }}
+            onUpdateImage={(image) => update(mediaRef.current.map((item) => (item.id === image.id ? image : item)))}
             onAssignImage={(id, pinId) =>
                 update(
                     mediaRef.current.map((image) =>
@@ -941,6 +1014,12 @@ export default function ActivityEditorDialog(props: Props) {
                     .sort((a, b) => (a.activityOrder ?? a.order) - (b.activityOrder ?? b.order))
                     .forEach((image) => {
                         const original = props.images.find((item) => item.id === image.id);
+                        if (!original && image.source === "unsplash") props.onAddImage(image);
+                        else if (
+                            original &&
+                            JSON.stringify(original.presentation) !== JSON.stringify(image.presentation)
+                        )
+                            props.onUpdateImage?.(image);
                         if (original?.pinId !== image.pinId) props.onAssignImage(image.id, image.pinId);
                     });
                 const current = props.images

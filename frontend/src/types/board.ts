@@ -32,6 +32,7 @@ export type BoardLocation = {
 };
 
 export type BoardImage = {
+    presentation?: import("@/lib/photo-editing").PhotoEdit | null;
     context?: import("./board-creator").PhotoContext | null;
     id: string;
     url: string;

@@ -44,27 +44,52 @@ export function toPublishedBoardData(document: BoardDocument): PublishedBoardDat
     );
     const items: BoardActivity[] = document.days.flatMap((day) =>
         day.activities.map((activity) => {
-            const uploaded = activity.uploadedImageIds.flatMap((id) => (images.has(id) ? [images.get(id)!] : []));
-            const external = activity.externalImage;
-            const externalImages: BoardImage[] = external
-                ? [
-                      {
-                          context: external.context ?? null,
-                          id: `unsplash-${external.providerImageId}`,
-                          url: external.url,
-                          alt: activity.title,
-                          source: "application",
-                          photographer: external.photographer,
-                          photographerUrl: external.photographerUrl ?? undefined,
-                          sourceUrl: external.sourceUrl ?? undefined
-                      }
-                  ]
-                : [];
-            const cover = uploaded.find((image) => image.id === String(activity.coverImageId));
-            // Put the chosen activity cover first and preserve the order of its remaining photos.
-            const photos = cover
-                ? [cover, ...uploaded.filter((image) => image !== cover), ...externalImages]
-                : [...externalImages, ...uploaded];
+            const legacy = activity.externalImage;
+            const media = activity.photos ?? [
+                ...activity.uploadedImageIds.map((imageId) => ({ source: "upload" as const, imageId })),
+                ...(legacy
+                    ? [
+                          {
+                              ...legacy,
+                              source: "unsplash" as const,
+                              thumbnailUrl: legacy.url,
+                              alt: activity.title,
+                              width: 0,
+                              height: 0
+                          }
+                      ]
+                    : [])
+            ];
+            const all: BoardImage[] = media.flatMap((photo) =>
+                photo.source === "upload"
+                    ? images.has(photo.imageId)
+                        ? [images.get(photo.imageId)!]
+                        : []
+                    : [
+                          {
+                              id: `unsplash-${activity.activityId}-${photo.providerImageId}`,
+                              url: photo.url,
+                              alt: photo.alt,
+                              width: photo.width,
+                              height: photo.height,
+                              source: "application" as const,
+                              context: photo.context ?? null,
+                              presentation: "presentation" in photo ? photo.presentation : null,
+                              photographer: photo.photographer,
+                              photographerUrl: photo.photographerUrl ?? undefined,
+                              sourceUrl: photo.sourceUrl ?? undefined
+                          }
+                      ]
+            );
+            const selected = activity.coverPhoto;
+            const cover = selected
+                ? all.find((image) =>
+                      selected.source === "upload"
+                          ? image.id === String(selected.imageId)
+                          : image.id.endsWith("-" + selected.providerImageId)
+                  )
+                : all.find((image) => image.id === String(activity.coverImageId));
+            const photos = cover ? [cover, ...all.filter((image) => image !== cover)] : all;
             const location = activity.location;
             return {
                 id: String(activity.activityId),

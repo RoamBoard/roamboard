@@ -1,34 +1,34 @@
 export const dayColors = [
-    "#b87568",
-    "#b98a62",
-    "#b69b62",
-    "#a5a064",
-    "#82996b",
-    "#649a80",
-    "#639b97",
-    "#64949f",
-    "#6d88aa",
-    "#7d7fa9",
-    "#947da7",
-    "#a77996",
-    "#bb8290",
-    "#a96960",
-    "#a77c57",
-    "#a28e56",
-    "#8c955e",
-    "#6f8c65",
-    "#568d79",
-    "#538b90",
-    "#5a80a0",
-    "#7273a0",
-    "#8b6d98",
-    "#a06b86",
-    "#c19783",
-    "#b6a07c",
-    "#98aa8b",
-    "#8eaaa6",
-    "#969fb8",
-    "#b09aae"
+    "#df524b",
+    "#df7134",
+    "#d99026",
+    "#b89b21",
+    "#85a72d",
+    "#4ca34b",
+    "#299e72",
+    "#219d91",
+    "#259bac",
+    "#338fca",
+    "#527ee0",
+    "#716cdd",
+    "#9261cf",
+    "#b65aba",
+    "#cd559b",
+    "#d34e79",
+    "#bf6552",
+    "#b47c37",
+    "#a39a35",
+    "#65a643",
+    "#33945b",
+    "#239b81",
+    "#248e9e",
+    "#428bb5",
+    "#687fd2",
+    "#896fce",
+    "#ab6bc5",
+    "#ca6baa",
+    "#d9788f",
+    "#c18a5c"
 ] as const;
 
 export type BoardStatus = "draft" | "published";
@@ -69,6 +69,7 @@ export type BoardPinDraft = {
     id: string;
     serverActivityId?: number;
     coverImageId?: number | null;
+    coverPhoto?: { source: "upload"; imageId: number } | { source: "unsplash"; providerImageId: string } | null;
     order: number;
     time: string;
     title: string;
@@ -90,6 +91,8 @@ export type BoardDayDraft = {
 export type PhotoContext = { kind: "illustrative"; scope: "nearby" | "region"; locationLabel: string };
 
 export type BoardImageDraft = {
+    presentation?: import("@/lib/photo-editing").PhotoEdit | null;
+    alt?: string;
     context?: PhotoContext | null;
     id: string;
     uploadedImageId?: number;

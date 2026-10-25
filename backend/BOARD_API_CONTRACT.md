@@ -363,3 +363,27 @@ Reads return the saved color or null. Omission preserves an existing day's color
 a color and explicit null use the indexed frontend default. Remix content retains selected colors. Existing
 authorization, revisions, day numbering and validation errors apply. Migration 023 adds the nullable constrained
 column; it is applied to shared development. See contracts/board-editor-redesign.md for the approved presentation.
+
+### Mixed activity photos and manual Unsplash search (2026-10-25)
+
+Activity writes accept ordered `photos` and optional nullable `coverPhoto`. Upload items are
+`{source: "upload", imageId}`; Unsplash items retain canonical provider identity, URL/thumbnail, dimensions,
+alt text, photographer/source links, optional illustration context and normalized nullable crop presentation.
+Cover references use the same source plus imageId/providerImageId and must identify an attached item.
+Reads return this list, the chosen cover, and legacy uploadedImageIds/externalImage/coverImageId projections.
+New writes must not mix photos with those legacy fields. Legacy writes preserve additional external photos,
+per-photo crops and omitted media/context; explicit clearing applies to the legacy-selected photo only.
+An uploaded image can belong to at most one activity and must remain in the Board imageIds gallery.
+Remix copies upload references and preserves external ordering, covers, attribution and per-activity crops.
+
+Authenticated GET /api/v1/providers/unsplash/activity-search?q=...&page=... accepts arbitrary trimmed queries,
+returns 12 results per page plus total/totalPages, and uses existing shared provider quotas. Selection through
+POST /api/v1/providers/unsplash/activity-photos/select requires session and exact frontend Origin and accepts
+only photoId. The backend fetches canonical metadata and records one download-equivalent request; search and
+rendering do not. Manual choices have no verified location context. External crops retain Unsplash hosting.
+See the approved editor contract for complete payload examples and compatibility rules.
+
+Migration 024_activity_photos.sql introduces canonical activity_photo storage and migrates old attachments,
+cover-only uploads and external metadata/context. activity_image becomes an upload-only compatibility view;
+legacy activity columns remain derived projections for existing discovery queries. Shared development application
+is complete after a verified backup; consult db/MIGRATION_LOG.md before rollout elsewhere.

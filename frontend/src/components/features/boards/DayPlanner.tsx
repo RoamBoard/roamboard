@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 
 import BoardPhotoStrip from "./BoardPhotoStrip";
 import AddActivityDialog from "./AddActivityDialog";
@@ -28,6 +29,7 @@ type Props = {
     onRemovePin: (pinId: string) => void;
     onRemoveActivityImage?: (id: string) => void;
     onAddActivityImage: (image: BoardImageDraft) => void;
+    onUpdateActivityImage?: (image: BoardImageDraft) => void;
     onAssignActivityImage: (imageId: string, pinId: string | null) => void;
     onSetActivityCover: (pinId: string, imageId: number | null) => void;
     onReorderActivityImage: (pinId: string, imageId: string, direction: -1 | 1) => void;
@@ -50,6 +52,7 @@ export default function DayPlanner({
     onRemovePin,
     onRemoveActivityImage,
     onAddActivityImage,
+    onUpdateActivityImage,
     onAssignActivityImage,
     onSetActivityCover,
     onReorderActivityImage
@@ -85,6 +88,35 @@ export default function DayPlanner({
             document.getElementById(`activity-${pinId}`)?.focus();
         });
     }
+
+    const activityDialog = editingPin ? (
+        <ActivityEditorDialog
+            proximity={editingPin.location ?? boardLocation}
+            pin={editingPin}
+            onUploadingChange={onActivityUploadingChange}
+            onRemoveImage={onRemoveActivityImage}
+            images={images}
+            remainingUploads={5}
+            onClose={() => {
+                setEditingPinId(null);
+                onActivityOpened?.();
+            }}
+            onSave={(updated) => {
+                onUpdatePin(updated);
+            }}
+            onDelete={() => {
+                onRemovePin(editingPin.id);
+                onActivityOpened?.();
+                setAnnouncement(`${editingPin.title} removed. Attached photos remain available.`);
+                setEditingPinId(null);
+            }}
+            onAddImage={onAddActivityImage}
+            onUpdateImage={onUpdateActivityImage}
+            onAssignImage={onAssignActivityImage}
+            onSetCover={onSetActivityCover}
+            onReorderImage={onReorderActivityImage}
+        />
+    ) : null;
 
     return (
         <fieldset
@@ -149,6 +181,7 @@ export default function DayPlanner({
                     onRemoveImage={onRemoveActivityImage}
                     images={images}
                     onAddImage={onAddActivityImage}
+                    onUpdateImage={onUpdateActivityImage}
                     onAssignImage={onAssignActivityImage}
                     onUploadingChange={onActivityUploadingChange}
                     proximity={dialogDay.pins.find((activity) => activity.location)?.location ?? boardLocation}
@@ -160,33 +193,9 @@ export default function DayPlanner({
                     onClose={() => setDialogDayId(null)}
                 />
             ) : null}
-            {editingPin ? (
-                <ActivityEditorDialog
-                    proximity={editingPin.location ?? boardLocation}
-                    pin={editingPin}
-                    onUploadingChange={onActivityUploadingChange}
-                    onRemoveImage={onRemoveActivityImage}
-                    images={images}
-                    remainingUploads={5}
-                    onClose={() => {
-                        setEditingPinId(null);
-                        onActivityOpened?.();
-                    }}
-                    onSave={(updated) => {
-                        onUpdatePin(updated);
-                    }}
-                    onDelete={() => {
-                        onRemovePin(editingPin.id);
-                        onActivityOpened?.();
-                        setAnnouncement(`${editingPin.title} removed. Attached photos remain available.`);
-                        setEditingPinId(null);
-                    }}
-                    onAddImage={onAddActivityImage}
-                    onAssignImage={onAssignActivityImage}
-                    onSetCover={onSetActivityCover}
-                    onReorderImage={onReorderActivityImage}
-                />
-            ) : null}
+            {activityDialog && typeof document !== "undefined"
+                ? createPortal(activityDialog, document.body)
+                : activityDialog}
             {removingDay ? (
                 <ConfirmDialog
                     title={`Remove day ${removingDay.dayNumber}?`}

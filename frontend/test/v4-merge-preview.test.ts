@@ -204,9 +204,9 @@ test("confirmed photo-presentation revisions update both V4 display covers and r
         );
         for (const card of pair) assert.ok(card.includes(display.toString().replaceAll("&", "&amp;")));
         assert.equal(imageSources.filter((url) => url === display.toString()).length, 2);
-        assert.equal(imageSources.filter((url) => url === thumbnail.toString()).length, 2);
+        assert.equal(imageSources.filter((url) => url === thumbnail.toString()).length, 1);
         assert.doesNotMatch(markup, /_next\/image/);
-        assert.match(markup, /Images for A retained photo activity/);
+        assert.match(markup, /aria-label="Day 1 photos"/);
         assert.match(markup, /The original activity notes/);
         assert.deepEqual(board, before);
     }

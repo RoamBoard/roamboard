@@ -389,12 +389,15 @@ export default function BoardCreator({
         setImages((current) =>
             current.filter((item) => item.id !== imageId).map((item, order) => ({ ...item, order }))
         );
-        if (image?.uploadedImageId)
+        if (image)
             setDays((current) =>
                 current.map((day) => ({
                     ...day,
                     pins: day.pins.map((pin) =>
-                        pin.coverImageId === image.uploadedImageId ? { ...pin, coverImageId: null } : pin
+                        pin.coverImageId === image.uploadedImageId ||
+                        (pin.coverPhoto?.source === "unsplash" && pin.coverPhoto.providerImageId === image.publicId)
+                            ? { ...pin, coverImageId: null, coverPhoto: null }
+                            : pin
                     )
                 }))
             );
@@ -466,7 +469,11 @@ export default function BoardCreator({
                     ...day,
                     pins: day.pins.map((pin) =>
                         pin.id === moving.pinId && pin.coverImageId === moving.uploadedImageId
-                            ? { ...pin, coverImageId: replacement }
+                            ? {
+                                  ...pin,
+                                  coverImageId: replacement,
+                                  coverPhoto: replacement ? { source: "upload" as const, imageId: replacement } : null
+                              }
                             : pin
                     )
                 }))
@@ -504,7 +511,7 @@ export default function BoardCreator({
     function reorderActivityImage(pinId: string, imageId: string, direction: -1 | 1) {
         setImages((current) => {
             const activityImages = current
-                .filter((image) => image.pinId === pinId && image.source === "upload")
+                .filter((image) => image.pinId === pinId)
                 .sort((first, second) => (first.activityOrder ?? first.order) - (second.activityOrder ?? second.order));
             const index = activityImages.findIndex((image) => image.id === imageId);
             const other = activityImages[index + direction];
@@ -730,10 +737,14 @@ export default function BoardCreator({
                                             value={title}
                                             onChange={(event) => setTitle(event.target.value)}
                                             placeholder="Your next chapter"
-                                            className="font-display border-line focus:border-foreground mt-2 mb-8 min-h-16 w-full border-b bg-transparent pb-4 text-4xl font-bold tracking-tight outline-none lg:text-5xl"
+                                            className="font-display border-line focus:border-foreground mt-2 mb-1 min-h-16 w-full border-b bg-transparent pb-4 text-4xl font-bold tracking-tight outline-none lg:text-5xl"
                                         />
                                         {fieldError("board-title")}
-                                        <div id="board-destination" tabIndex={-1} className="scroll-mt-36">
+                                        <div
+                                            id="board-destination"
+                                            tabIndex={-1}
+                                            className="mt-6 scroll-mt-36 [&>div]:mb-0"
+                                        >
                                             <BoardDestinationSearch
                                                 key={`${savedBoard?.boardId ?? "new"}-${destinationGeneration}`}
                                                 value={destination}
@@ -819,6 +830,11 @@ export default function BoardCreator({
                                     onRemovePin={removePin}
                                     onRemoveActivityImage={removeActivityImage}
                                     onAddActivityImage={addActivityImage}
+                                    onUpdateActivityImage={(updated) =>
+                                        setImages((current) =>
+                                            current.map((image) => (image.id === updated.id ? updated : image))
+                                        )
+                                    }
                                     onAssignActivityImage={assignActivityImage}
                                     onSetActivityCover={setActivityCover}
                                     onReorderActivityImage={reorderActivityImage}
@@ -826,11 +842,14 @@ export default function BoardCreator({
                             </div>
                         </section>
                         <section id="board-map" tabIndex={-1} data-editor-section>
-                            <div className="mx-auto max-w-6xl">
+                            <div className="mx-auto h-full max-w-6xl">
                                 <BoardPlanMap
                                     days={days}
                                     onOpenActivity={(activityId) => {
-                                        if (!editorDisabled && !boardUploading) setMapActivityId(activityId);
+                                        if (!editorDisabled && !boardUploading) {
+                                            document.getElementById("board-map")?.focus({ preventScroll: true });
+                                            setMapActivityId(activityId);
+                                        }
                                     }}
                                 />
                             </div>
@@ -918,6 +937,17 @@ export default function BoardCreator({
                                 author={savedBoard?.author.username ?? previewAuthor}
                                 editable={!editorDisabled}
                                 embedded
+                                onRemovePhoto={(id) => {
+                                    const image = images.find((item) => item.id === id);
+                                    if (image?.pinId && image.source === "upload") assignActivityImage(id, null);
+                                    else removeImage(id);
+                                }}
+                                onUpdatePhoto={(updated) =>
+                                    setImages((current) =>
+                                        current.map((image) => (image.id === updated.id ? updated : image))
+                                    )
+                                }
+                                onEditActivity={setMapActivityId}
                             />
                             <div id="publish" className="border-line mt-10 border-t pt-8">
                                 {" "}

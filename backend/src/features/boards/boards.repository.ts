@@ -1,3 +1,5 @@
+import { photoKey } from "./boards.photos.js";
+import type { ActivityPhoto } from "./boards.schemas.js";
 import { destinationKey } from "./boards.fillers.js";
 import type { FillerPool, FillerImage } from "./boards.types.js";
 import type { ImagePresentationEdit } from "../images/images.schemas.js";
@@ -202,8 +204,8 @@ async function writeChildren(client: PoolClient, boardId: number, userId: string
         day.activities.flatMap((activity) => (activity.activityId === undefined ? [] : [activity.activityId]))
     );
     await client.query(
-        `DELETE FROM activity_image USING activity a
-         WHERE activity_image.activity_id = a.activity_id AND a.board_id = $1`,
+        `DELETE FROM activity_photo USING activity a
+         WHERE activity_photo.activity_id = a.activity_id AND a.board_id = $1`,
         [boardId]
     );
     await client.query("DELETE FROM activity WHERE board_id = $1 AND activity_id <> ALL($2::int[])", [
@@ -212,7 +214,7 @@ async function writeChildren(client: PoolClient, boardId: number, userId: string
     ]);
 
     const dayIds: number[] = [];
-    const imageLinks: Array<{ imageId: number; activityId: number; position: number }> = [];
+    const photoLinks: Array<{ activityId: number; position: number; photo: ActivityPhoto; isCover: boolean }> = [];
     for (const day of input.days) {
         let dayId = day.dayId;
         if (dayId === undefined) {
@@ -278,8 +280,13 @@ async function writeChildren(client: PoolClient, boardId: number, userId: string
                     [...values, activityId]
                 );
             }
-            activity.uploadedImageIds.forEach((imageId, position) =>
-                imageLinks.push({ imageId, activityId, position })
+            activity.photos?.forEach((photo, position) =>
+                photoLinks.push({
+                    activityId: activityId!,
+                    position,
+                    photo,
+                    isCover: Boolean(activity.coverPhoto && photoKey(photo) === photoKey(activity.coverPhoto))
+                })
             );
         }
     }
@@ -304,17 +311,14 @@ async function writeChildren(client: PoolClient, boardId: number, userId: string
             input.imageIds
         ]);
     }
-    if (imageLinks.length) {
+    if (photoLinks.length)
         await client.query(
-            `INSERT INTO activity_image (uploaded_image_id, activity_id, position)
-             SELECT * FROM UNNEST($1::int[], $2::int[], $3::int[])`,
-            [
-                imageLinks.map((link) => link.imageId),
-                imageLinks.map((link) => link.activityId),
-                imageLinks.map((link) => link.position)
-            ]
+            `INSERT INTO activity_photo(activity_id, position, source, uploaded_image_id, external_photo, is_cover)
+         SELECT (entry->>'activityId')::int, (entry->>'position')::int, entry->'photo'->>'source',
+         (entry->'photo'->>'imageId')::int, CASE WHEN entry->'photo'->>'source'='unsplash' THEN entry->'photo' ELSE NULL END,
+         (entry->>'isCover')::boolean FROM jsonb_array_elements($1::jsonb) entry`,
+            [JSON.stringify(photoLinks)]
         );
-    }
     await client.query("UPDATE board SET cover_image_id = $1 WHERE board_id = $2", [
         input.coverImageId === undefined ? (input.imageIds[0] ?? null) : input.coverImageId,
         boardId
@@ -491,6 +495,32 @@ async function readBoardDocument(
          WHERE a.board_id = $1 ORDER BY ai.activity_id, ai.position`,
         [boardId]
     );
+    const photoResult = await client.query<{
+        activity_id: number;
+        source: "upload" | "unsplash";
+        uploaded_image_id: number | null;
+        external_photo: ActivityPhoto | null;
+        is_cover: boolean;
+    }>(
+        "SELECT p.* FROM activity_photo p JOIN activity a USING(activity_id) WHERE a.board_id=$1 ORDER BY p.activity_id,p.position",
+        [boardId]
+    );
+    const media = new Map<
+        number,
+        { photos: ActivityPhoto[]; coverPhoto: import("./boards.schemas.js").CoverPhoto | null }
+    >();
+    for (const row of photoResult.rows) {
+        const entry = media.get(row.activity_id) ?? { photos: [], coverPhoto: null };
+        const photo: ActivityPhoto =
+            row.source === "upload" ? { source: "upload", imageId: row.uploaded_image_id! } : row.external_photo!;
+        entry.photos.push(photo);
+        if (row.is_cover)
+            entry.coverPhoto =
+                photo.source === "upload"
+                    ? { source: "upload", imageId: photo.imageId }
+                    : { source: "unsplash", providerImageId: photo.providerImageId };
+        media.set(row.activity_id, entry);
+    }
     const activityImages = new Map<number, number[]>();
     for (const row of activityImageResult.rows) {
         const ids = activityImages.get(row.activity_id) ?? [];
@@ -522,6 +552,8 @@ async function readBoardDocument(
             source: row.source,
             location: row.location_id === null ? null : locationFromRow(row),
             locationConfirmed: row.location_confirmed,
+            photos: media.get(row.activity_id)?.photos ?? [],
+            coverPhoto: media.get(row.activity_id)?.coverPhoto ?? null,
             uploadedImageIds: activityImages.get(row.activity_id) ?? [],
             coverImageId: row.cover_image_id,
             externalImage:

@@ -11,6 +11,21 @@ export function createProviderRouter(controller: ProviderController, attachUser:
     const router = Router();
     const dev = [developmentOnly, attachUser, requireSessionUser];
     router.get("/config", controller.config);
+    router.get(
+        "/unsplash/activity-search",
+        attachUser,
+        requireSessionUser,
+        validateQuery(schemas.manualPhotoSearchSchema),
+        controller.manualPhotoSearch
+    );
+    router.post(
+        "/unsplash/activity-photos/select",
+        attachUser,
+        requireSessionUser,
+        requireFrontendOrigin,
+        validateBody(schemas.manualPhotoSelectionSchema),
+        controller.manualPhotoSelect
+    );
     router.post(
         "/locations/suggest-area",
         attachUser,

@@ -299,7 +299,7 @@ test("saved crop revisions refresh both V4 covers, itinerary and photo-review UR
         const refreshedThumbnail = `${edited.thumbnailUrl}&v=${revision}`;
         const refreshedDisplay = `${edited.url}&v=${revision}`;
         assert.equal(sources.filter((url) => url === refreshedDisplay).length, 2);
-        assert.equal(sources.filter((url) => url === refreshedThumbnail).length, 2);
+        assert.equal(sources.filter((url) => url === refreshedThumbnail).length, 1);
         assert.ok(!sources.includes(edited.url));
         assert.ok(!sources.includes(edited.thumbnailUrl));
         assert.ok(sources.includes(untouched.thumbnailUrl));

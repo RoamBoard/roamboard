@@ -1,6 +1,6 @@
 # Board editor redesign contract
 
-Status: Agreed.
+Status: Agreed, including second refinement. Requesting user approved frontend/backend implementation and migration 024 on 2026-10-25.
 
 Requesting user decisions recorded on 2026-10-24. The user explicitly confirmed decision authority for both
 frontend and backend. On 2026-10-24 the user approved this completed document, including its technical proposals,
@@ -398,3 +398,365 @@ The requesting user approved saving day colors, with the same colors on map filt
 Day objects in Board create/replace/read and remix content add optional nullable `color`, a lowercase six-digit hex string (for example `"#b87568"`). Omission on an existing day preserves its saved color by dayId; omission on a new day and explicit null use the default indexed palette. Unknown fields and malformed colors return the existing validation error. New clients send color or null. Migration 023 adds nullable board_day.color with the same format constraint. The frontend offers 30 colors and derives light/dark display variants without changing saved identity. No existing rows are recolored.
 
 Activity photo removal detaches uploaded images while retaining them in the Board image collection and cover choices. Only explicit Board photo removal removes a Board reference. Publishing collects field errors and reveals the first invalid chapter, retaining all other inline errors. Shared chapter navigation, drag carousels, photo zoom, and direct map clicks replace editor-specific controls. Geoapify remains the permanent location source.
+
+## Second refinement: approved 2026-10-25
+
+Source branch: 185-improve-create-board-page. Evidence: PlannerDayColumn, BoardPhotoStrip, BoardEditorRail,
+ActivityEditorDialog, BoardPlanMap, BoardCreationPreview, InteractiveMap, provider.providers.ts,
+provider.photo-suggestions.ts, boards.schemas.ts, migrations 022/023 and the migration log.
+The requesting user retains the previously recorded frontend/backend decision authority.
+The requesting user approved the concrete API/storage proposal and authorized implementation plus migration 024 on 2026-10-25. Implementation is complete; verification and migration application are recorded separately.
+
+### Agreed user requirements
+
+- Replace the 30 soft palette choices with more distinct, stronger colors. Keep theme variants and reduce the
+  whole-day background tint slightly from the implemented 10%; approved default is 6%. Persisted day colors must
+  carry through editor, Board overview maps, filters, pins and remixes. Existing selected values must not be silently
+  rewritten. Previously saved colors remain valid; stronger colors are new palette choices, not a rewrite of existing Board data.
+- Restore reliable activity dragging within/across days. Keep insertion feedback, time preservation, keyboard and
+  touch access; verify real browser dragging rather than accepting the visible grab cursor as evidence.
+- Hide the empty-time dash and reclaim its space. It is a placeholder, not a minus action. Keep actual activity times.
+  The adjacent category icon is functional; retain category editing without a duplicate icon or wasted gutter.
+- Gallery hover grows the whole image/card slightly without enlarging the image inside its crop. Preserve the
+  framing, rounded corners, focus behavior and reduced-motion behavior; leave room to avoid clipping the growth.
+- Add user-entered Unsplash photo search with explicit submission and paginated results. Search must not require a
+  location or silently constrain the query to the activity's place/category. Do not automatically replace attachments.
+- User explicitly chose multiple Unsplash photos alongside uploads. Saved ordering and cover choices must work
+  across both sources and survive reload and remix. This requires a new media persistence/API extension, not just
+  additional thumbnails. The current model stores only one external photo per activity.
+- Remove the Map chapter's gray top divider. At desktop sizes, heading, filters and map fit the available editor
+  viewport without an inner vertical scroll. Mobile retains access to all controls/content rather than clipping them.
+- Map pins grow on hover/focus and reveal the activity title plus a short Click to see more hint, reusing the profile
+  map/globe presentation where appropriate. Clicking opens the activity editor.
+- Dismissing an activity dialog by its backdrop consumes the complete pointer interaction: no click-through to
+  previous/next chapter arrows. Existing discard confirmation must still work.
+- Reduce the gap between tag-picker help text and Visibility so Details does not need a short nested scroll before
+  section navigation. Place each validation message immediately beside/below its field, not after its bottom margin.
+- Review full itinerary starts expanded for create/edit and resembles the Board summary. Use larger clickable photo
+  thumbnails and the existing zoom viewer. Remove the separate Review all photos disclosure; keep photo controls
+  in the itinerary review. Hover/focus exposes Crop and Delete controls with the existing subtle action animation.
+
+### Confirmed existing migrations and current gaps
+
+- 022_activity_photo_context.sql is committed on this branch and applied to shared development after a verified
+  backup on 2026-10-24. It stores nullable context for the existing single external activity image.
+- 023_board_day_color.sql is committed on this branch and applied to shared development after a verified backup
+  on 2026-10-25. It stores nullable day colors. Stronger palette choices and correcting overview color delivery do
+  not themselves require another migration. Audit read/adaptation/map rendering before proposing a new color field.
+- Migration 024_activity_photos.sql implements storage for multiple external activity photos and mixed
+  media cover/order persistence. It has not been created or applied. Existing photos/credits/context must be migrated
+  without loss. Old-client compatibility and replacement semantics must be explicit before implementation.
+- Current Unsplash search has no page parameter and forces landscape orientation. The current geographically
+  checked suggestion selector cannot serve arbitrary manual searches because it rejects unrelated selections.
+  Manual search needs a separate selection path that does not claim location verification.
+
+### Agreed search behavior and boundaries
+
+- Reuse Unsplash first. Explicit Search submits the user's trimmed query; show 12 results per page with Previous
+  and Next plus current page and result count. Do not prefetch pages or search on every keystroke. Remove the
+  landscape-only restriction for manual search. Retain existing application quotas and safe failure/429 handling.
+- Keep the existing simple search endpoint compatible for its callers; add an activity-search endpoint with page,
+  per-page and total-pages metadata rather than changing an array response beneath existing clients.
+- Require the normal session for editor search, and session plus exact Origin for photo selection. Selection accepts
+  an Unsplash photo ID, fetches canonical details, records the provider download-equivalent event and returns canonical
+  URLs/credit. Never fetch arbitrary client URLs. Search and preview alone do not record a selection/download.
+- Manual results are illustrative choices, not verified images of the activity's location. Preserve photographer and
+  provider credit and hotlink provider image URLs. User approved cropping both uploads and Unsplash photos.
+  External crops are presentation settings on that activity photo; never download/rehost the source or change provider identity.
+- Agreed: Unsplash only for this revision. Pexels integration, credentials and additional provider quotas are out of scope.
+
+### User decision log
+
+1. Agreed: multiple Unsplash photos coexist with uploaded activity photos.
+2. Agreed: unrestricted paginated Unsplash search first; no Pexels integration in this revision.
+3. Agreed: unassigned uploads appear under Other Board photos inside the expanded itinerary review.
+4. Agreed: under an activity, Remove detaches the photo; Other Board photos uses Delete from Board. Both use the
+   trash icon with accurate accessible labels/tooltips. Removing an external activity photo removes that reference,
+   never the provider asset. Uploaded photos remain available on the Board after activity detachment.
+5. Agreed: Crop works on uploads and Unsplash photos. Unsplash crops belong to the activity photo and persist with
+   Board saves/remixes. Upload crop Save retains its existing immediate, revision-checked global behavior.
+6. Agreed: the concrete API/storage/compatibility proposal below; implementation and migration 024 authorized.
+
+### Agreed API
+
+Keep existing Board permissions and revision checks. Add these routes behind the backend provider layer; never
+send provider credentials to the browser.
+
+- GET /api/v1/providers/unsplash/activity-search?q=red%20sailing%20boat&page=1 requires a session. q is a trimmed
+  nonempty string, at most 160 characters; page is a positive safe integer, default 1. Each page has 12 results.
+  Use all orientations, relevant ordering and the exact submitted words. No geographic eligibility check, automatic
+  pagination, retry or prefetch. One quota-managed Unsplash search per explicit request. A new query resets page 1;
+  ignore stale replies when query/page changes or the dialog closes. Keep previous attachments on all failures.
+- POST /api/v1/providers/unsplash/activity-photos/select requires a session and exact frontend Origin. Body contains
+  only photoId (1?80 ASCII letters, numbers, underscore or hyphen). Fetch that canonical photo, validate expected
+  provider response/URLs, and record its canonical download-equivalent event. At most one detail and one download
+  call through existing shared quotas. Search/previews/crops are not selection events. Disable repeated selection
+  while pending and deduplicate the same provider ID within an activity. Failure adds no attachment.
+- Search/selection errors use the existing error envelope: malformed input 400, missing session 401, foreign
+  selection Origin 403, unavailable photo 404, quota exhaustion 429 with safe Retry-After where known, provider
+  failure 502/503. No raw upstream bodies, keys or automatic quota increases.
+
+Illustrative search response (example identity/URLs only, not a verified provider asset):
+
+```json
+{
+    "data": {
+        "query": "red sailing boat",
+        "page": 1,
+        "pageSize": 12,
+        "total": 1,
+        "totalPages": 1,
+        "photos": [
+            {
+                "id": "example-photo-id",
+                "url": "https://images.unsplash.com/example-photo?ixid=example",
+                "thumbnailUrl": "https://images.unsplash.com/example-photo?ixid=example&w=400",
+                "alt": "Red sailing boat",
+                "photographer": "Example Photographer",
+                "photographerUrl": "https://unsplash.com/@example",
+                "sourceUrl": "https://unsplash.com/photos/example-photo-id",
+                "width": 2400,
+                "height": 1600
+            }
+        ]
+    }
+}
+```
+
+The selection request is `{"photoId":"example-photo-id"}`; success is `{"data": photo}` containing the canonical
+ProviderPhoto fields above plus `context: null`. This does not assert the photo depicts the activity's location.
+Existing nearby/region context stays on previously verified suggestions; manual photos show Selected by you.
+New manual selections are not silently discarded when the activity location changes. Automatic suggestions remain
+optional and never overwrite a manual attachment or explicitly chosen cover.
+
+### Mixed activity photos: write/read and compatibility
+
+Add optional `photos` and `coverPhoto` to activity objects in Board create/replace/read and remix content.
+The photos array order is the display order, including interleaved uploads and Unsplash photos. Identity is
+`{source:"upload", imageId}` or `{source:"unsplash", providerImageId}`. Duplicate identities in one activity are invalid.
+Uploaded IDs must be owned/authorized Board uploads and retain existing one-activity assignment rules. Unsplash
+entries use canonical provider metadata fields returned by selection, nullable existing illustration context, and
+optional nullable presentation settings. Apply existing strict external-image validation plus Unsplash URL-host
+validation; never fetch a supplied image/download URL. Existing API request-size and upload limits remain in effect.
+
+Example activity media fragment (all enclosing existing activity fields still apply):
+
+```json
+{
+    "photos": [
+        { "source": "upload", "imageId": 42 },
+        {
+            "source": "unsplash",
+            "providerImageId": "example-photo-id",
+            "url": "https://images.unsplash.com/example-photo?ixid=example",
+            "thumbnailUrl": "https://images.unsplash.com/example-photo?ixid=example&w=400",
+            "alt": "Red sailing boat",
+            "photographer": "Example Photographer",
+            "photographerUrl": "https://unsplash.com/@example",
+            "sourceUrl": "https://unsplash.com/photos/example-photo-id",
+            "width": 2400,
+            "height": 1600,
+            "context": null,
+            "presentation": null
+        }
+    ],
+    "coverPhoto": { "source": "unsplash", "providerImageId": "example-photo-id" }
+}
+```
+
+- photos present replaces this activity's complete ordered attachment list; [] detaches all. null is invalid.
+  New clients use photos/coverPhoto and omit legacy media fields. Reject a write that mixes the new photos field
+  with legacy uploadedImageIds/externalImage/coverImageId rather than guessing which one wins.
+- coverPhoto must reference an attached photo; null means no explicit selection and uses the first attached photo.
+  Omission preserves the current cover if still attached, otherwise uses the first photo. New activities start with
+  the existing earliest-upload default when applicable; later additions do not override an explicit cover.
+- Reads retain legacy uploadedImageIds, externalImage and coverImageId projections for existing readers, in addition
+  to photos/coverPhoto. externalImage projects the first Unsplash photo; coverImageId is the selected upload ID or
+  null for an external/default cover. This projection is not a promise that the activity has only one external photo.
+- Legacy writes without photos retain support: uploadedImageIds updates upload attachments, and externalImage updates
+  or clears only the first projected external photo. Preserve every additional external photo and its presentation.
+  Legacy unchanged/null upload cover projections must not wipe an existing external cover; an explicit valid numeric
+  legacy cover selection chooses that upload. An omitted legacy field preserves its current meaning.
+- Remix copies media order, source credit, illustration context, external crop settings and cover choice. Existing
+  owned upload-copy/remapped-ID behavior remains. Provider binaries stay on Unsplash.
+- Photo review changes update the same staged Board state as Day plan. Removing an activity photo does not remove
+  a Board upload; the detached upload appears immediately under Other Board photos. Deleting an unassigned upload
+  removes the Board reference, updates a matching Board cover using the existing fallback, and uses existing
+  reference-aware cleanup only after a successful save. A failed save never deletes the provider/original binary.
+
+### Unsplash crop presentation
+
+Reuse the crop geometry and controls of PhotoEditorDialog without routing external IDs into the protected-upload
+API. External presentation is null or `{x,y,width,height,outputWidth,outputHeight}`: normalized finite crop bounds
+inside [0,1], positive width/height, x+width and y+height at most 1; reuse existing minimum crop/output constraints
+and integer output dimensions 32?4096. Reject invalid bounds at the API boundary and database constraint.
+
+Crop applies a local presentation window plus supported provider sizing to the canonical image URL; retain ixid and
+all attribution. Do not depend on unsupported arbitrary crop-rectangle CDN parameters, canvas export, or rehosting.
+The original stays available for subsequent crop edits. External crop Save stages changes in the activity/Board
+editor; cancelling that activity discards its staged external crop, and Board Save persists it under the Board revision.
+In the overview review, Crop stages into the Board editor directly. The same provider photo in another activity/Board
+keeps its own presentation. Upload crop behavior remains the existing explicit immediate/global Save with revision checks.
+
+### Storage and migration
+
+Use migration 024_activity_photos.sql. Introduce
+one canonical activity-photo relation for uploaded and external references, ordered position and selected cover.
+Use database foreign keys for activities/uploads, uniqueness for per-activity position/source identity, at most one
+selected cover, and constrained external metadata/presentation. Migrate existing activity_image links and single
+external-image metadata/context without loss, retaining old upload ordering and the saved cover. Place the old
+external photo after existing uploads unless it was explicitly the activity cover; cover selection is independent
+of order. Do not rewrite original upload presentation or day colors.
+
+Port Board read/write/remix, published viewer adapters, image-access/reference queries and cleanup triggers to this
+canonical relation in one reviewed change. Legacy API fields are projections, not a second mutable source of truth.
+Update every isolated-schema fixture using these repositories. Verify the migration and backwards-compatible
+service behavior against existing single-photo Boards before applying it to shared development. Shared application
+requires a verified backup; the requesting user explicitly authorized applying only 024 on 2026-10-25.
+
+### Approved defaults
+
+The requesting user approved 12 search
+results per page, 6% day tint, stronger new palette choices while preserving existing saved colors, staged per-activity
+Unsplash crops, and the media API/legacy compatibility behavior above. Frontend/backend implementation and
+migration 024 are authorized; application and verification status are recorded separately.
+
+Provider references checked 2026-10-25:
+[Unsplash documentation](https://unsplash.com/documentation),
+[Pexels API documentation](https://www.pexels.com/api/documentation/).
+
+### Verification required for this refinement
+
+Independent behavior tests for media ordering/cover/reload/remix, paginated query changes and stale responses,
+selection auth/Origin/credits/provider failure, photo detach versus Board removal, first-error proximity/routing,
+and complete backdrop pointer consumption. Isolated-schema migration tests must preserve existing media.
+Browser checks must include an actual successful drag within/across days, hover scaling without crop zoom, map
+pin labels, desktop map/detail viewport fit, mobile section order and physical touch where available.
+
+### Second refinement approval record
+
+2026-10-25: in response to the completed contract review covering both applications, the requesting user replied
+"Yes. go ahead. Migrate 24 also." This approves the documented defaults, API/storage compatibility and crop behavior,
+authorizes implementation and authorizes applying only migration 024 to development after tests and a verified backup.
+The activity_image compatibility name will remain an upload-only database view over the canonical activity_photo relation,
+so existing reference-aware access/cleanup queries retain their meaning without a second mutable attachment table.
+
+### Second refinement implementation verification
+
+Migration 024 was applied to shared development on 2026-10-25 after a verified custom-format backup;
+see backend/db/MIGRATION_LOG.md for preservation checks. Migrations 022 and 023 were already applied and
+were not repeated. All 968 frontend tests, 280 backend tests and 29 local PostgreSQL integration tests pass.
+Production builds, application typechecks, root formatting and lint pass. Browser checks verify native drag
+within/across days, backdrop dismissal without chapter navigation and desktop map/details viewport fit.
+Physical touch and live provider relevance remain separate acceptance checks.
+
+## Third refinement: selection fix, photo interactions and rendering performance
+
+Status: Agreed. Requesting user approved implementation for both backend and frontend on 2026-10-25.
+Requesting user previously spoke for frontend/backend on this feature; their current review is still required.
+Source branch: 185-improve-create-board-page, inspected 2026-10-25 with existing uncommitted second-refinement work retained.
+
+### Evidence and current implementation
+
+- frontend/src/lib/providers.ts: selectManualActivityPhoto sends a JSON string without Content-Type; the shared
+  request helper does not add it. backend/src/app.ts parses application/json and the selection route validates
+  photoId. This explains the reported INVALID_REQUEST 400 without requiring a new selection endpoint.
+- ActivityEditorDialog renders attached photos in a two-column grid, rather than BoardPhotoStrip. Its image buttons
+  omit editor-photo-card. Shared CSS applies scaling to the image button's hover, whereas overlay buttons are siblings;
+  moving onto an overlay ends image hover. Pointer cursors are not consistently applied to overlay controls.
+- BoardPhotoStrip always reserves a navigation row, including when every photo fits. It already supports Embla drag,
+  horizontal wheel/Shift-wheel and shared directional controls. Existing BoardLibrary has a draggable scrollbar pattern.
+- DayPlanner mounts the activity dialog inside the day-plan chapter even when opened from BoardPlanMap.
+  BoardEditorRail responds to focusin from any chapter, including a dialog; useDialogFocus also restores prior focus.
+  Focus-driven chapter navigation is a candidate cause in addition to backdrop event propagation. Reproduce the exact
+  map-pin journey before choosing the smallest fix; the previous generic backdrop test did not prove this journey.
+- BoardCreationPreview starts its review open, renders one activity per row and one carousel per activity, and filters
+  the entire image array repeatedly. CroppedPhoto derives external request dimensions from saved crop/output sizes,
+  up to 4096px even when rendering a small thumbnail. Protected upload thumbnails already have a 320px bound.
+  The runtime lag has not yet been profiled; these are evidenced costs, not a claim that all lag has one cause.
+
+### Requested scope and proposed behavior
+
+1. Fix manual Unsplash selection through the existing authenticated, Origin-protected endpoint. Send application/json
+   and the unchanged {photoId} payload; preserve safe errors, attribution, quotas and one selection download request.
+   Add a real frontend-helper-to-Express regression so a mocked fetch cannot conceal the missing header again.
+2. Apply a shared photo-frame hover/focus state across create/edit intake, activity attached/available photos, cover
+   selection, manual search results and full Board review. The frame grows subtly, without zooming its contents.
+   Keep this state while any overlay control is hovered/focused. Images and enabled actions use pointer cursors.
+   Proposed motion: approximately 2% frame growth over 160-200ms; action reveal/scale over 120-160ms with a quick
+   spring-like ease-out. Respect reduced motion; keep controls accessible on touch and keyboard.
+3. Attached activity photos reuse the shared carousel, with approximately 144-160px cards on desktop and responsive
+   smaller-screen sizing. More than two photos normally overflow the dialog. Show applicable left/right controls and
+   a shared draggable progress scrollbar only on overflow, without empty navigation rows when every item fits.
+   Preserve independent cover/crop/remove/zoom actions and saved photo order. Carousel dragging scrolls the strip;
+   the existing reorder actions continue to change saved photo order. No implicit photo reassignment on scroll.
+4. Opening, saving or dismissing a map activity keeps the current Map chapter and map position. Backdrop dismissal
+   consumes the complete pointer/click sequence and restores useful focus in Map, including keyboard-opened pins.
+   Dirty changes retain the existing discard confirmation; nested crop/zoom dismissal cannot navigate chapters.
+5. Rename the expanded review to Review full Board and retain its default-open state. Reuse the visual structure
+   of BoardStoryEnding Summary: each day has an all-photo gallery followed by a compact activity list. Unlike the
+   published Summary, do not cap photos at three. Show every attachment in saved activity order, then saved photo
+   order within that activity, reading left-to-right then down. Do not reorder activities by time or omit repeated
+   photos belonging to different activities. Show the activity title on photo hover/keyboard focus, with a usable
+   touch alternative; retain credits, Crop/Delete and the shared zoom viewer. Use a responsive wrapping grid with
+   approximately 4-6 thumbnails across wide available space and fewer columns on narrow screens. Keep compact
+   activity rows in saved order with their times, location and full notes available; activity titles open editing.
+   Other Board photos remain a separate unassigned group using the same photo controls. This agreed day-gallery
+   design supersedes the earlier two-activity pairing and 160-character eligibility proposal.
+6. Profile image-heavy editor chapters and fix measured decode/network/render/layout costs. Use bounded thumbnails
+   for cards/strips/review, with larger existing authorized delivery only when zoom/crop is opened. External crop
+   thumbnails must honor their display budget instead of inheriting a 4096px crop-output request. Retain Unsplash
+   parameters/attribution and protected upload permissions, presentation revisions and cache semantics. Originals and
+   saved crop data are unchanged. Avoid loading large gallery assets before a viewer opens; lazy/defer offscreen photo
+   work and reuse grouped photo data where profiling justifies it. Do not introduce dependencies, new photo limits,
+   rehosting, global cache permission bypasses or whole-page virtualization without evidence that simpler fixes fail.
+
+### API and storage implications
+
+No new endpoint, stored field or migration is currently proposed. Existing mixed-media contract and migration 024
+remain authoritative. Example selection request uses Content-Type: application/json with body {"photoId":"photo_123"}.
+Success retains the existing data envelope with canonical ProviderPhoto and context:null; session, Origin, provider
+failure and malformed-ID behavior remain unchanged. A failed selection attaches nothing and preserves existing media.
+Lower-resolution thumbnails are delivery/presentation choices and do not overwrite image files or saved dimensions.
+
+### Verification and review gates
+
+Reproduce real JSON selection through the existing Express parser; test failure/retry and no duplicate attachment.
+Browser-test actual map-pin opening, backdrop/Close/Escape/dirty-discard and nested dialogs without rail movement.
+Test frame hover moving onto Crop/Delete plus focus/touch alternatives, scrolling overflow and no-overflow controls,
+complete day-gallery membership/order, compact activity rows, and mobile reading order in both themes and reduced motion.
+Record before/after request sizes, decoded image dimensions, long tasks and scrolling behavior with a representative
+photo-heavy Board and a larger stress fixture, without persisting fixture Boards or calling providers unnecessarily.
+Keep root formatting/lint, relevant frontend/backend types/tests/builds and independent test review requirements.
+
+### Open decisions and approval
+
+- Agreed by requesting user on 2026-10-25: Summary-style all-photo day galleries followed by compact activity lists,
+  using wider photo rows and activity titles on hover/focus. The earlier pairing proposal is superseded.
+- Proposed: 144-160px attached-photo cards; overflow-only arrows and draggable scrollbar.
+- Proposed: bounded thumbnails with larger viewer delivery and measured offscreen rendering improvements.
+- Requested: shared persistent frame hover, pointer cursors, selection fix, Map chapter retention and review rename.
+- Approved: the requesting user authorized implementation for both frontend and backend on 2026-10-25.
+  No new endpoint or migration is required; the selection failure is fixed in the frontend JSON request.
+
+Third refinement approval: on 2026-10-25 the requesting user stated "Start implementing. Yes, both BE and FE."
+This authorizes the documented revision across both applications; no additional database migration is proposed.
+
+### Third refinement implementation verification (2026-10-25)
+
+The selection helper now sends application/json; an independently authored helper-to-real-Express-parser test
+verifies the body. The backend selection endpoint, authorization, quotas and storage contract remain unchanged.
+All 973 frontend tests and 280 backend tests pass; both application builds and typechecks pass. Final root formatting
+and lint are required after the last edits. No database migration was added or applied for this refinement.
+
+Independent Chrome checks used controlled API/image responses without Board saves or real provider selections.
+A 160-photo fixture verified all photos in saved order, six desktop columns/two mobile columns, no 390px overflow,
+159 attached photos in the draggable strip with arrows/range versus no navigation row for one photo, persistent
+frame enlargement over Crop/Delete with pointer cursors, and Map retention through native backdrop/Close/Escape,
+dirty discard and nested zoom dismissal. In a settled 15-step review scroll lasting 761ms, no task exceeded 50ms.
+Initial/HMR tasks were excluded; this is controlled development-browser evidence, not a production SLA.
+Small cropped requests were bounded to 640px in both dimensions; 4096px appeared only after explicit zoom.
+The maximum source-pixel budget changes from 4096 squared to 640 squared (97.56% lower); this is a dimensional
+calculation, not a measured live-CDN byte saving. Offscreen review days use content visibility, photos use lazy
+decoding/loading and review grouping avoids repeated full-gallery scans/per-activity carousel layout work.
+Physical touch, real-CDN throughput and profiling the reporting user's signed-in Board remain untested.

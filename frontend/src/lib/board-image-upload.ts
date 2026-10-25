@@ -1,6 +1,9 @@
 import { uploadBoardImage } from "./board-creator-api";
 
-export async function uploadBoardImageBatch(files: File[]) {
+export async function uploadBoardImageBatch(
+    files: File[],
+    onUploaded?: (asset: Awaited<ReturnType<typeof uploadBoardImage>>) => void
+) {
     if (files.length > 30) throw new Error("Choose up to 30 photos per batch.");
     const results: PromiseSettledResult<Awaited<ReturnType<typeof uploadBoardImage>>>[] = new Array(files.length);
     const queue = files.map((file, index) => ({ file, index }));
@@ -15,6 +18,8 @@ export async function uploadBoardImageBatch(files: File[]) {
                 } catch (reason) {
                     results[index] = { status: "rejected", reason };
                 }
+                const result = results[index];
+                if (result.status === "fulfilled") onUploaded?.(result.value);
             }
         })
     );
