@@ -4,7 +4,8 @@
 import { activityNoteError, activityNoteLength } from "@/lib/activity-note";
 
 import { ArrowLeft, ArrowRight, Crop, Trash2, Upload } from "lucide-react";
-import EditorPhotoGallery from "./EditorPhotoGallery";
+import EditorPhotoGallery, { editorPhoto } from "./EditorPhotoGallery";
+import { StoryPhotoCredit } from "./StoryPhoto";
 import { useEffect, useId, useRef, useState } from "react";
 
 import CroppedPhoto from "@/components/images/CroppedPhoto";
@@ -43,7 +44,6 @@ type Props = {
     onAddImage: (image: BoardImageDraft) => void;
     onUpdateImage?: (image: BoardImageDraft) => void;
     onAssignImage: (imageId: string, pinId: string | null) => void;
-    onSetCover: (pinId: string, imageId: number | null) => void;
     onReorderImage: (pinId: string, imageId: string, direction: -1 | 1) => void;
 };
 
@@ -93,7 +93,6 @@ function ActivityEditorContent({
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState("");
     const uploadLock = useRef(false);
-    const editRevision = useRef(0);
     const [locationEditVersion, setLocationEditVersion] = useState(0);
     const fieldEdits = useRef({ category: false, title: false, time: false, location: false, cover: false });
     const uploadId = useId();
@@ -391,28 +390,7 @@ function ActivityEditorContent({
                                                 className="aspect-video w-full object-cover"
                                             />
                                         </button>
-                                        {cover.credit && cover.creditUrl && cover.sourceUrl ? (
-                                            <figcaption className="text-10 text-stone mt-1">
-                                                Photo by{" "}
-                                                <a
-                                                    href={cover.creditUrl}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="underline"
-                                                >
-                                                    {cover.credit}
-                                                </a>{" "}
-                                                on{" "}
-                                                <a
-                                                    href={cover.sourceUrl}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="underline"
-                                                >
-                                                    Unsplash
-                                                </a>
-                                            </figcaption>
-                                        ) : null}
+                                        <StoryPhotoCredit image={editorPhoto(cover)} />
                                     </figure>
                                 ) : null}
                                 <input
@@ -714,7 +692,6 @@ function ActivityEditorContent({
                                     className="font-display border-line text-foreground focus:border-foreground mt-2 block w-full border-b bg-transparent pb-3 text-3xl font-bold outline-none"
                                     onChange={(event) => {
                                         fieldEdits.current.title = true;
-                                        editRevision.current++;
                                         setDraft((current) => ({ ...current, title: event.target.value }));
                                     }}
                                 />
@@ -726,12 +703,10 @@ function ActivityEditorContent({
                                 disabled={uploading}
                                 onSearchEdited={() => {
                                     fieldEdits.current.location = true;
-                                    editRevision.current++;
                                     setLocationEditVersion((version) => version + 1);
                                 }}
                                 onSelect={(location, category) => {
                                     fieldEdits.current.location = true;
-                                    editRevision.current++;
                                     setLocationEditVersion((version) => version + 1);
                                     setAutomaticImage(null);
                                     setSkipAutomaticPhoto(false);
@@ -761,7 +736,6 @@ function ActivityEditorContent({
                                 disabled={uploading}
                                 onChange={(location) => {
                                     fieldEdits.current.location = true;
-                                    editRevision.current++;
                                     setDraft((current) => ({
                                         ...current,
                                         location,
@@ -782,7 +756,6 @@ function ActivityEditorContent({
                                         value={draft.location.name}
                                         onChange={(event) => {
                                             fieldEdits.current.location = true;
-                                            editRevision.current++;
                                             setLocationEditVersion((version) => version + 1);
                                             setDraft((current) => ({
                                                 ...current,
@@ -812,7 +785,6 @@ function ActivityEditorContent({
                                         );
                                         if (location) {
                                             fieldEdits.current.location = true;
-                                            editRevision.current++;
                                             setLocationEditVersion((version) => version + 1);
                                             if (
                                                 !photoSuggestion.suggestion?.location ||
@@ -864,7 +836,6 @@ function ActivityEditorContent({
                                         value={draft.category}
                                         onChange={(event) => {
                                             fieldEdits.current.category = true;
-                                            editRevision.current++;
                                             setDraft({ ...draft, category: event.target.value as PinCategory });
                                         }}
                                         className="text-14 text-foreground min-w-0 flex-1 bg-transparent outline-none"

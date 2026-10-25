@@ -127,7 +127,7 @@ export function CarouselItem({ className = "", ...props }: ComponentProps<"div">
 }
 
 const controlClass =
-    "border-line bg-background text-foreground inline-flex size-11 items-center justify-center rounded-full border transition-[transform,background-color] hover:scale-110 hover:bg-faint focus-visible:scale-110 focus-visible:outline-2 focus-visible:outline-offset-4 disabled:cursor-default disabled:opacity-30 motion-reduce:transition-none motion-reduce:transform-none";
+    "border-line bg-background text-foreground inline-flex size-11 cursor-pointer items-center justify-center rounded-full border transition-[transform,background-color] hover:scale-110 hover:bg-faint focus-visible:scale-110 focus-visible:outline-2 focus-visible:outline-offset-4 disabled:cursor-default disabled:opacity-30 motion-reduce:transition-none motion-reduce:transform-none";
 export function ScrollArrow({
     direction,
     className = "",

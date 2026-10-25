@@ -25,7 +25,6 @@ export default function BoardPreviewSection({
                 {!embedded ? (
                     <div className="mb-10 max-w-xl [&>header]:pb-4 [&>header>p]:max-w-md">
                         <CreatorSectionIntro
-                            number="05"
                             title="BOARD PREVIEW"
                             description="The cover and the details behind your journey. Two views of the same Board."
                         />

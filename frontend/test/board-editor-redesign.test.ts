@@ -97,7 +97,6 @@ test("an itinerary activity can save without a map pin and retains its entered t
             onDelete() {},
             onAddImage() {},
             onAssignImage() {},
-            onSetCover() {},
             onReorderImage() {}
         });
         capture.controls = elements(tree);
@@ -140,7 +139,6 @@ test("changing only an external cover requires discard confirmation even when bo
             onDelete() {},
             onAddImage() {},
             onAssignImage() {},
-            onSetCover() {},
             onReorderImage() {}
         });
         const nodes = elements(tree);
@@ -185,7 +183,6 @@ test("six-file activity batches are rejected before uploads even when board capa
             onDelete() {},
             onAddImage() {},
             onAssignImage() {},
-            onSetCover() {},
             onReorderImage() {}
         });
         if (!state.checked) {
@@ -327,7 +324,6 @@ test("attached uploads expose named keyboard crop and delete buttons", () => {
             onDelete() {},
             onAddImage() {},
             onAssignImage() {},
-            onSetCover() {},
             onReorderImage() {}
         });
     }
@@ -432,7 +428,6 @@ test("selecting an illustrative replacement persists it instead of retaining the
             remainingUploads: 5,
             onClose() {},
             onDelete() {},
-            onSetCover() {},
             onReorderImage() {},
             onSave: (saved) => {
                 state.pin = saved;

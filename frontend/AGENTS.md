@@ -688,11 +688,14 @@ there provide a keyboard alternative to dragging. The upload strip shows an unas
 assignment status, excluding stock photos.
 
 PhotoEditorDialog is shared by Board uploads, activity uploads and profile pictures. It offers draggable and
-keyboard-adjustable crop bounds, aspect presets and resize limits, without rotation or format conversion. It edits
+keyboard-adjustable crop bounds and aspect presets with automatic output sizing, without rotation or format conversion. It edits
 presentation settings through the protected image API, retaining the original and GPS/time. Reset restores original
 presentation. Saves apply to every use of that uploaded image and use an image revision to reject stale edits.
 The owner-only editor source is bounded to 4096px; ordinary delivery keeps its display/thumbnail bounds. Preview
 URLs update after saves. Modal focus, loading, failure, discard and leave-warning states are explicit.
+Crop actions use the existing editor icon styling and theme colors. Editor photo credits reuse StoryPhotoCredit.
+The shared enlarged viewer uses one 75% black overlay; empty stage clicks close it. Shared arrows follow the photo's
+displayed width and zoom, clamping to the viewport edge when necessary. Reduced motion uses CSS media queries.
 
 Publishing requires a main destination; incomplete drafts remain saveable. Three or more located activities can
 autofill an empty destination through a majority-area suggestion. Manual selections and explicit clearing stop

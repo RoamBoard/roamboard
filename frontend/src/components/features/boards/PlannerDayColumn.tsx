@@ -7,7 +7,7 @@ import { useRef, useState } from "react";
 import { dayColor } from "@/lib/day-color";
 import CroppedPhoto from "@/components/images/CroppedPhoto";
 import PinCategoryIcon from "@/components/ui/PinCategoryIcon";
-import { dayColors, type BoardDayDraft, type BoardImageDraft, type BoardPinDraft } from "@/types/board-creator";
+import { dayColors, type BoardDayDraft, type BoardImageDraft } from "@/types/board-creator";
 
 type Props = {
     day: BoardDayDraft;
@@ -19,7 +19,6 @@ type Props = {
     onAdd: () => void;
     onRemoveDay: () => void;
     onMovePin: (id: string, dayId: string, time: string, index?: number) => void;
-    onUpdatePin: (pin: BoardPinDraft) => void;
     onColorChange: (color: string) => void;
     dragTarget: { dayId: string; index: number } | null;
     onDragTargetChange: (target: { dayId: string; index: number } | null) => void;

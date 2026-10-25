@@ -499,15 +499,6 @@ export default function BoardCreator({
         else removeImage(imageId);
     }
 
-    function setActivityCover(pinId: string, imageId: number | null) {
-        setDays((current) =>
-            current.map((day) => ({
-                ...day,
-                pins: day.pins.map((pin) => (pin.id === pinId ? { ...pin, coverImageId: imageId } : pin))
-            }))
-        );
-    }
-
     function reorderActivityImage(pinId: string, imageId: string, direction: -1 | 1) {
         setImages((current) => {
             const activityImages = current
@@ -700,7 +691,6 @@ export default function BoardCreator({
                         <section id="board-basics" tabIndex={-1} data-editor-section>
                             <div className="mx-auto max-w-6xl">
                                 <CreatorSectionIntro
-                                    number="01"
                                     title="Set the scene"
                                     description="Every journey starts somewhere. Give yours a name and a view."
                                 />
@@ -785,7 +775,6 @@ export default function BoardCreator({
                         <section id="day-plan" tabIndex={-1} data-editor-section>
                             <div className="mx-auto max-w-[96rem]">
                                 <CreatorSectionIntro
-                                    number="02"
                                     title="Make room for the memorable"
                                     description="Build each day around the places, pauses and little discoveries that matter."
                                 />
@@ -836,7 +825,6 @@ export default function BoardCreator({
                                         )
                                     }
                                     onAssignActivityImage={assignActivityImage}
-                                    onSetActivityCover={setActivityCover}
                                     onReorderActivityImage={reorderActivityImage}
                                 />
                             </div>
@@ -857,7 +845,6 @@ export default function BoardCreator({
                         <section id="details-discovery" tabIndex={-1} data-editor-section>
                             <div className="mx-auto max-w-5xl">
                                 <CreatorSectionIntro
-                                    number="04"
                                     title="The finishing touches"
                                     description="Choose who can come along, and help your journey find its people."
                                 />
@@ -928,7 +915,6 @@ export default function BoardCreator({
                     <section id="board-preview" tabIndex={-1} data-editor-section>
                         <div className="mx-auto max-w-6xl">
                             <CreatorSectionIntro
-                                number="05"
                                 title="Your journey, together"
                                 description="Take one last look. Keep it for later, or let the world in."
                             />

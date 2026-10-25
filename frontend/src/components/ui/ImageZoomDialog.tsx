@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, type CSSProperties } from "react";
 import Image from "next/image";
 import CroppedPhoto from "@/components/images/CroppedPhoto";
-import { ChevronLeft, ChevronRight, RotateCcw, X, ZoomIn, ZoomOut } from "lucide-react";
+import { RotateCcw, X, ZoomIn, ZoomOut } from "lucide-react";
+import { ScrollArrow } from "./carousel";
 import LibraryImage from "@/components/images/LibraryImage";
 import { useDialogFocus } from "@/lib/use-dialog-focus";
 import { creditLink } from "@/components/features/boards/BoardPhoto";
@@ -28,22 +29,12 @@ export default function ImageZoomDialog({ images, initialIndex = 0, onClose }: P
     const [scale, setScale] = useState(1);
     const [pan, setPan] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
-    const [reducedMotion, setReducedMotion] = useState(
-        () => typeof window !== "undefined" && Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches)
-    );
     const dragStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
     const hasMoved = useRef(false);
     const swipeStart = useRef<{ x: number; y: number } | null>(null);
     const [loadedLarge, setLoadedLarge] = useState<string | null>(null);
     const [failedDisplay, setFailedDisplay] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (typeof window === "undefined" || !window.matchMedia) return;
-        const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-        const handleChange = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
-        media.addEventListener?.("change", handleChange);
-        return () => media.removeEventListener?.("change", handleChange);
-    }, []);
+    const [naturalSize, setNaturalSize] = useState({ url: "", width: 1, height: 1 });
 
     const currentImage = images[currentIndex] || images[0];
     const hasMultiple = images.length > 1;
@@ -268,6 +259,10 @@ export default function ImageZoomDialog({ images, initialIndex = 0, onClose }: P
 
     const isLibrary = currentImage.url.startsWith("library:");
     const Photo = isLibrary ? LibraryImage : Image;
+    const width = naturalSize.url === currentImage.url ? naturalSize.width : currentImage.width || 1;
+    const height = naturalSize.url === currentImage.url ? naturalSize.height : currentImage.height || 1;
+    const aspect =
+        (width * (currentImage.presentation?.width ?? 1)) / (height * (currentImage.presentation?.height ?? 1));
 
     return (
         <div
@@ -276,9 +271,9 @@ export default function ImageZoomDialog({ images, initialIndex = 0, onClose }: P
             aria-modal="true"
             aria-label="Enlarged photo view"
             tabIndex={-1}
-            className="fixed inset-0 z-[100] flex flex-col items-center justify-between bg-black/92 text-white backdrop-blur-md outline-none select-none"
+            className="fixed inset-0 z-[100] flex flex-col items-center justify-between bg-black/75 text-white outline-none select-none"
             onClick={(e) => {
-                if (e.target === e.currentTarget && !hasMoved.current) {
+                if (!(e.target as Element).closest("button, a, main")) {
                     onClose();
                 }
             }}
@@ -341,23 +336,28 @@ export default function ImageZoomDialog({ images, initialIndex = 0, onClose }: P
 
             {/* Main Image Stage */}
             <main
-                className={`relative flex w-full flex-1 touch-none items-center justify-center overflow-hidden p-2 sm:p-6 ${
-                    scale > 1 ? (isDragging ? "cursor-grabbing" : "cursor-grab") : "cursor-zoom-in"
-                }`}
+                className="relative flex w-full flex-1 touch-none items-center justify-center overflow-hidden p-2 sm:p-6"
+                style={{ "--photo-width": `min(calc(76dvh * ${aspect}), calc(100vw - 8rem))` } as CSSProperties}
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
                 onPointerCancel={handlePointerCancel}
                 onWheel={handleWheel}
-                onClick={handleImageClick}
+                onClick={(event) => {
+                    if (hasMoved.current) return;
+                    if (event.target === event.currentTarget) onClose();
+                    else handleImageClick();
+                }}
             >
                 <div
                     style={{
                         transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
-                        transformOrigin: "center center"
+                        transformOrigin: "center center",
+                        width: "var(--photo-width)",
+                        aspectRatio: aspect
                     }}
-                    className={`relative flex h-[76dvh] max-h-[82vh] w-[92vw] max-w-[90vw] items-center justify-center ${
-                        isDragging || reducedMotion
+                    className={`relative flex shrink-0 items-center justify-center ${scale > 1 ? (isDragging ? "cursor-grabbing" : "cursor-grab") : "cursor-zoom-in"} ${
+                        isDragging
                             ? "motion-reduce:transition-none"
                             : "motion-safe:transition-transform motion-safe:duration-200 motion-safe:ease-out motion-reduce:transition-none"
                     }`}
@@ -370,6 +370,13 @@ export default function ImageZoomDialog({ images, initialIndex = 0, onClose }: P
                             height={currentImage.height}
                             presentation={currentImage.presentation}
                             onError={() => setFailedDisplay(currentImage.url)}
+                            onLoad={(event) =>
+                                setNaturalSize({
+                                    url: currentImage.url,
+                                    width: event.currentTarget.naturalWidth,
+                                    height: event.currentTarget.naturalHeight
+                                })
+                            }
                             className="max-h-full w-full max-w-full"
                         />
                     ) : (
@@ -380,9 +387,14 @@ export default function ImageZoomDialog({ images, initialIndex = 0, onClose }: P
                             fill
                             sizes="95vw"
                             priority
-                            className="pointer-events-none object-scale-down select-none"
+                            className="pointer-events-none object-contain select-none"
                             style={{ opacity: largeUrl !== currentImage.url && loadedLarge === largeUrl ? 0 : 1 }}
-                            onLoad={() => {
+                            onLoad={(event) => {
+                                setNaturalSize({
+                                    url: currentImage.url,
+                                    width: event.currentTarget.naturalWidth,
+                                    height: event.currentTarget.naturalHeight
+                                });
                                 if (largeUrl === currentImage.url) setLoadedLarge(largeUrl);
                             }}
                             onError={() => setFailedDisplay(currentImage.url)}
@@ -398,7 +410,7 @@ export default function ImageZoomDialog({ images, initialIndex = 0, onClose }: P
                             sizes="95vw"
                             priority
                             unoptimized
-                            className="pointer-events-none object-scale-down select-none"
+                            className="pointer-events-none object-contain select-none"
                             style={{ opacity: loadedLarge === largeUrl ? 1 : 0 }}
                             onLoad={() => setLoadedLarge(largeUrl)}
                             onError={() => setLoadedLarge(null)}
@@ -414,28 +426,32 @@ export default function ImageZoomDialog({ images, initialIndex = 0, onClose }: P
                 {/* Left/Right Carousel Controls */}
                 {hasMultiple && (
                     <>
-                        <button
-                            type="button"
+                        <ScrollArrow
+                            direction="previous"
+                            onPointerDown={(event) => event.stopPropagation()}
                             onClick={(e) => {
                                 e.stopPropagation();
                                 goToPrev();
                             }}
                             aria-label="Previous photo"
-                            className="absolute top-1/2 left-3 z-20 flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-black/60 text-white/90 shadow-xl backdrop-blur-sm hover:bg-black/85 hover:text-white focus-visible:outline-2 focus-visible:outline-white motion-safe:transition-all motion-safe:hover:scale-105 motion-reduce:transform-none motion-reduce:transition-none sm:left-6"
-                        >
-                            <ChevronLeft size={24} strokeWidth={2} />
-                        </button>
-                        <button
-                            type="button"
+                            className="absolute top-1/2 z-20 -translate-y-1/2"
+                            style={{
+                                left: `clamp(8px, calc(50% + ${pan.x}px - var(--photo-width) * ${scale / 2} - 56px), calc(100% - 52px))`
+                            }}
+                        />
+                        <ScrollArrow
+                            direction="next"
+                            onPointerDown={(event) => event.stopPropagation()}
                             onClick={(e) => {
                                 e.stopPropagation();
                                 goToNext();
                             }}
                             aria-label="Next photo"
-                            className="absolute top-1/2 right-3 z-20 flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-black/60 text-white/90 shadow-xl backdrop-blur-sm hover:bg-black/85 hover:text-white focus-visible:outline-2 focus-visible:outline-white motion-safe:transition-all motion-safe:hover:scale-105 motion-reduce:transform-none motion-reduce:transition-none sm:right-6"
-                        >
-                            <ChevronRight size={24} strokeWidth={2} />
-                        </button>
+                            className="absolute top-1/2 z-20 -translate-y-1/2"
+                            style={{
+                                right: `clamp(8px, calc(50% - ${pan.x}px - var(--photo-width) * ${scale / 2} - 56px), calc(100% - 52px))`
+                            }}
+                        />
                     </>
                 )}
             </main>

@@ -31,7 +31,6 @@ type Props = {
     onAddActivityImage: (image: BoardImageDraft) => void;
     onUpdateActivityImage?: (image: BoardImageDraft) => void;
     onAssignActivityImage: (imageId: string, pinId: string | null) => void;
-    onSetActivityCover: (pinId: string, imageId: number | null) => void;
     onReorderActivityImage: (pinId: string, imageId: string, direction: -1 | 1) => void;
 };
 
@@ -54,7 +53,6 @@ export default function DayPlanner({
     onAddActivityImage,
     onUpdateActivityImage,
     onAssignActivityImage,
-    onSetActivityCover,
     onReorderActivityImage
 }: Props) {
     const [dialogDayId, setDialogDayId] = useState<string | null>(null);
@@ -113,7 +111,6 @@ export default function DayPlanner({
             onAddImage={onAddActivityImage}
             onUpdateImage={onUpdateActivityImage}
             onAssignImage={onAssignActivityImage}
-            onSetCover={onSetActivityCover}
             onReorderImage={onReorderActivityImage}
         />
     ) : null;
@@ -143,7 +140,6 @@ export default function DayPlanner({
                         onRemoveDay={() => requestRemoveDay(day)}
                         days={days}
                         disabled={disabled}
-                        onUpdatePin={onUpdatePin}
                         onMovePin={(pinId, dayId, time, index) => {
                             if (disabled) return;
                             onMovePin(pinId, dayId, time, index);

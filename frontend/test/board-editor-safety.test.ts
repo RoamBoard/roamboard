@@ -509,8 +509,14 @@ test("a partial photo batch retains successful uploads in input order through re
         (name) => new File(["photo bytes"], name, { type: "image/jpeg" })
     );
     const completed: number[] = [];
-    const pending = uploadBoardImageBatch(files, (asset) => completed.push(asset.imageId));
+    const laterUpload = deferred<void>();
+    const pending = uploadBoardImageBatch(files, (asset) => {
+        completed.push(asset.imageId);
+        if (asset.imageId === 505) laterUpload.resolve();
+    });
     await firstStarted.promise;
+    await laterUpload.promise;
+    assert.deepEqual(completed, [505]);
     firstCompletion.resolve(
         Response.json({
             data: {

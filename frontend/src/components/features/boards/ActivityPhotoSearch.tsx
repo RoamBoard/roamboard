@@ -8,8 +8,7 @@ import {
     type ManualPhotoPage,
     type ProviderPhoto
 } from "@/lib/providers";
-import EditorPhotoGallery from "./EditorPhotoGallery";
-import type { BoardImageDraft } from "@/types/board-creator";
+import StoryGallery from "./StoryGallery";
 
 export default function ActivityPhotoSearch({
     selectedIds,
@@ -61,24 +60,6 @@ export default function ActivityPhotoSearch({
             if (!controller.signal.aborted) setBusy(false);
         }
     }
-    const photos: BoardImageDraft[] = (result?.photos ?? []).map((photo, index) => ({
-        id: photo.id,
-        publicId: photo.id,
-        source: "unsplash",
-        pinId: null,
-        url: photo.url,
-        thumbnailUrl: photo.thumbnailUrl,
-        alt: photo.alt,
-        width: photo.width,
-        height: photo.height,
-        capturedAt: null,
-        latitude: null,
-        longitude: null,
-        order: index,
-        credit: photo.photographer,
-        creditUrl: photo.photographerUrl,
-        sourceUrl: photo.sourceUrl
-    }));
     return (
         <section aria-label="Search Unsplash photos" className="border-line mt-6 border-t pt-5">
             <h3 className="text-sm font-medium">Search Unsplash</h3>
@@ -192,7 +173,16 @@ export default function ActivityPhotoSearch({
                     </button>
                 </div>
             ) : null}
-            {zoom !== null ? <EditorPhotoGallery images={photos} index={zoom} onClose={() => setZoom(null)} /> : null}
+            {zoom !== null ? (
+                <StoryGallery
+                    placements={(result?.photos ?? []).map((photo) => ({
+                        id: photo.id,
+                        image: { ...photo, source: "application" as const }
+                    }))}
+                    initialIndex={zoom}
+                    onClose={() => setZoom(null)}
+                />
+            ) : null}
         </section>
     );
 }

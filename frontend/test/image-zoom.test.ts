@@ -378,6 +378,40 @@ test("ImageZoomDialog keyboard navigation, panning, and zoom shortcuts", (contex
     assert.ok(resetBadge, "Scale must reset to 100% after pressing 0");
 });
 
+test("empty image-stage space closes the gallery while clicking the photo zooms it", (context) => {
+    const closed: boolean[] = [];
+    const harness = mountZoomDialog(context, { images: testImages, onClose: () => closed.push(true) });
+    const stage = harness.nodes.find((node) => node.type === "main");
+    assert.ok(stage);
+    const click = stage.props.onClick as (event: { target: object; currentTarget: object }) => void;
+    const background = {};
+    click({ target: background, currentTarget: background });
+    assert.equal(closed.length, 1);
+    click({ target: {}, currentTarget: background });
+    harness.render();
+    assert.equal(closed.length, 1);
+    assert.ok(harness.nodes.some((node) => node.props.children === "200%"));
+});
+
+test("gallery arrows follow the actual loaded photo width and zoom, using shared controls", (context) => {
+    const harness = mountZoomDialog(context, { images: testImages, onClose: noop });
+    const photo = harness.nodes.find((node) => node.props.src === testImages[0].url);
+    assert.ok(photo);
+    (photo.props.onLoad as (event: unknown) => void)({ currentTarget: { naturalWidth: 600, naturalHeight: 900 } });
+    harness.render();
+    const stage = harness.nodes.find((node) => node.type === "main");
+    assert.match(String((stage?.props.style as Record<string, string>)["--photo-width"]), /0\.666/);
+    const previous = harness.nodes.find((node) => node.props["aria-label"] === "Previous photo");
+    assert.ok(previous);
+    assert.match(String((previous.props.style as { left: string }).left), /var\(--photo-width\) \* 0\.5/);
+    harness.emitKeyDown("+");
+    harness.render();
+    const zoomed = harness.nodes.find((node) => node.props["aria-label"] === "Previous photo");
+    assert.match(String((zoomed?.props.style as { left: string }).left), /var\(--photo-width\) \* 0\.75/);
+    const dialog = harness.nodes.find((node) => node.props.role === "dialog");
+    assert.match(String(dialog?.props.className), /bg-black\/75/);
+});
+
 test("BoardPhoto disables hover scale when motion reduction is preferred", () => {
     const { nodes } = capture(() => BoardPhoto({ image: testImages[0], zoomable: true }));
     const img = nodes.find(
@@ -406,8 +440,8 @@ test("ImageZoomDialog disables zoom transition when reduced motion is preferred"
     assert.ok(animatedBox, "Image container must have motion-reduce:transition-none");
     assert.ok(
         typeof animatedBox.props.className === "string" &&
-            !animatedBox.props.className.includes("motion-safe:transition-transform"),
-        "Image container must omit transition-transform when reduced motion is preferred"
+            animatedBox.props.className.includes("motion-safe:transition-transform"),
+        "Transform animation must only apply when motion is safe; the browser handles preference changes"
     );
 });
 

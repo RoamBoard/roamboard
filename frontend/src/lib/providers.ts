@@ -123,7 +123,6 @@ export const searchBoardLocationProvider = (
         signal
     });
 };
-export const searchBoardMapboxProvider = searchBoardLocationProvider;
 
 export const searchBoardDestinations = (countryCode: string, city: string) => {
     const params = new URLSearchParams({
@@ -143,7 +142,6 @@ export const reverseBoardLocationProvider = (latitude: string, longitude: string
     request<MapboxLocation>(
         `/api/v1/providers/locations/reverse?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}${preferPlace ? "&preferPlace=true" : ""}`
     );
-export const reverseBoardMapboxProvider = reverseBoardLocationProvider;
 
 export const routeMapboxProvider = (
     points: Array<{ latitude: number; longitude: number }>,

@@ -654,12 +654,6 @@ export async function suggestBoardPhotos(imageIds: number[]): Promise<SmartPhoto
     return result.photos;
 }
 
-export function refreshBoardPhotoLocation(
-    imageId: number
-): Promise<SmartPhotoSuggestion & { capturedAt: string | null; latitude: number | null; longitude: number | null }> {
-    return request("/api/v1/images/" + imageId + "/refresh-location", { method: "POST" });
-}
-
 export async function suggestMainDestination(
     points: Array<{ latitude: number; longitude: number; city?: string | null; country?: string | null }>,
     signal?: AbortSignal

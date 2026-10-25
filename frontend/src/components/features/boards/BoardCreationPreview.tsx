@@ -7,7 +7,8 @@ import { createBoardPreview } from "@/lib/board-creation-preview";
 import type { BoardCreatorPayload, BoardImageDraft } from "@/types/board-creator";
 import PhotoEditorDialog from "@/components/images/PhotoEditorDialog";
 import CroppedPhoto from "@/components/images/CroppedPhoto";
-import EditorPhotoGallery from "./EditorPhotoGallery";
+import EditorPhotoGallery, { editorPhoto } from "./EditorPhotoGallery";
+import { StoryPhotoCredit } from "./StoryPhoto";
 
 import BoardPreviewDiagram from "./BoardPreviewDiagram";
 
@@ -56,90 +57,66 @@ export default function BoardCreationPreview({
     function photoCard(image: BoardImageDraft, index: number) {
         return (
             <li key={image.id} className="group/photo relative min-w-0">
-                <button
-                    type="button"
-                    className="editor-photo-card block w-full overflow-hidden rounded-2xl focus-visible:outline-2"
-                    aria-label={`Enlarge Board photo ${index + 1}`}
-                    aria-describedby={image.pinId ? `review-photo-${image.id}` : undefined}
-                    onClick={() => setGalleryIndex(imageIndices.get(image.id) ?? 0)}
-                >
-                    <CroppedPhoto
-                        thumbnail
-                        src={image.thumbnailUrl}
-                        alt={image.alt ?? "Board photo"}
-                        presentation={image.presentation}
-                        width={image.width}
-                        height={image.height}
-                        loading="lazy"
-                        decoding="async"
-                        draggable={false}
-                        className="aspect-square w-full object-cover"
-                    />
-                </button>
-                {image.pinId ? (
-                    <span
-                        id={`review-photo-${image.id}`}
-                        className="editor-photo-label pointer-events-none absolute inset-x-2 bottom-14 rounded-lg bg-black/75 px-2 py-1 text-xs text-white"
+                <figure>
+                    <button
+                        type="button"
+                        className="editor-photo-card block w-full overflow-hidden rounded-2xl focus-visible:outline-2"
+                        aria-label={`Enlarge Board photo ${index + 1}`}
+                        aria-describedby={image.pinId ? `review-photo-${image.id}` : undefined}
+                        onClick={() => setGalleryIndex(imageIndices.get(image.id) ?? 0)}
                     >
-                        {activityTitles.get(image.pinId)}
-                    </span>
-                ) : null}
-                {editable && onRemovePhoto ? (
-                    <div className="editor-photo-actions">
-                        <button
-                            type="button"
-                            aria-label={`Crop photo ${index + 1}`}
-                            title="Crop"
-                            className="editor-icon-action"
-                            onClick={() => setEditing(image)}
+                        <CroppedPhoto
+                            thumbnail
+                            src={image.thumbnailUrl}
+                            alt={image.alt ?? "Board photo"}
+                            presentation={image.presentation}
+                            width={image.width}
+                            height={image.height}
+                            loading="lazy"
+                            decoding="async"
+                            draggable={false}
+                            className="aspect-square w-full object-cover"
+                        />
+                    </button>
+                    {image.pinId ? (
+                        <span
+                            id={`review-photo-${image.id}`}
+                            className="editor-photo-label pointer-events-none absolute inset-x-2 bottom-14 rounded-lg bg-black/75 px-2 py-1 text-xs text-white"
                         >
-                            <Crop size={16} />
-                        </button>
-                        <button
-                            type="button"
-                            aria-label={
-                                image.pinId
-                                    ? `Remove photo ${index + 1} from activity`
-                                    : `Delete photo ${index + 1} from Board`
-                            }
-                            title={image.pinId ? "Remove from activity" : "Delete from Board"}
-                            className="editor-icon-action"
-                            onClick={() => onRemovePhoto(image.id)}
-                        >
-                            <Trash2 size={16} />
-                        </button>
-                    </div>
-                ) : null}
-                {image.credit ? (
-                    <p className="text-muted-foreground mt-2 text-[10px]">
-                        Photo by{" "}
-                        <a
-                            href={image.creditUrl ?? image.sourceUrl ?? undefined}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="underline"
-                        >
-                            {image.credit}
-                        </a>
-                        {image.sourceUrl && image.sourceUrl !== image.creditUrl ? (
-                            <>
-                                {" "}
-                                on{" "}
-                                <a href={image.sourceUrl} target="_blank" rel="noreferrer" className="underline">
-                                    Unsplash
-                                </a>
-                            </>
-                        ) : null}
-                    </p>
-                ) : null}
-                {image.context ? (
-                    <p className="text-muted-foreground text-[10px]">
-                        Illustrative photo · {image.context.locationLabel}
-                    </p>
-                ) : null}
-                {image.uploadedImageId === board.coverImageId ? (
-                    <p className="text-muted-foreground mt-2 text-[10px]">Selected Board cover</p>
-                ) : null}
+                            {activityTitles.get(image.pinId)}
+                        </span>
+                    ) : null}
+                    {editable && onRemovePhoto ? (
+                        <div className="editor-photo-actions">
+                            <button
+                                type="button"
+                                aria-label={`Crop photo ${index + 1}`}
+                                title="Crop"
+                                className="editor-icon-action"
+                                onClick={() => setEditing(image)}
+                            >
+                                <Crop size={16} />
+                            </button>
+                            <button
+                                type="button"
+                                aria-label={
+                                    image.pinId
+                                        ? `Remove photo ${index + 1} from activity`
+                                        : `Delete photo ${index + 1} from Board`
+                                }
+                                title={image.pinId ? "Remove from activity" : "Delete from Board"}
+                                className="editor-icon-action"
+                                onClick={() => onRemovePhoto(image.id)}
+                            >
+                                <Trash2 size={16} />
+                            </button>
+                        </div>
+                    ) : null}
+                    <StoryPhotoCredit image={editorPhoto(image)} />
+                    {image.uploadedImageId === board.coverImageId ? (
+                        <p className="text-muted-foreground mt-2 text-[10px]">Selected Board cover</p>
+                    ) : null}
+                </figure>
             </li>
         );
     }

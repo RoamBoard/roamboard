@@ -52,7 +52,6 @@ export default function AddActivityDialog({
             onAssignImage={(id, pinId) => onAssignImage?.(id, pinId)}
             onRemoveImage={onRemoveImage}
             onUpdateImage={onUpdateImage}
-            onSetCover={() => {}}
             onReorderImage={() => {}}
         />
     );

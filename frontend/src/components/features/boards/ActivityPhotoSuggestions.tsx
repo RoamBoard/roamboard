@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { StoryPhotoCredit } from "./StoryPhoto";
 import {
     findActivityPhotoSuggestions,
     selectActivityPhotoSuggestion,
@@ -82,30 +83,23 @@ export default function ActivityPhotoSuggestions({
             <ul className="mt-3 grid gap-3 sm:grid-cols-2">
                 {photos.map((photo) => (
                     <li key={photo.id}>
-                        <button
-                            type="button"
-                            disabled={busy}
-                            onClick={() => void choose(photo)}
-                            className="w-full overflow-hidden rounded-xl text-left focus-visible:outline-2 focus-visible:outline-offset-4"
-                        >
-                            <img
-                                src={photo.thumbnailUrl}
-                                alt={photo.alt}
-                                className="aspect-[4/3] w-full object-cover"
-                            />
-                            <span className="mt-2 block text-xs">Illustrative · {photo.context.locationLabel}</span>
-                            <span className="text-muted-foreground mt-1 block text-[10px]">Select this photo</span>
-                        </button>
-                        <p className="text-muted-foreground mt-1 text-[10px]">
-                            Photo by{" "}
-                            <a href={photo.photographerUrl} target="_blank" rel="noreferrer" className="underline">
-                                {photo.photographer}
-                            </a>{" "}
-                            on{" "}
-                            <a href={photo.sourceUrl} target="_blank" rel="noreferrer" className="underline">
-                                Unsplash
-                            </a>
-                        </p>
+                        <figure>
+                            <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => void choose(photo)}
+                                className="w-full overflow-hidden rounded-xl text-left focus-visible:outline-2 focus-visible:outline-offset-4"
+                            >
+                                <img
+                                    src={photo.thumbnailUrl}
+                                    alt={photo.alt}
+                                    className="aspect-[4/3] w-full object-cover"
+                                />
+                                <span className="mt-2 block text-xs">Illustrative · {photo.context.locationLabel}</span>
+                                <span className="text-muted-foreground mt-1 block text-[10px]">Select this photo</span>
+                            </button>
+                            <StoryPhotoCredit image={{ ...photo, source: "application", context: undefined }} />
+                        </figure>
                     </li>
                 ))}
             </ul>

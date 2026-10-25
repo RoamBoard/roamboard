@@ -59,7 +59,6 @@ function mount(disabled = false, openPalette = false) {
             onOpenPin() {},
             onAdd() {},
             onRemoveDay() {},
-            onUpdatePin() {},
             onColorChange: (color) => chosen.push(color),
             dragTarget: null,
             onDragTargetChange() {}
@@ -178,7 +177,6 @@ test("touch grips move activities within and across days, while taps, cancellati
                 onOpenPin() {},
                 onAdd() {},
                 onRemoveDay() {},
-                onUpdatePin() {},
                 onColorChange() {},
                 dragTarget,
                 onDragTargetChange

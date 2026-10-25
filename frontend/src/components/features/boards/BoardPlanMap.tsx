@@ -61,7 +61,6 @@ export default function BoardPlanMap({
     return (
         <section aria-label="Board map" className="flex h-full min-h-[32rem] flex-col md:min-h-0">
             <CreatorSectionIntro
-                number="03"
                 title="MAP"
                 description="Explore your days by colour. Select an activity on the map to view or edit it."
             />

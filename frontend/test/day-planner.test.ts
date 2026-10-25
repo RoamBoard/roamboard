@@ -210,7 +210,6 @@ function plannerMarkup(overrides: Partial<ComponentProps<typeof DayPlanner>> = {
             onRemovePin: () => {},
             onAddActivityImage: () => {},
             onAssignActivityImage: () => {},
-            onSetActivityCover: () => {},
             onReorderActivityImage: () => {},
             ...overrides
         })

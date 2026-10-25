@@ -134,7 +134,6 @@ test("removing an activity photo stages detachment and saving keeps the original
             onAssignImage: (id, pinId) => {
                 board.images = board.images.map((item) => (item.id === id ? { ...item, pinId } : item));
             },
-            onSetCover() {},
             onReorderImage() {}
         });
         assert.equal(typeof wrapper.type, "function");

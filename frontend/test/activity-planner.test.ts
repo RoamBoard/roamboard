@@ -139,7 +139,6 @@ test("saving an existing activity preserves raw photo GPS and photo source until
             onDelete() {},
             onAddImage() {},
             onAssignImage() {},
-            onSetCover() {},
             onReorderImage() {}
         })
     );
@@ -206,7 +205,6 @@ test("activity editing omits removed photo refresh and day placement controls", 
             onDelete() {},
             onAddImage() {},
             onAssignImage() {},
-            onSetCover() {},
             onReorderImage() {}
         })
     );

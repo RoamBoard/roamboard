@@ -34,14 +34,3 @@ export function getBoardDays(board: Board): PublishedBoardDay[] {
         return { number, date, title, items, color: board.dayColors?.[number] };
     }).sort((first, second) => first.number - second.number);
 }
-
-// Count a location once even if several activities use it.
-export function getBoardPlaceNames(board: Board): string[] {
-    const places = new Map<string, string>();
-    for (const item of board.items) {
-        if ((item.type === "activity" || item.type === "location") && item.location) {
-            places.set(item.location.id, item.location.name);
-        }
-    }
-    return Array.from(places.values());
-}

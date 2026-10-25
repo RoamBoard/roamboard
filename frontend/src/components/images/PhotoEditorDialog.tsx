@@ -14,6 +14,7 @@ import {
 import { photoWasEdited } from "@/lib/use-photo-urls";
 import { useBoardLeaveWarning } from "@/lib/use-board-leave-warning";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { X } from "lucide-react";
 export default function PhotoEditorDialog({
     imageId,
     external,
@@ -141,10 +142,10 @@ export default function PhotoEditorDialog({
                             type="button"
                             disabled={busy}
                             aria-label="Close photo editor"
-                            className="border-line size-10 border"
+                            className="editor-icon-action border-line border"
                             onClick={close}
                         >
-                            ×
+                            <X size={18} />
                         </button>
                     </header>
                     <p className="text-muted-foreground mb-3 text-xs leading-relaxed">
@@ -239,7 +240,7 @@ export default function PhotoEditorDialog({
                                     <select
                                         aria-label="Photo aspect ratio"
                                         defaultValue="free"
-                                        className="border-line mt-2 w-full border p-3"
+                                        className="border-line hover:bg-faint mt-2 w-full cursor-pointer rounded-xl border p-3 transition-colors focus-visible:outline-2 disabled:cursor-default motion-reduce:transition-none"
                                         onChange={(event) => {
                                             const next =
                                                 event.target.value === "free"
@@ -271,7 +272,7 @@ export default function PhotoEditorDialog({
                                     <label key={key} className="text-xs">
                                         {label} / {Math.round(edit[key] * 100)}%
                                         <input
-                                            className="mt-3 block w-full"
+                                            className="accent-foreground mt-3 block w-full cursor-pointer disabled:cursor-default"
                                             type="range"
                                             min={key === "width" || key === "height" ? 0.01 : 0}
                                             max={
@@ -302,7 +303,7 @@ export default function PhotoEditorDialog({
                             {!image ? (
                                 <button
                                     type="button"
-                                    className="ml-3 underline"
+                                    className="hover:text-muted-foreground ml-3 cursor-pointer underline focus-visible:outline-2"
                                     onClick={() => {
                                         setError("");
                                         setRetry((current) => current + 1);
@@ -317,7 +318,7 @@ export default function PhotoEditorDialog({
                         <button
                             type="button"
                             disabled={busy || revision === null}
-                            className="border-line border px-4 py-3 text-xs"
+                            className="border-line hover:bg-faint cursor-pointer rounded-full border px-5 py-3 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 disabled:cursor-default disabled:opacity-40 motion-reduce:transition-none"
                             onClick={() => void save(true)}
                         >
                             Reset to original
@@ -325,7 +326,7 @@ export default function PhotoEditorDialog({
                         <button
                             type="button"
                             disabled={busy || !image || revision === null}
-                            className="bg-foreground text-background px-6 py-3 text-sm"
+                            className="bg-foreground text-background hover:bg-foreground/85 cursor-pointer rounded-full px-6 py-3 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 disabled:cursor-default disabled:opacity-40 motion-reduce:transition-none"
                             onClick={() => void save()}
                         >
                             {busy ? "Saving photo..." : "Save photo"}

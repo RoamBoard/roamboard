@@ -398,7 +398,8 @@ export default function BoardImageIntake({
 
                 {busy ? (
                     <p role="status" className="text-muted-foreground mx-auto mt-4 w-full text-center text-xs">
-                        Uploading images…
+                        {completedUploads.length} of {batchSize} photos uploaded
+                        {completedUploads.length === batchSize ? " - Finding activity suggestions..." : "..."}
                     </p>
                 ) : null}
 

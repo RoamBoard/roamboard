@@ -75,7 +75,6 @@ function editNote(original: string, replacement?: string, time?: string) {
             onDelete() {},
             onAddImage() {},
             onAssignImage() {},
-            onSetCover() {},
             onReorderImage() {}
         });
         const tree =
