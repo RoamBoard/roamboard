@@ -50,7 +50,7 @@ export default function AccountDeletionCard({ disabled }: { disabled: boolean })
                         setError(null);
                         setOpen(true);
                     }}
-                    className="text-13 cursor-pointer rounded-[2px] border border-red-600 px-4 py-2.5 font-medium text-red-600 transition-colors hover:bg-red-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    className="border-feedback-error text-feedback-error hover:bg-feedback-error hover:text-feedback-error-surface text-13 cursor-pointer rounded-[2px] border px-4 py-2.5 font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                 >
                     Delete account
                 </button>
