@@ -6,7 +6,6 @@ import request from "supertest";
 import { createApp } from "../src/app.js";
 import type { AuthRepository } from "../src/features/auth/auth.types.js";
 import type { AccountDeletionRepository } from "../src/features/account-deletion/account-deletion.repository.js";
-import { AppError } from "../src/shared/app-error.js";
 import { sessionCookieName } from "../src/shared/session-cookie.js";
 
 const origin = "http://localhost:3000";
@@ -24,8 +23,9 @@ function appFor(userId: string | null, deletion: AccountDeletionRepository) {
             repository,
             accountDeletionRepository: {
                 async deleteAccount(id) {
-                    await deletion.deleteAccount(id);
-                    current = null;
+                    const result = await deletion.deleteAccount(id);
+                    if (result === "deleted") current = null;
+                    return result;
                 }
             }
         })
@@ -37,6 +37,7 @@ test("account deletion requires a session and exact Origin and rejects payloads"
     const { app } = appFor("google-sub", {
         async deleteAccount(id) {
             calls.push(id);
+            return "deleted";
         }
     });
     assert.equal((await request(app).delete("/api/v1/users/me").set("Origin", origin)).status, 401);
@@ -84,6 +85,7 @@ test("confirmed deletion clears cookies, then the old session returns 401", asyn
     const { app } = appFor("google-sub", {
         async deleteAccount(id) {
             calls.push(id);
+            return "deleted";
         }
     });
     const first = await request(app).delete("/api/v1/users/me").set("Cookie", cookie).set("Origin", origin);
@@ -99,13 +101,22 @@ test("confirmed deletion clears cookies, then the old session returns 401", asyn
 test("guest and failed database deletions keep the session", async () => {
     const guest = appFor("guest:one", {
         async deleteAccount() {
-            throw new AppError(403, "Account deletion is unavailable for this account", "ACCOUNT_DELETION_UNAVAILABLE");
+            return "guest";
         }
     }).app;
     const rejected = await request(guest).delete("/api/v1/users/me").set("Cookie", cookie).set("Origin", origin);
     assert.equal(rejected.status, 403);
     assert.equal(rejected.body.error.code, "ACCOUNT_DELETION_UNAVAILABLE");
     assert.equal((await request(guest).get("/api/v1/auth/me").set("Cookie", cookie)).status, 200);
+
+    const missing = appFor("deleted-sub", {
+        async deleteAccount() {
+            return "missing";
+        }
+    }).app;
+    const absent = await request(missing).delete("/api/v1/users/me").set("Cookie", cookie).set("Origin", origin);
+    assert.equal(absent.status, 401);
+    assert.equal(absent.body.error.code, "UNAUTHENTICATED");
 
     const failed = appFor("google-sub", {
         async deleteAccount() {

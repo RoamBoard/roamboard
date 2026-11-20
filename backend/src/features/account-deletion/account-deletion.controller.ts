@@ -2,7 +2,7 @@ import type { RequestHandler } from "express";
 
 import { browserCookieName } from "../board-discovery/discovery.controller.js";
 import { sessionCookieName } from "../../shared/session-cookie.js";
-import type { AccountDeletionRepository } from "./account-deletion.repository.js";
+import type { AccountDeletionService } from "./account-deletion.service.js";
 
 function cookieOptions() {
     return {
@@ -13,10 +13,10 @@ function cookieOptions() {
     };
 }
 
-export function createAccountDeletionController(repository: AccountDeletionRepository): RequestHandler {
+export function createAccountDeletionController(service: AccountDeletionService): RequestHandler {
     return async (_request, response) => {
         const userId = (response.locals.user as { userId: string }).userId;
-        await repository.deleteAccount(userId);
+        await service.deleteAccount(userId);
         response.clearCookie(sessionCookieName(), cookieOptions());
         response.clearCookie(browserCookieName(), cookieOptions());
         response.json({ data: { deleted: true } });

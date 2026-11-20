@@ -1,7 +1,6 @@
 import type { PoolClient } from "pg";
 
 import { getPool } from "../../db.js";
-import { AppError } from "../../shared/app-error.js";
 import { collectOwnedBoardLocationIds, removeUnreferencedLocations } from "../boards/board-locations.repository.js";
 
 const unreferenced = `NOT EXISTS (SELECT 1 FROM board_image bi WHERE bi.uploaded_image_id = i.uploaded_image_id)
@@ -11,18 +10,17 @@ const unreferenced = `NOT EXISTS (SELECT 1 FROM board_image bi WHERE bi.uploaded
     AND NOT EXISTS (SELECT 1 FROM app_user u WHERE u.profile_picture_image_id = i.uploaded_image_id)`;
 
 export interface AccountDeletionRepository {
-    deleteAccount(userId: string): Promise<void>;
+    deleteAccount(userId: string): Promise<"deleted" | "guest" | "missing">;
 }
 
-async function deleteWithinTransaction(client: PoolClient, userId: string): Promise<void> {
+async function deleteWithinTransaction(client: PoolClient, userId: string): Promise<"deleted" | "guest" | "missing"> {
     const account = await client.query<{ is_guest: boolean }>(
         `SELECT EXISTS (SELECT 1 FROM guest_account g WHERE g.user_id=u.user_id) AS is_guest
          FROM app_user u WHERE u.user_id=$1 FOR UPDATE OF u`,
         [userId]
     );
-    if (!account.rows[0]) throw new AppError(401, "Not signed in", "UNAUTHENTICATED");
-    if (account.rows[0].is_guest)
-        throw new AppError(403, "Account deletion is unavailable for this account", "ACCOUNT_DELETION_UNAVAILABLE");
+    if (!account.rows[0]) return "missing";
+    if (account.rows[0].is_guest) return "guest";
 
     const browsers = await client.query<{ browser_id: string }>(
         "SELECT browser_id FROM board_browser WHERE user_id=$1 FOR UPDATE",
@@ -85,6 +83,7 @@ async function deleteWithinTransaction(client: PoolClient, userId: string): Prom
          WHERE i.uploaded_image_id=ANY($1::int[]) AND ${unreferenced}`,
         [imageIds]
     );
+    return "deleted";
 }
 
 export function createAccountDeletionRepository(): AccountDeletionRepository {
@@ -93,8 +92,9 @@ export function createAccountDeletionRepository(): AccountDeletionRepository {
             const client = await getPool().connect();
             try {
                 await client.query("BEGIN");
-                await deleteWithinTransaction(client, userId);
+                const result = await deleteWithinTransaction(client, userId);
                 await client.query("COMMIT");
+                return result;
             } catch (error) {
                 await client.query("ROLLBACK");
                 throw error;
