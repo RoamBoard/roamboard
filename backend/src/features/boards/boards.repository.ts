@@ -7,6 +7,7 @@ import type { PoolClient } from "pg";
 
 import { getPool } from "../../db.js";
 import { AppError } from "../../shared/app-error.js";
+import { collectBoardLocationIds, removeUnreferencedLocations } from "./board-locations.repository.js";
 import type { BoardLocationWrite, BoardWrite } from "./boards.schemas.js";
 import {
     canReadBoard,
@@ -777,6 +778,7 @@ export function createBoardsRepository(): BoardRepository {
             try {
                 await client.query("BEGIN");
                 let savedId = boardId;
+                let previousLocationIds: number[] = [];
                 if (savedId === null) {
                     const result = await client.query<{ board_id: number }>(
                         `INSERT INTO board (owner_user_id, title, description, visibility, status, is_completed, published_at)
@@ -821,6 +823,7 @@ export function createBoardsRepository(): BoardRepository {
                     ) {
                         throw new AppError(403, "Only the owner can change visibility or completion", "FORBIDDEN");
                     }
+                    previousLocationIds = await collectBoardLocationIds(client, savedId);
                     await client.query(
                         `UPDATE board SET title=$1, description=$2, visibility=$3, status=$4,
                          revision=revision+1, updated_at=NOW(), cover_image_id=NULL, is_completed=COALESCE($6, is_completed),
@@ -840,6 +843,7 @@ export function createBoardsRepository(): BoardRepository {
                     [input.fillerImagesEnabled ?? null, savedId]
                 );
                 await writeChildren(client, savedId, userId, input);
+                await removeUnreferencedLocations(client, previousLocationIds);
                 if (fillerPool !== undefined) {
                     await client.query("DELETE FROM board_filler_image WHERE board_id=$1", [savedId]);
                     for (const image of fillerPool.images)
@@ -886,6 +890,7 @@ export function createBoardsRepository(): BoardRepository {
                     await client.query("ROLLBACK");
                     return false;
                 }
+                const locationIds = await collectBoardLocationIds(client, boardId);
                 await client.query(
                     `UPDATE uploaded_image i SET orphaned_at = NOW()
                      WHERE i.uploaded_image_id IN (
@@ -898,6 +903,7 @@ export function createBoardsRepository(): BoardRepository {
                     [boardId]
                 );
                 await client.query("DELETE FROM board WHERE board_id = $1", [boardId]);
+                await removeUnreferencedLocations(client, locationIds);
                 await client.query("COMMIT");
                 return true;
             } catch (error) {

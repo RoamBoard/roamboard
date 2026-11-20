@@ -317,6 +317,8 @@ Google account owners can permanently delete their account from Settings through
 deletes the account, its Boards, comments, saves, memberships and other dependent rows
 in one transaction, invalidates every session, and returns `200 {"data":{"deleted":true}}`.
 It also removes locations from those Boards when no surviving Board or activity uses them.
+Migration 025 purges older unreferenced locations; subsequent Board edits and deletions
+remove newly detached locations in their own transactions.
 Development guest accounts receive `403`. Detached uploaded assets are removed by the
 existing retry worker after the account is gone; independent remixes owned by others remain.
 See [the agreed contract](../contracts/delete-account.md). Migration 025 is **pending**

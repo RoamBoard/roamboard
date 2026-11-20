@@ -274,6 +274,12 @@ test(
             };
             const destinationBoard = await service.create("owner-sub", { ...empty, destination });
             assert.deepEqual((await service.read(destinationBoard.boardId, "owner-sub")).destination, destination);
+            const destinationLocationId = (
+                await pool.query<{ primary_location_id: number }>(
+                    "SELECT primary_location_id FROM board WHERE board_id=$1",
+                    [destinationBoard.boardId]
+                )
+            ).rows[0]!.primary_location_id;
             const legacyWrite = await service.replace("owner-sub", destinationBoard.boardId, 1, empty);
             assert.deepEqual(legacyWrite.destination, destination, "Older clients omitting destination preserve it");
             const cityDestination = {
@@ -297,18 +303,109 @@ test(
                 destination: halfPrecisionDestination
             });
             assert.equal(halfPrecisionBoard.destination?.longitude, 18.071093);
+            const halfPrecisionLocationId = (
+                await pool.query<{ primary_location_id: number }>(
+                    "SELECT primary_location_id FROM board WHERE board_id=$1",
+                    [halfPrecisionBoard.boardId]
+                )
+            ).rows[0]!.primary_location_id;
             await service.delete(halfPrecisionBoard.boardId, "owner-sub");
+            assert.equal(
+                (await pool.query("SELECT 1 FROM location WHERE location_id=$1", [halfPrecisionLocationId])).rowCount,
+                0
+            );
             const changedDestination = await service.replace("owner-sub", destinationBoard.boardId, 2, {
                 ...empty,
                 destination: cityDestination
             });
             assert.deepEqual(changedDestination.destination, cityDestination);
+            assert.equal(
+                (await pool.query("SELECT 1 FROM location WHERE location_id=$1", [destinationLocationId])).rowCount,
+                0
+            );
+            const sharedDestinationBoard = await service.create("owner-sub", {
+                ...empty,
+                destination: cityDestination
+            });
+            const cityLocationId = (
+                await pool.query<{ primary_location_id: number }>(
+                    "SELECT primary_location_id FROM board WHERE board_id=$1",
+                    [destinationBoard.boardId]
+                )
+            ).rows[0]!.primary_location_id;
+            assert.equal(
+                (
+                    await pool.query<{ primary_location_id: number }>(
+                        "SELECT primary_location_id FROM board WHERE board_id=$1",
+                        [sharedDestinationBoard.boardId]
+                    )
+                ).rows[0]!.primary_location_id,
+                cityLocationId
+            );
             const clearedDestination = await service.replace("owner-sub", destinationBoard.boardId, 3, {
                 ...empty,
                 destination: null
             });
             assert.equal(clearedDestination.destination, null);
+            assert.equal(
+                (await pool.query("SELECT 1 FROM location WHERE location_id=$1", [cityLocationId])).rowCount,
+                1
+            );
+            await service.delete(sharedDestinationBoard.boardId, "owner-sub");
+            assert.equal(
+                (await pool.query("SELECT 1 FROM location WHERE location_id=$1", [cityLocationId])).rowCount,
+                0
+            );
             await service.delete(destinationBoard.boardId, "owner-sub");
+            const activityBoard = await service.create("owner-sub", {
+                ...empty,
+                title: "Private activity",
+                days: [
+                    {
+                        dayNumber: 1,
+                        date: null,
+                        activities: [
+                            {
+                                position: 0,
+                                title: "Private hotel",
+                                activityTime: null,
+                                category: "museum",
+                                note: null,
+                                source: "manual",
+                                location: {
+                                    name: "Private hotel",
+                                    latitude: 59.31,
+                                    longitude: 18.01,
+                                    address: "Private address",
+                                    city: "Stockholm",
+                                    country: "SWE",
+                                    externalPlaceId: null
+                                },
+                                locationConfirmed: true,
+                                uploadedImageIds: [],
+                                coverImageId: null,
+                                externalImage: null
+                            }
+                        ]
+                    }
+                ]
+            });
+            const detachedActivityLocationId = (
+                await pool.query<{ location_id: number }>("SELECT location_id FROM activity WHERE board_id=$1", [
+                    activityBoard.boardId
+                ])
+            ).rows[0]!.location_id;
+            await service.replace("owner-sub", activityBoard.boardId, activityBoard.revision, {
+                ...empty,
+                title: "Private activity",
+                days: [{ dayId: activityBoard.days[0]!.dayId, dayNumber: 1, date: null, activities: [] }]
+            });
+            assert.equal(
+                (await pool.query("SELECT 1 FROM location WHERE location_id=$1", [detachedActivityLocationId]))
+                    .rowCount,
+                0
+            );
+            await service.delete(activityBoard.boardId, "owner-sub");
             const created = await service.create("owner-sub", empty);
             assert.equal(created.revision, 1);
             assert.equal(created.title, "");
@@ -365,6 +462,11 @@ test(
             assert.equal(saved.days[0]?.activities[0]?.coverImageId, imageB);
             const dayId = saved.days[0]!.dayId;
             const activityId = saved.days[0]!.activities[0]!.activityId;
+            const activityLocationId = (
+                await pool.query<{ location_id: number }>("SELECT location_id FROM activity WHERE activity_id=$1", [
+                    activityId
+                ])
+            ).rows[0]!.location_id;
             await assert.rejects(service.replace("owner-sub", created.boardId, 1, draft), {
                 code: "STALE_BOARD_REVISION"
             });
@@ -509,6 +611,10 @@ test(
             assert.equal((await imageService.cleanupUnused()).removed, 0);
             await service.delete(created.boardId, "owner-sub");
             assert.equal(await repository.getBoard(created.boardId), null);
+            assert.equal(
+                (await pool.query("SELECT 1 FROM location WHERE location_id=$1", [activityLocationId])).rowCount,
+                0
+            );
             const children = await pool.query<{ count: string }>(
                 "SELECT COUNT(*)::text AS count FROM activity WHERE board_id=$1",
                 [created.boardId]

@@ -253,7 +253,9 @@ Restore and off-machine backup retention were not tested. Updated media reposito
 `025_delete_account.sql` is required for the agreed account deletion endpoint. It adds account cascades,
 allows retained legacy photo references to lose their uploader, and creates a provider-only retry queue for
 assets detached by deletion. It also indexes activity locations so account deletion can check surviving
-references efficiently. Isolated-schema tests passed on a temporary local PostgreSQL cluster.
+references efficiently and removes historical location rows with no Board or activity reference.
+Board edits and deletions now clean up newly detached locations transactionally. Isolated-schema
+tests passed on a temporary local PostgreSQL cluster.
 The shared development database has not been changed. From `backend/`, `npm run db:account` checks status;
 `npm run db:account -- --apply` first creates and verifies a custom-format backup, then applies only 025.
 Review the backup and migration against the target database before rollout. Do not reapply migrations 001–024.

@@ -2,6 +2,7 @@ import type { PoolClient } from "pg";
 
 import { getPool } from "../../db.js";
 import { AppError } from "../../shared/app-error.js";
+import { collectOwnedBoardLocationIds, removeUnreferencedLocations } from "../boards/board-locations.repository.js";
 
 const unreferenced = `NOT EXISTS (SELECT 1 FROM board_image bi WHERE bi.uploaded_image_id = i.uploaded_image_id)
     AND NOT EXISTS (SELECT 1 FROM activity_image ai WHERE ai.uploaded_image_id = i.uploaded_image_id)
@@ -38,15 +39,7 @@ async function deleteWithinTransaction(client: PoolClient, userId: string): Prom
         browserKeys
     ]);
 
-    const locations = await client.query<{ location_id: number }>(
-        `SELECT b.primary_location_id AS location_id FROM board b
-         WHERE b.owner_user_id=$1 AND b.primary_location_id IS NOT NULL
-         UNION
-         SELECT a.location_id FROM activity a JOIN board b ON b.board_id=a.board_id
-         WHERE b.owner_user_id=$1 AND a.location_id IS NOT NULL`,
-        [userId]
-    );
-    const locationIds = locations.rows.map((row) => row.location_id);
+    const locationIds = await collectOwnedBoardLocationIds(client, userId);
 
     // Incomplete uploads can still arrive through a previously issued provider signature.
     // Keep their storage keys until the existing expiry grace period has passed.
@@ -74,12 +67,7 @@ async function deleteWithinTransaction(client: PoolClient, userId: string): Prom
 
     // Location rows are shared across Boards and have no owner foreign key.
     // Remove only those used by this account that have no surviving references.
-    await client.query(
-        `DELETE FROM location l WHERE l.location_id=ANY($1::int[])
-         AND NOT EXISTS (SELECT 1 FROM board b WHERE b.primary_location_id=l.location_id)
-         AND NOT EXISTS (SELECT 1 FROM activity a WHERE a.location_id=l.location_id)`,
-        [locationIds]
-    );
+    await removeUnreferencedLocations(client, locationIds);
 
     // Board/profile cascades have now removed the account's saved image references.
     // Move unreferenced assets into a provider-only queue, then remove their image rows.

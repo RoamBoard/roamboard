@@ -14,7 +14,7 @@ A signed-in Google account owner can permanently delete their Roamboard account 
 
 Deleting the account removes its draft and published Boards, their dependent activities, photos and comments, other users' comments and saves on those Boards, and the account's comments on other Boards. It also removes the account's profile, saved Boards and activities, saved places, friendships, memberships, notifications, subscriptions, mentions, view/discovery records, provider references, sessions and other user-linked application rows. Other people's Boards created through the remix flow remain, including their independently copied photos.
 
-Locations referenced by the deleted account's Boards or activities are removed when no surviving Board or activity references them. Shared locations stay available to surviving Boards.
+Locations referenced by the deleted account's Boards or activities are removed when no surviving Board or activity references them. Shared locations stay available to surviving Boards. Migration 025 removes older unreferenced location rows left by prior Board edits and deletions; future Board writes and deletions clean up locations they detach in the same transaction.
 
 Uploaded provider assets whose last saved reference was removed are cleaned up after commit through a retryable worker. A temporary provider failure must not delay or reverse account deletion. The cleanup system may retain the minimum technical storage reference needed to complete deletion; it must not retain an active account, profile, session or user-owned application record for that purpose.
 

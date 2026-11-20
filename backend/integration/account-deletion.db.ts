@@ -35,9 +35,45 @@ test(
             process.env.DATABASE_URL = url.toString();
             const pool = getPool();
             const directory = new URL("../db/migrations/", import.meta.url);
+            let historicalOrphanId = 0;
+            let historicalReferencedId = 0;
             for (const name of (await readdir(directory)).filter((file) => file.endsWith(".sql")).sort()) {
+                if (name === "025_delete_account.sql") {
+                    const rows = await pool.query<{ location_id: number; name: string }>(
+                        `INSERT INTO location(name,address,latitude,longitude)
+                         VALUES ('Old private place','Old private address',59.3,18.0),
+                                ('Old shared place','Old shared address',59.4,18.1)
+                         RETURNING location_id,name`
+                    );
+                    historicalOrphanId = rows.rows.find((row) => row.name === "Old private place")!.location_id;
+                    historicalReferencedId = rows.rows.find((row) => row.name === "Old shared place")!.location_id;
+                    await pool.query(
+                        "INSERT INTO app_user(user_id,username,display_name) VALUES('migration-user','migration-user','Migration User')"
+                    );
+                    await pool.query(
+                        `INSERT INTO board(owner_user_id,title,primary_location_id,primary_location_kind)
+                         VALUES('migration-user','Migration Board',$1,'city')`,
+                        [historicalReferencedId]
+                    );
+                }
                 await pool.query(await readFile(new URL(name, directory), "utf8"));
             }
+            assert.equal(
+                (
+                    await pool.query("SELECT count(*)::int AS count FROM location WHERE location_id=$1", [
+                        historicalOrphanId
+                    ])
+                ).rows[0].count,
+                0
+            );
+            assert.equal(
+                (
+                    await pool.query("SELECT count(*)::int AS count FROM location WHERE location_id=$1", [
+                        historicalReferencedId
+                    ])
+                ).rows[0].count,
+                1
+            );
             await pool.query(
                 "INSERT INTO app_user(user_id,username,display_name) VALUES ('owner','owner','Owner'),('other','other','Other'),('guest:one','guest','Guest')"
             );

@@ -30,6 +30,13 @@ ALTER TABLE saved_activities ADD CONSTRAINT FK_saved_activities_0
 CREATE INDEX ix_activity_location ON activity (location_id)
   WHERE location_id IS NOT NULL;
 
+-- Older Board edits and deletions left location rows without a Board or activity.
+-- Every persisted location comes from Board content, so these rows have no owner
+-- or remaining content and can be removed before account deletion is enabled.
+DELETE FROM location l
+WHERE NOT EXISTS (SELECT 1 FROM board b WHERE b.primary_location_id=l.location_id)
+  AND NOT EXISTS (SELECT 1 FROM activity a WHERE a.location_id=l.location_id);
+
 -- A referenced legacy image may outlive its uploader. The account service
 -- clears private capture metadata before deleting the user.
 ALTER TABLE uploaded_image ALTER COLUMN uploaded_by_user_id DROP NOT NULL;

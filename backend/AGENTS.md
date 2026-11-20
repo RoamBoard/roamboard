@@ -79,6 +79,8 @@ required user foreign keys to cascade, permits legacy referenced images to outli
 capture metadata, and adds a storage-key-only retry queue for detached assets. The existing image worker removes
 those assets after commit; unfinished upload intents retain their expiry grace. Remixed Boards owned by others survive.
 Locations used by deleted Boards or activities are removed only when no surviving Board or activity references them.
+Migration 025 removes historical unreferenced locations, and Board edits/deletions now remove newly detached
+locations in their transactions while preserving locations still shared with another Board.
 `npm run db:account` checks migration status; `-- --apply` verifies a backup and applies only 025. Migration 025
 is not yet applied to the shared database; do not run the new endpoint there before the migration is reviewed and
 applied. See `db/MIGRATION_LOG.md`.
