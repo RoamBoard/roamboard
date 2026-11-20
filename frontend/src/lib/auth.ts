@@ -13,6 +13,16 @@ type ApiError = {
     error?: { code?: string; message?: string };
 };
 
+export class AccountDeletionError extends Error {
+    constructor(
+        message: string,
+        readonly status: number
+    ) {
+        super(message);
+        this.name = "AccountDeletionError";
+    }
+}
+
 const accountListeners = new Set<(user: AuthUser | null) => void>();
 const accountState = { generation: 0, logoutGeneration: 0, signedOut: false };
 
@@ -145,4 +155,27 @@ export async function signOut(): Promise<void> {
     });
 
     if (!response.ok) throw new Error("Could not sign out. Please try again.");
+}
+
+export async function deleteAccount(): Promise<void> {
+    const response = await fetch(`${apiUrl}/api/v1/users/me`, {
+        method: "DELETE",
+        credentials: "include"
+    });
+    if (!response.ok) {
+        const payload = (await response.json().catch(() => ({}))) as ApiError;
+        if (response.status === 401) {
+            accountState.logoutGeneration += 1;
+            invalidateAccountUpdates();
+        }
+        throw new AccountDeletionError(
+            payload.error?.message ?? "Account deletion failed. Please try again.",
+            response.status
+        );
+    }
+    const payload = (await response.json()) as { data?: { deleted?: boolean } };
+    if (payload.data?.deleted !== true)
+        throw new Error("The server did not confirm account deletion. Please try again.");
+    accountState.logoutGeneration += 1;
+    invalidateAccountUpdates();
 }

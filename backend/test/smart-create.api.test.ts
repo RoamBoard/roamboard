@@ -273,10 +273,12 @@ function setup(
         async findImage(imageId) {
             return records.find((image) => image.imageId === imageId) ?? null;
         },
-        async updateMetadata(imageId, asset) {
-            updates.push({ imageId, asset });
+        async updateMetadata(imageId, userId, asset) {
             const record = records.find((image) => image.imageId === imageId);
-            if (record) Object.assign(record, asset);
+            if (!record || record.uploaderUserId !== userId) return false;
+            updates.push({ imageId, asset });
+            Object.assign(record, asset);
+            return true;
         },
         async listCleanupCandidates() {
             return [];
@@ -373,6 +375,48 @@ test("refresh location reinspects the uploader's original and persists corrected
     assert.equal(response.body.data.location.label, "Bali Beach");
     assert.equal(response.body.data.category, "beach");
     assert.doesNotMatch(JSON.stringify(response.body), /roamboard\/private/);
+});
+
+test("refresh cannot restore metadata after the uploader account is deleted during inspection", async () => {
+    const original = photo(1, { boardId: 7 });
+    let inspectionStarted!: () => void;
+    const started = new Promise<void>((resolve) => {
+        inspectionStarted = resolve;
+    });
+    let completeInspection!: (asset: ProviderAsset) => void;
+    const inspection = new Promise<ProviderAsset>((resolve) => {
+        completeInspection = resolve;
+    });
+    const { api, calls, updates } = setup(
+        [original],
+        undefined,
+        undefined,
+        undefined,
+        refreshProvider(async () => {
+            inspectionStarted();
+            return inspection;
+        })
+    );
+    const pending = api
+        .post("/api/v1/images/1/refresh-location")
+        .set("Cookie", cookie)
+        .set("Origin", origin)
+        .send({})
+        .then((response) => response);
+    await started;
+    original.uploaderUserId = null;
+    original.capturedAt = null;
+    original.latitude = null;
+    original.longitude = null;
+    completeInspection(correctedAsset(original.storageKey));
+    const response = await pending;
+    assert.equal(response.status, 404);
+    assert.deepEqual(
+        original,
+        photo(1, { boardId: 7, uploaderUserId: null, capturedAt: null, latitude: null, longitude: null })
+    );
+    assert.deepEqual(updates, []);
+    assert.deepEqual(calls, []);
 });
 
 test("refresh authenticates, validates origin and ID, and verifies ownership before inspection", async () => {

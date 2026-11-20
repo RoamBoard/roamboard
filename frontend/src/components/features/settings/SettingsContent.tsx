@@ -18,6 +18,7 @@ import PersonalDetailsForm from "./PersonalDetailsForm";
 import LanguageEditor from "./LanguageEditor";
 import ThemeSelectorCard from "./ThemeSelectorCard";
 import SettingsSaveBar from "./SettingsSaveBar";
+import AccountDeletionCard from "./AccountDeletionCard";
 
 type Tab = "PROFILE" | "ACCOUNT";
 
@@ -401,6 +402,7 @@ export default function SettingsContent() {
                                         </p>
                                     )}
                                 </div>
+                                {!draft.id.startsWith("guest:") && <AccountDeletionCard disabled={saving} />}
                             </div>
                         )}
                     </fieldset>

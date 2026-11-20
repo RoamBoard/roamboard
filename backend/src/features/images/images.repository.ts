@@ -114,7 +114,7 @@ export function createImagesRepository(): ImagesRepository {
             const result = await getPool().query<{
                 uploaded_image_id: number;
                 storage_key: string;
-                uploaded_by_user_id: string;
+                uploaded_by_user_id: string | null;
                 board_id: number | null;
                 presentation_edit: import("./images.schemas.js").ImagePresentationEdit | null;
                 presentation_revision: number;
@@ -165,17 +165,19 @@ export function createImagesRepository(): ImagesRepository {
             );
             return result.rowCount === 1;
         },
-        async updateMetadata(imageId, asset) {
-            await getPool().query(
-                "UPDATE uploaded_image SET captured_at=$1,latitude=$2,longitude=$3 WHERE uploaded_image_id=$4",
-                [asset.capturedAt, asset.latitude, asset.longitude, imageId]
+        async updateMetadata(imageId, userId, asset) {
+            const result = await getPool().query(
+                `UPDATE uploaded_image SET captured_at=$1,latitude=$2,longitude=$3
+                 WHERE uploaded_image_id=$4 AND uploaded_by_user_id=$5`,
+                [asset.capturedAt, asset.latitude, asset.longitude, imageId, userId]
             );
+            return result.rowCount === 1;
         },
         async findImages(imageIds) {
             const result = await getPool().query<{
                 uploaded_image_id: number;
                 storage_key: string;
-                uploaded_by_user_id: string;
+                uploaded_by_user_id: string | null;
                 board_id: number | null;
                 captured_at: Date | null;
                 latitude: string | null;
@@ -212,6 +214,12 @@ export function createImagesRepository(): ImagesRepository {
                  WHERE NOT $3 AND ui.uploaded_image_id IS NULL AND ui.expires_at < $1
                    AND $4::int[] IS NULL
                    AND NOT starts_with(ui.storage_key, 'roamboard/editorial/')
+                 UNION ALL
+                 SELECT NULL::int AS image_id, ac.storage_key, NULL::uuid AS upload_id,
+                        ac.attempted_at AS last_attempt
+                 FROM account_asset_cleanup ac
+                 WHERE NOT $3 AND ac.eligible_at <= NOW() AND $4::int[] IS NULL
+                   AND NOT starts_with(ac.storage_key, 'roamboard/editorial/')
                  ORDER BY last_attempt NULLS FIRST, image_id, upload_id
                  LIMIT $2`,
                 [before, limit, requestedOnly, imageIds ?? null]
@@ -277,6 +285,36 @@ export function createImagesRepository(): ImagesRepository {
                 await client.query("ROLLBACK");
                 await client.query("UPDATE image_upload_intent SET cleanup_attempted_at=NOW() WHERE upload_id=$1", [
                     uploadId
+                ]);
+                throw error;
+            } finally {
+                client.release();
+            }
+        },
+        async cleanupDetachedAsset(storageKey, removeAsset) {
+            const client = await getPool().connect();
+            try {
+                await client.query("BEGIN");
+                const row = await client.query(
+                    `SELECT storage_key FROM account_asset_cleanup
+                     WHERE storage_key=$1 AND eligible_at<=NOW()
+                     AND NOT starts_with(storage_key, 'roamboard/editorial/')
+                     AND NOT EXISTS (SELECT 1 FROM uploaded_image WHERE storage_key=$1)
+                     FOR UPDATE SKIP LOCKED`,
+                    [storageKey]
+                );
+                if (!row.rowCount) {
+                    await client.query("ROLLBACK");
+                    return false;
+                }
+                await removeAsset();
+                await client.query("DELETE FROM account_asset_cleanup WHERE storage_key=$1", [storageKey]);
+                await client.query("COMMIT");
+                return true;
+            } catch (error) {
+                await client.query("ROLLBACK");
+                await client.query("UPDATE account_asset_cleanup SET attempted_at=NOW() WHERE storage_key=$1", [
+                    storageKey
                 ]);
                 throw error;
             } finally {

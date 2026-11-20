@@ -57,7 +57,8 @@ export function createSmartCreateService(
             const asset = await provider.inspect(image.storageKey);
             if (!asset || asset.storageKey !== image.storageKey)
                 throw new AppError(404, "The original photo could not be read", "IMAGE_ASSET_MISSING");
-            await repository.updateMetadata(imageId, asset);
+            if (!(await repository.updateMetadata(imageId, userId, asset)))
+                throw new AppError(404, "Image not found", "NOT_FOUND");
             let location: MapboxLocation | null = null;
             let warning: string | null = null;
             if (asset.latitude !== null && asset.longitude !== null) {

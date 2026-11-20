@@ -53,7 +53,8 @@ test(
                     "021_board_story.sql",
                     "022_activity_photo_context.sql",
                     "023_board_day_color.sql",
-                    "024_activity_photos.sql"
+                    "024_activity_photos.sql",
+                    "025_delete_account.sql"
                 ]) {
                     const sql = await readFile(new URL(`../db/migrations/${name}`, import.meta.url), "utf8");
                     await migrationClient.query(sql);
@@ -273,6 +274,12 @@ test(
             };
             const destinationBoard = await service.create("owner-sub", { ...empty, destination });
             assert.deepEqual((await service.read(destinationBoard.boardId, "owner-sub")).destination, destination);
+            const destinationLocationId = (
+                await pool.query<{ primary_location_id: number }>(
+                    "SELECT primary_location_id FROM board WHERE board_id=$1",
+                    [destinationBoard.boardId]
+                )
+            ).rows[0]!.primary_location_id;
             const legacyWrite = await service.replace("owner-sub", destinationBoard.boardId, 1, empty);
             assert.deepEqual(legacyWrite.destination, destination, "Older clients omitting destination preserve it");
             const cityDestination = {
@@ -296,18 +303,186 @@ test(
                 destination: halfPrecisionDestination
             });
             assert.equal(halfPrecisionBoard.destination?.longitude, 18.071093);
+            const halfPrecisionLocationId = (
+                await pool.query<{ primary_location_id: number }>(
+                    "SELECT primary_location_id FROM board WHERE board_id=$1",
+                    [halfPrecisionBoard.boardId]
+                )
+            ).rows[0]!.primary_location_id;
             await service.delete(halfPrecisionBoard.boardId, "owner-sub");
+            assert.equal(
+                (await pool.query("SELECT 1 FROM location WHERE location_id=$1", [halfPrecisionLocationId])).rowCount,
+                0
+            );
             const changedDestination = await service.replace("owner-sub", destinationBoard.boardId, 2, {
                 ...empty,
                 destination: cityDestination
             });
             assert.deepEqual(changedDestination.destination, cityDestination);
+            assert.equal(
+                (await pool.query("SELECT 1 FROM location WHERE location_id=$1", [destinationLocationId])).rowCount,
+                0
+            );
+            const sharedDestinationBoard = await service.create("owner-sub", {
+                ...empty,
+                destination: cityDestination
+            });
+            const cityLocationId = (
+                await pool.query<{ primary_location_id: number }>(
+                    "SELECT primary_location_id FROM board WHERE board_id=$1",
+                    [destinationBoard.boardId]
+                )
+            ).rows[0]!.primary_location_id;
+            assert.equal(
+                (
+                    await pool.query<{ primary_location_id: number }>(
+                        "SELECT primary_location_id FROM board WHERE board_id=$1",
+                        [sharedDestinationBoard.boardId]
+                    )
+                ).rows[0]!.primary_location_id,
+                cityLocationId
+            );
             const clearedDestination = await service.replace("owner-sub", destinationBoard.boardId, 3, {
                 ...empty,
                 destination: null
             });
             assert.equal(clearedDestination.destination, null);
+            assert.equal(
+                (await pool.query("SELECT 1 FROM location WHERE location_id=$1", [cityLocationId])).rowCount,
+                1
+            );
+            await service.delete(sharedDestinationBoard.boardId, "owner-sub");
+            assert.equal(
+                (await pool.query("SELECT 1 FROM location WHERE location_id=$1", [cityLocationId])).rowCount,
+                0
+            );
             await service.delete(destinationBoard.boardId, "owner-sub");
+            const concurrentDestination = {
+                ...cityDestination,
+                name: "Concurrent destination",
+                address: "Concurrent destination"
+            };
+            const sourceBoard = await service.create("owner-sub", {
+                ...empty,
+                destination: concurrentDestination
+            });
+            const targetBoard = await service.create("owner-sub", empty);
+            const concurrentLocationId = (
+                await pool.query<{ primary_location_id: number }>(
+                    "SELECT primary_location_id FROM board WHERE board_id=$1",
+                    [sourceBoard.boardId]
+                )
+            ).rows[0]!.primary_location_id;
+            const lockKey = randomBytes(4).readUInt32BE(0);
+            await pool.query(`CREATE FUNCTION pause_location_attach() RETURNS trigger LANGUAGE plpgsql AS $$
+                BEGIN
+                    IF NEW.board_id = ${targetBoard.boardId} AND NEW.primary_location_id IS NOT NULL THEN
+                        PERFORM pg_advisory_xact_lock(${lockKey}::bigint);
+                    END IF;
+                    RETURN NEW;
+                END $$`);
+            await pool.query(`CREATE TRIGGER pause_location_attach BEFORE UPDATE OF primary_location_id ON board
+                FOR EACH ROW EXECUTE FUNCTION pause_location_attach()`);
+            await admin.query("SELECT pg_advisory_lock($1::bigint)", [lockKey]);
+            let advisoryLocked = true;
+            let attachPromise: ReturnType<typeof service.replace> | undefined;
+            let deletePromise: ReturnType<typeof service.delete> | undefined;
+            try {
+                const waitForBlockedQuery = async (prefix: string) => {
+                    const deadline = Date.now() + 5000;
+                    while (Date.now() < deadline) {
+                        const waiting = await admin.query(
+                            `SELECT 1 FROM pg_stat_activity
+                             WHERE wait_event_type='Lock' AND query LIKE $1 LIMIT 1`,
+                            [`${prefix}%`]
+                        );
+                        if (waiting.rowCount) return;
+                        await new Promise((resolve) => setTimeout(resolve, 20));
+                    }
+                    assert.fail(`Timed out waiting for ${prefix} to block`);
+                };
+                attachPromise = service.replace("owner-sub", targetBoard.boardId, targetBoard.revision, {
+                    ...empty,
+                    destination: concurrentDestination
+                });
+                await waitForBlockedQuery("UPDATE board SET primary_location_id");
+                deletePromise = service.delete(sourceBoard.boardId, "owner-sub");
+                await waitForBlockedQuery("SELECT location_id FROM location WHERE location_id=ANY");
+                await admin.query("SELECT pg_advisory_unlock($1::bigint)", [lockKey]);
+                advisoryLocked = false;
+                await deletePromise;
+                assert.equal(
+                    (await pool.query("SELECT 1 FROM board WHERE board_id=$1", [sourceBoard.boardId])).rowCount,
+                    0
+                );
+                assert.deepEqual((await attachPromise).destination, concurrentDestination);
+                assert.equal(
+                    (
+                        await pool.query<{ primary_location_id: number }>(
+                            "SELECT primary_location_id FROM board WHERE board_id=$1",
+                            [targetBoard.boardId]
+                        )
+                    ).rows[0]!.primary_location_id,
+                    concurrentLocationId
+                );
+            } finally {
+                if (advisoryLocked) await admin.query("SELECT pg_advisory_unlock($1::bigint)", [lockKey]);
+                await Promise.allSettled([attachPromise, deletePromise]);
+            }
+            await service.delete(targetBoard.boardId, "owner-sub");
+            assert.equal(
+                (await pool.query("SELECT 1 FROM location WHERE location_id=$1", [concurrentLocationId])).rowCount,
+                0
+            );
+            const activityBoard = await service.create("owner-sub", {
+                ...empty,
+                title: "Private activity",
+                days: [
+                    {
+                        dayNumber: 1,
+                        date: null,
+                        activities: [
+                            {
+                                position: 0,
+                                title: "Private hotel",
+                                activityTime: null,
+                                category: "museum",
+                                note: null,
+                                source: "manual",
+                                location: {
+                                    name: "Private hotel",
+                                    latitude: 59.31,
+                                    longitude: 18.01,
+                                    address: "Private address",
+                                    city: "Stockholm",
+                                    country: "SWE",
+                                    externalPlaceId: null
+                                },
+                                locationConfirmed: true,
+                                uploadedImageIds: [],
+                                coverImageId: null,
+                                externalImage: null
+                            }
+                        ]
+                    }
+                ]
+            });
+            const detachedActivityLocationId = (
+                await pool.query<{ location_id: number }>("SELECT location_id FROM activity WHERE board_id=$1", [
+                    activityBoard.boardId
+                ])
+            ).rows[0]!.location_id;
+            await service.replace("owner-sub", activityBoard.boardId, activityBoard.revision, {
+                ...empty,
+                title: "Private activity",
+                days: [{ dayId: activityBoard.days[0]!.dayId, dayNumber: 1, date: null, activities: [] }]
+            });
+            assert.equal(
+                (await pool.query("SELECT 1 FROM location WHERE location_id=$1", [detachedActivityLocationId]))
+                    .rowCount,
+                0
+            );
+            await service.delete(activityBoard.boardId, "owner-sub");
             const created = await service.create("owner-sub", empty);
             assert.equal(created.revision, 1);
             assert.equal(created.title, "");
@@ -364,6 +539,11 @@ test(
             assert.equal(saved.days[0]?.activities[0]?.coverImageId, imageB);
             const dayId = saved.days[0]!.dayId;
             const activityId = saved.days[0]!.activities[0]!.activityId;
+            const activityLocationId = (
+                await pool.query<{ location_id: number }>("SELECT location_id FROM activity WHERE activity_id=$1", [
+                    activityId
+                ])
+            ).rows[0]!.location_id;
             await assert.rejects(service.replace("owner-sub", created.boardId, 1, draft), {
                 code: "STALE_BOARD_REVISION"
             });
@@ -508,6 +688,10 @@ test(
             assert.equal((await imageService.cleanupUnused()).removed, 0);
             await service.delete(created.boardId, "owner-sub");
             assert.equal(await repository.getBoard(created.boardId), null);
+            assert.equal(
+                (await pool.query("SELECT 1 FROM location WHERE location_id=$1", [activityLocationId])).rowCount,
+                0
+            );
             const children = await pool.query<{ count: string }>(
                 "SELECT COUNT(*)::text AS count FROM activity WHERE board_id=$1",
                 [created.boardId]

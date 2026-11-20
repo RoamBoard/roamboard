@@ -21,7 +21,7 @@ export interface UploadedImage {
     presentationEdit?: ImagePresentationEdit | null;
     presentationRevision?: number;
     storageKey: string;
-    uploaderUserId: string;
+    uploaderUserId: string | null;
     boardId: number | null;
     // A profile image can be shown with a readable Board without being attached as Board media.
     profileOwnerUserId?: string | null;
@@ -69,8 +69,9 @@ export interface ImagesRepository {
     findImages?(imageIds: number[]): Promise<UploadedImage[]>;
     updateMetadata?(
         imageId: number,
+        userId: string,
         asset: Pick<ProviderAsset, "capturedAt" | "latitude" | "longitude">
-    ): Promise<void>;
+    ): Promise<boolean>;
     savePresentation?(
         imageId: number,
         userId: string,
@@ -85,6 +86,7 @@ export interface ImagesRepository {
     ): Promise<Array<{ imageId: number | null; storageKey: string; uploadId: string | null }>>;
     cleanupImage(imageId: number, removeAsset: () => Promise<void>): Promise<boolean>;
     cleanupIntent(uploadId: string, removeAsset: () => Promise<void>): Promise<boolean>;
+    cleanupDetachedAsset?(storageKey: string, removeAsset: () => Promise<void>): Promise<boolean>;
 }
 
 export interface ImagesService {

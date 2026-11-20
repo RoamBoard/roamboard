@@ -21,6 +21,8 @@ import type { NotificationsRepository } from "./features/board-comment-notificat
 import type { BoardRepository, FillerProvider } from "./features/boards/boards.types.js";
 import { createImagesModule } from "./features/images/images.module.js";
 import type { ImageProvider, ImagesRepository } from "./features/images/images.types.js";
+import { createAccountDeletionModule } from "./features/account-deletion/account-deletion.module.js";
+import type { AccountDeletionRepository } from "./features/account-deletion/account-deletion.repository.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { attachSessionUser } from "./middleware/session-user.js";
 import { createProviderModule } from "./features/providers/provider.module.js";
@@ -54,6 +56,7 @@ export interface AppOptions extends AuthModuleOptions {
     searchRepository?: SearchRepository;
     searchProvider?: SearchProvider;
     savedPlacesRepository?: SavedPlacesRepository;
+    accountDeletionRepository?: AccountDeletionRepository;
 }
 
 export function createApp(options: AppOptions = {}): Express {
@@ -128,6 +131,7 @@ export function createApp(options: AppOptions = {}): Express {
     app.use("/api/v1/providers", providers.router);
     app.use("/api/v1/destinations", destinations.router);
     app.use("/api/v1/users", users.router);
+    app.use("/api/v1/users", createAccountDeletionModule(attachUser, options.accountDeletionRepository).router);
     app.use("/api/v1", users.publicRouter);
     app.use("/api/v1/search", search.router);
     app.use("/api/v1/saved-places", createSavedPlacesModule(attachUser, options.savedPlacesRepository).router);
