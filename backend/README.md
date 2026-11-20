@@ -312,6 +312,17 @@ photos are included. Saved remixes retain their independently copied photos; edi
 An immediate attempt covers only images removed by that request, at most four, and waits at most one second overall.
 The worker handles the remaining queue; sign-in never waits for image cleanup.
 
+Google account owners can permanently delete their account from Settings through
+`DELETE /api/v1/users/me` with a session cookie and exact frontend Origin. The backend
+deletes the account, its Boards, comments, saves, memberships and other dependent rows
+in one transaction, invalidates every session, and returns `200 {"data":{"deleted":true}}`.
+It also removes locations from those Boards when no surviving Board or activity uses them.
+Development guest accounts receive `403`. Detached uploaded assets are removed by the
+existing retry worker after the account is gone; independent remixes owned by others remain.
+See [the agreed contract](../contracts/delete-account.md). Migration 025 is **pending**
+on shared development: run `npm run db:account` to check, then apply only 025 with
+`npm run db:account -- --apply` after reviewing the verified backup and migration.
+
 The API server runs an image-cleanup sweep on startup and every minute, retrying durable deletion requests.
 Fresh unattached uploads and expired incomplete intents retain their 24-hour grace period. Run
 `npm run cleanup:images` for manual maintenance; it returns a nonzero exit code if any asset fails.

@@ -34,7 +34,10 @@ export function boardImageIds(board: BoardDocument | null): number[] {
 }
 
 export function createImageCleanup(
-    repository: Pick<ImagesRepository, "listCleanupCandidates" | "cleanupImage" | "cleanupIntent">,
+    repository: Pick<
+        ImagesRepository,
+        "listCleanupCandidates" | "cleanupImage" | "cleanupIntent" | "cleanupDetachedAsset"
+    >,
     provider: Pick<ImageProvider, "destroy">
 ) {
     async function cleanup(requestedOnly: boolean, imageIds?: readonly number[], expired = () => false) {
@@ -53,6 +56,8 @@ export function createImageCleanup(
                     const removeAsset = () => provider.destroy(candidate.storageKey);
                     if (candidate.imageId !== null) return repository.cleanupImage(candidate.imageId, removeAsset);
                     if (candidate.uploadId !== null) return repository.cleanupIntent(candidate.uploadId, removeAsset);
+                    if (repository.cleanupDetachedAsset)
+                        return repository.cleanupDetachedAsset(candidate.storageKey, removeAsset);
                     return false;
                 });
                 if (deleted) removed += 1;

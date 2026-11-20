@@ -650,6 +650,12 @@ inspector is no longer used by the page route. The profile page reads live accou
 
 Profile settings validate the existing backend rules before saving. A red error summary above Save Changes explains corrections and links to the affected fields; save failures retain the draft. Loading failures are separate from save errors. Pending saves disable editing and repeat submissions. A confirmed save opens the returned username's profile with an owner-only, dismissible confirmation. Leaving settings while a save is pending prevents its eventual response from redirecting the user back. Profile photos still save through their separate controls.
 
+The Settings Account tab offers irreversible deletion to Google accounts through a warning dialog and
+`DELETE /api/v1/users/me`. Development guest accounts do not see this control. The frontend clears account
+state and returns to the public home page only after a confirmed backend response; failures keep the session
+and dialog available for retry. See [the agreed contract](../contracts/delete-account.md). Backend migration 025
+is required before this endpoint can run against a deployed database.
+
 The old `useBoardPhotos`, `PublishedBoardDay` and browser-preview copy helpers remain as legacy utilities; the
 production published viewer above no longer uses automatic read-time illustrations or preview Save/Copy actions.
 

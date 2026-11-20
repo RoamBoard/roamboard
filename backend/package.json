@@ -23,6 +23,7 @@
         "db:editor": "tsx src/jobs/apply-activity-photo-context.ts",
         "db:story": "tsx src/jobs/apply-board-story.ts",
         "db:images": "tsx src/jobs/apply-image-deletion.ts",
+        "db:account": "tsx src/jobs/apply-delete-account.ts",
         "images:inventory": "tsx src/jobs/import-frontend-images.ts --inventory",
         "images:import": "tsx src/jobs/import-frontend-images.ts --apply",
         "images:add": "tsx src/jobs/register-image.ts",

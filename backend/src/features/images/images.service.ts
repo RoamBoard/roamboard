@@ -149,7 +149,7 @@ export function createImagesService(
         async openImage(imageId, variant, userId, boardId, profileHandle) {
             const image = await repository.findImage(imageId);
             if (!image) throw new AppError(404, "Image not found", "NOT_FOUND");
-            if (variant === "original" && image.uploaderUserId !== userId)
+            if (variant === "original" && (!userId || image.uploaderUserId !== userId))
                 throw new AppError(404, "Image not found", "NOT_FOUND");
             if (profileHandle !== undefined) {
                 if (!image.profileOwnerUserId || image.profileOwnerUsername !== profileHandle)
@@ -161,7 +161,7 @@ export function createImagesService(
                     throw new AppError(404, "Image not found", "NOT_FOUND");
                 }
             } else if (image.boardId === null) {
-                if (image.uploaderUserId !== userId) {
+                if (!userId || image.uploaderUserId !== userId) {
                     throw new AppError(404, "Image not found", "NOT_FOUND");
                 }
             } else {

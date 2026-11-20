@@ -70,6 +70,19 @@ Saved destination lookup uses
 Geoapify type=locality, reusing the Home search interaction without persisting temporary Mapbox discovery data.
 See [the Smart Create contract](../contracts/smart-create.md).
 
+## Account deletion
+
+The agreed [Delete account contract](../contracts/delete-account.md) is implemented for signed-in Google accounts.
+`DELETE /api/v1/users/me` requires the exact frontend Origin, removes the account and its dependent database records
+in one transaction, clears session/browser cookies, and rejects development guest accounts. Migration 025 changes
+required user foreign keys to cascade, permits legacy referenced images to outlive a deleted uploader without private
+capture metadata, and adds a storage-key-only retry queue for detached assets. The existing image worker removes
+those assets after commit; unfinished upload intents retain their expiry grace. Remixed Boards owned by others survive.
+Locations used by deleted Boards or activities are removed only when no surviving Board or activity references them.
+`npm run db:account` checks migration status; `-- --apply` verifies a backup and applies only 025. Migration 025
+is not yet applied to the shared database; do not run the new endpoint there before the migration is reviewed and
+applied. See `db/MIGRATION_LOG.md`.
+
 ## Uploaded image deletion
 
 Migration 020 adds transactional deletion requests and reference tracking for profiles, Board/activity covers and

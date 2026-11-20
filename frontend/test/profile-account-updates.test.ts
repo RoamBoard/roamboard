@@ -6,6 +6,7 @@ import {
     publishAccountUpdate,
     signInWithGoogle,
     signOut,
+    deleteAccount,
     type AuthUser
 } from "../src/lib/auth";
 import {
@@ -144,6 +145,40 @@ test("rejected profile saves and network failures do not publish account changes
     });
     for (const operation of operations) await assert.rejects(operation(), /API is unavailable/);
     assert.deepEqual(received, []);
+});
+
+test("account deletion publishes sign-out only after the server confirms it", async (context) => {
+    const received: Array<AuthUser | null> = [];
+    const unsubscribe = subscribeToAccountUpdates((user) => received.push(user));
+    context.after(unsubscribe);
+    const responseState: { complete?: (response: Response) => void } = {};
+    context.mock.method(globalThis, "fetch", (input: string | URL | Request, init?: RequestInit) => {
+        assert.ok(String(input).endsWith("/api/v1/users/me"));
+        assert.equal(init?.method, "DELETE");
+        assert.equal(init?.credentials, "include");
+        return new Promise<Response>((resolve) => {
+            responseState.complete = resolve;
+        });
+    });
+    const pending = deleteAccount();
+    assert.deepEqual(received, []);
+    assert.ok(responseState.complete);
+    responseState.complete(Response.json({ data: { deleted: true } }));
+    await pending;
+    assert.deepEqual(received, [null]);
+});
+
+test("failed account deletion keeps the signed-in account", async (context) => {
+    const received: Array<AuthUser | null> = [];
+    const unsubscribe = subscribeToAccountUpdates((user) => received.push(user));
+    context.after(unsubscribe);
+    context.mock.method(globalThis, "fetch", async () =>
+        Response.json({ error: { code: "INTERNAL_ERROR", message: "Deletion failed" } }, { status: 500 })
+    );
+    await assert.rejects(deleteAccount(), /Deletion failed/);
+    assert.deepEqual(received, []);
+    publishAccountUpdate(expectedAccount(profile(12)));
+    assert.deepEqual(received, [expectedAccount(profile(12))]);
 });
 
 test("account subscriptions unsubscribe cleanly and do not replay stale account data", () => {
