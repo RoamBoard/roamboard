@@ -45,6 +45,32 @@ test("account deletion requires a session and exact Origin and rejects payloads"
         (await request(app).delete("/api/v1/users/me").set("Cookie", cookie).set("Origin", origin).send({})).status,
         400
     );
+    for (const [contentType, body] of [
+        ["text/plain", "delete"],
+        ["application/x-www-form-urlencoded", "delete=true"],
+        ["application/octet-stream", Buffer.from("delete")],
+        ["application/vnd.roamboard.payload", "delete"]
+    ] as const) {
+        const response = await request(app)
+            .delete("/api/v1/users/me")
+            .set("Cookie", cookie)
+            .set("Origin", origin)
+            .set("Content-Type", contentType)
+            .send(body);
+        assert.equal(response.status, 400, contentType);
+        assert.equal(response.body.error.code, "INVALID_REQUEST", contentType);
+    }
+    assert.equal(
+        (
+            await request(app)
+                .delete("/api/v1/users/me")
+                .set("Cookie", cookie)
+                .set("Origin", origin)
+                .set("Content-Type", "text/plain")
+                .send("")
+        ).status,
+        400
+    );
     assert.equal(
         (await request(app).delete("/api/v1/users/me?userId=another").set("Cookie", cookie).set("Origin", origin))
             .status,
