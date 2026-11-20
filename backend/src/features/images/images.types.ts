@@ -69,8 +69,9 @@ export interface ImagesRepository {
     findImages?(imageIds: number[]): Promise<UploadedImage[]>;
     updateMetadata?(
         imageId: number,
+        userId: string,
         asset: Pick<ProviderAsset, "capturedAt" | "latitude" | "longitude">
-    ): Promise<void>;
+    ): Promise<boolean>;
     savePresentation?(
         imageId: number,
         userId: string,

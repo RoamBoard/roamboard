@@ -165,11 +165,13 @@ export function createImagesRepository(): ImagesRepository {
             );
             return result.rowCount === 1;
         },
-        async updateMetadata(imageId, asset) {
-            await getPool().query(
-                "UPDATE uploaded_image SET captured_at=$1,latitude=$2,longitude=$3 WHERE uploaded_image_id=$4",
-                [asset.capturedAt, asset.latitude, asset.longitude, imageId]
+        async updateMetadata(imageId, userId, asset) {
+            const result = await getPool().query(
+                `UPDATE uploaded_image SET captured_at=$1,latitude=$2,longitude=$3
+                 WHERE uploaded_image_id=$4 AND uploaded_by_user_id=$5`,
+                [asset.capturedAt, asset.latitude, asset.longitude, imageId, userId]
             );
+            return result.rowCount === 1;
         },
         async findImages(imageIds) {
             const result = await getPool().query<{

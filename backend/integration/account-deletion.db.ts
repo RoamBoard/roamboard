@@ -351,6 +351,16 @@ test(
             assert.equal(await images.findImage(orphan), null);
             assert.equal((await images.findImage(shared))?.uploaderUserId, null);
             assert.equal((await images.findImage(shared))?.latitude, null);
+            assert.equal(
+                await images.updateMetadata!(shared, "owner", {
+                    capturedAt: new Date("2026-06-21T11:30:00Z"),
+                    latitude: 59.3,
+                    longitude: 18.0
+                }),
+                false
+            );
+            assert.equal((await images.findImage(shared))?.capturedAt, null);
+            assert.equal((await images.findImage(shared))?.latitude, null);
             assert.equal((await images.findImage(copied))?.uploaderUserId, "other");
             assert.equal(
                 (await request(app).get("/api/v1/auth/me").set("Cookie", `${sessionCookieName()}=${secondToken}`))
