@@ -357,6 +357,83 @@ test(
                 0
             );
             await service.delete(destinationBoard.boardId, "owner-sub");
+            const concurrentDestination = {
+                ...cityDestination,
+                name: "Concurrent destination",
+                address: "Concurrent destination"
+            };
+            const sourceBoard = await service.create("owner-sub", {
+                ...empty,
+                destination: concurrentDestination
+            });
+            const targetBoard = await service.create("owner-sub", empty);
+            const concurrentLocationId = (
+                await pool.query<{ primary_location_id: number }>(
+                    "SELECT primary_location_id FROM board WHERE board_id=$1",
+                    [sourceBoard.boardId]
+                )
+            ).rows[0]!.primary_location_id;
+            const lockKey = randomBytes(4).readUInt32BE(0);
+            await pool.query(`CREATE FUNCTION pause_location_attach() RETURNS trigger LANGUAGE plpgsql AS $$
+                BEGIN
+                    IF NEW.board_id = ${targetBoard.boardId} AND NEW.primary_location_id IS NOT NULL THEN
+                        PERFORM pg_advisory_xact_lock(${lockKey}::bigint);
+                    END IF;
+                    RETURN NEW;
+                END $$`);
+            await pool.query(`CREATE TRIGGER pause_location_attach BEFORE UPDATE OF primary_location_id ON board
+                FOR EACH ROW EXECUTE FUNCTION pause_location_attach()`);
+            await admin.query("SELECT pg_advisory_lock($1::bigint)", [lockKey]);
+            let advisoryLocked = true;
+            let attachPromise: ReturnType<typeof service.replace> | undefined;
+            let deletePromise: ReturnType<typeof service.delete> | undefined;
+            try {
+                const waitForBlockedQuery = async (prefix: string) => {
+                    const deadline = Date.now() + 5000;
+                    while (Date.now() < deadline) {
+                        const waiting = await admin.query(
+                            `SELECT 1 FROM pg_stat_activity
+                             WHERE wait_event_type='Lock' AND query LIKE $1 LIMIT 1`,
+                            [`${prefix}%`]
+                        );
+                        if (waiting.rowCount) return;
+                        await new Promise((resolve) => setTimeout(resolve, 20));
+                    }
+                    assert.fail(`Timed out waiting for ${prefix} to block`);
+                };
+                attachPromise = service.replace("owner-sub", targetBoard.boardId, targetBoard.revision, {
+                    ...empty,
+                    destination: concurrentDestination
+                });
+                await waitForBlockedQuery("UPDATE board SET primary_location_id");
+                deletePromise = service.delete(sourceBoard.boardId, "owner-sub");
+                await waitForBlockedQuery("SELECT location_id FROM location WHERE location_id=ANY");
+                await admin.query("SELECT pg_advisory_unlock($1::bigint)", [lockKey]);
+                advisoryLocked = false;
+                await deletePromise;
+                assert.equal(
+                    (await pool.query("SELECT 1 FROM board WHERE board_id=$1", [sourceBoard.boardId])).rowCount,
+                    0
+                );
+                assert.deepEqual((await attachPromise).destination, concurrentDestination);
+                assert.equal(
+                    (
+                        await pool.query<{ primary_location_id: number }>(
+                            "SELECT primary_location_id FROM board WHERE board_id=$1",
+                            [targetBoard.boardId]
+                        )
+                    ).rows[0]!.primary_location_id,
+                    concurrentLocationId
+                );
+            } finally {
+                if (advisoryLocked) await admin.query("SELECT pg_advisory_unlock($1::bigint)", [lockKey]);
+                await Promise.allSettled([attachPromise, deletePromise]);
+            }
+            await service.delete(targetBoard.boardId, "owner-sub");
+            assert.equal(
+                (await pool.query("SELECT 1 FROM location WHERE location_id=$1", [concurrentLocationId])).rowCount,
+                0
+            );
             const activityBoard = await service.create("owner-sub", {
                 ...empty,
                 title: "Private activity",

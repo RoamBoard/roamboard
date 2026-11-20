@@ -26,6 +26,12 @@ export async function collectOwnedBoardLocationIds(client: PoolClient, userId: s
 
 export async function removeUnreferencedLocations(client: PoolClient, locationIds: readonly number[]): Promise<void> {
     if (!locationIds.length) return;
+    // A concurrent Board save holds a key-share lock while reusing a location.
+    // Wait for it, then check references in a new READ COMMITTED statement.
+    await client.query(
+        "SELECT location_id FROM location WHERE location_id=ANY($1::int[]) ORDER BY location_id FOR UPDATE",
+        [locationIds]
+    );
     await client.query(
         `DELETE FROM location l WHERE l.location_id=ANY($1::int[])
          AND NOT EXISTS (SELECT 1 FROM board b WHERE b.primary_location_id=l.location_id)

@@ -98,9 +98,13 @@ async function resolveLocations(client: PoolClient, input: BoardWrite): Promise<
 
     const coordinates = [...unique.values()];
     const existing = await client.query<LocationRow>(
-        `SELECT location_id, name, latitude, longitude, address, city, country, external_place_id
-         FROM location
-         WHERE latitude = ANY($1::numeric[]) AND longitude = ANY($2::numeric[])`,
+        `SELECT l.location_id, l.name, l.latitude, l.longitude, l.address, l.city, l.country, l.external_place_id
+         FROM location l
+         WHERE EXISTS (
+           SELECT 1 FROM UNNEST($1::numeric[], $2::numeric[]) AS point(latitude, longitude)
+           WHERE l.latitude=point.latitude AND l.longitude=point.longitude
+         )
+         ORDER BY l.location_id FOR KEY SHARE OF l`,
         [
             coordinates.map((item) => Number(item.latitude.toFixed(6))),
             coordinates.map((item) => Number(item.longitude.toFixed(6)))
